@@ -1,0 +1,50 @@
+# =============================================================================
+# CeilingCRM — pinned production dependencies
+# Generated from pyproject.toml comments
+# =============================================================================
+
+# Bot
+aiogram==3.7.0
+aiogram-dialog==2.1.0
+
+# Web
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+aiohttp==3.9.5
+
+# Database
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Cache / Queue
+redis[hiredis]==5.0.4
+celery[redis]==5.4.0
+APScheduler==3.10.4
+
+# Validation
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# Logging / Monitoring
+structlog==24.1.0
+sentry-sdk[aiohttp]==1.45.0
+prometheus-client==0.20.0
+
+# AI
+openai==1.30.0
+
+# Utilities
+python-dotenv==1.0.1
+httpx==0.27.0
+aiofiles==23.2.1
+
+# Export
+google-api-python-client==2.128.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+openpyxl==3.1.2
+reportlab==4.1.0
+sentry-sdk
+
