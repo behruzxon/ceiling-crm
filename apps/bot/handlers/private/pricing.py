@@ -47,6 +47,16 @@ router = Router(name="private:pricing")
 # Telegram keyboards may append to the emoji, and tolerates extra whitespace.
 _PRICE_BTN_RE: re.Pattern[str] = re.compile(r"\U0001F4B0\uFE0F?\s*Narx", re.IGNORECASE)
 
+# Matches any main-menu reply-keyboard button (VS-16 tolerant).
+# Used to intercept button taps that arrive while a pricing FSM state is active.
+_MENU_BTN_RE: re.Pattern[str] = re.compile(
+    r"📂\uFE0F?\s*Katalog"
+    r"|\U0001F4B0\uFE0F?\s*Narx"
+    r"|📋\uFE0F?\s*Buyurtma"
+    r"|📞\uFE0F?\s*Operator",
+    re.IGNORECASE,
+)
+
 
 # ─── Business logic (pure, no I/O) ───────────────────────────────────────────
 
@@ -163,9 +173,40 @@ async def cmd_pricing_start(
     await start_pricing_flow(message, state)
 
 
+# ─── Menu-button escape (waiting_for_length / waiting_for_width) ─────────────
+# Must be registered BEFORE the numeric handlers so that pressing a main-menu
+# button while a pricing state is active clears FSM and routes correctly
+# instead of showing "invalid number".
+
+@router.message(
+    StateFilter(PricingStates.waiting_for_length, PricingStates.waiting_for_width),
+    F.text.regexp(_MENU_BTN_RE),
+)
+async def handle_pricing_menu_escape(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Clear pricing FSM and handle the tapped main-menu button."""
+    await state.clear()
+    text = message.text or ""
+    if re.search(r"📞", text):
+        await message.answer(
+            "📞 <b>Operator bilan bog'lanish</b>\n\n"
+            "+998 90 886 66 66\n"
+            "+998 99 219 12 19",
+            reply_markup=main_menu_keyboard(),
+        )
+    else:
+        # For Katalog / Narx / Buyurtma: clear state and let the user
+        # re-tap the button — show main menu so they can do so.
+        await message.answer(
+            "Hisoblash bekor qilindi.",
+            reply_markup=main_menu_keyboard(),
+        )
+
+
 # ─── Step 1 : length ─────────────────────────────────────────────────────────
 
-@router.message(StateFilter(PricingStates.waiting_for_length))
+@router.message(StateFilter(PricingStates.waiting_for_length), F.text, ~F.text.startswith("/"))
 async def handle_length(
     message: Message, state: FSMContext, **data: object
 ) -> None:
@@ -178,9 +219,7 @@ async def handle_length(
     length = _parse_dimension(message.text)
     if length is None:
         await message.answer(
-            "❌ Noto'g'ri qiymat.\n"
-            "Iltimos, 0 dan katta, 50 dan kichiq son kiriting:\n"
-            "<i>Masalan: <code>4.5</code></i>",
+            "Son kiriting (masalan: <code>4.5</code>) yoki /cancel bosing."
         )
         return
 
@@ -203,7 +242,7 @@ async def handle_length(
 
 # ─── Step 2 : width → compute area → ask design ──────────────────────────────
 
-@router.message(StateFilter(PricingStates.waiting_for_width))
+@router.message(StateFilter(PricingStates.waiting_for_width), F.text, ~F.text.startswith("/"))
 async def handle_width(
     message: Message, state: FSMContext, **data: object
 ) -> None:
@@ -216,9 +255,7 @@ async def handle_width(
     width = _parse_dimension(message.text)
     if width is None:
         await message.answer(
-            "❌ Noto'g'ri qiymat.\n"
-            "Iltimos, 0 dan katta, 50 dan kichiq son kiriting:\n"
-            "<i>Masalan: <code>3.8</code></i>",
+            "Son kiriting (masalan: <code>3.8</code>) yoki /cancel bosing."
         )
         return
 

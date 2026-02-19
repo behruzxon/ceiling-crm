@@ -5,6 +5,7 @@ Routes ceiling-related questions to OpenAI with guardrails.
 from __future__ import annotations
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from apps.bot.keyboards.main_menu import main_menu_keyboard
@@ -25,8 +26,9 @@ HELP_TEXT = (
 
 
 @router.message(Command("start"))
-async def cmd_start(message: Message, **data) -> None:
-    """Greet user and show main menu keyboard."""
+async def cmd_start(message: Message, state: FSMContext, **data) -> None:
+    """Clear any active FSM state, then greet and show main menu."""
+    await state.clear()
     await message.answer(
         "Assalomu alaykum! 👋\n"
         "Shift o'rnatish bo'yicha CRM botga xush kelibsiz.\n\n"
@@ -36,6 +38,17 @@ async def cmd_start(message: Message, **data) -> None:
 
 
 @router.message(Command("help"))
-async def cmd_help(message: Message, **data) -> None:
-    """Show help menu with available commands."""
+async def cmd_help(message: Message, state: FSMContext, **data) -> None:
+    """Clear any active FSM state, then show help menu."""
+    await state.clear()
     await message.answer(HELP_TEXT)
+
+
+@router.message(Command("cancel"))
+async def cmd_cancel(message: Message, state: FSMContext, **data) -> None:
+    """Cancel any in-progress flow, clear FSM state, and return to main menu."""
+    await state.clear()
+    await message.answer(
+        "❎ Amal bekor qilindi.",
+        reply_markup=main_menu_keyboard(),
+    )
