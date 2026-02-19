@@ -17,7 +17,8 @@ class UserModel(Base):
     phone: Mapped[str | None] = mapped_column(sa.String(20), nullable=True, unique=True)
     language_code: Mapped[str] = mapped_column(sa.String(8), server_default="uz")
     role: Mapped[str] = mapped_column(
-        sa.Enum(UserRole, name="user_role"), nullable=False, server_default="client"
+        sa.Enum(UserRole, name="user_role", values_callable=lambda x: [e.value for e in x]),
+        nullable=False, server_default="client"
     )
     source: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     referral_code: Mapped[str | None] = mapped_column(sa.String(32), nullable=True)

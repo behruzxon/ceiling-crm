@@ -30,8 +30,9 @@ async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
             await callback.answer("Lid topilmadi", show_alert=True)
             return
 
+        lead_title = f"Lid #{lead.id} \u2014 To'liq ma'lumot"
         text = (
-            f"📋 {bold(f'Lid #{lead.id} — To\'liq ma\'lumot')}\n\n"
+            f"📋 {bold(lead_title)}\n\n"
             f"👤 Ism: {lead.name}\n"
             f"📱 Telefon: {lead.phone}\n"
             f"📍 Tuman: {lead.district}\n"
