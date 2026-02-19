@@ -11,8 +11,4 @@ router = Router(name="group:messages")
 
 @router.message(F.chat.type.in_({"group", "supergroup"}))
 async def on_group_message(message: Message, category: str | None, **data) -> None:
-    """
-    Handle incoming group messages.
-    TODO: route to AI support or command handlers.
-    """
-    raise NotImplementedError
+    """Silently ignore group text messages; join events handled by onboarding router."""
