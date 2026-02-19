@@ -3,7 +3,7 @@ AI support handler.
 Routes ceiling-related questions to OpenAI with guardrails.
 """
 from __future__ import annotations
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
@@ -39,15 +39,3 @@ async def cmd_start(message: Message, **data) -> None:
 async def cmd_help(message: Message, **data) -> None:
     """Show help menu with available commands."""
     await message.answer(HELP_TEXT)
-
-
-@router.message(F.text)
-async def handle_free_text(message: Message, **data) -> None:
-    """
-    Fallback text handler for DMs.
-    Acknowledges the message and points user to available commands.
-    """
-    await message.answer(
-        "Sizning xabaringiz qabul qilindi.\n"
-        "Mavjud buyruqlarni ko'rish uchun /help bosing."
-    )

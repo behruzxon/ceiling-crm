@@ -33,6 +33,8 @@ from infrastructure.database.models.audit_log import AuditLogModel  # noqa: F401
 from infrastructure.database.models.quote import QuoteModel  # noqa: F401
 from infrastructure.database.models.appointment import AppointmentModel  # noqa: F401
 from infrastructure.database.models.broadcast import BroadcastModel  # noqa: F401
+from infrastructure.database.models.ai_memory import AiMemoryModel  # noqa: F401
+from infrastructure.database.models.ai_conversation import AiConversationModel  # noqa: F401
 
 from shared.config import get_settings
 
@@ -42,28 +44,32 @@ fileConfig(config.config_file_name)  # configure stdlib logging from alembic.ini
 target_metadata = Base.metadata
 
 
-def get_url() -> str:
-    """Load database URL from Pydantic Settings (reads .env)."""
-    return get_settings().db.sync_url  # Alembic uses sync psycopg2 driver
+def get_async_url() -> str:
+    """Async DSN (asyncpg) for online migrations."""
+    return get_settings().db.async_url
+
+
+def get_sync_url() -> str:
+    """Sync DSN (psycopg2) for offline SQL script generation."""
+    return get_settings().db.sync_url
 
 
 # ── Offline mode (generates SQL script, no live DB required) ──────────────
 def run_migrations_offline() -> None:
     """
     Generate a SQL migration script without connecting to the database.
-    Useful for reviewing changes before applying them.
+    Uses sync psycopg2 URL since no actual connection is made.
 
     Usage:
         alembic upgrade head --sql > migration.sql
     """
-    url = get_url()
     context.configure(
-        url=url,
+        url=get_sync_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,           # detect column type changes
-        compare_server_default=True,  # detect server_default changes
+        compare_type=True,
+        compare_server_default=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -76,22 +82,20 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
-        # Include schemas if using multi-schema setup (future)
-        # include_schemas=True,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
-    """Run migrations using async engine."""
+    """Run migrations using async asyncpg engine."""
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_url()
+    configuration["sqlalchemy.url"] = get_async_url()
 
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
-        poolclass=pool.NullPool,  # use NullPool for migrations (no connection reuse)
+        poolclass=pool.NullPool,
     )
 
     async with connectable.connect() as connection:

@@ -119,6 +119,16 @@ class OpenAISettings(BaseSettings):
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
 
+class AISettings(BaseSettings):
+    """AI provider settings (overrides OpenAI defaults when set)."""
+
+    model_config = SettingsConfigDict(env_prefix="AI_", env_file=".env", extra="ignore")
+
+    provider: str = Field(default="openai", description="AI provider name")
+    api_key: SecretStr | None = Field(default=None, description="Overrides OPENAI_API_KEY if set")
+    model: str = Field(default="gpt-4o", description="Model identifier")
+
+
 class SentrySettings(BaseSettings):
     """Sentry error tracking configuration."""
 
@@ -201,6 +211,7 @@ class Settings(BaseSettings):
     db: DatabaseSettings = Field(default_factory=DatabaseSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
+    ai: AISettings = Field(default_factory=AISettings)
     sentry: SentrySettings = Field(default_factory=SentrySettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
