@@ -35,6 +35,7 @@ class BotSettings(BaseSettings):
     webhook_url: str | None = Field(default=None, description="Webhook URL (None = polling)")
     webhook_secret: SecretStr | None = Field(default=None)
     admin_group_id: int = Field(..., description="Telegram chat_id of the admin group")
+    admin_user_id: int | None = Field(default=None, description="Telegram user_id for DM operator alerts (ADMIN_USER_ID)")
     support_chat_id: int | None = Field(default=None)
 
     # Telegram API limits

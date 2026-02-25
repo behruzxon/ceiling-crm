@@ -207,13 +207,19 @@ async def _notify_admin(
     username: str,
 ) -> None:
     """
-    Send an operator-callback request alert to the admin group.
-    Uses BOT_ADMIN_GROUP_ID from settings.
-    Non-fatal: any exception is logged and swallowed.
+    Send an operator-callback request to the admin user's DM.
+    Uses BOT_ADMIN_USER_ID from settings.
+    Non-fatal: logs an error and returns without raising.
     """
+    settings = get_settings()
+    admin_user_id = settings.bot.admin_user_id
+    if admin_user_id is None:
+        log.error(
+            "operator_admin_user_id_missing",
+            detail="Set BOT_ADMIN_USER_ID in .env to receive operator notifications",
+        )
+        return
     try:
-        settings = get_settings()
-        admin_chat_id = settings.bot.admin_group_id
         text = (
             "📞 <b>Operator so'rovi!</b>\n\n"
             f"👤 Ism:      <b>{full_name}</b>\n"
@@ -221,7 +227,7 @@ async def _notify_admin(
             f"🆔 User ID:  <code>{user_id}</code>\n"
             f"🔗 Username: {username}"
         )
-        await bot.send_message(chat_id=admin_chat_id, text=text)
-        log.info("operator_admin_notified", user_id=user_id, chat_id=admin_chat_id)
+        await bot.send_message(chat_id=admin_user_id, text=text)
+        log.info("operator_admin_notified", user_id=user_id, admin_user_id=admin_user_id)
     except Exception:
         log.exception("operator_admin_notify_failed", user_id=user_id)
