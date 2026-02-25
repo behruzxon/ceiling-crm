@@ -20,8 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.events.bus import event_bus
 from core.services.broadcast_service import BroadcastService
 from core.services.crm_service import CRMService
+from core.services.group_settings_service import GroupSettingsService
 from core.services.lead_service import LeadService
 from core.services.user_service import UserService
+from infrastructure.database.repositories.group_settings_repo import PostgresGroupSettingsRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.repositories.pipeline_repo import PostgresPipelineRepository
 from infrastructure.database.repositories.user_repo import PostgresUserRepository
@@ -49,6 +51,10 @@ def get_lead_service(session: AsyncSession) -> LeadService:
         pipeline_repo=get_pipeline_repo(session),
         event_bus=event_bus,
     )
+
+
+def get_group_settings_service(session: AsyncSession) -> GroupSettingsService:
+    return GroupSettingsService(PostgresGroupSettingsRepository(session))
 
 
 def get_crm_service(session: AsyncSession) -> CRMService:

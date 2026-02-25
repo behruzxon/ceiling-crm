@@ -43,6 +43,7 @@ from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
+from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
 from apps.bot.handlers.group.onboarding import router as onboarding_router
@@ -136,9 +137,10 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Group router ───────────────────────────────────────────────────────
     group_router = Router(name="group")
     group_router.include_routers(
+        group_admin_router,    # /admin command + gs: callbacks — must be first
         member_status_router,
         onboarding_router,
-        group_messages_router,
+        group_messages_router, # silent catch-all — must be last
     )
 
     # ── Private DM router ─────────────────────────────────────────────────
