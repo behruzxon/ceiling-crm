@@ -36,6 +36,7 @@ from infrastructure.database.models.broadcast import BroadcastModel  # noqa: F40
 from infrastructure.database.models.ai_memory import AiMemoryModel  # noqa: F401
 from infrastructure.database.models.ai_conversation import AiConversationModel  # noqa: F401
 from infrastructure.database.models.group_settings import GroupSettingsModel  # noqa: F401
+from infrastructure.database.models.payment import PaymentModel  # noqa: F401
 
 from shared.config import get_settings
 

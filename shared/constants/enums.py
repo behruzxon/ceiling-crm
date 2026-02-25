@@ -65,3 +65,16 @@ class LeadSource(str, Enum):
     ADS      = "ads"
     DEEPLINK = "deeplink"
     REFERRAL = "referral"
+
+
+class PaymentStatus(str, Enum):
+    PENDING  = "pending"
+    PAID     = "paid"
+    CANCELED = "canceled"
+    REFUNDED = "refunded"
+
+
+class PaymentMethod(str, Enum):
+    CASH     = "cash"
+    CARD     = "card"
+    TRANSFER = "transfer"
