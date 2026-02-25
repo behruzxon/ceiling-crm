@@ -20,11 +20,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── Enum types ────────────────────────────────────────────────────────
-    op.execute("CREATE TYPE payment_status AS ENUM ('pending','paid','canceled','refunded')")
-    op.execute("CREATE TYPE payment_method AS ENUM ('cash','card','transfer')")
-
-    # ── Table ─────────────────────────────────────────────────────────────
     op.create_table(
         "payments",
         sa.Column("id",          sa.BigInteger(), sa.Identity(), nullable=False),
@@ -33,8 +28,8 @@ def upgrade() -> None:
             "amount", sa.BigInteger(), nullable=False,
             comment="Amount in UZS (so'm), integer — no fractional currency",
         ),
-        sa.Column("method",      sa.Enum("cash", "card", "transfer",  name="payment_method",  create_type=False), nullable=False),
-        sa.Column("status",      sa.Enum("pending", "paid", "canceled", "refunded", name="payment_status", create_type=False), nullable=False, server_default="pending"),
+        sa.Column("method",      sa.Enum("cash", "card", "transfer",  name="payment_method"),  nullable=False),
+        sa.Column("status",      sa.Enum("pending", "paid", "canceled", "refunded", name="payment_status"), nullable=False, server_default="pending"),
         sa.Column("paid_at",     sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("receipt_url", sa.Text(), nullable=True),
         sa.Column("notes",       sa.Text(), nullable=True),
