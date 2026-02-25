@@ -24,11 +24,13 @@ from core.services.group_settings_service import GroupSettingsService
 from core.services.lead_service import LeadService
 from core.services.payment_service import PaymentService
 from core.services.user_service import UserService
+from core.services.warranty_service import WarrantyService
 from infrastructure.database.repositories.group_settings_repo import PostgresGroupSettingsRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.repositories.payment_repo import PostgresPaymentRepository
 from infrastructure.database.repositories.pipeline_repo import PostgresPipelineRepository
 from infrastructure.database.repositories.user_repo import PostgresUserRepository
+from infrastructure.database.repositories.warranty_repo import PostgresWarrantyRepository
 
 
 def get_user_repo(session: AsyncSession) -> PostgresUserRepository:
@@ -61,6 +63,10 @@ def get_group_settings_service(session: AsyncSession) -> GroupSettingsService:
 
 def get_payment_service(session: AsyncSession) -> PaymentService:
     return PaymentService(PostgresPaymentRepository(session))
+
+
+def get_warranty_service(session: AsyncSession) -> WarrantyService:
+    return WarrantyService(PostgresWarrantyRepository(session))
 
 
 def get_crm_service(session: AsyncSession) -> CRMService:
