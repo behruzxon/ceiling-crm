@@ -43,18 +43,22 @@ import sqlalchemy as sa
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import default_state
+from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    KeyboardButton,
     Message,
+    ReplyKeyboardMarkup,
 )
+
 from openai import AsyncOpenAI
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
+from apps.bot.keyboards.main_menu import main_menu_keyboard
 from apps.bot.keyboards.pricing import design_keyboard
 from apps.bot.states.pricing import PricingStates
 from infrastructure.database.models.ai_conversation import AiConversationModel
@@ -65,6 +69,24 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
+
+
+# ── Explicit AI-mode FSM ──────────────────────────────────────────────────────
+
+class AiSupportStates(StatesGroup):
+    waiting_for_ai_question = State()
+
+
+_EXIT_TEXTS: frozenset[str] = frozenset({"⬅️ Menyu"})
+
+
+def _ai_keyboard() -> ReplyKeyboardMarkup:
+    """Persistent exit button shown throughout the AI chat session."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="⬅️ Menyu")]],
+        resize_keyboard=True,
+    )
+
 
 # ── Tuneable constants ────────────────────────────────────────────────────────
 
@@ -80,22 +102,59 @@ _KNOWLEDGE_BASE: str = _KB_PATH.read_text(encoding="utf-8") if _KB_PATH.exists()
 # ── Static system prompt ──────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = f"""
-Sen "Natijnoy Potolok" kompaniyasining do'stona savdo yordamchisissan (ism: Zulfiya).
+Sen "Natijnoy Potolok" kompaniyasining tajribali savdo menejeri va botdagi yordamchisissan (ism: Zulfiya).
 Kompaniya Qashqadaryo viloyatida stretch shiftlar o'rnatish bilan shug'ullanadi.
 
 ASOSIY QOIDALAR:
 - Faqat o'zbek tilida javob ber.
-- Qisqa, samimiy va aniq javob ber (3-4 jumladan oshirma).
-- Faqat stretch shiftlar mavzusida gapir. Boshqa mavzularda: "Bu savolga javob bera olmayman."
-- Xona o'lchami tilga olinsa, narx kalkulyatorini taklif qil.
+- Qisqa, ishonchli, samimiy javob ber (3–5 jumla). Keraksiz matn qo'shma.
+- Faqat stretch shiftlar mavzusida gapir. Boshqa mavzularda: "Bu savolga javob bera olmayman, lekin shift haqida yordam bera olaman."
+- Har doim suhbatni oldinga yuritmaga harakat qil — javobni savol bilan tugat.
+
+SAVDO STRATEGIYASI (eng muhim):
+
+1. NARX SO'RASA → avval xona o'lchamlarini so'ra, keyin aniq hisoblash ayt.
+   Misol: "Xona o'lchamini bilsam, aniq narxni hisoblab beraman. Uzunlik va kenglik (masalan, 4×5 m)?"
+   O'lcham olgach — narxni hisoblash va chegirmani eslatib ber.
+
+2. IKKILANAYOTGANDA → bepul o'lchov taklifini qil (majburiyat yo'q, xavf yo'q).
+   Misol: "Usta bepul kelib o'lchaydi — hech qanday majburiyat yo'q. Bugunmi yoki ertami qulay?"
+
+3. HAR JAVOBDAN KEYIN → quyidagilardan birini so'ra (agar noma'lum bo'lsa):
+   - Xona o'lchamlari (uzunlik × kenglik)
+   - Xona turi (zal, yotoqxona, oshxona)
+   - Joylashuv (tuman)
+   - Dizayn qiziqishi
+
+4. CHEGIRMA → o'lcham olgach avtomatik eslatib ber: 20 m²dan → 5%, 40 m²dan → 10%.
+
+E'TIROZLARGA JAVOB (to'liq skript):
+
+- "Qimmat" / "Arzonroq yo'qmi":
+  → "Eng arzon variant — Odnotonniy (80 000 UZS/m²). 15 yillik kafolat va yashirin to'lov yo'qligi bilan narx oqlangan.
+     O'lchamingizni aytsangiz, chegirma bilan aniq raqamni hisoblab beraman."
+
+- "O'ylab ko'raman" / "Keyinroq":
+  → "Albatta! Faqat bir taklif — usta bepul kelib o'lchaydi, narx hisoblanadi, majburiyat yo'q.
+     Aniq raqamlar bilan o'ylash osonroq. Bugun vaqtingiz bormi?"
+
+- "Boshqa kompaniya arzonroq":
+  → "Raqobatchilar bilan taqqoslash uchun farqlarni ko'ring: 15 yillik kafolat, yashirin to'lov yo'q, mahalliy tez xizmat.
+     Bepul o'lchamizdan foydalaning — keyin qaror qilasiz."
+
+- "Vaqtim yo'q":
+  → "O'lchov 30 daqiqa oladi. Qaysi vaqt qulay — ertalab yoki kechqurun?"
 
 TAKRORLASHNI OLDINI OLISH:
 - Suhbat tarixi mavjud bo'lsa (CONTEXT blokida ko'rsatilsa), "Assalomu alaykum" bilan boshlama.
 - "Natijnoy Potolok" va "6 yildan beri" iboralarini faqat birinchi suhbatda yoki
   foydalanuvchi kompaniya haqida so'raganda ishlatib o'tish.
 - CTA iborasini doim farqli qil — quyidagilardan navbatma-navbat tanlang:
-    "Narxni hisoblaymizmi?" | "Katalogni ochaymi?" | "Operatorga ulaymi?"
-  Oxirgi CTA (CONTEXT blokida "Oxirgi CTA" sifatida ko'rsatiladi) qaysi bo'lsa,
+    "O'lchamingizni ayting, hisoblaylik." |
+    "Bepul o'lchovga yuboring — majburiyat yo'q." |
+    "Katalogda yoqadigan dizayn bor — ochaymi?" |
+    "Operatorimiz tez javob beradi — ulaymi?"
+  Oxirgi CTA (CONTEXT blokida "Oxirgi CTA turi" sifatida ko'rsatiladi) qaysi bo'lsa,
   boshqa birini tanlang.
 
 SHAXSIYLASHTIRISH (CONTEXT mavjud bo'lsa):
@@ -371,6 +430,36 @@ async def _persist_exchange(
         log.warning("ai_persist_exchange_failed", user_id=user_id)
 
 
+async def clear_ai_conversation(user_id: int) -> None:
+    """
+    Reset the active conversation thread for a user (called on /start).
+
+    Clears last_messages and summary in ai_conversations so the next AI
+    interaction starts a fresh thread.  Does NOT touch ai_user_memory —
+    the user's profile, design interests, dimensions, and location are kept.
+    Non-fatal: any DB error is logged and swallowed.
+    """
+    try:
+        factory = get_session_factory()
+        async with factory() as session:
+            await session.execute(
+                pg_insert(AiConversationModel)
+                .values(user_id=user_id, last_messages=[], summary=None)
+                .on_conflict_do_update(
+                    index_elements=["user_id"],
+                    set_={
+                        "last_messages": [],
+                        "summary": None,
+                        "updated_at": sa.func.now(),
+                    },
+                )
+            )
+            await session.commit()
+        log.info("ai_conversation_cleared", user_id=user_id)
+    except Exception:
+        log.warning("ai_conversation_clear_failed", user_id=user_id)
+
+
 async def _store_user_message_only(
     *,
     user_id: int,
@@ -479,11 +568,85 @@ _FAILSAFE_KB = InlineKeyboardMarkup(
 _CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 
 
-# ── Main handler ──────────────────────────────────────────────────────────────
+# ── Explicit AI mode — entry / exit / question ────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "🤖 AI yordam")
+async def cmd_ai_start(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Enter dedicated AI chat mode."""
+    await state.clear()
+    await state.set_state(AiSupportStates.waiting_for_ai_question)
+    await message.answer(
+        "🤖 <b>AI yordam</b>\n\nSavolingizni yozing:",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text.in_(_EXIT_TEXTS),
+)
+async def handle_ai_exit(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Exit AI mode and return to main menu."""
+    await state.clear()
+    await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text,
+    ~F.text.startswith("/"),
+    ~F.text.in_(_EXIT_TEXTS),
+)
+async def handle_ai_question(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Answer questions with the AI service while in explicit AI mode."""
+    text = message.text or ""
+    user_id = message.from_user.id if message.from_user else 0
+
+    profile, history, summary = await _load_context(user_id)
+    context_block = _build_context_block(profile, summary)
+
+    try:
+        result = await _call_ai(text, history, context_block)
+        intent = str(result.get("intent", "other"))
+        reply_text = str(result.get("reply", "")).strip()
+        extracted: dict[str, Any] = result.get("extracted") or {}
+        if not reply_text:
+            raise ValueError("empty AI reply")
+    except Exception:
+        log.exception("ai_call_failed", user_id=user_id)
+        await _store_user_message_only(
+            user_id=user_id, user_text=text, current_messages=history
+        )
+        await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    await message.answer(reply_text, reply_markup=_ai_keyboard())
+
+    await _persist_exchange(
+        user_id=user_id,
+        user_text=text,
+        assistant_text=reply_text,
+        intent=intent,
+        extracted=extracted,
+        current_profile=profile,
+        current_messages=history,
+        current_summary=summary,
+    )
+    log.info("ai_reply_sent", user_id=user_id, intent=intent, mode="explicit")
+
+
+# ── Passive handler (default_state catch-all) ─────────────────────────────────
 
 @router.message(
     F.chat.type == "private",
     F.text,
+    ~F.text.startswith("/"),   # never intercept commands (/start, /help, /cancel …)
     StateFilter(default_state),
 )
 async def handle_ai_message(

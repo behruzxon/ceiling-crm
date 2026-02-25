@@ -8,6 +8,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from apps.bot.handlers.private.ai_support import clear_ai_conversation
 from apps.bot.keyboards.main_menu import main_menu_keyboard
 
 router = Router(name="private:support")
@@ -27,8 +28,14 @@ HELP_TEXT = (
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext, **data) -> None:
-    """Clear any active FSM state, then greet and show main menu."""
+    """Clear FSM state and AI conversation thread, then greet.
+
+    User profile data (lead stage, phone, design interests, dimensions)
+    is intentionally preserved — only the active conversation thread is reset.
+    """
     await state.clear()
+    user_id = message.from_user.id if message.from_user else 0
+    await clear_ai_conversation(user_id)
     await message.answer(
         "Assalomu alaykum! 👋\n"
         "Shift o'rnatish bo'yicha CRM botga xush kelibsiz.\n\n"

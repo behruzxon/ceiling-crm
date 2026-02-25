@@ -144,13 +144,13 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Private DM router ─────────────────────────────────────────────────
     private_router = Router(name="private")
     private_router.include_routers(
+        support_router,      # /start /help /cancel — commands must win over any catch-all
         catalog_router,
         pricing_router,
-        order_router,        # new order flow — must precede lead_capture_router
-        operator_router,     # operator flow — must precede ai_support_router
+        order_router,        # must precede lead_capture_router
+        operator_router,     # must precede ai_support_router
         lead_capture_router,
-        ai_support_router,  # AI free-text handler (before support catch-all)
-        support_router,
+        ai_support_router,  # free-text catch-all — commands already excluded by guard
     )
 
     # Mount all top-level routers into Dispatcher
