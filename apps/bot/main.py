@@ -49,6 +49,8 @@ from apps.bot.handlers.group.onboarding import router as onboarding_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
+from apps.bot.handlers.private.operator import router as operator_router
+from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.support import router as support_router
 from apps.bot.middlewares.audit import AuditMiddleware
@@ -144,6 +146,8 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     private_router.include_routers(
         catalog_router,
         pricing_router,
+        order_router,        # new order flow — must precede lead_capture_router
+        operator_router,     # operator flow — must precede ai_support_router
         lead_capture_router,
         ai_support_router,  # AI free-text handler (before support catch-all)
         support_router,

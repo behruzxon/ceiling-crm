@@ -31,6 +31,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from apps.bot.handlers.private.operator import start_operator_flow
 from apps.bot.keyboards.main_menu import main_menu_keyboard
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
@@ -189,12 +190,8 @@ async def handle_pricing_menu_escape(
     await state.clear()
     text = message.text or ""
     if re.search(r"📞", text):
-        await message.answer(
-            "📞 <b>Operator bilan bog'lanish</b>\n\n"
-            "+998 90 886 66 66\n"
-            "+998 99 219 12 19",
-            reply_markup=main_menu_keyboard(),
-        )
+        # Hand off to the operator flow (start_operator_flow clears + sets state).
+        await start_operator_flow(message, state)
     else:
         # For Katalog / Narx / Buyurtma: clear state and let the user
         # re-tap the button — show main menu so they can do so.
@@ -317,7 +314,7 @@ async def handle_design_callback(
             lead_service = get_lead_service(session)
             lead = await lead_service.create_lead(
                 user_id=user.id,
-                category=CeilingCategory.MATTE_WHITE,
+                category=CeilingCategory.ODNOTONNY,
                 name=user.full_name or user.first_name,
                 phone=placeholder_phone,
                 district="–",
@@ -393,14 +390,8 @@ async def handle_order(
 async def handle_operator(
     message: Message, state: FSMContext, **data: object
 ) -> None:
-    """Show operator contact details and return user to the main menu."""
-    await state.clear()
-    await message.answer(
-        "📞 <b>Operator bilan bog'lanish</b>\n\n"
-        "Menejerimiz tez orada siz bilan bog'lanadi.\n\n"
-        "Murojaat uchun: @ceiling_manager",
-        reply_markup=main_menu_keyboard(),
-    )
+    """Hand off to the operator contact-request flow."""
+    await start_operator_flow(message, state)
 
 
 @router.message(

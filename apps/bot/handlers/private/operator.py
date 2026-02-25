@@ -1,0 +1,227 @@
+"""
+apps.bot.handlers.private.operator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Operator contact-request flow.
+
+FSM flow
+--------
+  "📞 Operator"  (from any state / no state)
+    └─► [show phone numbers]
+          └─► waiting_for_confirmation   ← "Ha" / "Yo'q" keyboard
+                ├─ "Yo'q" → clear state → main menu
+                └─ "Ha"   → waiting_for_contact
+                              ├─ F.contact → extract phone → notify admin → confirm
+                              └─ F.text    → re-prompt (keep state)
+
+Admin notification
+------------------
+  Uses settings.bot.admin_group_id (BOT_ADMIN_GROUP_ID env var).
+  Non-fatal: any send failure is logged and swallowed so the user
+  confirmation is never blocked.
+
+Shared helper
+-------------
+  start_operator_flow(message, state) is importable by other handlers
+  (e.g. pricing.py) that need to hand off to this flow without
+  duplicating the entry logic.
+"""
+from __future__ import annotations
+
+from aiogram import Bot, F, Router
+from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import (
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
+
+from apps.bot.keyboards.main_menu import main_menu_keyboard
+from shared.config import get_settings
+from shared.logging import get_logger
+
+log = get_logger(__name__)
+router = Router(name="private:operator")
+
+_OPERATOR_PHONES = "+998 90 886 66 66\n+998 99 219 12 19"
+
+
+# ─── FSM states ───────────────────────────────────────────────────────────────
+
+class OperatorFlow(StatesGroup):
+    waiting_for_confirmation = State()  # "Ha" / "Yo'q"
+    waiting_for_contact      = State()  # request_contact button
+
+
+# ─── Keyboards ────────────────────────────────────────────────────────────────
+
+def _confirm_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Ha"), KeyboardButton(text="Yo'q")]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def _contact_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📲 Nomerni yuborish", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+# ─── Shared entry helper ──────────────────────────────────────────────────────
+
+async def start_operator_flow(message: Message, state: FSMContext) -> None:
+    """
+    Show operator phone numbers and ask for callback confirmation.
+
+    Importable by other handlers (e.g. pricing.py) so they can hand off
+    to this flow without repeating the entry logic.  Clears any existing
+    FSM state before setting the new one.
+    """
+    await state.clear()
+    await state.set_state(OperatorFlow.waiting_for_confirmation)
+    await message.answer(
+        "📞 <b>Operator raqamlari:</b>\n\n"
+        f"{_OPERATOR_PHONES}\n\n"
+        "Operator sizga o'zi telefon qiladi. Nomeringizni qoldirasizmi?",
+        reply_markup=_confirm_keyboard(),
+    )
+
+
+# ─── Entry point ──────────────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "📞 Operator")
+async def handle_operator_entry(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Catch the main-menu «📞 Operator» button tap from any FSM state."""
+    await start_operator_flow(message, state)
+
+
+# ─── Step 1 : confirmation ────────────────────────────────────────────────────
+
+@router.message(StateFilter(OperatorFlow.waiting_for_confirmation), F.text == "Ha")
+async def handle_confirm_yes(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """User agreed to leave their number — request Telegram contact."""
+    await state.set_state(OperatorFlow.waiting_for_contact)
+    await message.answer(
+        "📲 Quyidagi tugmani bosib raqamingizni yuboring.\n\n"
+        "<i>Namuna: +998 90 123 45 67</i>",
+        reply_markup=_contact_keyboard(),
+    )
+
+
+@router.message(StateFilter(OperatorFlow.waiting_for_confirmation), F.text == "Yo'q")
+async def handle_confirm_no(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """User declined — clear state and return to main menu."""
+    await state.clear()
+    await message.answer(
+        "Tushunarli. Kerak bo'lsa murojaat qilishingiz mumkin.",
+        reply_markup=main_menu_keyboard(),
+    )
+
+
+@router.message(StateFilter(OperatorFlow.waiting_for_confirmation))
+async def handle_confirmation_fallback(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Reprompt on unexpected input during the confirmation step."""
+    await message.answer(
+        "Iltimos, «Ha» yoki «Yo'q» tugmasini bosing.",
+        reply_markup=_confirm_keyboard(),
+    )
+
+
+# ─── Step 2 : contact received ────────────────────────────────────────────────
+
+@router.message(StateFilter(OperatorFlow.waiting_for_contact), F.contact)
+async def handle_contact(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """User shared their Telegram contact — notify admin and confirm."""
+    contact = message.contact
+    if contact is None:
+        await message.answer(
+            "Iltimos, pastdagi 📲 tugma orqali nomerni yuboring.",
+            reply_markup=_contact_keyboard(),
+        )
+        return
+
+    phone = contact.phone_number
+    user = message.from_user
+    full_name = user.full_name if user else "Noma'lum"
+    user_id = user.id if user else 0
+    username = f"@{user.username}" if user and user.username else "—"
+
+    await state.clear()
+
+    # Admin notification first — non-fatal.
+    if message.bot is not None:
+        await _notify_admin(
+            message.bot,
+            phone=phone,
+            full_name=full_name,
+            user_id=user_id,
+            username=username,
+        )
+
+    # User-facing confirmation.
+    await message.answer(
+        "Rahmat! ✅ Nomeringiz qabul qilindi. Operator tez orada bog'lanadi.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await message.answer(
+        "Asosiy menyu:",
+        reply_markup=main_menu_keyboard(),
+    )
+
+
+@router.message(StateFilter(OperatorFlow.waiting_for_contact), F.text)
+async def handle_contact_text_fallback(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """User typed text instead of sharing contact — keep state and re-prompt."""
+    await message.answer(
+        "Iltimos, pastdagi 📲 tugma orqali nomerni yuboring.",
+        reply_markup=_contact_keyboard(),
+    )
+
+
+# ─── Admin notification helper ────────────────────────────────────────────────
+
+async def _notify_admin(
+    bot: Bot,
+    *,
+    phone: str,
+    full_name: str,
+    user_id: int,
+    username: str,
+) -> None:
+    """
+    Send an operator-callback request alert to the admin group.
+    Uses BOT_ADMIN_GROUP_ID from settings.
+    Non-fatal: any exception is logged and swallowed.
+    """
+    try:
+        settings = get_settings()
+        admin_chat_id = settings.bot.admin_group_id
+        text = (
+            "📞 <b>Operator so'rovi!</b>\n\n"
+            f"👤 Ism:      <b>{full_name}</b>\n"
+            f"📱 Telefon:  <b>{phone}</b>\n"
+            f"🆔 User ID:  <code>{user_id}</code>\n"
+            f"🔗 Username: {username}"
+        )
+        await bot.send_message(chat_id=admin_chat_id, text=text)
+        log.info("operator_admin_notified", user_id=user_id, chat_id=admin_chat_id)
+    except Exception:
+        log.exception("operator_admin_notify_failed", user_id=user_id)
