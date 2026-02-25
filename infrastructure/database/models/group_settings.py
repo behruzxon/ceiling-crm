@@ -23,7 +23,7 @@ class GroupSettingsModel(Base):
         sa.Boolean, nullable=False, server_default="true"
     )
     welcome_autodelete_seconds: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default="45"
+        sa.Integer, nullable=False, server_default="3600"
     )
     captcha_enabled: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, server_default="false"

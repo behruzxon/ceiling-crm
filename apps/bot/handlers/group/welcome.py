@@ -19,7 +19,11 @@ import asyncio
 
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatMemberStatus
-from aiogram.types import ChatMemberUpdated
+from aiogram.types import (
+    ChatMemberUpdated,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 
 from apps.bot.handlers.group._moderation import dm_log, try_delete
 from infrastructure.database.session import get_session_factory
@@ -57,14 +61,32 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     chat_title = event.chat.title or str(chat_id)
 
     text = (
-        f"👋 Xush kelibsiz, {mention}!\n\n"
-        f"<b>{chat_title}</b> guruhiga qo'shildingiz. "
-        "Savollaringiz bo'lsa yozishingiz mumkin. "
-        "Narx hisoblash uchun /price, katalog uchun /catalog."
+        f"👋 Assalomu alaykum, {mention}!\n\n"
+        "VashPotolok kompaniyasining rasmiy savol-javob guruhiga xush kelibsiz.\n\n"
+        "Bu yerda:\n"
+        "• 📐 Potolok bo'yicha savollar berishingiz mumkin\n"
+        "• 📸 Rasm yuborib maslahat olishingiz mumkin\n"
+        "• 👷‍♂️ Mutaxassislar javob beradi\n\n"
+        "📩 Narx hisoblash va katalog uchun:\n"
+        "👉 @potolok_x_bot\n\n"
+        "🚫 Reklama va linklar taqiqlanadi."
     )
 
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="📐 Narx hisoblash",
+            url="https://t.me/potolok_x_bot?start=price",
+        ),
+        InlineKeyboardButton(
+            text="📂 Katalog",
+            url="https://t.me/potolok_x_bot?start=catalog",
+        ),
+    ]])
+
     try:
-        msg = await bot.send_message(chat_id, text, parse_mode="HTML")
+        msg = await bot.send_message(
+            chat_id, text, parse_mode="HTML", reply_markup=keyboard
+        )
     except Exception as exc:
         log.warning("welcome_send_failed", chat_id=chat_id, error=str(exc))
         return
