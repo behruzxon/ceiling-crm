@@ -46,6 +46,7 @@ from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_ca
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
+from apps.bot.handlers.group.moderation import router as moderation_router
 from apps.bot.handlers.group.welcome import router as welcome_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
@@ -140,6 +141,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         group_admin_router,    # /admin command + gs: callbacks — must be first
         member_status_router,
         welcome_router,        # C3-2: join welcome + auto-delete
+        moderation_router,     # C3-3 link blocking + C3-4 flood control
         group_messages_router, # silent catch-all — must be last
     )
 
