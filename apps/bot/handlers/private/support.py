@@ -37,9 +37,15 @@ async def cmd_start(message: Message, state: FSMContext, **data) -> None:
     user_id = message.from_user.id if message.from_user else 0
     await clear_ai_conversation(user_id)
     await message.answer(
-        "Assalomu alaykum! 👋\n"
-        "Shift o'rnatish bo'yicha CRM botga xush kelibsiz.\n\n"
-        "Quyidagi tugmalardan birini tanlang:",
+        f"Assalomu alaykum, {message.from_user.first_name}! 👋\n\n"
+        "VashPotolok kompaniyasining rasmiy Potolok X botiga xush kelibsiz.\n\n"
+        "Biz Qashqadaryo bo'ylab yuqori sifatli natijoy potolok xizmatini taqdim etamiz.\n"
+        "Professional yondashuv va 15 yilgacha kafolat bilan.\n\n"
+        "• 📐 Aniq narx hisoblash\n"
+        "• 🎨 10+ turdagi dizayn\n"
+        "• 📂 Real loyihalar katalogi\n"
+        "• 📞 Tezkor operator aloqasi\n\n"
+        "👇 Quyidagi bo'limlardan birini tanlang:",
         reply_markup=main_menu_keyboard(),
     )
 
