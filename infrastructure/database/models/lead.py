@@ -12,9 +12,28 @@ class LeadModel(Base):
 
     id: Mapped[int] = mapped_column(sa.BigInteger, sa.Identity(), primary_key=True)
     user_id: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=False)
-    category: Mapped[str] = mapped_column(sa.Enum(CeilingCategory, name="ceiling_category"), nullable=False)
+    category: Mapped[str] = mapped_column(
+        sa.Enum(
+            CeilingCategory,
+            name="ceiling_category",
+            # Use enum .value ("matviy_oq") not .name ("MATTE_WHITE") when
+            # serialising to SQL.  The DB enum was created with value-strings,
+            # so without this SQLAlchemy sends the wrong literal and Postgres
+            # raises: invalid input value for enum ceiling_category: "MATTE_WHITE"
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=False,
+    )
     source_group_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("groups.id"), nullable=True)
-    source: Mapped[str] = mapped_column(sa.Enum(LeadSource, name="lead_source"), server_default="group")
+    source: Mapped[str] = mapped_column(
+        sa.Enum(
+            LeadSource,
+            name="lead_source",
+            # Same fix: DB stores "deeplink" not "DEEPLINK".
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        server_default="group",
+    )
     name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     phone: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     district: Mapped[str] = mapped_column(sa.String(128), nullable=False)

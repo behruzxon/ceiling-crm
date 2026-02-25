@@ -15,16 +15,16 @@ class UserRole(str, Enum):
 
 
 class CeilingCategory(str, Enum):
-    MATTE_WHITE    = "matviy_oq"
-    GLOSSY_WHITE   = "yaltiroq_oq"
-    BLACK_PREMIUM  = "qora_premium"
-    FLORAL_3D      = "gulli_3d"
-    MARBLE         = "mramor_dizayn"
-    LED_BACKLIGHT  = "led_podsvetka"
-    STARRY_SKY     = "yulduzli_osmon"
-    TWO_LEVEL      = "ikki_darajali"
-    OFFICE_MINIMAL = "ofis_minimal"
-    KITCHEN        = "oshxona"
+    GULLI         = "gulli"
+    ODNOTONNY     = "odnotonny"
+    MRAMOR        = "mramor"
+    QORA_NAQSH_UF = "qora_naqsh_uf"
+    HI_TECH       = "hi_tech"
+    KOSMOS        = "kosmos"
+    OSMON         = "osmon"
+    OSHXONA       = "oshxona"
+    NAQSH_RAMKA   = "naqsh_ramka"
+    NAQSH_OQ      = "naqsh_oq"
 
 
 class PipelineStage(str, Enum):

@@ -9,6 +9,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from apps.bot.keyboards.main_menu import main_menu_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
@@ -85,7 +86,7 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
             lead_service = get_lead_service(session)
             lead = await lead_service.create_lead(
                 user_id=user_id,
-                category=CeilingCategory.MATTE_WHITE,  # default, can be refined later
+                category=CeilingCategory.ODNOTONNY,  # default, can be refined later
                 name=name,
                 phone=phone,
                 district=district,
@@ -100,12 +101,16 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
                 f"👤 Ism: {name}\n"
                 f"📱 Telefon: {phone}\n"
                 f"📍 Tuman: {district}\n\n"
-                "Operatorimiz tez orada siz bilan bog'lanadi."
+                "Operatorimiz tez orada siz bilan bog'lanadi.",
+                reply_markup=main_menu_keyboard(),
             )
 
             log.info("lead_captured_via_bot", lead_id=lead.id, user_id=user_id)
         except Exception:
             await session.rollback()
             await state.clear()
-            await message.answer("❌ Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+            await message.answer(
+                "❌ Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+                reply_markup=main_menu_keyboard(),
+            )
             raise

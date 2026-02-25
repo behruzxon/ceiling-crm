@@ -18,7 +18,7 @@ class TestPricingService:
         with pytest.raises(NotImplementedError):
             await self.svc.calculate_quote(
                 lead_id=1,
-                category=CeilingCategory.LED_BACKLIGHT,
+                category=CeilingCategory.HI_TECH,
                 area_sqm=Decimal("25"),
                 district="Yunusabad",
                 addons=LeadAddons(),

@@ -15,16 +15,16 @@ log = get_logger(__name__)
 
 # Default base prices per sqm (UZS) — seeded to Redis cache
 DEFAULT_BASE_PRICES: dict[CeilingCategory, Decimal] = {
-    CeilingCategory.MATTE_WHITE:    Decimal("120000"),
-    CeilingCategory.GLOSSY_WHITE:   Decimal("130000"),
-    CeilingCategory.BLACK_PREMIUM:  Decimal("180000"),
-    CeilingCategory.FLORAL_3D:      Decimal("250000"),
-    CeilingCategory.MARBLE:         Decimal("220000"),
-    CeilingCategory.LED_BACKLIGHT:  Decimal("200000"),
-    CeilingCategory.STARRY_SKY:     Decimal("300000"),
-    CeilingCategory.TWO_LEVEL:      Decimal("280000"),
-    CeilingCategory.OFFICE_MINIMAL: Decimal("100000"),
-    CeilingCategory.KITCHEN:        Decimal("140000"),
+    CeilingCategory.ODNOTONNY:     Decimal("120000"),
+    CeilingCategory.NAQSH_OQ:      Decimal("130000"),
+    CeilingCategory.QORA_NAQSH_UF: Decimal("180000"),
+    CeilingCategory.GULLI:         Decimal("250000"),
+    CeilingCategory.MRAMOR:        Decimal("220000"),
+    CeilingCategory.HI_TECH:       Decimal("200000"),
+    CeilingCategory.KOSMOS:        Decimal("300000"),
+    CeilingCategory.NAQSH_RAMKA:   Decimal("280000"),
+    CeilingCategory.OSMON:         Decimal("100000"),
+    CeilingCategory.OSHXONA:       Decimal("140000"),
 }
 
 # Add-on unit prices (UZS)

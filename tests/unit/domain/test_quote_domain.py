@@ -9,7 +9,7 @@ def test_quote_base_total():
     """Verify base_total = base_price × area × modifier."""
     quote = Quote(
         id=1, lead_id=1,
-        category=CeilingCategory.LED_BACKLIGHT,
+        category=CeilingCategory.HI_TECH,
         base_price_per_sqm=Decimal("95000"),
         area_sqm=Decimal("20"),
         district_modifier=Decimal("1.05"),
@@ -23,7 +23,7 @@ def test_quote_total_with_discount():
     """Verify discount applies correctly."""
     quote = Quote(
         id=1, lead_id=1,
-        category=CeilingCategory.MATTE_WHITE,
+        category=CeilingCategory.ODNOTONNY,
         base_price_per_sqm=Decimal("45000"),
         area_sqm=Decimal("10"),
         district_modifier=Decimal("1.00"),
