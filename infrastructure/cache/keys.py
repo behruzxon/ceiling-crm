@@ -54,6 +54,9 @@ class CacheTTL:
     # Broadcast dedup
     BROADCAST_USER_SENT = 86_400     # 24 hours — prevent re-send same broadcast
 
+    # Group moderation
+    MOD_LINK_WINDOW     = 600        # 10 min — link violation counter window
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -133,3 +136,9 @@ class CacheKeys:
     def user_active_category(user_id: int) -> str:
         """The ceiling category a user is currently browsing."""
         return f"user:{user_id}:active_category"
+
+    # ── Group moderation ──────────────────────────────────────────────────
+    @staticmethod
+    def mod_link_violations(chat_id: int, user_id: int) -> str:
+        """Link violation counter per user per group (10-min window)."""
+        return f"mod:{chat_id}:link_violations:{user_id}"

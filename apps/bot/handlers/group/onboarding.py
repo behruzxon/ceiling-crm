@@ -1,19 +1,12 @@
 """
-Group onboarding handler.
-Fires when a user joins a category group.
-Detects category via GroupContextMiddleware → sends welcome card.
+Group onboarding handler — superseded by welcome.py (C3-2).
+
+The chat_member welcome logic has been moved to welcome.py.
+This module is kept as a no-op stub so existing imports do not break
+while the router is being phased out.
 """
 from __future__ import annotations
-from aiogram import Router, F
-from aiogram.types import ChatMemberUpdated
+
+from aiogram import Router
 
 router = Router(name="group:onboarding")
-
-
-@router.chat_member()
-async def on_user_joined(event: ChatMemberUpdated, category: str | None, **data) -> None:
-    """
-    Handle new member joining a category group.
-    TODO: implement welcome message with catalog/price/operator buttons.
-    """
-    raise NotImplementedError

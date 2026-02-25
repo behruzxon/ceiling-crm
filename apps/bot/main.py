@@ -46,7 +46,7 @@ from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_ca
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
-from apps.bot.handlers.group.onboarding import router as onboarding_router
+from apps.bot.handlers.group.welcome import router as welcome_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
@@ -139,7 +139,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     group_router.include_routers(
         group_admin_router,    # /admin command + gs: callbacks — must be first
         member_status_router,
-        onboarding_router,
+        welcome_router,        # C3-2: join welcome + auto-delete
         group_messages_router, # silent catch-all — must be last
     )
 
