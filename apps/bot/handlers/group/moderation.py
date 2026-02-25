@@ -2,7 +2,7 @@
 apps.bot.handlers.group.moderation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C3-3: Link blocking with escalation.
-C3-4: Flood control.  (added in next commit)
+C3-4: Flood control.
 
 Both features share a single message handler to prevent the aiogram
 propagation-stop problem (once a handler fires, the update is consumed).
@@ -23,6 +23,7 @@ from apps.bot.handlers.group._moderation import (
     mute_user,
     try_delete,
 )
+from apps.bot.handlers.group.flood_guard import check_flood
 from apps.bot.handlers.group.link_guard import has_link
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_group_settings_service
@@ -35,7 +36,7 @@ router = Router(name="group:moderation")
 @router.message(F.chat.type.in_({"group", "supergroup"}))
 async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
     """
-    Combined moderation handler — C3-3 link blocking.
+    Combined moderation handler — C3-3 link blocking + C3-4 flood control.
     Loads group settings once. Admins are never moderated.
     """
     if message.from_user is None:
@@ -86,3 +87,14 @@ async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
                     f"→ <b>{chat_title}</b>",
                 ))
         return  # message already handled — skip flood check
+
+    # ── C3-4: Flood control ───────────────────────────────────────────────
+    if settings.flood_enabled and await check_flood(chat_id, user_id):
+        muted = await mute_user(bot, chat_id, user_id, seconds=120)
+        log.info("flood_muted", chat_id=chat_id, user_id=user_id, muted=muted)
+        if settings.logs_enabled:
+            asyncio.create_task(dm_log(
+                bot,
+                f"⚡ Flood mute 2 min: <b>{user_name}</b> (#{user_id}) "
+                f"→ <b>{chat_title}</b>",
+            ))
