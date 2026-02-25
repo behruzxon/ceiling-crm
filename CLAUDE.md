@@ -9,8 +9,12 @@ CeilingCRM is an enterprise Telegram bot CRM for a stretch ceiling business (Uzb
 ## Development Commands
 
 ```bash
+# First-time setup
+cp .env.example .env  # then fill in BOT_TOKEN, POSTGRES_PASSWORD, etc.
+
 # Infrastructure (requires Docker)
 docker compose up -d postgres redis
+docker compose --profile monitoring up -d  # adds Prometheus + Grafana
 
 # Install dependencies
 pip install -r requirements.txt
@@ -68,13 +72,17 @@ The codebase follows a layered architecture with strict dependency direction: `a
 
 - **Repository pattern**: `core/repositories/` defines ABCs, `infrastructure/database/repositories/` implements them. Services inject repository abstractions.
 - **DI wiring**: `infrastructure/di.py` provides factory functions. `AuthMiddleware` opens a session and injects `db_user`, `user_role`, `db_session` into handler data.
+- **Handler data dict**: Every handler receives `db_user` (ORM User), `user_role` (UserRole enum), and `db_session` (AsyncSession) automatically. Use the injected `db_session` rather than opening a new session in handlers.
 - **RBAC**: `RoleFilter` checks `db_user.role` against required roles. Permission hierarchy: SUPERADMIN > ADMIN > MANAGER > INSTALLER > CLIENT. Role changes enforced in `UserService.change_role()`.
 - **Session management**: Use `async with get_session() as session` for read-write, `get_readonly_session()` for queries. Sessions auto-commit on success, rollback on exception.
 - **Pipeline**: Event-sourced via `pipeline_stages` table. `CRMService.advance_stage()` validates transitions against `ALLOWED_TRANSITIONS` map.
+- **Cache keys**: All Redis keys are defined in `infrastructure/cache/keys.py` via `CacheKeys` (key builders) and `CacheTTL` (TTL constants). Never use raw key strings in application code.
 - **Media upload**: Admin photo/video/document uploads routed through `StorageAdapter` (local/S3). Telegram `file_id` stored for re-sending.
 - **ORM base**: All models inherit from `infrastructure.database.session.Base` (DeclarativeBase).
 - **Bot modes**: Polling locally (no BOT_WEBHOOK_URL), webhook in production.
-- **FSM strategy**: `USER_IN_CHAT` — separate FSM state per user per chat.
+- **FSM strategy**: `USER_IN_CHAT` — separate FSM state per user per chat. FSM `StatesGroup` classes live in `apps/bot/states/`.
+- **Router priority**: In `build_dispatcher()`, router registration order determines handler priority. Within the private router, `order_router` must be registered before `lead_capture_router`, and `ai_support_router` must be before `support_router` (catch-all last).
+- **AI knowledge base**: `shared/knowledge/uz.md` is the Uzbek-language product knowledge file injected into the AI support system prompt.
 
 ### RBAC roles
 
@@ -85,6 +93,10 @@ The codebase follows a layered architecture with strict dependency direction: `a
 | MANAGER | Lead management, pipeline transitions, appointments |
 | INSTALLER | Assigned appointments, installation status updates |
 | CLIENT | Catalog, pricing calculator, lead submission |
+
+## Testing
+
+Unit tests mock repository ABCs using `AsyncMock`. Shared fixtures (`mock_user_repo`, `mock_lead_repo`, `mock_pipeline_repo`, `mock_event_bus`) are in `tests/conftest.py`. Tests are grouped under `tests/unit/domain/` and `tests/unit/services/`.
 
 ## Code Style
 
