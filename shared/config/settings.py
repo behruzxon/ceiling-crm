@@ -162,6 +162,16 @@ class RateLimitSettings(BaseSettings):
     max_requests: int = Field(default=30, description="Per user per window")
 
 
+class PaymentSettings(BaseSettings):
+    """Payment card requisites shown to clients before they transfer money."""
+
+    model_config = SettingsConfigDict(env_prefix="PAYMENT_", env_file=".env", extra="ignore")
+
+    card_number: str | None = Field(default=None, description="Card number digits, e.g. 8600123456781234")
+    card_holder: str | None = Field(default=None, description="Cardholder full name")
+    bank_name: str | None = Field(default=None, description="Bank name shown in requisites")
+
+
 class BusinessSettings(BaseSettings):
     """Business rules and defaults."""
 
@@ -217,6 +227,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = Field(default_factory=StorageSettings)
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
     business: BusinessSettings = Field(default_factory=BusinessSettings)
+    payment: PaymentSettings = Field(default_factory=PaymentSettings)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

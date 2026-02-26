@@ -43,6 +43,7 @@ class PaymentModel(Base):
     )
     receipt_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    proof_file_id: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
     created_by: Mapped[int | None] = mapped_column(
         sa.BigInteger,
         sa.ForeignKey("users.id", ondelete="SET NULL"),

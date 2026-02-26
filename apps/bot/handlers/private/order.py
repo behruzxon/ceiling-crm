@@ -46,6 +46,7 @@ from dataclasses import dataclass
 
 import sqlalchemy as sa
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -71,10 +72,8 @@ from shared.utils.phone import is_valid_uz_phone, normalize_phone
 log = get_logger(__name__)
 router = Router(name="private:order")
 
-# ── Admin group / channel that receives new-order alerts ──────────────────────
-# Resolved at call time from settings (BOT_ADMIN_GROUP_ID env var).
-def _admin_chat_id() -> int:
-    return get_settings().bot.admin_group_id
+# ── Admin DM that receives new-order alerts ───────────────────────────────────
+# Uses BOT_ADMIN_USER_ID (private DM). Admin must have started the bot first.
 
 
 # ─── Districts (Qashqadaryo region) ────────────────────────────────────────────
@@ -474,30 +473,40 @@ async def _notify_admin(
     location: str | None,
 ) -> None:
     """
-    Send a formatted new-order alert to the admin group.
+    Send a formatted new-order alert to the admin DM (BOT_ADMIN_USER_ID).
     Non-fatal: any exception is logged and swallowed so the user's
     confirmation flow is never affected.
     """
+    admin_user_id = get_settings().bot.admin_user_id
+    if not admin_user_id:
+        log.warning("admin_user_id_not_set_skipping_order_notify", lead_id=lead_id)
+        return
+
+    area_line = f"📐 Maydon:   <b>{area} m²</b>\n" if area is not None else ""
+    location_line = (
+        f"🗺 Manzil:   https://maps.google.com/?q={location}\n"
+        if location
+        else ""
+    )
+    text = (
+        "🔔 <b>Yangi buyurtma!</b>\n\n"
+        f"👤 Ism:     <b>{name}</b>\n"
+        f"📱 Telefon: <b>{phone}</b>\n"
+        f"📍 Tuman:   <b>{district}</b>\n"
+        f"🏷 Tur:     <b>{category_label}</b>\n"
+        f"{area_line}"
+        f"{location_line}"
+        f"🔖 Lead ID: <code>#{lead_id}</code>"
+    )
     try:
-        area_line = f"📐 Maydon:   <b>{area} m²</b>\n" if area is not None else ""
-        location_line = (
-            f"🗺 Manzil:   https://maps.google.com/?q={location}\n"
-            if location
-            else ""
+        await bot.send_message(chat_id=admin_user_id, text=text)
+        log.info("admin_notified", lead_id=lead_id, admin_user_id=admin_user_id)
+    except TelegramForbiddenError:
+        log.warning(
+            "admin_notify_forbidden_admin_must_start_bot",
+            lead_id=lead_id,
+            admin_user_id=admin_user_id,
         )
-        text = (
-            "🔔 <b>Yangi buyurtma!</b>\n\n"
-            f"👤 Ism:     <b>{name}</b>\n"
-            f"📱 Telefon: <b>{phone}</b>\n"
-            f"📍 Tuman:   <b>{district}</b>\n"
-            f"🏷 Tur:     <b>{category_label}</b>\n"
-            f"{area_line}"
-            f"{location_line}"
-            f"🔖 Lead ID: <code>#{lead_id}</code>"
-        )
-        chat_id = _admin_chat_id()
-        await bot.send_message(chat_id=chat_id, text=text)
-        log.info("admin_notified", lead_id=lead_id, chat_id=chat_id)
     except Exception:
         log.exception("admin_notify_failed", lead_id=lead_id)
 

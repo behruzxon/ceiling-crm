@@ -72,9 +72,11 @@ class PaymentStatus(str, Enum):
     PAID     = "paid"
     CANCELED = "canceled"
     REFUNDED = "refunded"
+    REJECTED = "rejected"
 
 
 class PaymentMethod(str, Enum):
     CASH     = "cash"
     CARD     = "card"
     TRANSFER = "transfer"
+    MANUAL   = "manual"   # bot-submitted payment awaiting admin approval

@@ -15,6 +15,7 @@ def my_orders_keyboard() -> ReplyKeyboardMarkup:
                 KeyboardButton(text="🧾 Hisob-kitob tarixi"),
                 KeyboardButton(text="🛠 Kafolat ma'lumoti"),
             ],
+            [KeyboardButton(text="💳 To'lov qilish")],
             [KeyboardButton(text="⬅️ Orqaga")],
         ],
         resize_keyboard=True,

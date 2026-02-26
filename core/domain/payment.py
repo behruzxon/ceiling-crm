@@ -21,6 +21,7 @@ class Payment(BaseModel):
     paid_at: datetime | None = None
     receipt_url: str | None = None
     notes: str | None = None
+    proof_file_id: str | None = None   # Telegram file_id of payment receipt (photo or doc)
     created_by: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

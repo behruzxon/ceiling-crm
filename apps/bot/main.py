@@ -42,6 +42,7 @@ from apps.bot.handlers.admin.pipeline import router as pipeline_router
 from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
+from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.member_status import router as member_status_router
@@ -53,6 +54,7 @@ from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
 from apps.bot.handlers.private.my_orders import router as my_orders_router
 from apps.bot.handlers.private.operator import router as operator_router
+from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.support import router as support_router
@@ -134,6 +136,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     callbacks_router.include_routers(
         lead_callbacks_router,
         pipeline_callbacks_router,
+        payment_callbacks_router,
     )
 
     # ── Group router ───────────────────────────────────────────────────────
@@ -153,6 +156,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         catalog_router,
         pricing_router,
         my_orders_router,    # must precede order_router (shares "📦" prefix text)
+        payment_router,      # FSM — must precede lead_capture_router catch-all
         order_router,        # must precede lead_capture_router
         operator_router,     # must precede ai_support_router
         lead_capture_router,

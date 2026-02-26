@@ -22,6 +22,7 @@ class PaymentService:
         method: PaymentMethod,
         notes: str | None = None,
         receipt_url: str | None = None,
+        proof_file_id: str | None = None,
         created_by: int | None = None,
     ) -> Payment:
         """Record a new payment in PENDING status."""
@@ -33,6 +34,7 @@ class PaymentService:
             status=PaymentStatus.PENDING,
             notes=notes,
             receipt_url=receipt_url,
+            proof_file_id=proof_file_id,
             created_by=created_by,
         )
         created = await self._repo.create(payment)
@@ -71,6 +73,12 @@ class PaymentService:
         """Transition a PAID payment to REFUNDED."""
         payment = await self._repo.update_status(payment_id, PaymentStatus.REFUNDED)
         log.info("payment_refunded", payment_id=payment_id)
+        return payment
+
+    async def reject_payment(self, payment_id: int) -> Payment:
+        """Transition payment to REJECTED."""
+        payment = await self._repo.update_status(payment_id, PaymentStatus.REJECTED)
+        log.info("payment_rejected", payment_id=payment_id)
         return payment
 
     async def list_by_lead(self, lead_id: int) -> list[Payment]:

@@ -30,6 +30,7 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
             paid_at=model.paid_at,
             receipt_url=model.receipt_url,
             notes=model.notes,
+            proof_file_id=model.proof_file_id,
             created_by=model.created_by,
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -60,6 +61,7 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
             paid_at=entity.paid_at,
             receipt_url=entity.receipt_url,
             notes=entity.notes,
+            proof_file_id=entity.proof_file_id,
             created_by=entity.created_by,
         )
         self._session.add(model)
@@ -75,6 +77,10 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         if status == PaymentStatus.PAID and model.paid_at is None:
             model.paid_at = datetime.now(tz=timezone.utc)
         await self._session.flush()
+        # onupdate=func.now() expires `updated_at` server-side after flush;
+        # refresh fetches the new value via an awaited SELECT, avoiding
+        # the MissingGreenlet error that sync lazy-load would trigger.
+        await self._session.refresh(model)
         return self._to_domain(model)
 
     async def update(self, entity: Payment) -> Payment:
@@ -88,6 +94,7 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         model.receipt_url = entity.receipt_url
         model.notes = entity.notes
         await self._session.flush()
+        await self._session.refresh(model)  # same reason as update_status above
         return self._to_domain(model)
 
     async def delete(self, id: int) -> bool:
