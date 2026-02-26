@@ -17,6 +17,11 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
     async def get_by_user_id(self, user_id: int) -> list[Lead]: ...
 
     @abstractmethod
+    async def list_by_user(self, user_id: int, limit: int = 5) -> list[Lead]:
+        """Return the *limit* most recent leads for *user_id*, newest first."""
+        ...
+
+    @abstractmethod
     async def get_by_stage(self, stage: PipelineStage) -> list[Lead]: ...
 
     @abstractmethod

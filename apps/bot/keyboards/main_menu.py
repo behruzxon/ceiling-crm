@@ -9,7 +9,7 @@ def main_menu_keyboard(locale: str = "uz") -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="💰 Narx")],
             [KeyboardButton(text="✅ Zakaz berish"), KeyboardButton(text="📞 Operator")],
-            [KeyboardButton(text="🤖 AI yordam")],
+            [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="🤖 AI yordam")],
         ],
         resize_keyboard=True,
     )

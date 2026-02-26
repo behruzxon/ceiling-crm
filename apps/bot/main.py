@@ -51,6 +51,7 @@ from apps.bot.handlers.group.welcome import router as welcome_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
+from apps.bot.handlers.private.my_orders import router as my_orders_router
 from apps.bot.handlers.private.operator import router as operator_router
 from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
@@ -151,6 +152,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         support_router,      # /start /help /cancel — commands must win over any catch-all
         catalog_router,
         pricing_router,
+        my_orders_router,    # must precede order_router (shares "📦" prefix text)
         order_router,        # must precede lead_capture_router
         operator_router,     # must precede ai_support_router
         lead_capture_router,

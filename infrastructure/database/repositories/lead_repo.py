@@ -86,6 +86,20 @@ class PostgresLeadRepository(AbstractLeadRepository):
             leads.append(self._to_domain(model, stage or PipelineStage.NEW))
         return leads
 
+    async def list_by_user(self, user_id: int, limit: int = 5) -> list[Lead]:
+        stmt = (
+            select(LeadModel)
+            .where(LeadModel.user_id == user_id)
+            .order_by(LeadModel.created_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        leads = []
+        for model in result.scalars().all():
+            stage = await self._get_current_stage(model.id)
+            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
+        return leads
+
     async def get_by_stage(self, stage: PipelineStage) -> list[Lead]:
         latest = self._latest_stage_subquery()
         stmt = (

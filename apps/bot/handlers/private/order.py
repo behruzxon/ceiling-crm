@@ -63,6 +63,7 @@ from apps.bot.keyboards.main_menu import main_menu_keyboard
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
+from shared.config import get_settings
 from shared.constants.enums import CeilingCategory, LeadSource
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
@@ -71,8 +72,9 @@ log = get_logger(__name__)
 router = Router(name="private:order")
 
 # ── Admin group / channel that receives new-order alerts ──────────────────────
-# Replace with the real Telegram chat_id (negative for groups/channels).
-ADMIN_CHAT_ID: int = 123456789
+# Resolved at call time from settings (BOT_ADMIN_GROUP_ID env var).
+def _admin_chat_id() -> int:
+    return get_settings().bot.admin_group_id
 
 
 # ─── Districts (Qashqadaryo region) ────────────────────────────────────────────
@@ -493,8 +495,9 @@ async def _notify_admin(
             f"{location_line}"
             f"🔖 Lead ID: <code>#{lead_id}</code>"
         )
-        await bot.send_message(chat_id=ADMIN_CHAT_ID, text=text)
-        log.info("admin_notified", lead_id=lead_id, chat_id=ADMIN_CHAT_ID)
+        chat_id = _admin_chat_id()
+        await bot.send_message(chat_id=chat_id, text=text)
+        log.info("admin_notified", lead_id=lead_id, chat_id=chat_id)
     except Exception:
         log.exception("admin_notify_failed", lead_id=lead_id)
 

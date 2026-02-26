@@ -1,0 +1,252 @@
+"""
+apps.bot.handlers.private.my_orders
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"📦 Buyurtmalarim" submenu — private chats only.
+
+Submenu buttons
+---------------
+  📊 Mening buyurtmalarim  — last 5 orders with pipeline stage
+  📦 Buyurtma holati       — latest order stage + next-step hint
+  🧾 Hisob-kitob tarixi    — last 10 payments across all user orders
+  🛠 Kafolat ma'lumoti     — warranty card for latest completed order
+  ⬅️ Orqaga                — return to main menu
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from aiogram import F, Router
+from aiogram.types import Message
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.my_orders import my_orders_keyboard
+from infrastructure.di import (
+    get_lead_repo,
+    get_payment_service,
+    get_warranty_service,
+)
+from shared.constants.enums import PaymentMethod, PaymentStatus, PipelineStage
+from shared.logging import get_logger
+
+log = get_logger(__name__)
+router = Router(name="private:my_orders")
+
+
+# ── Stage display strings ─────────────────────────────────────────────────────
+
+_STAGE_LABELS: dict[PipelineStage, str] = {
+    PipelineStage.NEW:          "🆕 Yangi",
+    PipelineStage.CONTACTED:    "📞 Bog'landi",
+    PipelineStage.MEASUREMENT:  "📏 O'lchov",
+    PipelineStage.QUOTE:        "📋 Taklif",
+    PipelineStage.DEAL:         "🤝 Shartnoma",
+    PipelineStage.INSTALLATION: "🔧 O'rnatish",
+    PipelineStage.COMPLETED:    "✅ Bajarildi",
+    PipelineStage.LOST:         "❌ Bekor",
+}
+
+_STAGE_HINTS: dict[PipelineStage, str] = {
+    PipelineStage.NEW:          "Menejer tez orada siz bilan bog'lanadi.",
+    PipelineStage.CONTACTED:    "Menejer siz bilan bog'landi. O'lchov tayinlanmoqda.",
+    PipelineStage.MEASUREMENT:  "O'lchov tashrifi rejalashtirilgan.",
+    PipelineStage.QUOTE:        "Taklif tayyorlanmoqda.",
+    PipelineStage.DEAL:         "Shartnoma imzolandi. O'rnatish kutilmoqda.",
+    PipelineStage.INSTALLATION: "Ish jarayonida. Tez orada bajariladi.",
+    PipelineStage.COMPLETED:    "Buyurtma muvaffaqiyatli yakunlandi!",
+    PipelineStage.LOST:         "Buyurtma bekor qilindi. Savol bo'lsa, operatorga murojaat qiling.",
+}
+
+_METHOD_LABELS: dict[PaymentMethod, str] = {
+    PaymentMethod.CASH:     "Naqd",
+    PaymentMethod.CARD:     "Karta",
+    PaymentMethod.TRANSFER: "O'tkazma",
+}
+
+_STATUS_LABELS: dict[PaymentStatus, str] = {
+    PaymentStatus.PENDING:  "Kutilmoqda",
+    PaymentStatus.PAID:     "To'landi ✅",
+    PaymentStatus.CANCELED: "Bekor",
+    PaymentStatus.REFUNDED: "Qaytarildi",
+}
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+# ── Entry: show submenu ────────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "📦 Buyurtmalarim")
+async def cmd_my_orders(message: Message, **data: object) -> None:
+    await message.answer(
+        "📦 <b>Buyurtmalarim</b>\n\nKerakli bo'limni tanlang:",
+        reply_markup=my_orders_keyboard(),
+    )
+
+
+# ── 📊 Mening buyurtmalarim ───────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "📊 Mening buyurtmalarim")
+async def cmd_orders_list(message: Message, **data: object) -> None:
+    user_id: int = message.from_user.id if message.from_user else 0
+    db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
+    lead_repo = get_lead_repo(db_session)
+    leads = await lead_repo.list_by_user(user_id, limit=5)
+
+    if not leads:
+        await message.answer(
+            "📭 Sizda hali buyurtma yo'q.\n\n"
+            "Yangi buyurtma berish uchun «✅ Zakaz berish» tugmasini bosing.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    lines: list[str] = ["📋 <b>So'nggi buyurtmalaringiz:</b>\n"]
+    for i, lead in enumerate(leads, start=1):
+        date_str = lead.created_at.strftime("%d.%m.%Y") if lead.created_at else "—"
+        stage_label = _STAGE_LABELS.get(lead.current_stage, lead.current_stage.value)
+        area_part = f" • {lead.room_area} m²" if lead.room_area else ""
+        lines.append(
+            f"{i}. <b>#{lead.id}</b>  {date_str}\n"
+            f"   📍 {lead.district}{area_part}\n"
+            f"   🏷 {lead.category.value}  |  {stage_label}"
+        )
+
+    await message.answer("\n\n".join(lines), reply_markup=my_orders_keyboard())
+
+
+# ── 📦 Buyurtma holati ────────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "📦 Buyurtma holati")
+async def cmd_order_status(message: Message, **data: object) -> None:
+    user_id: int = message.from_user.id if message.from_user else 0
+    db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
+    lead_repo = get_lead_repo(db_session)
+    leads = await lead_repo.list_by_user(user_id, limit=1)
+
+    if not leads:
+        await message.answer(
+            "📭 Hali buyurtma yo'q.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    lead = leads[0]
+    stage = lead.current_stage
+    label = _STAGE_LABELS.get(stage, stage.value)
+    hint = _STAGE_HINTS.get(stage, "")
+    date_str = lead.created_at.strftime("%d.%m.%Y") if lead.created_at else "—"
+    area_part = f" • {lead.room_area} m²" if lead.room_area else ""
+
+    await message.answer(
+        f"📦 <b>Oxirgi buyurtma holati</b>\n\n"
+        f"🔖 #{lead.id}  ({date_str})\n"
+        f"📍 {lead.district}{area_part}\n\n"
+        f"<b>Holat:</b> {label}\n"
+        f"<i>{hint}</i>",
+        reply_markup=my_orders_keyboard(),
+    )
+
+
+# ── 🧾 Hisob-kitob tarixi ─────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "🧾 Hisob-kitob tarixi")
+async def cmd_payment_history(message: Message, **data: object) -> None:
+    user_id: int = message.from_user.id if message.from_user else 0
+    db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
+    lead_repo = get_lead_repo(db_session)
+    payment_service = get_payment_service(db_session)
+
+    leads = await lead_repo.list_by_user(user_id, limit=5)
+    if not leads:
+        await message.answer(
+            "📭 Hali to'lov yo'q.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    all_payments = []
+    for lead in leads:
+        payments = await payment_service.list_by_lead(lead.id)
+        all_payments.extend(payments)
+
+    if not all_payments:
+        await message.answer(
+            "📭 Hali to'lov yo'q.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    # Sort newest first, take 10
+    all_payments.sort(
+        key=lambda p: p.paid_at or p.created_at or _EPOCH,
+        reverse=True,
+    )
+    recent = all_payments[:10]
+
+    lines: list[str] = ["🧾 <b>To'lov tarixi:</b>\n"]
+    for p in recent:
+        ref_dt = p.paid_at or p.created_at
+        date_str = ref_dt.strftime("%d.%m.%Y") if ref_dt else "—"
+        method = _METHOD_LABELS.get(p.method, p.method.value)
+        status = _STATUS_LABELS.get(p.status, p.status.value)
+        amount_fmt = f"{p.amount:,}".replace(",", "\u00a0")
+        lines.append(
+            f"• {date_str}  <b>{amount_fmt} so'm</b>\n"
+            f"  {method} | {status} | #{p.lead_id}"
+        )
+
+    await message.answer("\n\n".join(lines), reply_markup=my_orders_keyboard())
+
+
+# ── 🛠 Kafolat ma'lumoti ──────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "🛠 Kafolat ma'lumoti")
+async def cmd_warranty_info(message: Message, **data: object) -> None:
+    user_id: int = message.from_user.id if message.from_user else 0
+    db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
+    lead_repo = get_lead_repo(db_session)
+    warranty_service = get_warranty_service(db_session)
+
+    leads = await lead_repo.list_by_user(user_id, limit=5)
+    if not leads:
+        await message.answer(
+            "📭 Hali buyurtma yo'q.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    # Check leads newest-first for a warranty; use the first found
+    warranty = None
+    for lead in leads:
+        warranty = await warranty_service.get_by_lead(lead.id)
+        if warranty:
+            break
+
+    if warranty is None:
+        await message.answer(
+            "🛠 <b>Kafolat ma'lumoti</b>\n\n"
+            "Kafolat hali berilmagan.\n"
+            "<i>Kafolat o'rnatish ishlari tugagandan so'ng rasmiylashtiladi.</i>",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
+
+    card_no = warranty.warranty_card_no or "—"
+    await message.answer(
+        f"🛡 <b>Kafolat ma'lumoti</b>\n\n"
+        f"📋 Raqam: <code>{card_no}</code>\n"
+        f"📅 Berilgan: {warranty.issued_at.strftime('%d.%m.%Y')}\n"
+        f"⏳ Amal qiladi: {warranty.expires_at.strftime('%d.%m.%Y')}\n"
+        f"🔖 Buyurtma: #{warranty.lead_id}",
+        reply_markup=my_orders_keyboard(),
+    )
+
+
+# ── ⬅️ Orqaga ─────────────────────────────────────────────────────────────────
+
+@router.message(F.chat.type == "private", F.text == "⬅️ Orqaga")
+async def cmd_back_to_main(message: Message, **data: object) -> None:
+    await message.answer(
+        "🏠 Asosiy menyu:",
+        reply_markup=main_menu_keyboard(),
+    )
