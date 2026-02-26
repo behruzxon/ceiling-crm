@@ -35,26 +35,60 @@ router = Router(name="private:my_orders")
 
 # ── Stage display strings ─────────────────────────────────────────────────────
 
-_STAGE_LABELS: dict[PipelineStage, str] = {
-    PipelineStage.NEW:          "🆕 Yangi",
-    PipelineStage.CONTACTED:    "📞 Bog'landi",
-    PipelineStage.MEASUREMENT:  "📏 O'lchov",
-    PipelineStage.QUOTE:        "📋 Taklif",
-    PipelineStage.DEAL:         "🤝 Shartnoma",
-    PipelineStage.INSTALLATION: "🔧 O'rnatish",
-    PipelineStage.COMPLETED:    "✅ Bajarildi",
-    PipelineStage.LOST:         "❌ Bekor",
+_STAGE_EMOJI: dict[PipelineStage, str] = {
+    PipelineStage.NEW:          "🟡",
+    PipelineStage.CONTACTED:    "⚪️",
+    PipelineStage.MEASUREMENT:  "🟠",
+    PipelineStage.QUOTE:        "🟣",
+    PipelineStage.DEAL:         "🔵",
+    PipelineStage.INSTALLATION: "🟢",
+    PipelineStage.COMPLETED:    "✅",
+    PipelineStage.LOST:         "🔴",
+}
+
+_STAGE_NAME: dict[PipelineStage, str] = {
+    PipelineStage.NEW:          "Yangi",
+    PipelineStage.CONTACTED:    "Bog'landi",
+    PipelineStage.MEASUREMENT:  "O'lchov",
+    PipelineStage.QUOTE:        "Taklif",
+    PipelineStage.DEAL:         "Buyurtma berildi",
+    PipelineStage.INSTALLATION: "O'rnatildi",
+    PipelineStage.COMPLETED:    "Yakunlandi",
+    PipelineStage.LOST:         "Bekor qilindi",
 }
 
 _STAGE_HINTS: dict[PipelineStage, str] = {
-    PipelineStage.NEW:          "Menejer tez orada siz bilan bog'lanadi.",
-    PipelineStage.CONTACTED:    "Menejer siz bilan bog'landi. O'lchov tayinlanmoqda.",
-    PipelineStage.MEASUREMENT:  "O'lchov tashrifi rejalashtirilgan.",
-    PipelineStage.QUOTE:        "Taklif tayyorlanmoqda.",
-    PipelineStage.DEAL:         "Shartnoma imzolandi. O'rnatish kutilmoqda.",
-    PipelineStage.INSTALLATION: "Ish jarayonida. Tez orada bajariladi.",
-    PipelineStage.COMPLETED:    "Buyurtma muvaffaqiyatli yakunlandi!",
-    PipelineStage.LOST:         "Buyurtma bekor qilindi. Savol bo'lsa, operatorga murojaat qiling.",
+    PipelineStage.NEW:          "Menejer tez orada bog'lanadi.",
+    PipelineStage.CONTACTED:    "O'lchov vaqti kelishiladi.",
+    PipelineStage.MEASUREMENT:  "O'lchov vaqti kelishiladi.",
+    PipelineStage.QUOTE:        "Narx tasdiqlansa, buyurtma boshlanadi.",
+    PipelineStage.DEAL:         "Montaj rejalashtirilmoqda.",
+    PipelineStage.INSTALLATION: "Tekshiruv va kafolat rasmiylashadi.",
+    PipelineStage.COMPLETED:    "Rahmat! Kafolat amal qiladi.",
+    PipelineStage.LOST:         "Bekor qilingan. Yangi buyurtma berishingiz mumkin.",
+}
+
+
+def _stage_badge(stage: PipelineStage) -> str:
+    """Return a formatted stage badge line: 📌 Holat: <emoji> <name>"""
+    emoji = _STAGE_EMOJI.get(stage, "⚪️")
+    name = _STAGE_NAME.get(stage, stage.value)
+    return f"📌 Holat: {emoji} {name}"
+
+
+# ── Category display labels ───────────────────────────────────────────────────
+
+_CATEGORY_LABELS: dict[str, str] = {
+    "gulli":         "🌸 Gulli",
+    "odnotonny":     "🎨 Odnotonny",
+    "mramor":        "🪨 Mramor",
+    "qora_naqsh_uf": "🖤 Qora naqsh (UF)",
+    "hi_tech":       "✨ Hi-tech",
+    "kosmos":        "🌌 Kosmos",
+    "osmon":         "☁️ Osmon",
+    "oshxona":       "🍳 Oshxona",
+    "naqsh_ramka":   "🖼 Naqsh ramka",
+    "naqsh_oq":      "💎 Naqsh oq",
 }
 
 _METHOD_LABELS: dict[PaymentMethod, str] = {
@@ -100,18 +134,25 @@ async def cmd_orders_list(message: Message, **data: object) -> None:
         )
         return
 
-    lines: list[str] = ["📋 <b>So'nggi buyurtmalaringiz:</b>\n"]
-    for i, lead in enumerate(leads, start=1):
+    cards: list[str] = []
+    for lead in leads:
         date_str = lead.created_at.strftime("%d.%m.%Y") if lead.created_at else "—"
-        stage_label = _STAGE_LABELS.get(lead.current_stage, lead.current_stage.value)
-        area_part = f" • {lead.room_area} m²" if lead.room_area else ""
-        lines.append(
-            f"{i}. <b>#{lead.id}</b>  {date_str}\n"
-            f"   📍 {lead.district}{area_part}\n"
-            f"   🏷 {lead.category.value}  |  {stage_label}"
-        )
+        category_label = _CATEGORY_LABELS.get(lead.category.value, lead.category.value)
+        lines = [
+            f"📦 <b>#{lead.id}</b> | {date_str}",
+            f"📍 {lead.district or '—'}",
+            f"🎨 {category_label}",
+        ]
+        if lead.room_area:
+            lines.append(f"📐 {lead.room_area} m²")
+        lines.append(_stage_badge(lead.current_stage))
+        cards.append("\n".join(lines))
 
-    await message.answer("\n\n".join(lines), reply_markup=my_orders_keyboard())
+    header = "📋 <b>So'nggi buyurtmalaringiz:</b>"
+    await message.answer(
+        header + "\n\n" + "\n\n".join(cards),
+        reply_markup=my_orders_keyboard(),
+    )
 
 
 # ── 📦 Buyurtma holati ────────────────────────────────────────────────────────
@@ -131,18 +172,13 @@ async def cmd_order_status(message: Message, **data: object) -> None:
         return
 
     lead = leads[0]
-    stage = lead.current_stage
-    label = _STAGE_LABELS.get(stage, stage.value)
-    hint = _STAGE_HINTS.get(stage, "")
-    date_str = lead.created_at.strftime("%d.%m.%Y") if lead.created_at else "—"
-    area_part = f" • {lead.room_area} m²" if lead.room_area else ""
+    hint = _STAGE_HINTS.get(lead.current_stage, "")
 
     await message.answer(
-        f"📦 <b>Oxirgi buyurtma holati</b>\n\n"
-        f"🔖 #{lead.id}  ({date_str})\n"
-        f"📍 {lead.district}{area_part}\n\n"
-        f"<b>Holat:</b> {label}\n"
-        f"<i>{hint}</i>",
+        f"📦 <b>Oxirgi buyurtma</b>\n"
+        f"📍 {lead.district or '—'}\n"
+        f"{_stage_badge(lead.current_stage)}\n"
+        f"➡️ <i>{hint}</i>",
         reply_markup=my_orders_keyboard(),
     )
 
