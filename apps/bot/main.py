@@ -57,6 +57,7 @@ from apps.bot.handlers.private.operator import router as operator_router
 from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
+from apps.bot.handlers.private.promotions import router as promotions_router
 from apps.bot.handlers.private.support import router as support_router
 from apps.bot.middlewares.audit import AuditMiddleware
 from apps.bot.middlewares.auth import AuthMiddleware
@@ -154,6 +155,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     private_router.include_routers(
         support_router,      # /start /help /cancel — commands must win over any catch-all
         catalog_router,
+        promotions_router,   # simple text+callback handler — no FSM state deps
         pricing_router,
         my_orders_router,    # must precede order_router (shares "📦" prefix text)
         payment_router,      # FSM — must precede lead_capture_router catch-all
