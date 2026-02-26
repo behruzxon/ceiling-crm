@@ -53,10 +53,25 @@ class AppointmentStatus(str, Enum):
 
 class BroadcastStatus(str, Enum):
     DRAFT      = "draft"
+    PENDING    = "pending"
     SCHEDULED  = "scheduled"
     RUNNING    = "running"
     DONE       = "done"
     FAILED     = "failed"
+    CANCELLED  = "cancelled"
+
+
+class SegmentType(str, Enum):
+    ALL_PRIVATE    = "all_private"    # all non-blocked private users
+    LEAD_STAGE     = "lead_stage"     # users whose latest pipeline stage == X
+    ADMIN_GROUPS   = "admin_groups"   # bot's tracked admin/announcement groups
+
+
+class PayloadType(str, Enum):
+    TEXT    = "text"
+    PHOTO   = "photo"
+    VIDEO   = "video"
+    DOCUMENT = "document"
 
 
 class LeadSource(str, Enum):

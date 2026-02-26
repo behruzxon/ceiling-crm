@@ -38,6 +38,7 @@ from infrastructure.database.models.ai_conversation import AiConversationModel  
 from infrastructure.database.models.group_settings import GroupSettingsModel  # noqa: F401
 from infrastructure.database.models.payment import PaymentModel  # noqa: F401
 from infrastructure.database.models.warranty import WarrantyModel  # noqa: F401
+from infrastructure.database.models.admin_group import AdminGroupModel  # noqa: F401
 
 from shared.config import get_settings
 
