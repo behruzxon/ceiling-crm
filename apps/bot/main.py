@@ -49,6 +49,7 @@ from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
 from apps.bot.handlers.group.moderation import router as moderation_router
 from apps.bot.handlers.group.welcome import router as welcome_router
+from apps.bot.handlers.private.about import router as about_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
@@ -156,6 +157,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         support_router,      # /start /help /cancel — commands must win over any catch-all
         catalog_router,
         promotions_router,   # simple text+callback handler — no FSM state deps
+        about_router,        # simple text+callback handler — owns open_catalog callback
         pricing_router,
         my_orders_router,    # must precede order_router (shares "📦" prefix text)
         payment_router,      # FSM — must precede lead_capture_router catch-all
