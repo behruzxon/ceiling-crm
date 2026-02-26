@@ -24,7 +24,7 @@ MESSAGES = {
     "error_rate_limited": "⏳ Iltimos, {seconds} soniyadan so'ng qayta urinib ko'ring.",
     "error_generic": "❌ Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
     "btn_catalog": "📸 Katalog",
-    "btn_price": "💰 Narx",
+    "btn_price": "🧮 Narx kalkulyator",
     "btn_order": "📋 Buyurtma",
     "btn_operator": "📞 Operator",
     "btn_cancel": "❌ Bekor qilish",

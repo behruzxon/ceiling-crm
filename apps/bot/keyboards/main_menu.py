@@ -7,7 +7,7 @@ def main_menu_keyboard(locale: str = "uz") -> ReplyKeyboardMarkup:
     """Build main menu keyboard. TODO: add translations."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="💰 Narx")],
+            [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="🧮 Narx kalkulyator")],
             [KeyboardButton(text="✅ Zakaz berish"), KeyboardButton(text="📞 Operator")],
             [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="🤖 AI yordam")],
         ],

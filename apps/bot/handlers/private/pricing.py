@@ -3,7 +3,7 @@ Pricing calculator FSM handler.
 
 FSM flow
 --------
-  "💰 Narx" / /price
+  "🧮 Narx kalkulyator" / /price
     └─► waiting_for_length
           └─► waiting_for_width
                 └─► choosing_design          ← inline keyboard (6 designs)
@@ -44,17 +44,27 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 router = Router(name="private:pricing")
 
-# Matches "💰 Narx" regardless of VS-16 variation selector (\uFE0F) that
-# Telegram keyboards may append to the emoji, and tolerates extra whitespace.
-_PRICE_BTN_RE: re.Pattern[str] = re.compile(r"\U0001F4B0\uFE0F?\s*Narx", re.IGNORECASE)
+# Matches "🧮 Narx kalkulyator" regardless of VS-16 variation selector (\uFE0F)
+# that Telegram keyboards may append to the emoji, and tolerates extra whitespace.
+_PRICE_BTN_RE: re.Pattern[str] = re.compile(r"\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator", re.IGNORECASE)
 
 # Matches any main-menu reply-keyboard button (VS-16 tolerant).
 # Used to intercept button taps that arrive while a pricing FSM state is active.
 _MENU_BTN_RE: re.Pattern[str] = re.compile(
     r"📂\uFE0F?\s*Katalog"
-    r"|\U0001F4B0\uFE0F?\s*Narx"
+    r"|\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator"
     r"|📋\uFE0F?\s*Buyurtma"
     r"|📞\uFE0F?\s*Operator",
+    re.IGNORECASE,
+)
+
+# Matches "LENGTHxWIDTH" (or *, ×, ga, spaces) with optional decimal commas/dots.
+# Group 1 = length, Group 2 = width.
+# Examples: "5ga4", "5*4", "5 x 4", "5 4", "5,2x3,3", "5.2 * 3.3"
+_TWO_DIMS_RE: re.Pattern[str] = re.compile(
+    r"^\s*([0-9]+(?:[.,][0-9]+)?)"           # first number
+    r"(?:\s*(?:x|×|\*|ga)\s*|\s+)"           # separator: keyword/symbol OR whitespace
+    r"([0-9]+(?:[.,][0-9]+)?)\s*$",           # second number
     re.IGNORECASE,
 )
 
@@ -145,6 +155,22 @@ def _parse_dimension(text: str | None) -> float | None:
     return v if 0 < v <= 50 else None
 
 
+def _parse_two_dimensions(text: str) -> tuple[float, float] | None:
+    """Try to extract two dimensions from a single message.
+
+    Returns ``(length, width)`` as floats, or ``None`` if fewer than two
+    valid dimensions are found (caller should fall back to the step-by-step flow).
+    """
+    m = _TWO_DIMS_RE.match(text)
+    if m is None:
+        return None
+    a = _parse_dimension(m.group(1))
+    b = _parse_dimension(m.group(2))
+    if a is None or b is None:
+        return None
+    return a, b
+
+
 # ─── Shared entry-point helper ────────────────────────────────────────────────
 
 async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
@@ -157,8 +183,8 @@ async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
     await state.set_state(PricingStates.waiting_for_length)
     await reply_to.answer(
         "📐 <b>Narxni hisoblash</b>\n\n"
-        "Xona <b>uzunligini</b> metrda kiriting:\n"
-        "<i>Masalan: <code>5.2</code></i>",
+        "Uzunlik va kenglikni yuboring:\n"
+        "<i>Masalan: <code>5x4</code> yoki <code>5 4</code></i>",
     )
 
 
@@ -207,17 +233,44 @@ async def handle_pricing_menu_escape(
 async def handle_length(
     message: Message, state: FSMContext, **data: object
 ) -> None:
-    """Validate length and advance to the width step.
+    """Parse length (and optionally width) from the user's message.
 
-    If the value exceeds 20 m (likely a typo), a one-shot confirmation prompt
-    is shown. Any valid re-entry in the same state is accepted unconditionally.
+    Fast path: if the text contains two valid dimensions (e.g. "5x4", "5 4",
+    "5.2*3.3"), both are stored and the flow jumps straight to design selection.
+
+    Slow path (fallback): a single number is treated as length only, then the
+    bot asks for width in the next step (original step-by-step behaviour).
+
+    If the input is unparseable, a short hint is shown and the state stays.
     """
+    text = (message.text or "").strip()
     fsm = await state.get_data()
-    length = _parse_dimension(message.text)
-    if length is None:
+
+    # ── Fast path: two dimensions in one message ──────────────────────────
+    pair = _parse_two_dimensions(text)
+    if pair is not None:
+        length, width = pair
+        if (length > 20 or width > 20) and not fsm.get("_warned_pair"):
+            await state.update_data(_warned_pair=True)
+            await message.answer(
+                f"⚠️ <b>{length} × {width} m</b> — bu juda katta ko'rinadi.\n"
+                "Rostdan ham shundaymi? Tasdiqlash uchun qaytadan kiriting:"
+            )
+            return
+        area = round(length * width, 2)
+        await state.update_data(length=length, width=width, area=area)
+        await state.set_state(PricingStates.choosing_design)
         await message.answer(
-            "Son kiriting (masalan: <code>4.5</code>) yoki /cancel bosing."
+            f"✅ {length} × {width} m  |  Maydon: <b>{area:.2f} m²</b>\n\n"
+            "Qaysi tur/dizaynni tanlaysiz?",
+            reply_markup=design_keyboard(),
         )
+        return
+
+    # ── Slow path: single dimension (original step-by-step flow) ─────────
+    length = _parse_dimension(text)
+    if length is None:
+        await message.answer("Masalan: <code>5x4</code> yoki <code>5 4</code>")
         return
 
     if length > 20 and not fsm.get("_warned_length"):
