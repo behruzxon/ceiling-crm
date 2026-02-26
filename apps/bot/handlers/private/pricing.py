@@ -16,9 +16,11 @@ FSM flow
 Business rules (isolated in _calculate, not in handlers)
 ---------------------------------------------------------
   Pricing  : per-design price_per_sqm (see keyboards/pricing.py → DESIGN_BY_KEY)
-  Discount : area > 40 m² → 10 %
-             area > 20 m² →  5 %
-             otherwise    →  0 %
+  Discount : area > 40 m²              → 10 %
+             area > DISCOUNT_THRESHOLD →  5 %
+             otherwise                 →  0 %
+  Promo    : area >= LED_PROMO_THRESHOLD AND design == LED_PROMO_DESIGN
+             → informational LED strip promo message (price unchanged)
   Safe input: dimension > 20 m triggers a one-shot confirmation prompt
 """
 from __future__ import annotations
@@ -69,11 +71,23 @@ _TWO_DIMS_RE: re.Pattern[str] = re.compile(
 )
 
 
+# ─── Promotion / discount constants ──────────────────────────────────────────
+
+# Minimum area (m²) that qualifies for the 5 % volume discount.
+DISCOUNT_THRESHOLD: float = 20.0
+
+# Minimum area (m²) required for the LED strip promotional offer.
+LED_PROMO_THRESHOLD: float = 50.0
+
+# Design key that triggers the LED promo (must match DESIGN_BY_KEY in keyboards/pricing.py).
+LED_PROMO_DESIGN: str = "gulli"
+
+
 # ─── Business logic (pure, no I/O) ───────────────────────────────────────────
 
 _TIERS: tuple[tuple[float, int], ...] = (
-    (40.0, 10),  # area > 40 m²  → 10 %
-    (20.0,  5),  # area > 20 m²  →  5 %
+    (40.0,              10),  # area > 40 m²             → 10 %
+    (DISCOUNT_THRESHOLD, 5),  # area > DISCOUNT_THRESHOLD →  5 %
 )
 
 
@@ -169,6 +183,11 @@ def _parse_two_dimensions(text: str) -> tuple[float, float] | None:
     if a is None or b is None:
         return None
     return a, b
+
+
+def _led_promo_eligible(area: float, design_key: str) -> bool:
+    """Return True when the LED strip promo applies (informational only, no price change)."""
+    return area >= LED_PROMO_THRESHOLD and design_key == LED_PROMO_DESIGN
 
 
 # ─── Shared entry-point helper ────────────────────────────────────────────────
@@ -412,6 +431,12 @@ async def handle_design_callback(
         quote.format_breakdown(),
         reply_markup=after_quote_keyboard(),
     )
+
+    if _led_promo_eligible(area, key):
+        await callback.message.answer(
+            "🎁 Siz 50 m² dan oshganingiz uchun GULLI dizaynga "
+            "LED lenta bepul aksiyasiga tushdingiz!"
+        )
 
 
 # ─── Step 4 : post-quote actions ─────────────────────────────────────────────
