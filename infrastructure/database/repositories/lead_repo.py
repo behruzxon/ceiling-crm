@@ -40,6 +40,10 @@ class PostgresLeadRepository(AbstractLeadRepository):
             utm_campaign=model.utm_campaign,
             assigned_manager_id=model.assigned_manager_id,
             current_stage=current_stage or PipelineStage.NEW,
+            package_type=model.package_type,
+            lead_status=model.lead_status,
+            last_action=model.last_action,
+            score=model.score or 0,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -255,3 +259,70 @@ class PostgresLeadRepository(AbstractLeadRepository):
             return False
         await self._session.delete(model)
         return True
+
+    async def upsert_package_lead(
+        self,
+        user_id: int,
+        package_type: str,
+        first_name: str,
+        score_delta: int,
+        lead_status: str,
+    ) -> Lead:
+        """Create or update a lead when the user selects a package.
+
+        Finds the most recent lead for *user_id* and updates its package
+        fields + increments score.  If no lead exists yet, inserts a minimal
+        placeholder (name = first_name, phone = '—', district = 'Noma'lum').
+        """
+        stmt = (
+            select(LeadModel)
+            .where(LeadModel.user_id == user_id)
+            .order_by(LeadModel.created_at.desc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+
+        if model is not None:
+            update_stmt = (
+                update(LeadModel)
+                .where(LeadModel.id == model.id)
+                .values(
+                    package_type=package_type,
+                    lead_status=lead_status,
+                    last_action="package_order",
+                    score=LeadModel.score + score_delta,
+                    updated_at=datetime.now(timezone.utc),
+                )
+                .returning(LeadModel)
+            )
+            res = await self._session.execute(update_stmt)
+            model = res.scalar_one()
+            return self._to_domain(model, PipelineStage.PACKAGE_SELECTED)
+
+        # No existing lead — create minimal placeholder
+        model = LeadModel(
+            user_id=user_id,
+            category=CeilingCategory.ODNOTONNY.value,
+            source=LeadSource.DEEPLINK.value,
+            name=first_name,
+            phone="—",
+            district="Noma'lum",
+            package_type=package_type,
+            lead_status=lead_status,
+            last_action="package_order",
+            score=score_delta,
+        )
+        self._session.add(model)
+        await self._session.flush()
+        await self._session.refresh(model)
+        return self._to_domain(model, PipelineStage.NEW)
+
+    async def update_lead_status(self, lead_id: int, lead_status: str) -> None:
+        """Update the lead_status column (hot / warm / cold / blocked)."""
+        stmt = (
+            update(LeadModel)
+            .where(LeadModel.id == lead_id)
+            .values(lead_status=lead_status, updated_at=datetime.now(timezone.utc))
+        )
+        await self._session.execute(stmt)

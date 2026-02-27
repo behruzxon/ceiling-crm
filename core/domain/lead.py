@@ -38,5 +38,12 @@ class Lead(BaseModel):
     utm_campaign: str | None = None
     assigned_manager_id: int | None = None
     current_stage: PipelineStage = PipelineStage.NEW
+
+    # Package / funnel fields (nullable for non-package leads)
+    package_type: str | None = None
+    lead_status: str | None = None   # hot / warm / cold
+    last_action: str | None = None
+    score: int = 0
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

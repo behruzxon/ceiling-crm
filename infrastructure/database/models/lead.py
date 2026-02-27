@@ -45,5 +45,18 @@ class LeadModel(Base):
     utm_source: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     utm_campaign: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     assigned_manager_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=True)
+
+    # ── Package / funnel fields ───────────────────────────────────────────────
+    package_type: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
+    lead_status: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)   # hot/warm/cold
+    last_action: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
+    score: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
     updated_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())
+
+    __table_args__ = (
+        sa.Index("ix_leads_user_id", "user_id"),
+        sa.Index("ix_leads_package_type", "package_type"),
+        sa.Index("ix_leads_lead_status", "lead_status"),
+    )

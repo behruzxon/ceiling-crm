@@ -15,6 +15,7 @@ def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo
         [KeyboardButton(text="✅ Zakaz berish"), KeyboardButton(text="📞 Operator")],
         [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="🤖 AI yordam")],
         [KeyboardButton(text="🎁 Chegirmalar"), KeyboardButton(text="⭐ Biz haqimizda")],
+        [KeyboardButton(text="📦 Tayyor paketlar")],
     ]
     if is_admin:
         rows.append([KeyboardButton(text="📣 Rassilka")])

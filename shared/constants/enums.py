@@ -28,14 +28,27 @@ class CeilingCategory(str, Enum):
 
 
 class PipelineStage(str, Enum):
-    NEW          = "NEW"
-    CONTACTED    = "CONTACTED"
-    MEASUREMENT  = "MEASUREMENT"
-    QUOTE        = "QUOTE"
-    DEAL         = "DEAL"
-    INSTALLATION = "INSTALLATION"
-    COMPLETED    = "COMPLETED"
-    LOST         = "LOST"
+    NEW              = "NEW"
+    PACKAGE_SELECTED = "PACKAGE_SELECTED"
+    CONTACTED        = "CONTACTED"
+    MEASUREMENT      = "MEASUREMENT"
+    QUOTE            = "QUOTE"
+    DEAL             = "DEAL"
+    INSTALLATION     = "INSTALLATION"
+    COMPLETED        = "COMPLETED"
+    LOST             = "LOST"
+
+
+class PackageType(str, Enum):
+    STANDARD = "standard"
+    PREMIUM  = "premium"
+    VIP      = "vip"
+
+
+class LeadStatus(str, Enum):
+    HOT  = "hot"
+    WARM = "warm"
+    COLD = "cold"
 
 
 class AppointmentType(str, Enum):

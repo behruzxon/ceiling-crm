@@ -52,3 +52,25 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         limit: int = 50,
         offset: int = 0,
     ) -> list[Lead]: ...
+
+    @abstractmethod
+    async def upsert_package_lead(
+        self,
+        user_id: int,
+        package_type: str,
+        first_name: str,
+        score_delta: int,
+        lead_status: str,
+    ) -> Lead:
+        """Create or update a lead when the user selects a package.
+
+        If a lead already exists for *user_id*, updates its package fields and
+        increments the score in-place.  Otherwise creates a minimal placeholder
+        lead that can be completed later via the full order flow.
+        """
+        ...
+
+    @abstractmethod
+    async def update_lead_status(self, lead_id: int, lead_status: str) -> None:
+        """Update the lead_status column (hot / warm / cold / blocked)."""
+        ...

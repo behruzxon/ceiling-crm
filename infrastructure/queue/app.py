@@ -14,6 +14,7 @@ def create_celery_app() -> Celery:
             "infrastructure.queue.tasks.broadcast_tasks",
             "infrastructure.queue.tasks.notification_tasks",
             "infrastructure.queue.tasks.export_tasks",
+            "infrastructure.queue.tasks.package_tasks",
         ],
     )
     app.conf.update(

@@ -37,7 +37,13 @@ class AuthMiddleware(BaseMiddleware):
     ) -> Any:
         tg_user = data.get("event_from_user")
 
-        if tg_user is None:
+        # Skip upsert for missing users, bots, or any non-positive ID.
+        # Negative IDs belong to Telegram groups/channels/service entities
+        # (e.g. anonymous admin posts use GroupAnonymousBot id=1087968824 which
+        # is positive but is_bot=True; supergroup/channel linked-chat events can
+        # surface negative IDs).  Only real human private users have id > 0 and
+        # is_bot == False — those are the only records we want in `users`.
+        if tg_user is None or tg_user.is_bot or tg_user.id <= 0:
             data["db_user"] = None
             data["user_role"] = None
             return await handler(event, data)

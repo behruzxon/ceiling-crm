@@ -1,0 +1,448 @@
+warning: in the working copy of 'apps/bot/keyboards/main_menu.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/bot/main.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/bot/middlewares/auth.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/domain/lead.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/repositories/lead_repo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/services/lead_service.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/database/models/lead.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/database/repositories/broadcast_repo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/database/repositories/lead_repo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/database/repositories/user_repo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/queue/app.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infrastructure/queue/tasks/broadcast_tasks.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'shared/constants/enums.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/apps/bot/keyboards/main_menu.py b/apps/bot/keyboards/main_menu.py[m
+[1mindex e4e55cb..bcf463b 100644[m
+[1m--- a/apps/bot/keyboards/main_menu.py[m
+[1m+++ b/apps/bot/keyboards/main_menu.py[m
+[36m@@ -15,6 +15,7 @@[m [mdef main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo[m
+         [KeyboardButton(text="✅ Zakaz berish"), KeyboardButton(text="📞 Operator")],[m
+         [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="🤖 AI yordam")],[m
+         [KeyboardButton(text="🎁 Chegirmalar"), KeyboardButton(text="⭐ Biz haqimizda")],[m
+[32m+[m[32m        [KeyboardButton(text="📦 Tayyor paketlar")],[m
+     ][m
+     if is_admin:[m
+         rows.append([KeyboardButton(text="📣 Rassilka")])[m
+[1mdiff --git a/apps/bot/main.py b/apps/bot/main.py[m
+[1mindex 1bb68a2..3285897 100644[m
+[1m--- a/apps/bot/main.py[m
+[1m+++ b/apps/bot/main.py[m
+[36m@@ -42,6 +42,7 @@[m [mfrom apps.bot.handlers.admin.pipeline import router as pipeline_router[m
+ from apps.bot.handlers.admin.reports import router as reports_router[m
+ from apps.bot.handlers.admin.scheduler import router as scheduler_router[m
+ from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router[m
+[32m+[m[32mfrom apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router[m
+ from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router[m
+ from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router[m
+ from apps.bot.handlers.group.admin import router as group_admin_router[m
+[36m@@ -51,6 +52,7 @@[m [mfrom apps.bot.handlers.group.messages import router as group_messages_router[m
+ from apps.bot.handlers.group.moderation import router as moderation_router[m
+ from apps.bot.handlers.group.welcome import router as welcome_router[m
+ from apps.bot.handlers.private.about import router as about_router[m
+[32m+[m[32mfrom apps.bot.handlers.private.packages import router as packages_router[m
+ from apps.bot.handlers.private.ai_support import router as ai_support_router[m
+ from apps.bot.handlers.private.catalog import router as catalog_router[m
+ from apps.bot.handlers.private.lead_capture import router as lead_capture_router[m
+[36m@@ -140,6 +142,7 @@[m [mdef build_dispatcher(storage: RedisStorage) -> Dispatcher:[m
+         lead_callbacks_router,[m
+         pipeline_callbacks_router,[m
+         payment_callbacks_router,[m
+[32m+[m[32m        package_callbacks_router,   # pkg:admin:* inline buttons from notifications[m
+     )[m
+ [m
+     # ── Group router ───────────────────────────────────────────────────────[m
+[36m@@ -160,6 +163,7 @@[m [mdef build_dispatcher(storage: RedisStorage) -> Dispatcher:[m
+         catalog_router,[m
+         promotions_router,   # simple text+callback handler — no FSM state deps[m
+         about_router,        # simple text+callback handler — owns open_catalog callback[m
+[32m+[m[32m        packages_router,     # "📦 Tayyor paketlar" + pkg:detail/order/calc callbacks[m
+         pricing_router,[m
+         my_orders_router,    # must precede order_router (shares "📦" prefix text)[m
+         payment_router,      # FSM — must precede lead_capture_router catch-all[m
+[1mdiff --git a/apps/bot/middlewares/auth.py b/apps/bot/middlewares/auth.py[m
+[1mindex 9f98796..c686aec 100644[m
+[1m--- a/apps/bot/middlewares/auth.py[m
+[1m+++ b/apps/bot/middlewares/auth.py[m
+[36m@@ -37,7 +37,13 @@[m [mclass AuthMiddleware(BaseMiddleware):[m
+     ) -> Any:[m
+         tg_user = data.get("event_from_user")[m
+ [m
+[31m-        if tg_user is None:[m
+[32m+[m[32m        # Skip upsert for missing users, bots, or any non-positive ID.[m
+[32m+[m[32m        # Negative IDs belong to Telegram groups/channels/service entities[m
+[32m+[m[32m        # (e.g. anonymous admin posts use GroupAnonymousBot id=1087968824 which[m
+[32m+[m[32m        # is positive but is_bot=True; supergroup/channel linked-chat events can[m
+[32m+[m[32m        # surface negative IDs).  Only real human private users have id > 0 and[m
+[32m+[m[32m        # is_bot == False — those are the only records we want in `users`.[m
+[32m+[m[32m        if tg_user is None or tg_user.is_bot or tg_user.id <= 0:[m
+             data["db_user"] = None[m
+             data["user_role"] = None[m
+             return await handler(event, data)[m
+[1mdiff --git a/core/domain/lead.py b/core/domain/lead.py[m
+[1mindex ea7fbfe..a7f3ff5 100644[m
+[1m--- a/core/domain/lead.py[m
+[1m+++ b/core/domain/lead.py[m
+[36m@@ -38,5 +38,12 @@[m [mclass Lead(BaseModel):[m
+     utm_campaign: str | None = None[m
+     assigned_manager_id: int | None = None[m
+     current_stage: PipelineStage = PipelineStage.NEW[m
+[32m+[m
+[32m+[m[32m    # Package / funnel fields (nullable for non-package leads)[m
+[32m+[m[32m    package_type: str | None = None[m
+[32m+[m[32m    lead_status: str | None = None   # hot / warm / cold[m
+[32m+[m[32m    last_action: str | None = None[m
+[32m+[m[32m    score: int = 0[m
+[32m+[m
+     created_at: datetime = Field(default_factory=datetime.utcnow)[m
+     updated_at: datetime = Field(default_factory=datetime.utcnow)[m
+[1mdiff --git a/core/repositories/lead_repo.py b/core/repositories/lead_repo.py[m
+[1mindex 3e76281..68400b2 100644[m
+[1m--- a/core/repositories/lead_repo.py[m
+[1m+++ b/core/repositories/lead_repo.py[m
+[36m@@ -52,3 +52,25 @@[m [mclass AbstractLeadRepository(BaseRepository[Lead, int]):[m
+         limit: int = 50,[m
+         offset: int = 0,[m
+     ) -> list[Lead]: ...[m
+[32m+[m
+[32m+[m[32m    @abstractmethod[m
+[32m+[m[32m    async def upsert_package_lead([m
+[32m+[m[32m        self,[m
+[32m+[m[32m        user_id: int,[m
+[32m+[m[32m        package_type: str,[m
+[32m+[m[32m        first_name: str,[m
+[32m+[m[32m        score_delta: int,[m
+[32m+[m[32m        lead_status: str,[m
+[32m+[m[32m    ) -> Lead:[m
+[32m+[m[32m        """Create or update a lead when the user selects a package.[m
+[32m+[m
+[32m+[m[32m        If a lead already exists for *user_id*, updates its package fields and[m
+[32m+[m[32m        increments the score in-place.  Otherwise creates a minimal placeholder[m
+[32m+[m[32m        lead that can be completed later via the full order flow.[m
+[32m+[m[32m        """[m
+[32m+[m[32m        ...[m
+[32m+[m
+[32m+[m[32m    @abstractmethod[m
+[32m+[m[32m    async def update_lead_status(self, lead_id: int, lead_status: str) -> None:[m
+[32m+[m[32m        """Update the lead_status column (hot / warm / cold / blocked)."""[m
+[32m+[m[32m        ...[m
+[1mdiff --git a/core/services/lead_service.py b/core/services/lead_service.py[m
+[1mindex 98d186d..442f543 100644[m
+[1m--- a/core/services/lead_service.py[m
+[1m+++ b/core/services/lead_service.py[m
+[36m@@ -112,3 +112,43 @@[m [mclass LeadService:[m
+     async def search_leads(self, **filters: object) -> list[Lead]:[m
+         """Flexible lead search delegated to repository."""[m
+         return await self._leads.search(**filters)[m
+[32m+[m
+[32m+[m[32m    async def select_package([m
+[32m+[m[32m        self,[m
+[32m+[m[32m        user_id: int,[m
+[32m+[m[32m        package_type: str,[m
+[32m+[m[32m        first_name: str,[m
+[32m+[m[32m        score_delta: int,[m
+[32m+[m[32m        lead_status: str,[m
+[32m+[m[32m    ) -> Lead:[m
+[32m+[m[32m        """Record that a user selected a package.[m
+[32m+[m
+[32m+[m[32m        Upserts the lead (create or update), then inserts a PACKAGE_SELECTED[m
+[32m+[m[32m        pipeline stage record.  Does NOT go through CRMService transition[m
+[32m+[m[32m        validation — package selection is an entry-point action, not a[m
+[32m+[m[32m        pipeline-internal move.[m
+[32m+[m[32m        """[m
+[32m+[m[32m        lead = await self._leads.upsert_package_lead([m
+[32m+[m[32m            user_id=user_id,[m
+[32m+[m[32m            package_type=package_type,[m
+[32m+[m[32m            first_name=first_name,[m
+[32m+[m[32m            score_delta=score_delta,[m
+[32m+[m[32m            lead_status=lead_status,[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        await self._pipeline.insert_stage([m
+[32m+[m[32m            lead_id=lead.id,[m
+[32m+[m[32m            stage=PipelineStage.PACKAGE_SELECTED,[m
+[32m+[m[32m            changed_by=user_id,[m
+[32m+[m[32m            note=f"Paket tanlandi: {package_type}",[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        log.info([m
+[32m+[m[32m            "package_selected",[m
+[32m+[m[32m            lead_id=lead.id,[m
+[32m+[m[32m            user_id=user_id,[m
+[32m+[m[32m            package_type=package_type,[m
+[32m+[m[32m            lead_status=lead_status,[m
+[32m+[m[32m            score_delta=score_delta,[m
+[32m+[m[32m        )[m
+[32m+[m[32m        return lead[m
+[1mdiff --git a/infrastructure/database/models/lead.py b/infrastructure/database/models/lead.py[m
+[1mindex 363c462..f17f142 100644[m
+[1m--- a/infrastructure/database/models/lead.py[m
+[1m+++ b/infrastructure/database/models/lead.py[m
+[36m@@ -45,5 +45,18 @@[m [mclass LeadModel(Base):[m
+     utm_source: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)[m
+     utm_campaign: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)[m
+     assigned_manager_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=True)[m
+[32m+[m
+[32m+[m[32m    # ── Package / funnel fields ───────────────────────────────────────────────[m
+[32m+[m[32m    package_type: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)[m
+[32m+[m[32m    lead_status: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)   # hot/warm/cold[m
+[32m+[m[32m    last_action: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)[m
+[32m+[m[32m    score: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)[m
+[32m+[m
+     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())[m
+     updated_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())[m
+[32m+[m
+[32m+[m[32m    __table_args__ = ([m
+[32m+[m[32m        sa.Index("ix_leads_user_id", "user_id"),[m
+[32m+[m[32m        sa.Index("ix_leads_package_type", "package_type"),[m
+[32m+[m[32m        sa.Index("ix_leads_lead_status", "lead_status"),[m
+[32m+[m[32m    )[m
+[1mdiff --git a/infrastructure/database/repositories/broadcast_repo.py b/infrastructure/database/repositories/broadcast_repo.py[m
+[1mindex 5c3d6c4..5e99e3c 100644[m
+[1m--- a/infrastructure/database/repositories/broadcast_repo.py[m
+[1m+++ b/infrastructure/database/repositories/broadcast_repo.py[m
+[36m@@ -169,8 +169,15 @@[m [mclass PostgresBroadcastRepository(AbstractBroadcastRepository):[m
+         await self._session.execute(stmt)[m
+ [m
+     async def get_all_private_user_ids(self) -> list[int]:[m
+[31m-        """Return IDs of all non-blocked users."""[m
+[31m-        stmt = sa.select(UserModel.id).where(UserModel.is_blocked.is_(False))[m
+[32m+[m[32m        """Return IDs of all non-blocked private users.[m
+[32m+[m
+[32m+[m[32m        The id > 0 guard filters out any corrupted rows (groups / channels /[m
+[32m+[m[32m        service bots) that may have been stored before the AuthMiddleware fix.[m
+[32m+[m[32m        """[m
+[32m+[m[32m        stmt = sa.select(UserModel.id).where([m
+[32m+[m[32m            UserModel.is_blocked.is_(False),[m
+[32m+[m[32m            UserModel.id > 0,[m
+[32m+[m[32m        )[m
+         result = await self._session.execute(stmt)[m
+         return list(result.scalars().all())[m
+ [m
+[1mdiff --git a/infrastructure/database/repositories/lead_repo.py b/infrastructure/database/repositories/lead_repo.py[m
+[1mindex 39f7cb6..6895b44 100644[m
+[1m--- a/infrastructure/database/repositories/lead_repo.py[m
+[1m+++ b/infrastructure/database/repositories/lead_repo.py[m
+[36m@@ -40,6 +40,10 @@[m [mclass PostgresLeadRepository(AbstractLeadRepository):[m
+             utm_campaign=model.utm_campaign,[m
+             assigned_manager_id=model.assigned_manager_id,[m
+             current_stage=current_stage or PipelineStage.NEW,[m
+[32m+[m[32m            package_type=model.package_type,[m
+[32m+[m[32m            lead_status=model.lead_status,[m
+[32m+[m[32m            last_action=model.last_action,[m
+[32m+[m[32m            score=model.score or 0,[m
+             created_at=model.created_at,[m
+             updated_at=model.updated_at,[m
+         )[m
+[36m@@ -255,3 +259,70 @@[m [mclass PostgresLeadRepository(AbstractLeadRepository):[m
+             return False[m
+         await self._session.delete(model)[m
+         return True[m
+[32m+[m
+[32m+[m[32m    async def upsert_package_lead([m
+[32m+[m[32m        self,[m
+[32m+[m[32m        user_id: int,[m
+[32m+[m[32m        package_type: str,[m
+[32m+[m[32m        first_name: str,[m
+[32m+[m[32m        score_delta: int,[m
+[32m+[m[32m        lead_status: str,[m
+[32m+[m[32m    ) -> Lead:[m
+[32m+[m[32m        """Create or update a lead when the user selects a package.[m
+[32m+[m
+[32m+[m[32m        Finds the most recent lead for *user_id* and updates its package[m
+[32m+[m[32m        fields + increments score.  If no lead exists yet, inserts a minimal[m
+[32m+[m[32m        placeholder (name = first_name, phone = '—', district = 'Noma'lum').[m
+[32m+[m[32m        """[m
+[32m+[m[32m        stmt = ([m
+[32m+[m[32m            select(LeadModel)[m
+[32m+[m[32m            .where(LeadModel.user_id == user_id)[m
+[32m+[m[32m            .order_by(LeadModel.created_at.desc())[m
+[32m+[m[32m            .limit(1)[m
+[32m+[m[32m        )[m
+[32m+[m[32m        result = await self._session.execute(stmt)[m
+[32m+[m[32m        model = result.scalar_one_or_none()[m
+[32m+[m
+[32m+[m[32m        if model is not None:[m
+[32m+[m[32m            update_stmt = ([m
+[32m+[m[32m                update(LeadModel)[m
+[32m+[m[32m                .where(LeadModel.id == model.id)[m
+[32m+[m[32m                .values([m
+[32m+[m[32m                    package_type=package_type,[m
+[32m+[m[32m                    lead_status=lead_status,[m
+[32m+[m[32m                    last_action="package_order",[m
+[32m+[m[32m                    score=LeadModel.score + score_delta,[m
+[32m+[m[32m                    updated_at=datetime.now(timezone.utc),[m
+[32m+[m[32m                )[m
+[32m+[m[32m                .returning(LeadModel)[m
+[32m+[m[32m            )[m
+[32m+[m[32m            res = await self._session.execute(update_stmt)[m
+[32m+[m[32m            model = res.scalar_one()[m
+[32m+[m[32m            return self._to_domain(model, PipelineStage.PACKAGE_SELECTED)[m
+[32m+[m
+[32m+[m[32m        # No existing lead — create minimal placeholder[m
+[32m+[m[32m        model = LeadModel([m
+[32m+[m[32m            user_id=user_id,[m
+[32m+[m[32m            category=CeilingCategory.ODNOTONNY.value,[m
+[32m+[m[32m            source=LeadSource.DEEPLINK.value,[m
+[32m+[m[32m            name=first_name,[m
+[32m+[m[32m            phone="—",[m
+[32m+[m[32m            district="Noma'lum",[m
+[32m+[m[32m            package_type=package_type,[m
+[32m+[m[32m            lead_status=lead_status,[m
+[32m+[m[32m            last_action="package_order",[m
+[32m+[m[32m            score=score_delta,[m
+[32m+[m[32m        )[m
+[32m+[m[32m        self._session.add(model)[m
+[32m+[m[32m        await self._session.flush()[m
+[32m+[m[32m        await self._session.refresh(model)[m
+[32m+[m[32m        return self._to_domain(model, PipelineStage.NEW)[m
+[32m+[m
+[32m+[m[32m    async def update_lead_status(self, lead_id: int, lead_status: str) -> None:[m
+[32m+[m[32m        """Update the lead_status column (hot / warm / cold / blocked)."""[m
+[32m+[m[32m        stmt = ([m
+[32m+[m[32m            update(LeadModel)[m
+[32m+[m[32m            .where(LeadModel.id == lead_id)[m
+[32m+[m[32m            .values(lead_status=lead_status, updated_at=datetime.now(timezone.utc))[m
+[32m+[m[32m        )[m
+[32m+[m[32m        await self._session.execute(stmt)[m
+[1mdiff --git a/infrastructure/database/repositories/user_repo.py b/infrastructure/database/repositories/user_repo.py[m
+[1mindex cfeea7b..f859247 100644[m
+[1m--- a/infrastructure/database/repositories/user_repo.py[m
+[1m+++ b/infrastructure/database/repositories/user_repo.py[m
+[36m@@ -49,7 +49,17 @@[m [mclass PostgresUserRepository(AbstractUserRepository):[m
+         return self._to_domain(model) if model else None[m
+ [m
+     async def upsert(self, user: User) -> User:[m
+[31m-        """INSERT ... ON CONFLICT DO UPDATE for Telegram user."""[m
+[32m+[m[32m        """INSERT ... ON CONFLICT DO UPDATE for Telegram user.[m
+[32m+[m
+[32m+[m[32m        Raises ValueError for non-positive IDs (groups / channels / service[m
+[32m+[m[32m        entities) so the bug is caught loudly at the repository boundary even[m
+[32m+[m[32m        if a future caller bypasses the AuthMiddleware guard.[m
+[32m+[m[32m        """[m
+[32m+[m[32m        if user.id <= 0:[m
+[32m+[m[32m            raise ValueError([m
+[32m+[m[32m                f"upsert() called with non-positive user id={user.id}. "[m
+[32m+[m[32m                "Only private Telegram users (id > 0) may be stored in `users`."[m
+[32m+[m[32m            )[m
+         stmt = insert(UserModel).values([m
+             id=user.id,[m
+             username=user.username,[m
+[1mdiff --git a/infrastructure/queue/app.py b/infrastructure/queue/app.py[m
+[1mindex 98623ff..3bdafa5 100644[m
+[1m--- a/infrastructure/queue/app.py[m
+[1m+++ b/infrastructure/queue/app.py[m
+[36m@@ -14,6 +14,7 @@[m [mdef create_celery_app() -> Celery:[m
+             "infrastructure.queue.tasks.broadcast_tasks",[m
+             "infrastructure.queue.tasks.notification_tasks",[m
+             "infrastructure.queue.tasks.export_tasks",[m
+[32m+[m[32m            "infrastructure.queue.tasks.package_tasks",[m
+         ],[m
+     )[m
+     app.conf.update([m
+[1mdiff --git a/infrastructure/queue/tasks/broadcast_tasks.py b/infrastructure/queue/tasks/broadcast_tasks.py[m
+[1mindex eec6000..0809de9 100644[m
+[1m--- a/infrastructure/queue/tasks/broadcast_tasks.py[m
+[1m+++ b/infrastructure/queue/tasks/broadcast_tasks.py[m
+[36m@@ -12,24 +12,39 @@[m [mprocess_broadcast_batch(broadcast_id)[m
+        ADMIN_GROUPS → admin_groups table only[m
+   4. Send each message (text / photo / video / document).[m
+      - RetryAfter: sleep then retry once.[m
+[31m-     - Forbidden:  user blocked the bot; count as failed, continue.[m
+[32m+[m[32m     - Terminal error (chat not found / bot blocked / forbidden):[m
+[32m+[m[32m         mark users.is_blocked = true, count as failed, continue.[m
+[32m+[m[32m     - Other error: count as failed, continue.[m
+   5. Update counters (batched every 50 sends).[m
+   6. Finalize: set finished_at + mark DONE (or FAILED on exception).[m
+ [m
+ Throttling: 1 / BROADCAST_RATE_LIMIT seconds per message.[m
+[32m+[m
+[32m+[m[32mEngine lifetime[m
+[32m+[m[32m---------------[m
+[32m+[m[32masyncio.run() creates a new event loop, runs the coroutine, then **closes**[m
+[32m+[m[32mthe loop.  A global singleton engine (like the one in session.py) would have[m
+[32m+[m[32mits asyncpg connection pool bound to that dead loop, causing[m
+[32m+[m[32m    RuntimeError: Event loop is closed[m
+[32m+[m[32mon the next task.  Therefore each top-level coroutine creates its own[m
+[32m+[m[32mAsyncEngine and disposes it in a finally block.[m
+ """[m
+ from __future__ import annotations[m
+ [m
+ import asyncio[m
+[32m+[m[32mfrom collections.abc import AsyncGenerator[m
+[32m+[m[32mfrom contextlib import asynccontextmanager[m
+ from datetime import datetime, timezone[m
+ [m
+[32m+[m[32mimport sqlalchemy as sa[m
+ from aiogram import Bot[m
+ from aiogram.client.default import DefaultBotProperties[m
+ from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter[m
+[32m+[m[32mfrom sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine[m
+ [m
+[32m+[m[32mfrom infrastructure.database.models.user import UserModel[m
+ from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository[m
+ from infrastructure.database.repositories.broadcast_repo import PostgresBroadcastRepository[m
+[31m-from infrastructure.database.session import get_readonly_session, get_session[m
+ from infrastructure.queue.app import celery_app[m
+ from shared.config import get_settings[m
+ from shared.constants.enums import BroadcastStatus, PayloadType, SegmentType[m
+[36m@@ -39,6 +54,113 @@[m [mlog = get_logger(__name__)[m
+ [m
+ _COUNTER_BATCH = 50  # flush counters to DB every N sends[m
+ [m
+[32m+[m[32m# ── Terminal-error detection ───────────────────────────────────────────────────[m
+[32m+[m[32m# Lowercase substrings that identify a permanently unreachable chat.[m
+[32m+[m[32m# TelegramForbiddenError (403) is always terminal.[m
+[32m+[m[32m# Specific TelegramBadRequest (400) messages are listed here.[m
+[32m+[m[32m_BLOCK_PHRASES: frozenset[str] = frozenset({[m
+[32m+[m[32m    "chat not found",[m
+[32m+[m[32m    "bot was blocked by the user",[m
+[32m+[m[32m    "user is deactivated",[m
+[32m+[m[32m    "have no rights to send a message",[m
+[32m+[m[32m    "group chat was upgraded to a supergroup chat",[m
+[32m+[m[32m})[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _is_terminal_error(exc: Exception) -> bool:[m
+[32m+[m[32m    """Return True when the error means this chat_id is permanently unreachable."""[m
+[32m+[m[32m    if isinstance(exc, TelegramForbiddenError):[m
+[32m+[m[32m        return True[m
+[32m+[m[32m    msg = str(exc).lower()[m
+[32m+[m[32m    return any(phrase in msg for phrase in _BLOCK_PHRASES)[m
+[32m+[m
+[32m+[m
+[32m+[m[32m# ── Local session helpers ──────────────────────────────────────────────────────[m
+[32m+[m[32m# These helpers accept a caller-supplied session factory instead of using the[m
+[32m+[m[32m# global singleton from session.py, so they are safe to call inside asyncio.run().[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@asynccontextmanager[m
+[32m+[m[32masync def _rw_session([m
+[32m+[m[32m    factory: async_sessionmaker[AsyncSession],[m
+[32m+[m[32m) -> AsyncGenerator[AsyncSession, None]:[m
+[32m+[m[32m    """Read-write session: commits on success, rolls back on error."""[m
+[32m+[m[32m    async with factory() as session:[m
+[32m+[m[32m        try:[m
+[32m+[m[32m            yield session[m
+[32m+[m[32m            await session.commit()[m
+[32m+[m[32m        except Exception:[m
+[32m+[m[32m            await session.rollback()[m
+[32m+[m[32m            raise[m
+[32m+[m[32m        finally:[m
+[32m+[m[32m            await session.close()[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@asynccontextmanager[m
+[32m+[m[32masync def _ro_session([m
+[32m+[m[32m    factory: async_sessionmaker[AsyncSession],[m
+[32m+[m[32m) -> AsyncGenerator[AsyncSession, None]:[m
+[32m+[m[32m    """Read-only session: never commits."""[m
+[32m+[m[32m    async with factory() as session:[m
+[32m+[m[32m        try:[m
+[32m+[m[32m            yield session[m
+[32m+[m[32m        finally:[m
+[32m+[m[32m            await session.rollback()[m
+[32m+[m[32m            await session.close()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _make_session_factory() -> tuple[object, async_sessionmaker[AsyncSession]]:[m
+[32m+[m[32m    ""

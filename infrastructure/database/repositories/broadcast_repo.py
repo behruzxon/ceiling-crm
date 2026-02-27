@@ -169,8 +169,15 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         await self._session.execute(stmt)
 
     async def get_all_private_user_ids(self) -> list[int]:
-        """Return IDs of all non-blocked users."""
-        stmt = sa.select(UserModel.id).where(UserModel.is_blocked.is_(False))
+        """Return IDs of all non-blocked private users.
+
+        The id > 0 guard filters out any corrupted rows (groups / channels /
+        service bots) that may have been stored before the AuthMiddleware fix.
+        """
+        stmt = sa.select(UserModel.id).where(
+            UserModel.is_blocked.is_(False),
+            UserModel.id > 0,
+        )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

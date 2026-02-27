@@ -112,3 +112,43 @@ class LeadService:
     async def search_leads(self, **filters: object) -> list[Lead]:
         """Flexible lead search delegated to repository."""
         return await self._leads.search(**filters)
+
+    async def select_package(
+        self,
+        user_id: int,
+        package_type: str,
+        first_name: str,
+        score_delta: int,
+        lead_status: str,
+    ) -> Lead:
+        """Record that a user selected a package.
+
+        Upserts the lead (create or update), then inserts a PACKAGE_SELECTED
+        pipeline stage record.  Does NOT go through CRMService transition
+        validation — package selection is an entry-point action, not a
+        pipeline-internal move.
+        """
+        lead = await self._leads.upsert_package_lead(
+            user_id=user_id,
+            package_type=package_type,
+            first_name=first_name,
+            score_delta=score_delta,
+            lead_status=lead_status,
+        )
+
+        await self._pipeline.insert_stage(
+            lead_id=lead.id,
+            stage=PipelineStage.PACKAGE_SELECTED,
+            changed_by=user_id,
+            note=f"Paket tanlandi: {package_type}",
+        )
+
+        log.info(
+            "package_selected",
+            lead_id=lead.id,
+            user_id=user_id,
+            package_type=package_type,
+            lead_status=lead_status,
+            score_delta=score_delta,
+        )
+        return lead

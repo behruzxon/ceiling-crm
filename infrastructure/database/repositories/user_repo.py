@@ -49,7 +49,17 @@ class PostgresUserRepository(AbstractUserRepository):
         return self._to_domain(model) if model else None
 
     async def upsert(self, user: User) -> User:
-        """INSERT ... ON CONFLICT DO UPDATE for Telegram user."""
+        """INSERT ... ON CONFLICT DO UPDATE for Telegram user.
+
+        Raises ValueError for non-positive IDs (groups / channels / service
+        entities) so the bug is caught loudly at the repository boundary even
+        if a future caller bypasses the AuthMiddleware guard.
+        """
+        if user.id <= 0:
+            raise ValueError(
+                f"upsert() called with non-positive user id={user.id}. "
+                "Only private Telegram users (id > 0) may be stored in `users`."
+            )
         stmt = insert(UserModel).values(
             id=user.id,
             username=user.username,
