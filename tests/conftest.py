@@ -37,3 +37,17 @@ def mock_event_bus() -> MagicMock:
     bus = MagicMock()
     bus.emit = AsyncMock()
     return bus
+
+
+@pytest.fixture
+def mock_admin_group_repo() -> AsyncMock:
+    """Mock AbstractAdminGroupRepository for service tests."""
+    from core.repositories.admin_group_repo import AbstractAdminGroupRepository
+    return AsyncMock(spec=AbstractAdminGroupRepository)
+
+
+@pytest.fixture
+def mock_broadcast_repo() -> AsyncMock:
+    """Mock AbstractBroadcastRepository for broadcast service tests."""
+    from core.repositories.broadcast_repo import AbstractBroadcastRepository
+    return AsyncMock(spec=AbstractBroadcastRepository)
