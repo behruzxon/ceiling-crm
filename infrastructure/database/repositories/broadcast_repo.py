@@ -117,6 +117,10 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
         title = f"Rassilka {segment_type.value} {ts}"
 
+        # message_template is a legacy NOT NULL column; populate it from the
+        # v2 text field so existing queries that read it still get a value.
+        message_template = text or ""
+
         model = BroadcastModel(
             title=title,
             segment_type=segment_type.value,
@@ -124,6 +128,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             payload_type=payload_type.value,
             text=text,
             file_id=file_id,
+            message_template=message_template,
             status=BroadcastStatus.PENDING.value,
             created_by=created_by,
         )
