@@ -29,6 +29,7 @@ from core.services.warranty_service import WarrantyService
 from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.database.repositories.broadcast_repo import PostgresBroadcastRepository
 from infrastructure.database.repositories.group_settings_repo import PostgresGroupSettingsRepository
+from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.repositories.payment_repo import PostgresPaymentRepository
 from infrastructure.database.repositories.pipeline_repo import PostgresPipelineRepository
@@ -86,3 +87,15 @@ def get_admin_group_service(session: AsyncSession) -> AdminGroupService:
 
 def get_broadcast_service(session: AsyncSession) -> BroadcastService:
     return BroadcastService(PostgresBroadcastRepository(session))
+
+
+def get_lead_action_repo(session: AsyncSession) -> PostgresLeadActionRepository:
+    return PostgresLeadActionRepository(session)
+
+
+def get_lead_analytics_service(session: AsyncSession) -> "LeadAnalyticsService":
+    from core.services.lead_analytics_service import LeadAnalyticsService
+    return LeadAnalyticsService(
+        action_repo=PostgresLeadActionRepository(session),
+        lead_repo=PostgresLeadRepository(session),
+    )

@@ -12,7 +12,7 @@ from aiogram.types import Message
 from apps.bot.keyboards.main_menu import main_menu_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_service
+from infrastructure.di import get_lead_action_repo, get_lead_service
 from shared.constants.enums import CeilingCategory, LeadSource
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
@@ -106,6 +106,17 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
             )
 
             log.info("lead_captured_via_bot", lead_id=lead.id, user_id=user_id)
+
+            # Log lead creation event (fire-and-forget, own session)
+            try:
+                log_factory = get_session_factory()
+                async with log_factory() as log_session:
+                    await get_lead_action_repo(log_session).insert(
+                        lead.id, user_id, "lead_created"
+                    )
+                    await log_session.commit()
+            except Exception:
+                log.exception("lead_created_action_log_error", lead_id=lead.id)
         except Exception:
             await session.rollback()
             await state.clear()

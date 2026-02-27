@@ -38,10 +38,12 @@ from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
 from apps.bot.handlers.admin.dashboard import router as dashboard_router
 from apps.bot.handlers.admin.leads import router as admin_leads_router
 from apps.bot.handlers.admin.media import router as media_router
+from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
 from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
+from apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
@@ -51,6 +53,7 @@ from apps.bot.handlers.group.messages import router as group_messages_router
 from apps.bot.handlers.group.moderation import router as moderation_router
 from apps.bot.handlers.group.welcome import router as welcome_router
 from apps.bot.handlers.private.about import router as about_router
+from apps.bot.handlers.private.packages import router as packages_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
@@ -130,6 +133,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         pipeline_router,
         broadcasts_router,
         scheduler_router,
+        operator_stats_router,
         reports_router,
         media_router,
     )
@@ -140,6 +144,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         lead_callbacks_router,
         pipeline_callbacks_router,
         payment_callbacks_router,
+        package_callbacks_router,   # pkg:admin:* inline buttons from notifications
     )
 
     # ── Group router ───────────────────────────────────────────────────────
@@ -160,6 +165,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         catalog_router,
         promotions_router,   # simple text+callback handler — no FSM state deps
         about_router,        # simple text+callback handler — owns open_catalog callback
+        packages_router,     # "📦 Tayyor paketlar" + pkg:detail/order/calc callbacks
         pricing_router,
         my_orders_router,    # must precede order_router (shares "📦" prefix text)
         payment_router,      # FSM — must precede lead_capture_router catch-all

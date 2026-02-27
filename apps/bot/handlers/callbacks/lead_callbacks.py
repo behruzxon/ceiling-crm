@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_service, get_user_service
+from infrastructure.di import get_lead_action_repo, get_lead_service, get_user_service
 from shared.constants.enums import UserRole
 from shared.exceptions.base import NotFoundError
 from shared.utils.formatting import bold
@@ -95,6 +95,9 @@ async def cb_do_assign(callback: CallbackQuery, **data: object) -> None:
         try:
             lead_service = get_lead_service(session)
             lead = await lead_service.assign_manager(lead_id, manager_id, actor_id)
+            await get_lead_action_repo(session).insert(
+                lead_id, actor_id, "lead_assigned", payload={"manager_id": manager_id}
+            )
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]

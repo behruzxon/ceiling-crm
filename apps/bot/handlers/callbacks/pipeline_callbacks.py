@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_crm_service
+from infrastructure.di import get_crm_service, get_lead_action_repo
 from shared.constants.enums import PipelineStage
 from shared.exceptions.base import (
     InvalidStageTransitionError,
@@ -73,6 +73,18 @@ async def cb_do_advance(callback: CallbackQuery, **data: object) -> None:
         try:
             crm = get_crm_service(session)
             lead = await crm.advance_stage(lead_id, new_stage, actor_id)
+
+            # Semantic action log — fire-and-forget (never raises)
+            if new_stage == PipelineStage.MEASUREMENT:
+                _action = "measurement_set"
+            elif new_stage in (PipelineStage.DEAL, PipelineStage.QUOTE):
+                _action = "order_done"
+            else:
+                _action = "status_changed"
+            await get_lead_action_repo(session).insert(
+                lead_id, actor_id, _action, payload={"new": new_stage.value}
+            )
+
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
@@ -104,6 +116,9 @@ async def cb_mark_lost(callback: CallbackQuery, **data: object) -> None:
             await crm.advance_stage(
                 lead_id, PipelineStage.LOST, actor_id,
                 note="Yo'qotildi (admin paneldan belgilangan)",
+            )
+            await get_lead_action_repo(session).insert(
+                lead_id, actor_id, "status_changed", payload={"new": PipelineStage.LOST.value}
             )
             await session.commit()
 
