@@ -10,8 +10,17 @@ from aiogram.types import Message
 
 from apps.bot.handlers.private.ai_support import clear_ai_conversation
 from apps.bot.keyboards.main_menu import main_menu_keyboard
+from shared.config import get_settings
 
 router = Router(name="private:support")
+
+
+def _is_bot_admin(user_id: int) -> bool:
+    settings = get_settings()
+    return (
+        settings.bot.admin_user_id is not None
+        and user_id == settings.bot.admin_user_id
+    )
 
 HELP_TEXT = (
     "🏠 <b>Ceiling CRM Bot</b>\n\n"
@@ -46,7 +55,7 @@ async def cmd_start(message: Message, state: FSMContext, **data) -> None:
         "• 📂 Real loyihalar katalogi\n"
         "• 📞 Tezkor operator aloqasi\n\n"
         "👇 Quyidagi bo'limlardan birini tanlang:",
-        reply_markup=main_menu_keyboard(),
+        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
     )
 
 
@@ -61,7 +70,8 @@ async def cmd_help(message: Message, state: FSMContext, **data) -> None:
 async def cmd_cancel(message: Message, state: FSMContext, **data) -> None:
     """Cancel any in-progress flow, clear FSM state, and return to main menu."""
     await state.clear()
+    user_id = message.from_user.id if message.from_user else 0
     await message.answer(
         "❎ Amal bekor qilindi.",
-        reply_markup=main_menu_keyboard(),
+        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
     )

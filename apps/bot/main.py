@@ -45,6 +45,7 @@ from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
+from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
 from apps.bot.handlers.group.moderation import router as moderation_router
@@ -144,11 +145,12 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Group router ───────────────────────────────────────────────────────
     group_router = Router(name="group")
     group_router.include_routers(
-        group_admin_router,    # /admin command + gs: callbacks — must be first
+        group_admin_router,         # /admin command + gs: callbacks — must be first
+        admin_group_tracker_router, # my_chat_member → upsert admin_groups (silent)
         member_status_router,
-        welcome_router,        # C3-2: join welcome + auto-delete
-        moderation_router,     # C3-3 link blocking + C3-4 flood control
-        group_messages_router, # silent catch-all — must be last
+        welcome_router,             # join welcome + auto-delete
+        moderation_router,          # link blocking + flood control
+        group_messages_router,      # silent catch-all — must be last
     )
 
     # ── Private DM router ─────────────────────────────────────────────────
