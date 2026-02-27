@@ -60,6 +60,28 @@ services:
         condition: service_healthy
     command: python -m apps.bot.main
 
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      PAYMENT_CARD_NUMBER: ${PAYMENT_CARD_NUMBER}
+      PAYMENT_CARD_HOLDER: ${PAYMENT_CARD_HOLDER}
+      PAYMENT_BANK_NAME: ${PAYMENT_BANK_NAME}
+      BOT_ADMIN_USER_ID: ${BOT_ADMIN_USER_ID}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A infrastructure.queue.app worker -l info
+
 volumes:
   postgres_data:
     driver: local
