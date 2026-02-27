@@ -18,7 +18,8 @@ class BroadcastModel(Base):
 
     # ── Segment ──────────────────────────────────────────────────────────────
     segment_type: Mapped[str] = mapped_column(
-        sa.Enum(SegmentType, name="segment_type"),
+        sa.Enum(SegmentType, name="segment_type",
+                values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default=SegmentType.ALL_PRIVATE.value,
     )
@@ -26,7 +27,8 @@ class BroadcastModel(Base):
 
     # ── Payload ───────────────────────────────────────────────────────────────
     payload_type: Mapped[str] = mapped_column(
-        sa.Enum(PayloadType, name="payload_type"),
+        sa.Enum(PayloadType, name="payload_type",
+                values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default=PayloadType.TEXT.value,
     )
@@ -44,7 +46,8 @@ class BroadcastModel(Base):
 
     # ── Status & counters ─────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(
-        sa.Enum(BroadcastStatus, name="broadcast_status"),
+        sa.Enum(BroadcastStatus, name="broadcast_status",
+                values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default=BroadcastStatus.DRAFT.value,
     )
