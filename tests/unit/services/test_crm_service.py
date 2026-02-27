@@ -20,14 +20,21 @@ class TestCRMServiceTransitions:
         assert PipelineStage.CONTACTED in transitions
         assert PipelineStage.LOST in transitions
 
-    def test_get_valid_transitions_completed_is_terminal(self):
-        assert self.svc.get_valid_transitions(PipelineStage.COMPLETED) == []
+    def test_get_valid_transitions_completed_allows_undo(self):
+        # COMPLETED can go back to INSTALLATION (undo / correction)
+        transitions = self.svc.get_valid_transitions(PipelineStage.COMPLETED)
+        assert PipelineStage.INSTALLATION in transitions
+        # COMPLETED cannot jump forward to arbitrary stages
+        assert PipelineStage.NEW not in transitions
+        assert PipelineStage.LOST not in transitions
 
     def test_lost_re_engage_to_new(self):
         transitions = self.svc.get_valid_transitions(PipelineStage.LOST)
         assert PipelineStage.NEW in transitions
 
     @pytest.mark.asyncio
-    async def test_advance_stage_not_implemented(self):
-        with pytest.raises(NotImplementedError):
+    async def test_advance_stage_invalid_transition_raises(self):
+        # Mocked pipeline_repo returns a MagicMock (not a PipelineStage),
+        # which falls through ALLOWED_TRANSITIONS lookup to [] → InvalidStageTransitionError
+        with pytest.raises(InvalidStageTransitionError):
             await self.svc.advance_stage(1, PipelineStage.CONTACTED, actor_id=99)

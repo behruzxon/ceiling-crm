@@ -58,6 +58,7 @@ def get_lead_service(session: AsyncSession) -> LeadService:
         lead_repo=get_lead_repo(session),
         pipeline_repo=get_pipeline_repo(session),
         event_bus=event_bus,
+        action_repo=PostgresLeadActionRepository(session),
     )
 
 
