@@ -49,45 +49,51 @@ PACKAGE_INFO: dict[str, dict] = {
     "standard": {
         "name": "🥉 Standard",
         "description": (
-            "🥉 <b>Standard Paket</b>\n\n"
-            "• Asosiy PVC shiftlar\n"
-            "• 10+ rang tanlov\n"
-            "• 5 yillik kafolat\n"
-            "• LED yorug'lik imkoniyati\n\n"
-            "💰 Narx: <b>35 000 UZS/m²</b> dan"
+            "🥉 <b>STANDARD — Eng arzon va tez variant</b>\n\n"
+            "• Oddiy va ishonchli natijnoy shift\n"
+            "• ⚡ Eng tez o'rnatish\n"
+            "• 💸 Har qanday boshqa potolok turidan arzon\n"
+            "• 🎨 10+ rang tanlov\n"
+            "• 🛡 10 yil kafolat\n\n"
+            "💰 Narx: <b>80 000 UZS/m²</b>\n\n"
+            "🎯 <i>Ijara uylari va byudjet variant uchun ideal</i>"
         ),
-        "price_per_m2": 35_000,
+        "price_per_m2": 80_000,
         "score_delta": 5,
         "status": "warm",
     },
     "premium": {
-        "name": "🥈 Premium",
+        "name": "🥈 Premium ⭐",
         "description": (
-            "🥈 <b>Premium Paket</b> ⭐ <i>Eng ko'p tanlanadigan!</i>\n\n"
-            "• Premium PVC shiftlar\n"
-            "• 30+ rang tanlov\n"
-            "• 7 yillik kafolat\n"
-            "• LED yorug'lik + dizayn xizmati\n"
-            "• Bepul o'lchov\n\n"
-            "💰 Narx: <b>55 000 UZS/m²</b> dan"
+            "🥈 <b>PREMIUM ⭐ Eng ko'p tanlanadi</b>\n\n"
+            "• 🌸 Gulli dizayn variantlar\n"
+            "• 🧩 Hi-tech zamonaviy uslub\n"
+            "• 🪨 Mramor (marmar) effektli naqshlar\n"
+            "• 🎨 10 000+ dizayn va faktura\n"
+            "• 💡 LED bilan uyg'un dizayn\n"
+            "• 🛡 10 yil kafolat\n\n"
+            "💰 Narx: <b>120 000 UZS/m²</b>"
         ),
-        "price_per_m2": 55_000,
+        "price_per_m2": 120_000,
         "score_delta": 10,
         "status": "hot",
     },
     "vip": {
-        "name": "🥇 VIP",
+        "name": "🥇 VIP 👑",
         "description": (
-            "🥇 <b>VIP Paket</b>\n\n"
-            "• Natijoy brendli shiftlar\n"
-            "• 50+ rang tanlov\n"
-            "• 10 yillik kafolat\n"
-            "• Maxsus dizayn + LED + RGB\n"
-            "• Bepul o'lchov + loyiha\n"
-            "• VIP xizmat ko'rsatish\n\n"
-            "💰 Narx: <b>80 000 UZS/m²</b> dan"
+            "🥇 <b>VIP 👑 Eksklyuziv dizayn</b>\n\n"
+            "• 🧩 Murakkab hi-tech dizaynlar\n"
+            "• 💡 Spot chiroqlar integratsiyasi\n"
+            "• ➖ Trek sistema\n"
+            "• ✨ Svetavoy liniya\n"
+            "• 🌈 RGB + ko'p darajali yoritish\n"
+            "• 🏗 Ko'p bosqichli konstruktsiya\n"
+            "• 🎨 Individual loyiha asosida dizayn\n"
+            "• 📐 Bepul o'lchov + dizayn loyiha\n"
+            "• 🛡 15 yil kafolat\n\n"
+            "💰 Narx: <b>140 000 – 1 000 000 UZS/m²</b>"
         ),
-        "price_per_m2": 80_000,
+        "price_per_m2": 140_000,
         "score_delta": 15,
         "status": "hot",
     },
@@ -96,9 +102,9 @@ PACKAGE_INFO: dict[str, dict] = {
 _PACKAGES_LIST_TEXT = (
     "📦 <b>Tayyor paketlar</b>\n\n"
     "Eng qulay paketni tanlang va operator tez orada bog'lanadi:\n\n"
-    "🥉 <b>Standard</b> — 35 000 UZS/m² dan\n"
-    "🥈 <b>Premium</b> ⭐ — 55 000 UZS/m² dan  <i>(eng ko'p)</i>\n"
-    "🥇 <b>VIP</b> — 80 000 UZS/m² dan\n\n"
+    "🥉 <b>Standard</b> — 80 000 UZS/m²\n"
+    "🥈 <b>Premium</b> ⭐ — 120 000 UZS/m²  <i>(eng ko'p tanlanadi)</i>\n"
+    "🥇 <b>VIP</b> 👑 — 140 000 – 1 000 000 UZS/m²\n\n"
     "👇 Paketni tanlang:"
 )
 
