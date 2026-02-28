@@ -27,7 +27,8 @@ from aiogram.types import (
 
 from apps.bot.handlers.group._moderation import dm_log, try_delete
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_group_settings_service
+from infrastructure.di import get_group_join_repo, get_group_settings_service
+from shared.config import get_settings
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -53,10 +54,27 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
         log.warning("welcome_settings_load_failed", chat_id=chat_id)
         return
 
+    joined = event.new_chat_member.user
+
+    # ── Join analytics (independent of welcome_enabled) ──────────────────
+    # Runs for the main customer group only.  Non-fatal — a DB failure must
+    # never prevent the welcome message from being sent.
+    _main_gid = get_settings().bot.main_group_id
+    if _main_gid and event.chat.id == _main_gid and joined.id > 0:
+        try:
+            async with get_session_factory()() as _s:
+                await get_group_join_repo(_s).upsert_join(
+                    group_id=_main_gid,
+                    user_id=joined.id,
+                    joined_at=event.date,
+                )
+                await _s.commit()
+            log.info("group_join_recorded", group_id=_main_gid, user_id=joined.id)
+        except Exception:
+            log.exception("group_join_record_error", group_id=_main_gid, user_id=joined.id)
+
     if not settings.welcome_enabled:
         return
-
-    joined = event.new_chat_member.user
     mention = f"<a href='tg://user?id={joined.id}'>{joined.full_name}</a>"
     chat_title = event.chat.title or str(chat_id)
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from apps.bot.handlers.private.ai_support import clear_ai_conversation
 from apps.bot.keyboards.main_menu import main_menu_keyboard
@@ -35,12 +35,29 @@ HELP_TEXT = (
 )
 
 
+# Inline fallback shown in group chats where reply keyboards may be hidden.
+# URL buttons open the bot in DM so all flows work correctly.
+_GROUP_INLINE_KB = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="🛒 Zakaz berish",      url="https://t.me/potolok_x_bot?start=order"),
+        InlineKeyboardButton(text="💰 Narx hisoblash",    url="https://t.me/potolok_x_bot?start=price"),
+    ],
+    [
+        InlineKeyboardButton(text="📂 Katalog",           url="https://t.me/potolok_x_bot?start=catalog"),
+        InlineKeyboardButton(text="🏷️ Tayyor paketlar",  url="https://t.me/potolok_x_bot?start=packages"),
+    ],
+])
+
+
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext, **data) -> None:
     """Clear FSM state and AI conversation thread, then greet.
 
     User profile data (lead stage, phone, design interests, dimensions)
     is intentionally preserved — only the active conversation thread is reset.
+    In group/supergroup chats a persistent reply keyboard is set AND an
+    inline keyboard is sent as a second message (groups sometimes hide
+    reply keyboards even with is_persistent=True).
     """
     await state.clear()
     user_id = message.from_user.id if message.from_user else 0
@@ -57,6 +74,8 @@ async def cmd_start(message: Message, state: FSMContext, **data) -> None:
         "👇 Quyidagi bo'limlardan birini tanlang:",
         reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
     )
+    if message.chat.type in ("group", "supergroup"):
+        await message.answer("👇 Bot bo'limlari:", reply_markup=_GROUP_INLINE_KB)
 
 
 @router.message(Command("help"))

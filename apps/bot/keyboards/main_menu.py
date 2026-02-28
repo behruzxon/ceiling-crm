@@ -19,4 +19,9 @@ def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo
     ]
     if is_admin:
         rows.append([KeyboardButton(text="📣 Rassilka")])
-    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+    return ReplyKeyboardMarkup(
+        keyboard=rows,
+        resize_keyboard=True,
+        is_persistent=True,
+        one_time_keyboard=False,
+    )

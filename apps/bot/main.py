@@ -159,8 +159,8 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     group_router.include_routers(
         group_admin_router,         # /admin command + gs: callbacks — must be first
         admin_group_tracker_router, # my_chat_member → upsert admin_groups (silent)
-        member_status_router,
-        welcome_router,             # join welcome + auto-delete
+        welcome_router,             # chat_member: join welcome + analytics — before any other chat_member handler
+        member_status_router,       # my_chat_member: bot add/remove log only (no chat_member handlers)
         moderation_router,          # link blocking + flood control
         group_messages_router,      # silent catch-all — must be last
     )
@@ -307,7 +307,12 @@ async def run_polling() -> None:
     try:
         await dp.start_polling(
             bot,
-            allowed_updates=dp.resolve_used_update_types(),
+            allowed_updates=[
+                "message",
+                "callback_query",
+                "chat_member",
+                "my_chat_member",
+            ],
             handle_signals=True,
         )
     finally:
