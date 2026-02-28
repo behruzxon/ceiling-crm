@@ -16,8 +16,9 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from apps.bot.filters.role import RoleFilter
 from core.domain.lead import Lead
+from core.services.pipeline_service import KANBAN_DISPLAY, KANBAN_STAGES
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_action_repo, get_lead_repo
+from infrastructure.di import get_lead_action_repo, get_lead_repo, get_pipeline_service
 from shared.constants.enums import PipelineStage, UserRole
 from shared.utils.formatting import bold
 
@@ -52,9 +53,6 @@ ACTION_EMOJI: dict[str, str] = {
     "order_done": "✅",
     "lead_assigned": "👤",
 }
-
-# Stages that count as "won" for conversion %
-_WON_STAGES = {"DEAL", "INSTALLATION", "COMPLETED"}
 
 # Accept "DONE" as an alias for "COMPLETED" in /stage command
 _STAGE_ALIASES: dict[str, PipelineStage] = {"DONE": PipelineStage.COMPLETED}
@@ -127,56 +125,33 @@ def build_pipeline_keyboard(lead_id: int) -> InlineKeyboardMarkup:
 # ── /pipeline [days] ──────────────────────────────────────────────────────────
 
 @router.message(Command("pipeline"), RoleFilter(*_MGMT_ROLES))
-async def cmd_pipeline(message: Message, command: CommandObject, **data: object) -> None:
-    """Kanban summary: stage counts (all-time) + conversion % for last N days."""
-    days = 30
-    if command.args:
-        try:
-            days = max(1, min(365, int(command.args.strip())))
-        except ValueError:
-            pass
-
+async def cmd_pipeline(message: Message, **data: object) -> None:
+    """Show the kanban board as an inline keyboard with live stage counts."""
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
-        action_repo = get_lead_action_repo(session)
+        pipeline_svc = get_pipeline_service(session)
+        counts = await pipeline_svc.get_stage_counts()
 
-        all_time_counts = await lead_repo.get_pipeline_counts()
-        funnel = await action_repo.get_funnel_stats(days)
+    total = sum(counts.values())
 
-    period_total: int = funnel["total"]
-    stage_counts: dict[str, int] = funnel["stage_counts"]
-    won = sum(stage_counts.get(s, 0) for s in _WON_STAGES)
-    conv_pct = (won / period_total * 100) if period_total > 0 else 0.0
+    buttons: list[list[InlineKeyboardButton]] = []
+    for kanban_stage in KANBAN_STAGES:
+        label = KANBAN_DISPLAY[kanban_stage]
+        cnt = counts.get(kanban_stage, 0)
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"{label} ({cnt})",
+                callback_data=f"kanban:stage:{kanban_stage}",
+            )
+        ])
 
-    total_all = sum(all_time_counts.values())
-
-    lines = [f"📊 {bold('Pipeline Kanban')}\n"]
-    lines.append(f"Jami lidlar: {bold(str(total_all))}")
-    lines.append(f"So'nggi {days} kun: {period_total} lid")
-    lines.append(
-        f"Konversiya ({days} kun): {bold(f'{conv_pct:.1f}%')} "
-        f"({won}/{period_total if period_total else '—'})\n"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await message.answer(
+        f"📊 {bold('Pipeline Kanban')}\n"
+        f"Jami lidlar: {bold(str(total))}\n\n"
+        "Bosqichni tanlang 👇",
+        reply_markup=keyboard,
     )
-    lines.append("─" * 28)
-
-    for stage in PipelineStage:
-        if stage == PipelineStage.LOST:
-            continue
-        count = all_time_counts.get(stage, 0)
-        period_cnt = stage_counts.get(stage.value, 0)
-        emoji = STAGE_EMOJI.get(stage, "▪️")
-        bar = "█" * min(count, 15)
-        lines.append(
-            f"{emoji} {stage.value}: {bold(str(count))} "
-            f"(+{period_cnt} / {days}d) {bar}"
-        )
-
-    lost_count = all_time_counts.get(PipelineStage.LOST, 0)
-    lines.append(f"\n❌ LOST: {lost_count}")
-    lines.append(f"\n💡 /stage NEW  /stage MEASUREMENT  /stage DEAL  /stage DONE")
-
-    await message.answer("\n".join(lines))
 
 
 # ── /stage STAGE [page] ───────────────────────────────────────────────────────

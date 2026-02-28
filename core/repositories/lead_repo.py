@@ -74,3 +74,30 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
     async def update_lead_status(self, lead_id: int, lead_status: str) -> None:
         """Update the lead_status column (hot / warm / cold / blocked)."""
         ...
+
+    @abstractmethod
+    async def update_last_action(self, lead_id: int, last_action: str) -> None:
+        """Stamp leads.last_action with *last_action*. Used for dedupe markers."""
+        ...
+
+    @abstractmethod
+    async def get_counts_by_stage(self) -> dict[str, int]:
+        """Return lead counts grouped into 5 kanban buckets.
+
+        Buckets: new | hot | measurement | won | lost
+        Leads with no pipeline_stages record are counted as 'new'.
+        """
+        ...
+
+    @abstractmethod
+    async def get_leads_by_kanban_stage(
+        self,
+        kanban_stage: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[Lead]:
+        """Return leads for a kanban bucket, ordered newest-first.
+
+        kanban_stage must be one of: new | hot | measurement | won | lost
+        """
+        ...

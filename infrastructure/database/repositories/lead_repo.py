@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import sqlalchemy as sa
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -326,3 +327,121 @@ class PostgresLeadRepository(AbstractLeadRepository):
             .values(lead_status=lead_status, updated_at=datetime.now(timezone.utc))
         )
         await self._session.execute(stmt)
+
+    async def update_last_action(self, lead_id: int, last_action: str) -> None:
+        """Stamp leads.last_action with *last_action*. Used for dedupe markers."""
+        stmt = (
+            update(LeadModel)
+            .where(LeadModel.id == lead_id)
+            .values(last_action=last_action, updated_at=datetime.now(timezone.utc))
+        )
+        await self._session.execute(stmt)
+
+    # ── Kanban helpers ─────────────────────────────────────────────────────────
+
+    # Map kanban bucket → pipeline stage values stored in pipeline_stages.stage
+    _KANBAN_PIPELINE_MAP: dict[str, list[str]] = {
+        "new":         [PipelineStage.NEW.value, PipelineStage.PACKAGE_SELECTED.value],
+        "hot":         [PipelineStage.CONTACTED.value],
+        "measurement": [PipelineStage.MEASUREMENT.value, PipelineStage.QUOTE.value],
+        "won":         [PipelineStage.DEAL.value, PipelineStage.INSTALLATION.value, PipelineStage.COMPLETED.value],
+        "lost":        [PipelineStage.LOST.value],
+    }
+
+    async def get_counts_by_stage(self) -> dict[str, int]:
+        """Return lead counts grouped into 5 kanban buckets.
+
+        Uses an OUTER JOIN so leads with no pipeline_stages row fall into 'new'.
+        """
+        latest = (
+            select(
+                PipelineStageModel.lead_id,
+                PipelineStageModel.stage,
+            )
+            .distinct(PipelineStageModel.lead_id)
+            .order_by(PipelineStageModel.lead_id, PipelineStageModel.created_at.desc())
+            .subquery("latest_stage_kb")
+        )
+
+        stage_col = latest.c.stage
+        kanban_expr = sa.case(
+            (stage_col.in_(["CONTACTED"]), "hot"),
+            (stage_col.in_(["MEASUREMENT", "QUOTE"]), "measurement"),
+            (stage_col.in_(["DEAL", "INSTALLATION", "COMPLETED"]), "won"),
+            (stage_col == "LOST", "lost"),
+            else_="new",  # NEW, PACKAGE_SELECTED and NULL (no stage) → new
+        )
+
+        stmt = (
+            select(kanban_expr.label("kanban_stage"), func.count().label("cnt"))
+            .select_from(LeadModel)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .group_by("kanban_stage")
+        )
+
+        result = await self._session.execute(stmt)
+        counts: dict[str, int] = {
+            "new": 0, "hot": 0, "measurement": 0, "won": 0, "lost": 0,
+        }
+        for kanban_stage, cnt in result.all():
+            if kanban_stage in counts:
+                counts[kanban_stage] = cnt
+        return counts
+
+    async def get_leads_by_kanban_stage(
+        self,
+        kanban_stage: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[Lead]:
+        """Return leads for a kanban bucket, newest-first.
+
+        For the 'new' bucket an OUTER JOIN is used so leads with no
+        pipeline_stages record are included.
+        """
+        pipeline_stages = self._KANBAN_PIPELINE_MAP.get(
+            kanban_stage.lower(), [PipelineStage.NEW.value]
+        )
+
+        latest = (
+            select(
+                PipelineStageModel.lead_id,
+                PipelineStageModel.stage,
+            )
+            .distinct(PipelineStageModel.lead_id)
+            .order_by(PipelineStageModel.lead_id, PipelineStageModel.created_at.desc())
+            .subquery("latest_stage_kb2")
+        )
+
+        if kanban_stage.lower() == "new":
+            stmt = (
+                select(LeadModel, latest.c.stage)
+                .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+                .where(
+                    sa.or_(
+                        latest.c.stage.in_(pipeline_stages),
+                        latest.c.stage.is_(None),
+                    )
+                )
+                .order_by(LeadModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        else:
+            stmt = (
+                select(LeadModel, latest.c.stage)
+                .join(latest, LeadModel.id == latest.c.lead_id)
+                .where(latest.c.stage.in_(pipeline_stages))
+                .order_by(LeadModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+
+        rows = (await self._session.execute(stmt)).all()
+        leads: list[Lead] = []
+        for row in rows:
+            model: LeadModel = row[0]
+            stage_val: str | None = row[1]
+            stage = PipelineStage(stage_val) if stage_val else PipelineStage.NEW
+            leads.append(self._to_domain(model, stage))
+        return leads

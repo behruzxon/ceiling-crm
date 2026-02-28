@@ -117,6 +117,13 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
                     await log_session.commit()
             except Exception:
                 log.exception("lead_created_action_log_error", lead_id=lead.id)
+
+            # Notify admins about new lead (fire-and-forget)
+            try:
+                from infrastructure.di import get_lead_notification_service
+                await get_lead_notification_service().notify_new_lead(lead)
+            except Exception:
+                log.exception("notify_new_lead_error", lead_id=lead.id)
         except Exception:
             await session.rollback()
             await state.clear()

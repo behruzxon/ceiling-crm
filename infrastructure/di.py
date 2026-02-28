@@ -24,9 +24,11 @@ from core.services.crm_service import CRMService
 from core.services.group_settings_service import GroupSettingsService
 from core.services.lead_service import LeadService
 from core.services.payment_service import PaymentService
+from core.services.pipeline_service import PipelineService
 from core.services.user_service import UserService
 from core.services.warranty_service import WarrantyService
 from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
+from infrastructure.database.repositories.audit_log_repo import PostgresAuditLogRepository
 from infrastructure.database.repositories.broadcast_repo import PostgresBroadcastRepository
 from infrastructure.database.repositories.group_settings_repo import PostgresGroupSettingsRepository
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
@@ -99,4 +101,28 @@ def get_lead_analytics_service(session: AsyncSession) -> "LeadAnalyticsService":
     return LeadAnalyticsService(
         action_repo=PostgresLeadActionRepository(session),
         lead_repo=PostgresLeadRepository(session),
+    )
+
+
+def get_audit_log_repo(session: AsyncSession) -> PostgresAuditLogRepository:
+    return PostgresAuditLogRepository(session)
+
+
+def get_pipeline_service(session: AsyncSession) -> PipelineService:
+    return PipelineService(
+        lead_repo=get_lead_repo(session),
+        pipeline_repo=get_pipeline_repo(session),
+        action_repo=PostgresLeadActionRepository(session),
+        audit_repo=PostgresAuditLogRepository(session),
+    )
+
+
+def get_lead_notification_service() -> "LeadNotificationService":
+    """Return a LeadNotificationService wired with bot credentials from settings."""
+    from core.services.lead_notification_service import LeadNotificationService
+    from shared.config import get_settings
+    settings = get_settings()
+    return LeadNotificationService(
+        admin_user_id=settings.bot.admin_user_id,
+        bot_token=settings.bot.token.get_secret_value(),
     )

@@ -143,6 +143,14 @@ async def cb_set_status(callback: CallbackQuery, **data: object) -> None:
     )
     await callback.answer(f"{emoji} Holat: {new_status.upper()}")
 
+    # HOT alert when admin manually marks a lead hot (deduped internally)
+    if new_status == "hot":
+        try:
+            from infrastructure.di import get_lead_notification_service
+            await get_lead_notification_service().notify_hot_lead(lead_id)
+        except Exception:
+            log.exception("pkg_hot_lead_notify_error", lead_id=lead_id)
+
 
 @router.callback_query(F.data.startswith("pkg:admin:phone:"))
 async def cb_show_phone(callback: CallbackQuery, **data: object) -> None:

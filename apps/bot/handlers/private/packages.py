@@ -369,6 +369,15 @@ async def cb_package_order(callback: CallbackQuery, **data: object) -> None:
     except Exception:
         log.exception("pkg_admin_notify_error", lead_id=lead.id)
 
+    # HOT lead alert if applicable (fire-and-forget, deduped internally)
+    try:
+        from core.services.lead_notification_service import is_hot_lead
+        from infrastructure.di import get_lead_notification_service
+        if is_hot_lead(lead):
+            await get_lead_notification_service().notify_hot_lead(lead.id)
+    except Exception:
+        log.exception("pkg_hot_lead_notify_error", lead_id=lead.id)
+
     # Schedule follow-up check in 15 minutes (idempotent Celery task)
     try:
         check_package_followup.apply_async(

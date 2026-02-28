@@ -42,6 +42,7 @@ from apps.bot.handlers.admin.operator_stats import router as operator_stats_rout
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
 from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
+from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
 from apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
@@ -142,6 +143,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     callbacks_router = Router(name="callbacks")
     callbacks_router.include_routers(
         lead_callbacks_router,
+        kanban_callbacks_router,    # kanban:* — visual pipeline management
         pipeline_callbacks_router,
         payment_callbacks_router,
         package_callbacks_router,   # pkg:admin:* inline buttons from notifications
