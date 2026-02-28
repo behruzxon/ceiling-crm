@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from aiogram import Bot, F, Router
@@ -63,14 +64,24 @@ from aiogram.types import (
 from apps.bot.keyboards.main_menu import main_menu_keyboard
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_service
+from core.services.lead_notification_service import is_hot_lead
+from infrastructure.di import get_lead_notification_service, get_lead_repo, get_lead_service, get_pipeline_repo
 from shared.config import get_settings
-from shared.constants.enums import CeilingCategory, LeadSource
+from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
 
 log = get_logger(__name__)
 router = Router(name="private:order")
+
+# Stages at or past QUOTE — inserting QUOTE on top of these would be a downgrade.
+_QUOTE_OR_BEYOND: frozenset[PipelineStage] = frozenset({
+    PipelineStage.QUOTE,
+    PipelineStage.DEAL,
+    PipelineStage.INSTALLATION,
+    PipelineStage.COMPLETED,
+    PipelineStage.LOST,
+})
 
 # ── Admin DM that receives new-order alerts ───────────────────────────────────
 # Uses BOT_ADMIN_USER_ID (private DM). Admin must have started the bot first.
@@ -260,9 +271,84 @@ _ORDER_TEXTS: frozenset[str] = frozenset({"✅ Zakaz berish", "📦 Buyurtma ber
 @router.message(F.chat.type == "private", F.text.in_(_ORDER_TEXTS))
 @router.message(F.chat.type == "private", Command("order"))
 async def cmd_order_start(message: Message, state: FSMContext, **data: object) -> None:
-    """Clear any active FSM and begin the order flow."""
-    log.debug("order_flow_start", user_id=message.from_user and message.from_user.id)
+    """Clear any active FSM, ensure a lead row exists, begin the order flow."""
+    user = message.from_user
+    user_id: int = user.id if user else 0
+    first_name: str = (user.first_name or "—") if user else "—"
+
+    log.debug("order_flow_start", user_id=user_id)
     await state.clear()
+
+    # ── Ensure a CRM lead exists for this user ────────────────────────────────
+    # Creates a minimal placeholder if none exists; updates tracking fields
+    # on an existing non-closed lead.  The lead_id is stored in FSM so that
+    # _save_and_confirm can UPDATE it with real data instead of creating a dupe.
+    if user_id:
+        try:
+            factory = get_session_factory()
+            async with factory() as session:
+                lead_repo = get_lead_repo(session)
+                existing = await lead_repo.get_by_user_id(user_id)
+
+                # Pick the most recent lead that is still open.
+                # Exclude by pipeline stage (LOST / COMPLETED) AND by lead_status
+                # ('won' / 'lost') so that a kanban-closed lead is never reused.
+                _closed_stages = (PipelineStage.LOST.value, PipelineStage.COMPLETED.value)
+                _closed_statuses = ("won", "lost")
+                active = next(
+                    (
+                        l for l in existing
+                        if l.current_stage.value not in _closed_stages
+                        and l.lead_status not in _closed_statuses
+                    ),
+                    None,
+                )
+
+                if active:
+                    # Update tracking fields on the existing lead
+                    await lead_repo.update_last_action(active.id, "order_start")
+                    if not active.lead_status:
+                        await lead_repo.update_lead_status(active.id, "contacted")
+                    await session.commit()
+                    is_new_lead = False
+                    tracked_lead_id = active.id
+                else:
+                    # No active lead — create a minimal placeholder so the
+                    # lead appears in the kanban immediately
+                    lead = await get_lead_service(session).create_lead(
+                        user_id=user_id,
+                        category=CeilingCategory.ODNOTONNY,
+                        name=first_name,
+                        phone="—",
+                        district="Noma'lum",
+                        source=LeadSource.DEEPLINK,
+                        utm_source="order_flow",
+                    )
+                    await lead_repo.update_lead_status(lead.id, "contacted")
+                    await lead_repo.update_last_action(lead.id, "order_start")
+                    await session.commit()
+                    is_new_lead = True
+                    tracked_lead_id = lead.id
+
+                # Re-read after commit so notification has the refreshed state
+                notify_lead = await lead_repo.get_by_id(tracked_lead_id)
+
+            await state.update_data(lead_id=tracked_lead_id)
+
+            # Notify admins (fire-and-forget, non-fatal)
+            if notify_lead:
+                try:
+                    notif_svc = get_lead_notification_service()
+                    if is_new_lead:
+                        await notif_svc.notify_new_lead(notify_lead)
+                    if is_hot_lead(notify_lead):
+                        await notif_svc.notify_hot_lead(notify_lead.id)
+                except Exception:
+                    log.exception("order_start_notify_error", lead_id=tracked_lead_id)
+
+        except Exception:
+            log.exception("order_start_lead_ensure_error", user_id=user_id)
+
     await state.set_state(OrderFlow.waiting_for_name)
     await message.answer(
         "📋 <b>Zakaz berish</b>\n\n"
@@ -544,43 +630,84 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
         notes_parts.append(f"Joylashuv: {location}")
     notes = " | ".join(notes_parts)
 
+    # lead_id from cmd_order_start (stored in FSM). When present, we UPDATE
+    # the existing placeholder rather than inserting a duplicate row.
+    existing_lead_id: int | None = fsm.get("lead_id")
+
     lead_id: int | None = None
     try:
         factory = get_session_factory()
         async with factory() as session:
-            lead_service = get_lead_service(session)
-            lead = await lead_service.create_lead(
-                user_id=user_id,
-                # ── Enum safety ───────────────────────────────────────────────
-                # CeilingCategory(category_value) resolves the enum member from
-                # the DB value string (e.g. "odnotonny" → CeilingCategory.ODNOTONNY).
-                # SQLAlchemy then uses values_callable to send the .value to PG.
-                category=CeilingCategory(category_value),
-                name=name,
-                phone=phone,
-                district=district,
-                source=LeadSource.DEEPLINK,
-                utm_source="order_flow",
-                notes=notes,
-            )
-
-            # ── Room dimensions ───────────────────────────────────────────────
-            # create_lead() does not expose room_* columns.  We update them
-            # in the same transaction so the write is fully atomic.
-            if room_area is not None:
+            if existing_lead_id:
+                # ── UPDATE placeholder created at cmd_order_start ─────────────
+                # Merge all real collected data into the existing row in one shot.
+                update_values: dict = {
+                    "name": name,
+                    "phone": phone,
+                    "district": district,
+                    "category": CeilingCategory(category_value).value,
+                    "notes": notes,
+                    "utm_source": "order_flow",
+                    "lead_status": "contacted",
+                    "last_action": "order_done",
+                    "updated_at": datetime.now(timezone.utc),
+                }
+                if room_area is not None:
+                    update_values.update({
+                        "room_length": room_length,
+                        "room_width": room_width,
+                        "room_area": room_area,
+                    })
                 await session.execute(
                     sa.update(LeadModel)
-                    .where(LeadModel.id == lead.id)
-                    .values(
-                        room_length=room_length,
-                        room_width=room_width,
-                        room_area=room_area,
+                    .where(LeadModel.id == existing_lead_id)
+                    .values(**update_values)
+                )
+                pending_lead_id = existing_lead_id
+            else:
+                # ── Fallback: create a full lead (cmd_order_start did not run) ─
+                # CeilingCategory(category_value) resolves the enum member from
+                # the DB value string so SQLAlchemy sends the correct .value to PG.
+                lead_service = get_lead_service(session)
+                lead = await lead_service.create_lead(
+                    user_id=user_id,
+                    category=CeilingCategory(category_value),
+                    name=name,
+                    phone=phone,
+                    district=district,
+                    source=LeadSource.DEEPLINK,
+                    utm_source="order_flow",
+                    notes=notes,
+                )
+                # create_lead() does not expose room_* columns; update atomically.
+                if room_area is not None:
+                    await session.execute(
+                        sa.update(LeadModel)
+                        .where(LeadModel.id == lead.id)
+                        .values(
+                            room_length=room_length,
+                            room_width=room_width,
+                            room_area=room_area,
+                        )
                     )
+                pending_lead_id = lead.id
+
+            # ── Pipeline stage: advance to QUOTE (idempotent) ─────────────────
+            # Insert a QUOTE row unless the lead is already at QUOTE or later.
+            # This is what makes the order visible in Kanban and Mening buyurtmalarim.
+            pipeline_repo = get_pipeline_repo(session)
+            current_stage = await pipeline_repo.get_current_stage(pending_lead_id)
+            if current_stage not in _QUOTE_OR_BEYOND:
+                await pipeline_repo.insert_stage(
+                    lead_id=pending_lead_id,
+                    stage=PipelineStage.QUOTE,
+                    changed_by=user_id,
+                    note="Zakaz berish orqali",
                 )
 
             await session.commit()
+            lead_id = pending_lead_id
 
-        lead_id = lead.id
         log.info("order_lead_saved", lead_id=lead_id, user_id=user_id, area=room_area)
 
     except Exception:
@@ -622,3 +749,10 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
             lead_id=lead_id,
             location=location,
         )
+
+    # HOT lead alert after final save (deduped internally — safe to always call)
+    if lead_id is not None:
+        try:
+            await get_lead_notification_service().notify_hot_lead(lead_id)
+        except Exception:
+            log.exception("order_hot_lead_notify_error", lead_id=lead_id)
