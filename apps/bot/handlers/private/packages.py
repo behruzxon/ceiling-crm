@@ -237,7 +237,7 @@ async def _send_admin_notifications(
 # ── Handlers ───────────────────────────────────────────────────────────────────
 
 
-@router.message(F.text == "📦 Tayyor paketlar")
+@router.message(F.text.contains("Tayyor paketlar"))
 async def cmd_packages(message: Message, **data: object) -> None:
     """Show the package selection menu."""
     await message.answer(
