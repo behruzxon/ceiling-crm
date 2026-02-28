@@ -34,7 +34,8 @@ class BotSettings(BaseSettings):
     token: SecretStr = Field(..., description="Telegram Bot API token")
     webhook_url: str | None = Field(default=None, description="Webhook URL (None = polling)")
     webhook_secret: SecretStr | None = Field(default=None)
-    admin_group_id: int = Field(..., description="Telegram chat_id of the admin group")
+    admin_group_id: int = Field(..., description="Telegram chat_id of the admin group (for notifications)")
+    main_group_id: int | None = Field(default=None, description="Telegram chat_id of the main customer group (for join tracking via BOT_MAIN_GROUP_ID)")
     admin_user_id: int | None = Field(default=None, description="Telegram user_id for DM operator alerts (ADMIN_USER_ID)")
     support_chat_id: int | None = Field(default=None)
 

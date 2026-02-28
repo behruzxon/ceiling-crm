@@ -117,6 +117,26 @@ def get_pipeline_service(session: AsyncSession) -> PipelineService:
     )
 
 
+def get_group_join_repo(session: AsyncSession) -> "PostgresGroupJoinRepository":
+    from infrastructure.database.repositories.group_join_repo import PostgresGroupJoinRepository
+    return PostgresGroupJoinRepository(session)
+
+
+def get_stats_service(session: AsyncSession) -> "StatsService":
+    from core.services.stats_service import StatsService
+    from infrastructure.database.repositories.group_join_repo import PostgresGroupJoinRepository
+    from shared.config import get_settings
+    settings = get_settings()
+    # Use the main customer group for join tracking; fall back to admin_group_id
+    # if BOT_MAIN_GROUP_ID is not configured yet (backward-compat).
+    tracked_group_id = settings.bot.main_group_id or settings.bot.admin_group_id
+    return StatsService(
+        session=session,
+        join_repo=PostgresGroupJoinRepository(session),
+        tracked_group_id=tracked_group_id,
+    )
+
+
 def get_lead_notification_service() -> "LeadNotificationService":
     """Return a LeadNotificationService wired with bot credentials from settings."""
     from core.services.lead_notification_service import LeadNotificationService

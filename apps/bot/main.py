@@ -41,6 +41,7 @@ from apps.bot.handlers.admin.media import router as media_router
 from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
 from apps.bot.handlers.admin.reports import router as reports_router
+from apps.bot.handlers.admin.stats import router as stats_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
@@ -65,6 +66,7 @@ from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.promotions import router as promotions_router
 from apps.bot.handlers.private.support import router as support_router
+from apps.bot.tasks import daily_report
 from apps.bot.middlewares.audit import AuditMiddleware
 from apps.bot.middlewares.auth import AuthMiddleware
 from apps.bot.middlewares.group_context import GroupContextMiddleware
@@ -137,6 +139,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         operator_stats_router,
         reports_router,
         media_router,
+        stats_router,          # /stats + stats:period:* callbacks
     )
 
     # ── Callbacks router ───────────────────────────────────────────────────
@@ -229,6 +232,8 @@ async def on_startup(bot: Bot) -> None:
         await bot.delete_webhook(drop_pending_updates=True)
         log.info("polling_mode_active")
 
+    daily_report.start(bot)
+
     log.info("bot_startup_complete")
 
 
@@ -242,6 +247,8 @@ async def on_shutdown(bot: Bot) -> None:
     settings = get_settings()
     if settings.bot.webhook_url:
         await bot.delete_webhook()
+
+    daily_report.stop()
 
     await disconnect_database()
     await disconnect_redis()
