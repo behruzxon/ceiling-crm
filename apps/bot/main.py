@@ -50,6 +50,7 @@ from apps.bot.handlers.callbacks.package_callbacks import router as package_call
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
+from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
@@ -158,6 +159,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     group_router = Router(name="group")
     group_router.include_routers(
         group_admin_router,         # /admin command + gs: callbacks — must be first
+        group_start_router,         # /start in groups → inline keyboard (DM deeplinks)
         admin_group_tracker_router, # my_chat_member → upsert admin_groups (silent)
         welcome_router,             # chat_member: join welcome + analytics — before any other chat_member handler
         member_status_router,       # my_chat_member: bot add/remove log only (no chat_member handlers)
