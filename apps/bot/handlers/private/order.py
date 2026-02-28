@@ -579,14 +579,14 @@ async def _notify_admin(
     location: str | None,
 ) -> None:
     """
-    Send a formatted new-order alert to the admin DM (BOT_ADMIN_USER_ID).
+    Send a formatted new-order alert to the admin group (BOT_ADMIN_GROUP_ID)
+    and, if configured, also to the admin DM (BOT_ADMIN_USER_ID).
     Non-fatal: any exception is logged and swallowed so the user's
     confirmation flow is never affected.
     """
-    admin_user_id = get_settings().bot.admin_user_id
-    if not admin_user_id:
-        log.warning("admin_user_id_not_set_skipping_order_notify", lead_id=lead_id)
-        return
+    settings = get_settings()
+    admin_user_id = settings.bot.admin_user_id
+    admin_group_id = settings.bot.admin_group_id
 
     area_line = f"📐 Maydon:   <b>{area} m²</b>\n" if area is not None else ""
     location_line = (
@@ -604,17 +604,38 @@ async def _notify_admin(
         f"{location_line}"
         f"🔖 Lead ID: <code>#{lead_id}</code>"
     )
-    try:
-        await bot.send_message(chat_id=admin_user_id, text=text)
-        log.info("admin_notified", lead_id=lead_id, admin_user_id=admin_user_id)
-    except TelegramForbiddenError:
-        log.warning(
-            "admin_notify_forbidden_admin_must_start_bot",
-            lead_id=lead_id,
-            admin_user_id=admin_user_id,
-        )
-    except Exception:
-        log.exception("admin_notify_failed", lead_id=lead_id)
+    group_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="📌 Kanban'da ochish",
+            callback_data=f"kanban:lead:{lead_id}:new",
+        ),
+    ]])
+
+    # ── Admin group (primary destination) ────────────────────────────────
+    if admin_group_id:
+        try:
+            await bot.send_message(
+                chat_id=admin_group_id, text=text, reply_markup=group_keyboard
+            )
+            log.info("admin_group_notified", lead_id=lead_id, chat_id=admin_group_id)
+        except Exception:
+            log.exception("admin_group_notify_failed", lead_id=lead_id, chat_id=admin_group_id)
+    else:
+        log.warning("admin_group_id_not_set_skipping_order_notify", lead_id=lead_id)
+
+    # ── Admin DM (secondary, optional) ───────────────────────────────────
+    if admin_user_id:
+        try:
+            await bot.send_message(chat_id=admin_user_id, text=text)
+            log.info("admin_dm_notified", lead_id=lead_id, admin_user_id=admin_user_id)
+        except TelegramForbiddenError:
+            log.warning(
+                "admin_notify_forbidden_admin_must_start_bot",
+                lead_id=lead_id,
+                admin_user_id=admin_user_id,
+            )
+        except Exception:
+            log.exception("admin_dm_notify_failed", lead_id=lead_id)
 
 
 # ─── Persistence + confirmation ──────────────────────────────────────────────────

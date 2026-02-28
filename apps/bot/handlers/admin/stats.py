@@ -27,6 +27,7 @@ from aiogram.types import (
 from apps.bot.filters.role import RoleFilter
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_stats_service
+from shared.config import get_settings
 from shared.constants.enums import UserRole
 from shared.logging import get_logger
 
@@ -86,11 +87,38 @@ def _format_stats(s: dict) -> str:  # type: ignore[type-arg]
 @router.message(F.text == "📊 Statistika", RoleFilter(*_MGMT_ROLES))
 @router.message(Command("stats"), RoleFilter(*_MGMT_ROLES))
 async def cmd_stats(message: Message, **data: object) -> None:
-    """Show the period-selector keyboard."""
-    await message.answer(
-        "📊 <b>Statistika</b>\n\nDavrni tanlang:",
-        reply_markup=_period_keyboard(),
-    )
+    """Show the period-selector keyboard.
+
+    If invoked from the admin group directly, replies in-place.
+    If invoked from a private DM or any other chat, posts the stats card
+    to the admin group and sends a short acknowledgement to the caller.
+    """
+    admin_group_id = get_settings().bot.admin_group_id
+    text = "📊 <b>Statistika</b>\n\nDavrni tanlang:"
+    kb = _period_keyboard()
+
+    if message.chat.id == admin_group_id:
+        # Already in the admin group — reply here directly.
+        await message.answer(text, reply_markup=kb)
+        return
+
+    # Invoked from outside the admin group (e.g. private DM).
+    # Post the interactive card to the admin group; ack in current chat.
+    if not admin_group_id:
+        log.warning("stats_admin_group_id_not_set")
+        await message.answer(text, reply_markup=kb)
+        return
+
+    try:
+        await message.bot.send_message(  # type: ignore[union-attr]
+            chat_id=admin_group_id, text=text, reply_markup=kb
+        )
+        log.info("stats_sent_to_admin_group", chat_id=admin_group_id)
+        await message.answer("📊 Statistika admin guruhiga yuborildi.")
+    except Exception:
+        log.exception("stats_send_to_group_failed", chat_id=admin_group_id)
+        # Fallback: show in current chat so admin isn't left without a response.
+        await message.answer(text, reply_markup=kb)
 
 
 @router.callback_query(
