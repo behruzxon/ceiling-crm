@@ -57,6 +57,9 @@ class CacheTTL:
     # Group moderation
     MOD_LINK_WINDOW     = 600        # 10 min — link violation counter window
 
+    # CTA inactivity feature
+    CTA_SENT            = 172_800    # 2 days — dedup flag per user per calendar day
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -142,3 +145,18 @@ class CacheKeys:
     def mod_link_violations(chat_id: int, user_id: int) -> str:
         """Link violation counter per user per group (10-min window)."""
         return f"mod:{chat_id}:link_violations:{user_id}"
+
+    # ── CTA inactivity feature ────────────────────────────────────────────
+    @staticmethod
+    def cta_user_activity() -> str:
+        """Sorted set: member=str(user_id), score=unix_ts. Used for 5-min inactivity scan."""
+        return "cta:user_activity"
+
+    @staticmethod
+    def cta_sent(user_id: int, date_str: str) -> str:
+        """Flag key (value '1'): set when a CTA was sent to this user today.
+
+        date_str format: YYYY-MM-DD
+        TTL: CacheTTL.CTA_SENT (2 days).
+        """
+        return f"cta:sent:{user_id}:{date_str}"

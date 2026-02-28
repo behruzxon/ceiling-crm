@@ -95,7 +95,7 @@ async def start_operator_flow(message: Message, state: FSMContext) -> None:
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "📞 Operator")
+@router.message(F.chat.type == "private", F.text == "☎️ Operator")
 async def handle_operator_entry(
     message: Message, state: FSMContext, **data: object
 ) -> None:

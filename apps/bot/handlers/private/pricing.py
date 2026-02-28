@@ -46,9 +46,12 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 router = Router(name="private:pricing")
 
-# Matches "🧮 Narx kalkulyator" regardless of VS-16 variation selector (\uFE0F)
-# that Telegram keyboards may append to the emoji, and tolerates extra whitespace.
-_PRICE_BTN_RE: re.Pattern[str] = re.compile(r"\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator", re.IGNORECASE)
+# Matches both "🧮 Narx kalkulyator" (legacy, U+1F9EE) and "💰 Narx kalkulyator"
+# (current, U+1F4B0) regardless of VS-16 variation selector (\uFE0F) that Telegram
+# keyboards may append, and tolerates extra whitespace.
+_PRICE_BTN_RE: re.Pattern[str] = re.compile(
+    r"[\U0001F9EE\U0001F4B0]\uFE0F?\s*Narx\s*kalkulyator", re.IGNORECASE
+)
 
 # Matches any main-menu reply-keyboard button (VS-16 tolerant).
 # Used to intercept button taps that arrive while a pricing FSM state is active.
@@ -463,7 +466,7 @@ async def handle_order(
 
 @router.message(
     StateFilter(PricingStates.confirming_action),
-    F.text == "📞 Operator",
+    F.text == "☎️ Operator",
 )
 async def handle_operator(
     message: Message, state: FSMContext, **data: object

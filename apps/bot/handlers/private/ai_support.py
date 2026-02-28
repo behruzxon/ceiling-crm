@@ -59,6 +59,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.ui.cta import cta_intent_keyboard
 from apps.bot.keyboards.pricing import design_keyboard
 from apps.bot.states.pricing import PricingStates
 from infrastructure.database.models.ai_conversation import AiConversationModel
@@ -627,6 +628,12 @@ async def handle_ai_question(
         return
 
     await message.answer(reply_text, reply_markup=_ai_keyboard())
+    # Follow-up CTA: intent-based inline buttons (separate message — can't mix
+    # ReplyKeyboard and InlineKeyboard in the same send call)
+    await message.answer(
+        "👇 Kerakli bo'limni tanlang:",
+        reply_markup=cta_intent_keyboard(text),
+    )
 
     await _persist_exchange(
         user_id=user_id,
@@ -702,7 +709,7 @@ async def handle_ai_message(
         await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
         return
 
-    await message.answer(reply_text, reply_markup=_INTENT_KEYBOARDS.get(intent))
+    await message.answer(reply_text, reply_markup=cta_intent_keyboard(text))
 
     # ── Persist exchange (non-fatal) ──────────────────────────────────────
     await _persist_exchange(

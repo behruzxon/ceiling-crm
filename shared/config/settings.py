@@ -173,6 +173,22 @@ class PaymentSettings(BaseSettings):
     bank_name: str | None = Field(default=None, description="Bank name shown in requisites")
 
 
+class CTASettings(BaseSettings):
+    """CTA (call-to-action) marketing prompts configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="CTA_", env_file=".env", extra="ignore")
+
+    enabled: bool = Field(default=True, description="Master switch — set false to suppress all CTA messages")
+    discount_text: str = Field(
+        default="🔥 Chegirma aktiv! Bugun -10% (shartlar operator orqali)",
+        description="Text sent with the discount CTA inline keyboard",
+    )
+    discount_percent: int | None = Field(
+        default=None,
+        description="When set, appended to the discount button label as '(-N%)'",
+    )
+
+
 class BusinessSettings(BaseSettings):
     """Business rules and defaults."""
 
@@ -229,6 +245,7 @@ class Settings(BaseSettings):
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
     business: BusinessSettings = Field(default_factory=BusinessSettings)
     payment: PaymentSettings = Field(default_factory=PaymentSettings)
+    cta: CTASettings = Field(default_factory=CTASettings)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

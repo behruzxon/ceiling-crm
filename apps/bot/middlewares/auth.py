@@ -5,12 +5,15 @@ Creates user record if first interaction.
 """
 from __future__ import annotations
 
+import time
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject
+from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from core.domain.user import User
+from infrastructure.cache.client import get_redis
+from infrastructure.cache.keys import CacheKeys
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_user_repo
 from shared.logging import get_logger
@@ -66,6 +69,23 @@ class AuthMiddleware(BaseMiddleware):
                 data["db_user"] = db_user
                 data["user_role"] = db_user.role
                 data["db_session"] = session
+
+                # Track last private-chat activity for CTA inactivity feature.
+                # Only record for real human users in private chats; non-fatal.
+                if isinstance(event, (Message, CallbackQuery)):
+                    _chat = (
+                        event.chat
+                        if isinstance(event, Message)
+                        else (event.message.chat if event.message else None)
+                    )
+                    if _chat and _chat.type == "private":
+                        try:
+                            await get_redis().zadd(
+                                CacheKeys.cta_user_activity(),
+                                {str(tg_user.id): float(int(time.time()))},
+                            )
+                        except Exception:
+                            pass  # activity tracking must never break auth
 
                 return await handler(event, data)
             except Exception:

@@ -199,6 +199,25 @@ class CacheClient:
         remaining = max(0, max_requests - count)
         return count <= max_requests, remaining
 
+    # ── Sorted-set helpers (used by CTA inactivity feature) ──────────────
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        """ZADD wrapper with automatic key prefixing."""
+        return await self._redis.zadd(self._key(key), mapping)  # type: ignore[arg-type]
+
+    async def zrangebyscore(
+        self, key: str, min_score: float, max_score: float
+    ) -> list[str]:
+        """Return members with scores in [min_score, max_score]."""
+        result: list[str] = await self._redis.zrangebyscore(
+            self._key(key), min_score, max_score
+        )
+        return result
+
+    async def zrem(self, key: str, *members: str) -> int:
+        """Remove one or more members from a sorted set."""
+        return await self._redis.zrem(self._key(key), *members)
+
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
     async def ping(self) -> bool:

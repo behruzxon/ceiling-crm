@@ -265,17 +265,24 @@ def _location_keyboard() -> ReplyKeyboardMarkup:
 # r"\uFE0F" in a raw string is the 6-char literal \uFE0F, not U+FE0F, so the
 # effective pattern was "✅uFE0F?\s*Zakaz berish" which never matched the button.
 
-_ORDER_TEXTS: frozenset[str] = frozenset({"✅ Zakaz berish", "📦 Buyurtma berish"})
+_ORDER_TEXTS: frozenset[str] = frozenset({
+    "✅ Zakaz berish",   # legacy emoji (kept for in-flight messages)
+    "🛒 Zakaz berish",   # current emoji
+    "📦 Buyurtma berish",
+})
 
 
-@router.message(F.chat.type == "private", F.text.in_(_ORDER_TEXTS))
-@router.message(F.chat.type == "private", Command("order"))
-async def cmd_order_start(message: Message, state: FSMContext, **data: object) -> None:
-    """Clear any active FSM, ensure a lead row exists, begin the order flow."""
-    user = message.from_user
-    user_id: int = user.id if user else 0
-    first_name: str = (user.first_name or "—") if user else "—"
+async def _start_order_flow(
+    message: Message,
+    state: FSMContext,
+    user_id: int,
+    first_name: str,
+) -> None:
+    """Core order-start logic — callable from message handlers AND callbacks.
 
+    Extracted so that ``cta:order`` callback can reuse the exact same flow
+    without duplicating DB + notification logic.
+    """
     log.debug("order_flow_start", user_id=user_id)
     await state.clear()
 
@@ -354,6 +361,19 @@ async def cmd_order_start(message: Message, state: FSMContext, **data: object) -
         "📋 <b>Zakaz berish</b>\n\n"
         "Ismingizni kiriting:",
         reply_markup=ReplyKeyboardRemove(),
+    )
+
+
+@router.message(F.chat.type == "private", F.text.in_(_ORDER_TEXTS))
+@router.message(F.chat.type == "private", Command("order"))
+async def cmd_order_start(message: Message, state: FSMContext, **data: object) -> None:
+    """Clear any active FSM, ensure a lead row exists, begin the order flow."""
+    user = message.from_user
+    await _start_order_flow(
+        message=message,
+        state=state,
+        user_id=user.id if user else 0,
+        first_name=(user.first_name or "—") if user else "—",
     )
 
 

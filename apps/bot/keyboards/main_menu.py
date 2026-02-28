@@ -11,11 +11,11 @@ def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo
         is_admin: When True, appends the admin-only "📣 Rassilka" button.
     """
     rows = [
-        [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="🧮 Narx kalkulyator")],
-        [KeyboardButton(text="✅ Zakaz berish"), KeyboardButton(text="📞 Operator")],
-        [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="🤖 AI yordam")],
-        [KeyboardButton(text="🎁 Chegirmalar"), KeyboardButton(text="⭐ Biz haqimizda")],
-        [KeyboardButton(text="📦 Tayyor paketlar")],
+        [KeyboardButton(text="🛒 Zakaz berish"), KeyboardButton(text="💰 Narx kalkulyator")],
+        [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="🏷️ Tayyor paketlar")],
+        [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="☎️ Operator")],
+        [KeyboardButton(text="🎁 Chegirmalar"), KeyboardButton(text="🤖 AI yordam")],
+        [KeyboardButton(text="⭐ Biz haqimizda")],
     ]
     if is_admin:
         rows.append([KeyboardButton(text="📣 Rassilka")])
