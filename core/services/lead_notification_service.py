@@ -20,6 +20,7 @@ from infrastructure.database.repositories.audit_log_repo import PostgresAuditLog
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.session import get_session_factory
+from shared.config import get_settings
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -184,7 +185,14 @@ class LeadNotificationService:
             log.exception("notify_get_groups_error")
             return
 
+        admin_group_id = get_settings().bot.admin_group_id
         for gid in group_ids:
+            # Hard whitelist: only send to the designated admin group.
+            # Prevents the main customer group (BOT_MAIN_GROUP_ID) from
+            # receiving lead cards even if it was previously recorded.
+            if gid != admin_group_id:
+                log.warning("notify_skip_non_admin_group", chat_id=gid)
+                continue
             try:
                 await bot.send_message(gid, text, reply_markup=keyboard)  # type: ignore[union-attr]
             except Exception as exc:

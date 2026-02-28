@@ -12,6 +12,7 @@ from aiogram.types import ChatMemberUpdated
 
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_admin_group_service
+from shared.config import get_settings
 from shared.logging import get_logger
 
 router = Router(name="group:admin_group_tracker")
@@ -31,6 +32,12 @@ async def track_bot_admin_status(event: ChatMemberUpdated, **data: object) -> No
     new_status = event.new_chat_member.status
     if new_status != "administrator":
         # Bot was removed, restricted, or made a plain member — no action needed.
+        return
+
+    # Only register the designated admin group.  The main customer group must
+    # never receive lead/CRM notifications, so we never add it here.
+    if chat.id != get_settings().bot.admin_group_id:
+        log.debug("admin_group_tracker_skip_non_admin_group", chat_id=chat.id)
         return
 
     title = chat.title or str(chat.id)
