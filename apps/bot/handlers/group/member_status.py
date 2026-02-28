@@ -5,6 +5,7 @@ Tracks join / leave / ban events for analytics.
 from __future__ import annotations
 
 from aiogram import Router
+from aiogram.filters import BaseFilter
 from aiogram.types import ChatMemberUpdated
 
 from infrastructure.database.session import get_session_factory
@@ -21,36 +22,42 @@ _NOT_MEMBER = frozenset({"left", "kicked", "restricted", "banned"})
 _IS_MEMBER = frozenset({"member", "administrator", "creator"})
 
 
+class _IsMainGroup(BaseFilter):
+    """Passes only for chat_member events in the configured main customer group.
+
+    Must be a decorator-level filter rather than a runtime guard inside the
+    handler body.  In aiogram 3, a handler that executes and returns ``None``
+    *consumes* the update — downstream handlers (e.g. welcome_router) never
+    see it.  A filter that rejects the event lets aiogram pass it to the
+    next registered handler instead.
+    """
+
+    async def __call__(self, event: ChatMemberUpdated) -> bool:
+        main_group_id = get_settings().bot.main_group_id
+        return bool(main_group_id) and event.chat.id == main_group_id
+
+
 @router.my_chat_member()
 async def on_bot_status_change(event: ChatMemberUpdated, **data: object) -> None:
-    """Log when the bot is added to or removed from a group."""
-    old_status = event.old_chat_member.status
-    new_status = event.new_chat_member.status
-
+    """Log when the bot is added to or removed from any group."""
     log.info(
         "bot_status_changed",
         chat_id=event.chat.id,
         chat_title=event.chat.title,
-        old_status=old_status,
-        new_status=new_status,
+        old_status=event.old_chat_member.status,
+        new_status=event.new_chat_member.status,
     )
 
 
-@router.chat_member()
+@router.chat_member(_IsMainGroup())
 async def on_user_join(event: ChatMemberUpdated, **data: object) -> None:
-    """Record a user joining the configured main group for join-count analytics.
+    """Record a user joining the main customer group for join-count analytics.
 
-    Only fires for BOT_MAIN_GROUP_ID.  Uses INSERT … ON CONFLICT DO NOTHING
-    so that re-joins after a leave are silently ignored.
+    Only fires for BOT_MAIN_GROUP_ID (enforced by _IsMainGroup filter).
+    Uses INSERT … ON CONFLICT DO NOTHING so re-joins are silently ignored.
     Never raises — a tracking failure must never disrupt the group.
     """
-    try:
-        main_group_id = get_settings().bot.main_group_id
-    except Exception:
-        return
-
-    if not main_group_id or event.chat.id != main_group_id:
-        return
+    main_group_id = get_settings().bot.main_group_id  # guaranteed non-None by filter
 
     old_status = event.old_chat_member.status
     new_status = event.new_chat_member.status
