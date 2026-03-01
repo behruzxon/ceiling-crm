@@ -63,6 +63,16 @@ async def cmd_start(message: Message, state: FSMContext, **data) -> None:
     )
 
 
+@router.message(Command("menu"), F.chat.type == "private")
+async def cmd_menu(message: Message, **data) -> None:
+    """Show the main menu keyboard in a private chat."""
+    user_id = message.from_user.id if message.from_user else 0
+    await message.answer(
+        "Menyu:",
+        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
+    )
+
+
 @router.message(Command("help"))
 async def cmd_help(message: Message, state: FSMContext, **data) -> None:
     """Clear any active FSM state, then show help menu."""

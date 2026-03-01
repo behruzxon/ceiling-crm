@@ -1,38 +1,35 @@
 """
 apps.bot.handlers.group.start
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Handles /start in group and supergroup chats.
+Handles /start and /menu commands in group and supergroup chats.
 
-In groups, ReplyKeyboardMarkup is unreliable (Telegram clients may hide it).
-This handler responds with an InlineKeyboardMarkup whose URL buttons open
-the bot in DM, so every flow (order, pricing, catalog, packages) works
-correctly regardless of group keyboard restrictions.
+Sends the persistent reply keyboard so the main menu is always visible
+in the group, without requiring users to open the bot in DM.
 """
 from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import Message
 
+from apps.bot.keyboards.main_menu import main_menu_keyboard
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="group:start")
 
-_GROUP_INLINE_KB = InlineKeyboardMarkup(inline_keyboard=[
-    [
-        InlineKeyboardButton(text="🧾 Zakaz berish",     url="https://t.me/potolok_x_bot?start=order"),
-        InlineKeyboardButton(text="💰 Narx hisoblash",   url="https://t.me/potolok_x_bot?start=price"),
-    ],
-    [
-        InlineKeyboardButton(text="📂 Katalog",          url="https://t.me/potolok_x_bot?start=catalog"),
-        InlineKeyboardButton(text="🏷 Tayyor paketlar",  url="https://t.me/potolok_x_bot?start=packages"),
-    ],
-])
+_MENU_KB = main_menu_keyboard()
 
 
 @router.message(Command("start"), F.chat.type.in_({"group", "supergroup"}))
 async def group_start(message: Message, **data: object) -> None:
-    """Respond to /start in a group with an inline keyboard pointing to the bot DM."""
+    """Respond to /start in a group with the persistent reply keyboard."""
     log.info("start_group", chat_id=message.chat.id, chat_type=message.chat.type)
-    await message.answer("🔘 Bot bo'limlari:", reply_markup=_GROUP_INLINE_KB)
+    await message.answer("Menyu:", reply_markup=_MENU_KB)
+
+
+@router.message(Command("menu"), F.chat.type.in_({"group", "supergroup"}))
+async def group_menu(message: Message, **data: object) -> None:
+    """Show the main menu keyboard in a group chat."""
+    log.info("menu_group", chat_id=message.chat.id)
+    await message.answer("Menyu:", reply_markup=_MENU_KB)

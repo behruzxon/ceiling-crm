@@ -3,7 +3,7 @@ apps.bot.handlers.private.promotions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Promotions & special offers handler.
 
-Triggered by "🎁 Chegirmalar" main-menu button.
+Triggered by "🎉 Chegirmalar" main-menu button.
 Displays current discounts and promotional offers with three CTA buttons:
   - 🧮 Narx kalkulyator → starts pricing FSM
   - ✅ Zakaz berish     → starts order FSM
@@ -30,9 +30,9 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 router = Router(name="private:promotions")
 
-# VS-16 tolerant match for the "🎁 Chegirmalar" main-menu button.
+# VS-16 tolerant match for the "🎉 Chegirmalar" main-menu button.
 _PROMO_BTN_RE: re.Pattern[str] = re.compile(
-    r"\U0001F381\uFE0F?\s*Chegirmalar", re.IGNORECASE
+    r"\U0001F389\uFE0F?\s*Chegirmalar", re.IGNORECASE
 )
 
 _PROMO_TEXT: str = (

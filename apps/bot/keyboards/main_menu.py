@@ -12,9 +12,9 @@ def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo
     """
     rows = [
         [KeyboardButton(text="🛒 Zakaz berish"), KeyboardButton(text="💰 Narx kalkulyator")],
-        [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="🏷️ Tayyor paketlar")],
+        [KeyboardButton(text="📂 Katalog"), KeyboardButton(text="🎁 Tayyor paketlar")],
         [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="☎️ Operator")],
-        [KeyboardButton(text="🎁 Chegirmalar"), KeyboardButton(text="🤖 AI yordam")],
+        [KeyboardButton(text="🎉 Chegirmalar"), KeyboardButton(text="🤖 AI yordam")],
         [KeyboardButton(text="⭐ Biz haqimizda")],
     ]
     if is_admin:

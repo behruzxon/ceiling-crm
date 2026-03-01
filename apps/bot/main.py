@@ -89,6 +89,7 @@ log = get_logger(__name__)
 
 BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="start",   description="Botni ishga tushirish / Start"),
+    BotCommand(command="menu",    description="Asosiy menyuni ko'rsatish"),
     BotCommand(command="catalog", description="Shiftlar katalogi"),
     BotCommand(command="price",   description="Narxni hisoblash"),
     BotCommand(command="order",   description="Buyurtma berish"),
