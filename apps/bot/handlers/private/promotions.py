@@ -60,7 +60,7 @@ def _promo_keyboard() -> InlineKeyboardMarkup:
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == BTN_PROMOS)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_PROMOS)
 async def cmd_promotions(message: Message, **data: object) -> None:
     """Show the promotions page with CTA inline keyboard."""
     log.debug("promotions_opened", user_id=message.from_user and message.from_user.id)

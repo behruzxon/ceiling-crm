@@ -58,7 +58,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
-from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
 from apps.bot.ui.cta import cta_intent_keyboard
 from apps.bot.keyboards.pricing import design_keyboard
 from apps.bot.states.pricing import PricingStates
@@ -571,11 +571,14 @@ _CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 
 # ── Explicit AI mode — entry / exit / question ────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "🤖 AI yordam")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_AI)
 async def cmd_ai_start(
     message: Message, state: FSMContext, **data: object
 ) -> None:
     """Enter dedicated AI chat mode."""
+    if message.from_user is None:
+        await message.answer("Iltimos, botni shaxsiy chatda oching. 📩")
+        return
     await state.clear()
     await state.set_state(AiSupportStates.waiting_for_ai_question)
     await message.answer(

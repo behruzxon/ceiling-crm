@@ -60,7 +60,7 @@ def _about_keyboard() -> InlineKeyboardMarkup:
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == BTN_ABOUT)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_ABOUT)
 async def cmd_about(message: Message, **data: object) -> None:
     """Display the About Us page with CTA inline keyboard."""
     log.debug("about_opened", user_id=message.from_user and message.from_user.id)

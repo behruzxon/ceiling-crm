@@ -1,7 +1,7 @@
 """
 apps.bot.handlers.private.my_orders
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"📦 Buyurtmalarim" submenu — private chats only.
+"📦 Buyurtmalarim" submenu — works in private and group chats.
 
 Submenu buttons
 ---------------
@@ -109,7 +109,7 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 # ── Entry: show submenu ────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "📦 Buyurtmalarim")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📦 Buyurtmalarim")
 async def cmd_my_orders(message: Message, **data: object) -> None:
     await message.answer(
         "📦 <b>Buyurtmalarim</b>\n\nKerakli bo'limni tanlang:",
@@ -119,7 +119,7 @@ async def cmd_my_orders(message: Message, **data: object) -> None:
 
 # ── 📊 Mening buyurtmalarim ───────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "📊 Mening buyurtmalarim")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📊 Mening buyurtmalarim")
 async def cmd_orders_list(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -157,7 +157,7 @@ async def cmd_orders_list(message: Message, **data: object) -> None:
 
 # ── 📦 Buyurtma holati ────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "📦 Buyurtma holati")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📦 Buyurtma holati")
 async def cmd_order_status(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -185,7 +185,7 @@ async def cmd_order_status(message: Message, **data: object) -> None:
 
 # ── 🧾 Hisob-kitob tarixi ─────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "🧾 Hisob-kitob tarixi")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🧾 Hisob-kitob tarixi")
 async def cmd_payment_history(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -236,7 +236,7 @@ async def cmd_payment_history(message: Message, **data: object) -> None:
 
 # ── 🛠 Kafolat ma'lumoti ──────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "🛠 Kafolat ma'lumoti")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🛠 Kafolat ma'lumoti")
 async def cmd_warranty_info(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -280,7 +280,7 @@ async def cmd_warranty_info(message: Message, **data: object) -> None:
 
 # ── ⬅️ Orqaga ─────────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "⬅️ Orqaga")
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "⬅️ Orqaga")
 async def cmd_back_to_main(message: Message, **data: object) -> None:
     await message.answer(
         "🏠 Asosiy menyu:",

@@ -95,7 +95,7 @@ async def start_operator_flow(message: Message, state: FSMContext) -> None:
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == BTN_OPERATOR)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_OPERATOR)
 async def handle_operator_entry(
     message: Message, state: FSMContext, **data: object
 ) -> None:

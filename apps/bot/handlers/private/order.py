@@ -355,10 +355,13 @@ async def _start_order_flow(
     )
 
 
-@router.message(F.chat.type == "private", F.text == BTN_ORDER)
-@router.message(F.chat.type == "private", Command("order"))
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_ORDER)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), Command("order"))
 async def cmd_order_start(message: Message, state: FSMContext, **data: object) -> None:
     """Clear any active FSM, ensure a lead row exists, begin the order flow."""
+    if message.from_user is None:
+        await message.answer("Iltimos, botni shaxsiy chatda oching. 📩")
+        return
     user = message.from_user
     await _start_order_flow(
         message=message,

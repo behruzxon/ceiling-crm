@@ -195,8 +195,8 @@ async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
 
 # ─── Entry points ─────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == BTN_PRICE)
-@router.message(F.chat.type == "private", Command("price"))
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_PRICE)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), Command("price"))
 async def cmd_pricing_start(
     message: Message, state: FSMContext, **data: object
 ) -> None:

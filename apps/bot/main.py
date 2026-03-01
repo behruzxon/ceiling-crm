@@ -160,12 +160,14 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     group_router = Router(name="group")
     group_router.include_routers(
         group_admin_router,         # /admin command + gs: callbacks — must be first
-        group_start_router,         # /start in groups → inline keyboard (DM deeplinks)
-        admin_group_tracker_router, # my_chat_member → upsert admin_groups (silent)
+        group_start_router,         # /start + /menu in groups → reply keyboard
+        admin_group_tracker_router, # my_chat_member → upsert admin_groups + send menu
         welcome_router,             # chat_member: join welcome + analytics — before any other chat_member handler
         member_status_router,       # my_chat_member: bot add/remove log only (no chat_member handlers)
         moderation_router,          # link blocking + flood control
-        group_messages_router,      # silent catch-all — must be last
+        # NOTE: group_messages_router is intentionally NOT here.
+        # It is registered at the dispatcher level AFTER private_router so that
+        # group button taps (🛒, 💰, etc.) reach the private handlers first.
     )
 
     # ── Private DM router ─────────────────────────────────────────────────
@@ -185,12 +187,16 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         ai_support_router,  # free-text catch-all — commands already excluded by guard
     )
 
-    # Mount all top-level routers into Dispatcher
+    # Mount all top-level routers into Dispatcher.
+    # group_messages_router MUST come last: it is a catch-all for unhandled
+    # group text and must not shadow the private handlers that now serve
+    # both private and group chats.
     dp.include_routers(
         admin_router,
         callbacks_router,
         group_router,
         private_router,
+        group_messages_router,  # silent catch-all — always last
     )
 
     log.info(
