@@ -38,7 +38,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.main_menu import BTN_OPERATOR, main_menu_keyboard
 from shared.config import get_settings
 from shared.logging import get_logger
 
@@ -95,7 +95,7 @@ async def start_operator_flow(message: Message, state: FSMContext) -> None:
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text == "☎️ Operator")
+@router.message(F.chat.type == "private", F.text == BTN_OPERATOR)
 async def handle_operator_entry(
     message: Message, state: FSMContext, **data: object
 ) -> None:

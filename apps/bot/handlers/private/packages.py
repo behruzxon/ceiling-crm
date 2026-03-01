@@ -37,6 +37,7 @@ from infrastructure.database.repositories.admin_group_repo import PostgresAdminG
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
 from infrastructure.queue.tasks.package_tasks import check_package_followup
+from apps.bot.keyboards.main_menu import BTN_PACKAGES
 from shared.config import get_settings
 from shared.logging import get_logger
 
@@ -237,7 +238,7 @@ async def _send_admin_notifications(
 # ── Handlers ───────────────────────────────────────────────────────────────────
 
 
-@router.message(F.text.contains("Tayyor paketlar"))
+@router.message(F.text == BTN_PACKAGES)
 async def cmd_packages(message: Message, **data: object) -> None:
     """Show the package selection menu."""
     await message.answer(

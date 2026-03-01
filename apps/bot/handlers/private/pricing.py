@@ -34,7 +34,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from apps.bot.handlers.private.operator import start_operator_flow
-from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.main_menu import MAIN_MENU_BUTTONS, BTN_OPERATOR, main_menu_keyboard
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from apps.bot.states.pricing import PricingStates
@@ -45,23 +45,6 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:pricing")
-
-# Matches both "🧮 Narx kalkulyator" (legacy, U+1F9EE) and "💰 Narx kalkulyator"
-# (current, U+1F4B0) regardless of VS-16 variation selector (\uFE0F) that Telegram
-# keyboards may append, and tolerates extra whitespace.
-_PRICE_BTN_RE: re.Pattern[str] = re.compile(
-    r"[\U0001F9EE\U0001F4B0]\uFE0F?\s*Narx\s*kalkulyator", re.IGNORECASE
-)
-
-# Matches any main-menu reply-keyboard button (VS-16 tolerant).
-# Used to intercept button taps that arrive while a pricing FSM state is active.
-_MENU_BTN_RE: re.Pattern[str] = re.compile(
-    r"📂\uFE0F?\s*Katalog"
-    r"|\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator"
-    r"|📋\uFE0F?\s*Buyurtma"
-    r"|📞\uFE0F?\s*Operator",
-    re.IGNORECASE,
-)
 
 # Matches "LENGTHxWIDTH" (or *, ×, ga, spaces) with optional decimal commas/dots.
 # Group 1 = length, Group 2 = width.
@@ -212,7 +195,7 @@ async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
 
 # ─── Entry points ─────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text.regexp(_PRICE_BTN_RE))
+@router.message(F.chat.type == "private", F.text == BTN_PRICE)
 @router.message(F.chat.type == "private", Command("price"))
 async def cmd_pricing_start(
     message: Message, state: FSMContext, **data: object
@@ -229,20 +212,19 @@ async def cmd_pricing_start(
 
 @router.message(
     StateFilter(PricingStates.waiting_for_length, PricingStates.waiting_for_width),
-    F.text.regexp(_MENU_BTN_RE),
+    F.text.in_(MAIN_MENU_BUTTONS),
 )
 async def handle_pricing_menu_escape(
     message: Message, state: FSMContext, **data: object
 ) -> None:
     """Clear pricing FSM and handle the tapped main-menu button."""
     await state.clear()
-    text = message.text or ""
-    if re.search(r"📞", text):
+    if message.text == BTN_OPERATOR:
         # Hand off to the operator flow (start_operator_flow clears + sets state).
         await start_operator_flow(message, state)
     else:
-        # For Katalog / Narx / Buyurtma: clear state and let the user
-        # re-tap the button — show main menu so they can do so.
+        # For any other main-menu button: clear state and show the menu so
+        # the user can tap again.
         await message.answer(
             "Hisoblash bekor qilindi.",
             reply_markup=main_menu_keyboard(),

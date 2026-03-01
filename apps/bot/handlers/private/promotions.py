@@ -11,8 +11,6 @@ Displays current discounts and promotional offers with three CTA buttons:
 """
 from __future__ import annotations
 
-import re
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -25,15 +23,11 @@ from aiogram.types import (
 from apps.bot.handlers.private.operator import start_operator_flow
 from apps.bot.handlers.private.order import OrderFlow
 from apps.bot.handlers.private.pricing import start_pricing_flow
+from apps.bot.keyboards.main_menu import BTN_PROMOS
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:promotions")
-
-# VS-16 tolerant match for the "🎉 Chegirmalar" main-menu button.
-_PROMO_BTN_RE: re.Pattern[str] = re.compile(
-    r"\U0001F389\uFE0F?\s*Chegirmalar", re.IGNORECASE
-)
 
 _PROMO_TEXT: str = (
     "🎁 AKSIYALAR VA MAXSUS TAKLIFLAR\n\n"
@@ -66,7 +60,7 @@ def _promo_keyboard() -> InlineKeyboardMarkup:
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text.regexp(_PROMO_BTN_RE))
+@router.message(F.chat.type == "private", F.text == BTN_PROMOS)
 async def cmd_promotions(message: Message, **data: object) -> None:
     """Show the promotions page with CTA inline keyboard."""
     log.debug("promotions_opened", user_id=message.from_user and message.from_user.id)

@@ -61,7 +61,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.main_menu import BTN_ORDER, main_menu_keyboard
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
 from core.services.lead_notification_service import is_hot_lead
@@ -261,15 +261,6 @@ def _location_keyboard() -> ReplyKeyboardMarkup:
 
 
 # ─── Entry point ─────────────────────────────────────────────────────────────────
-# Exact-match both button texts.  The old _ORDER_BTN_RE regex was broken because
-# r"\uFE0F" in a raw string is the 6-char literal \uFE0F, not U+FE0F, so the
-# effective pattern was "✅uFE0F?\s*Zakaz berish" which never matched the button.
-
-_ORDER_TEXTS: frozenset[str] = frozenset({
-    "✅ Zakaz berish",   # legacy emoji (kept for in-flight messages)
-    "🛒 Zakaz berish",   # current emoji
-    "📦 Buyurtma berish",
-})
 
 
 async def _start_order_flow(
@@ -364,7 +355,7 @@ async def _start_order_flow(
     )
 
 
-@router.message(F.chat.type == "private", F.text.in_(_ORDER_TEXTS))
+@router.message(F.chat.type == "private", F.text == BTN_ORDER)
 @router.message(F.chat.type == "private", Command("order"))
 async def cmd_order_start(message: Message, state: FSMContext, **data: object) -> None:
     """Clear any active FSM, ensure a lead row exists, begin the order flow."""
