@@ -61,7 +61,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from apps.bot.keyboards.main_menu import BTN_ORDER, main_menu_keyboard
+from apps.bot.keyboards.main_menu import BTN_ORDER, MAIN_MENU_BUTTONS, main_menu_keyboard
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
 from core.services.lead_notification_service import is_hot_lead
@@ -210,9 +210,21 @@ class OrderFlow(StatesGroup):
 
 # ─── Keyboards ──────────────────────────────────────────────────────────────────
 
-def _phone_keyboard() -> ReplyKeyboardMarkup:
+def _phone_keyboard(is_private: bool = True) -> ReplyKeyboardMarkup:
+    """Phone-request keyboard.
+
+    In private chats ``request_contact=True`` makes Telegram send the user's
+    verified contact directly.  In group/supergroup chats Telegram forbids
+    request_contact, so we fall back to a plain text button with the same
+    label — the user will tap it and a separate group handler guides them to DM.
+    """
+    btn = (
+        KeyboardButton(text="📱 Raqamni ulashish", request_contact=True)
+        if is_private
+        else KeyboardButton(text="📱 Raqamni ulashish")
+    )
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 Raqamni ulashish", request_contact=True)]],
+        keyboard=[[btn]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
@@ -386,7 +398,7 @@ async def handle_name(message: Message, state: FSMContext, **data: object) -> No
         f"✅ Ism: <b>{name}</b>\n\n"
         "📱 Telefon raqamingizni kiriting yoki tugmani bosing:\n"
         "<i>Masalan: <code>+998901234567</code></i>",
-        reply_markup=_phone_keyboard(),
+        reply_markup=_phone_keyboard(is_private=(message.chat.type == "private")),
     )
 
 
@@ -401,21 +413,45 @@ async def handle_phone_contact(message: Message, state: FSMContext, **data: obje
         await message.answer(
             "❌ Raqam o'qilmadi. Qo'lda kiriting:\n"
             "<i>Masalan: <code>+998901234567</code></i>",
-            reply_markup=_phone_keyboard(),
+            reply_markup=_phone_keyboard(is_private=(message.chat.type == "private")),
         )
         return
     await _advance_from_phone(message, state, phone)
 
 
-@router.message(StateFilter(OrderFlow.waiting_for_phone), F.text, ~F.text.startswith("/"))
+@router.message(
+    StateFilter(OrderFlow.waiting_for_phone),
+    F.chat.type.in_({"group", "supergroup"}),
+    F.text == "📱 Raqamni ulashish",
+)
+async def handle_phone_group_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """User tapped the phone button in a group — guide them to open the bot in DM."""
+    settings = get_settings()
+    url = f"https://t.me/{settings.bot.username}?start=share_phone"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="📩 Botni DM da ochish", url=url)]]
+    )
+    await message.reply(
+        "📩 Raqam yuborish faqat shaxsiy chatda ishlaydi. Botni oching:",
+        reply_markup=kb,
+    )
+
+
+@router.message(
+    StateFilter(OrderFlow.waiting_for_phone),
+    F.text,
+    ~F.text.startswith("/"),
+    ~F.text.in_(MAIN_MENU_BUTTONS),  # let menu buttons fall through to their own handlers
+)
 async def handle_phone_text(message: Message, state: FSMContext, **data: object) -> None:
-    """Accept a manually typed phone number."""
+    """Accept a manually typed phone number, or reprompt with button guidance."""
     phone = normalize_phone((message.text or "").strip())
     if not phone or not is_valid_uz_phone(phone):
         await message.answer(
-            "❌ Noto'g'ri format. +998 bilan boshlanadigan raqam kiriting:\n"
+            "Raqam yuborish uchun 📱 Raqamni ulashish tugmasini bosing "
+            "yoki +998 bilan boshlanadigan raqam kiriting:\n"
             "<i>Masalan: <code>+998901234567</code></i>",
-            reply_markup=_phone_keyboard(),
+            reply_markup=_phone_keyboard(is_private=(message.chat.type == "private")),
         )
         return
     await _advance_from_phone(message, state, phone)
@@ -449,7 +485,7 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
     # Send the category inline keyboard in the next message.
     await message.answer(
         f"✅ Tuman: <b>{district}</b>\n\n"
-        "🏷 Shift turini tanlang:",
+        "🏷 Patalok turini tanlang:",
         reply_markup=_category_keyboard(),
     )
 
@@ -477,7 +513,7 @@ async def handle_category(callback: CallbackQuery, state: FSMContext, **data: ob
 
     await state.set_state(OrderFlow.waiting_for_area)
     await msg.answer(
-        f"✅ Shift turi: <b>{label}</b>\n\n"
+        f"✅ Patalok turi: <b>{label}</b>\n\n"
         "📐 Xona o'lchamini kiriting:\n\n"
         "  • Uzunlik × Kenglik:  <code>5x4</code>  yoki  <code>5 4</code>\n"
         "  • To'g'ridan maydon:  <code>20m2</code>\n\n"

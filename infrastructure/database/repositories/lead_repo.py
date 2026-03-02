@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.lead import Lead, LeadAddons
-from core.repositories.lead_repo import AbstractLeadRepository
+from core.repositories.lead_repo import AbstractLeadRepository, _UNSET
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.pipeline_stage import PipelineStageModel
 from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
@@ -45,6 +46,10 @@ class PostgresLeadRepository(AbstractLeadRepository):
             lead_status=model.lead_status,
             last_action=model.last_action,
             score=model.score or 0,
+            lead_temperature=model.lead_temperature,
+            closing_confidence=model.closing_confidence,
+            next_follow_up_at=model.next_follow_up_at,
+            follow_up_count=model.follow_up_count or 0,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -336,6 +341,57 @@ class PostgresLeadRepository(AbstractLeadRepository):
             .values(last_action=last_action, updated_at=datetime.now(timezone.utc))
         )
         await self._session.execute(stmt)
+
+    async def update_ai_scoring(
+        self,
+        lead_id: int,
+        *,
+        lead_temperature: str | None = None,
+        closing_confidence: float | None = None,
+        next_follow_up_at: Any = _UNSET,
+        increment_followup_count: bool = False,
+    ) -> None:
+        """Persist AI scoring columns. Only non-_UNSET values are written."""
+        values: dict[str, Any] = {"updated_at": datetime.now(timezone.utc)}
+        if lead_temperature is not None:
+            values["lead_temperature"] = lead_temperature
+        if closing_confidence is not None:
+            values["closing_confidence"] = closing_confidence
+        if next_follow_up_at is not _UNSET:
+            values["next_follow_up_at"] = next_follow_up_at  # may be None (clear)
+        if increment_followup_count:
+            values["follow_up_count"] = LeadModel.follow_up_count + 1
+        if len(values) == 1:  # only updated_at — nothing to do
+            return
+        stmt = update(LeadModel).where(LeadModel.id == lead_id).values(**values)
+        await self._session.execute(stmt)
+
+    async def get_due_followups(
+        self,
+        now: datetime,
+        limit: int = 100,
+    ) -> list[Lead]:
+        """Return leads with next_follow_up_at <= now, skipping terminal statuses."""
+        _SKIP = {"order", "lost", "won", "deal", "completed"}
+        stmt = (
+            select(LeadModel)
+            .where(
+                LeadModel.next_follow_up_at.isnot(None),
+                LeadModel.next_follow_up_at <= now,
+                sa.or_(
+                    LeadModel.lead_status.is_(None),
+                    LeadModel.lead_status.notin_(_SKIP),
+                ),
+            )
+            .order_by(LeadModel.next_follow_up_at.asc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        leads: list[Lead] = []
+        for model in result.scalars().all():
+            stage = await self._get_current_stage(model.id)
+            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
+        return leads
 
     # ── Kanban helpers ─────────────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ from shared.logging import get_logger
 router = Router(name="group:admin_group_tracker")
 log = get_logger(__name__)
 
-_MENU_KB = main_menu_keyboard()
+_GROUP_MENU_KB = main_menu_keyboard()
 
 
 class _IsBotGainingAccess(BaseFilter):
@@ -80,12 +80,13 @@ async def track_bot_group_entry(event: ChatMemberUpdated, **data: object) -> Non
         except Exception:
             log.exception("admin_group_tracker_failed", chat_id=chat.id)
 
-    # Send menu keyboard to the group
+    # Send the persistent ReplyKeyboard to the whole group (non-selective).
+    # All current members will see the bottom keyboard appear after this message.
     try:
         await event.bot.send_message(
             chat_id=chat.id,
-            text="Menyu:",
-            reply_markup=_MENU_KB,
+            text="📋 Menyu:",
+            reply_markup=_GROUP_MENU_KB,
         )
         log.info("group_menu_sent", chat_id=chat.id)
     except Exception:

@@ -1,6 +1,8 @@
-"""Follow-up funnel job definitions (D+1, D+3, D+7)."""
+"""Follow-up funnel job — runs every 60 seconds."""
 from __future__ import annotations
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -9,29 +11,24 @@ log = get_logger(__name__)
 def register_followup_jobs(scheduler: AsyncIOScheduler) -> None:
     """Register all follow-up automation jobs."""
     scheduler.add_job(
-        check_new_leads_alert,
+        check_due_followups,
         trigger="interval",
-        minutes=5,
-        id="check_new_leads",
+        seconds=60,
+        id="check_due_followups",
         replace_existing=True,
     )
 
 
-async def check_new_leads_alert() -> None:
-    """Alert admins about NEW leads with no contact for >30 minutes. TODO: implement."""
-    raise NotImplementedError
+async def check_due_followups() -> None:
+    """Send admin reminders for leads whose next_follow_up_at is now overdue."""
+    from shared.config import get_settings
+    from core.services.followup_service import FollowupService
 
-
-async def send_followup_day1(lead_id: int) -> None:
-    """Send D+1 follow-up message to client. TODO: implement via BroadcastService."""
-    raise NotImplementedError
-
-
-async def send_followup_day3(lead_id: int) -> None:
-    """Send D+3 follow-up message. TODO: implement."""
-    raise NotImplementedError
-
-
-async def send_followup_day7(lead_id: int) -> None:
-    """Send D+7 final follow-up. TODO: implement."""
-    raise NotImplementedError
+    settings = get_settings()
+    svc = FollowupService(
+        bot_token=settings.bot.token.get_secret_value(),
+        admin_user_id=settings.bot.admin_user_id,
+    )
+    count = await svc.process_due_followups()
+    if count:
+        log.info("followup_job_done", count=count)

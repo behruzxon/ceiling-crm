@@ -69,7 +69,7 @@ async def cmd_promotions(message: Message, **data: object) -> None:
 
 # ─── CTA callbacks ────────────────────────────────────────────────────────────
 
-@router.callback_query(F.message.chat.type == "private", F.data == "open_pricing")
+@router.callback_query(F.data == "open_pricing")
 async def cb_open_pricing(
     callback: CallbackQuery, state: FSMContext, **data: object
 ) -> None:
@@ -81,7 +81,7 @@ async def cb_open_pricing(
     await start_pricing_flow(msg, state)
 
 
-@router.callback_query(F.message.chat.type == "private", F.data == "order_start")
+@router.callback_query(F.data == "order_start")
 async def cb_order_start(
     callback: CallbackQuery, state: FSMContext, **data: object
 ) -> None:
@@ -98,7 +98,7 @@ async def cb_order_start(
     )
 
 
-@router.callback_query(F.message.chat.type == "private", F.data == "contact_operator")
+@router.callback_query(F.data == "contact_operator")
 async def cb_contact_operator(
     callback: CallbackQuery, state: FSMContext, **data: object
 ) -> None:

@@ -45,5 +45,11 @@ class Lead(BaseModel):
     last_action: str | None = None
     score: int = 0
 
+    # AI scoring + follow-up scheduling
+    lead_temperature: str | None = None    # hot / warm / cold (from AI exchange)
+    closing_confidence: float | None = None
+    next_follow_up_at: datetime | None = None
+    follow_up_count: int = 0
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

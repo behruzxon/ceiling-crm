@@ -1,6 +1,6 @@
 """Main menu reply keyboard builder and button-text constants."""
 from __future__ import annotations
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 # ── Button text constants ─────────────────────────────────────────────────────
 # Single source of truth for all main-menu button labels.
@@ -22,12 +22,18 @@ MAIN_MENU_BUTTONS: frozenset[str] = frozenset({
 })
 
 
-def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeyboardMarkup:
+def main_menu_keyboard(
+    locale: str = "uz",
+    is_admin: bool = False,
+    selective: bool = False,
+) -> ReplyKeyboardMarkup:
     """Build main menu keyboard.
 
     Args:
         locale: Language code (unused for now, reserved for i18n).
         is_admin: When True, appends the admin-only "📣 Rassilka" button.
+        selective: When True, keyboard is shown only to the replied-to user
+                   (use with message.reply()).  Sets is_persistent=False.
     """
     rows = [
         [KeyboardButton(text=BTN_ORDER),     KeyboardButton(text=BTN_PRICE)],
@@ -41,6 +47,43 @@ def main_menu_keyboard(locale: str = "uz", is_admin: bool = False) -> ReplyKeybo
     return ReplyKeyboardMarkup(
         keyboard=rows,
         resize_keyboard=True,
-        is_persistent=True,
+        is_persistent=not selective,
         one_time_keyboard=False,
+        selective=selective,
+    )
+
+
+def group_menu_inline_keyboard() -> InlineKeyboardMarkup:
+    """Inline menu for group/supergroup chats.
+
+    ReplyKeyboardMarkup is unreliable in groups: it is only shown to the user
+    who triggered the command, other members don't see it, and with bot privacy
+    mode enabled the bot never receives the resulting plain-text taps at all.
+
+    InlineKeyboard buttons produce callback_query updates that are always
+    delivered to the bot regardless of privacy mode — making this the only
+    reliable menu mechanism for groups.
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=BTN_ORDER,     callback_data="grpmenu:order"),
+                InlineKeyboardButton(text=BTN_PRICE,     callback_data="grpmenu:price"),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_CATALOG,   callback_data="grpmenu:catalog"),
+                InlineKeyboardButton(text=BTN_PACKAGES,  callback_data="grpmenu:packages"),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_MY_ORDERS, callback_data="grpmenu:my_orders"),
+                InlineKeyboardButton(text=BTN_OPERATOR,  callback_data="grpmenu:operator"),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_PROMOS,    callback_data="grpmenu:promos"),
+                InlineKeyboardButton(text=BTN_AI,        callback_data="grpmenu:ai"),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_ABOUT,     callback_data="grpmenu:about"),
+            ],
+        ]
     )

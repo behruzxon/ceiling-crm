@@ -36,6 +36,7 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
 from apps.bot.handlers.admin.dashboard import router as dashboard_router
+from apps.bot.handlers.admin.lead_status import router as lead_status_router
 from apps.bot.handlers.admin.leads import router as admin_leads_router
 from apps.bot.handlers.admin.media import router as media_router
 from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
@@ -62,6 +63,7 @@ from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
 from apps.bot.handlers.private.my_orders import router as my_orders_router
+from apps.bot.handlers.private.measurement_lead import router as measurement_lead_router
 from apps.bot.handlers.private.operator import router as operator_router
 from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
@@ -72,6 +74,7 @@ from apps.bot.tasks import daily_report, inactive_cta
 from apps.bot.middlewares.audit import AuditMiddleware
 from apps.bot.middlewares.auth import AuthMiddleware
 from apps.bot.middlewares.group_context import GroupContextMiddleware
+from apps.bot.middlewares.group_menu_injector import GroupMenuInjectorMiddleware
 from apps.bot.middlewares.locale import LocaleMiddleware
 from apps.bot.middlewares.rate_limit import RateLimitMiddleware
 from infrastructure.cache.client import connect_redis, disconnect_redis, get_sessions_redis
@@ -90,11 +93,12 @@ log = get_logger(__name__)
 BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="start",   description="Botni ishga tushirish / Start"),
     BotCommand(command="menu",    description="Asosiy menyuni ko'rsatish"),
-    BotCommand(command="catalog", description="Shiftlar katalogi"),
+    BotCommand(command="catalog", description="Patalok katalogi"),
     BotCommand(command="price",   description="Narxni hisoblash"),
     BotCommand(command="order",   description="Buyurtma berish"),
     BotCommand(command="help",    description="Yordam"),
     BotCommand(command="cancel",  description="Amalni bekor qilish"),
+    BotCommand(command="ai_off",  description="AI rejimdan chiqish"),
 ]
 
 
@@ -130,6 +134,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     dp.update.outer_middleware(GroupContextMiddleware())
     dp.update.outer_middleware(RateLimitMiddleware())
     dp.update.outer_middleware(AuditMiddleware())
+    dp.message.outer_middleware(GroupMenuInjectorMiddleware())  # inject selective ReplyKeyboard in groups
 
     # ── Admin router (restricted access) ──────────────────────────────────
     admin_router = Router(name="admin")
@@ -150,6 +155,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     callbacks_router.include_routers(
         lead_callbacks_router,
         kanban_callbacks_router,    # kanban:* — visual pipeline management
+        lead_status_router,         # lead:{id}:status:{status} — quick admin status updates
         cta_callbacks_router,       # cta:* — discount / order / pricing / operator / catalog
         pipeline_callbacks_router,
         payment_callbacks_router,
@@ -160,14 +166,16 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     group_router = Router(name="group")
     group_router.include_routers(
         group_admin_router,         # /admin command + gs: callbacks — must be first
-        group_start_router,         # /start + /menu in groups → reply keyboard
+        group_start_router,         # /start + /menu in groups → inline keyboard + grpmenu:* callbacks
         admin_group_tracker_router, # my_chat_member → upsert admin_groups + send menu
         welcome_router,             # chat_member: join welcome + analytics — before any other chat_member handler
         member_status_router,       # my_chat_member: bot add/remove log only (no chat_member handlers)
-        moderation_router,          # link blocking + flood control
-        # NOTE: group_messages_router is intentionally NOT here.
-        # It is registered at the dispatcher level AFTER private_router so that
-        # group button taps (🛒, 💰, etc.) reach the private handlers first.
+        # NOTE: moderation_router is intentionally NOT here.
+        # It has a bare F.chat.type catch-all for group messages — placing it inside
+        # group_router (before private_router) would swallow every menu button tap
+        # before the BTN_* text handlers in private_router ever see it.
+        # It is registered at the dispatcher level AFTER private_router, mirroring
+        # the same reasoning that keeps group_messages_router last.
     )
 
     # ── Private DM router ─────────────────────────────────────────────────
@@ -182,20 +190,28 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         my_orders_router,    # must precede order_router (shares "📦" prefix text)
         payment_router,      # FSM — must precede lead_capture_router catch-all
         order_router,        # must precede lead_capture_router
-        operator_router,     # must precede ai_support_router
+        operator_router,          # must precede ai_support_router
+        measurement_lead_router,  # FSM for bepul o'lchov — before ai_support catch-all
         lead_capture_router,
         ai_support_router,  # free-text catch-all — commands already excluded by guard
     )
 
     # Mount all top-level routers into Dispatcher.
-    # group_messages_router MUST come last: it is a catch-all for unhandled
-    # group text and must not shadow the private handlers that now serve
-    # both private and group chats.
+    #
+    # Router priority (highest → lowest):
+    #   admin_router      — role-gated admin commands + callbacks
+    #   callbacks_router  — all inline-button callbacks (kanban:, cta:, pkg:, etc.)
+    #   group_router      — /start /menu + my_chat_member/chat_member events
+    #   private_router    — DM flows that also serve groups (BTN_* text handlers)
+    #   moderation_router — link/flood guard; must run AFTER private_router so
+    #                       menu button taps reach BTN_* handlers first
+    #   group_messages_router — silent catch-all; always last
     dp.include_routers(
         admin_router,
         callbacks_router,
         group_router,
         private_router,
+        moderation_router,      # after private so BTN_* text taps reach private first
         group_messages_router,  # silent catch-all — always last
     )
 

@@ -48,19 +48,52 @@ class LeadNotificationService:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _lead_status_keyboard(lead_id: int) -> "InlineKeyboardMarkup":
+        """Build the quick-action inline keyboard appended to every lead card."""
+        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📌 Kanban'da ochish",
+                    callback_data=f"kanban:lead:{lead_id}:new",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Bog'landim",
+                    callback_data=f"lead:{lead_id}:status:contacted",
+                ),
+                InlineKeyboardButton(
+                    text="📅 O'lchov",
+                    callback_data=f"lead:{lead_id}:status:measurement",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💰 Narx yuborildi",
+                    callback_data=f"lead:{lead_id}:status:quoted",
+                ),
+                InlineKeyboardButton(
+                    text="🧾 Zakaz",
+                    callback_data=f"lead:{lead_id}:status:deal",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Yo'qotildi",
+                    callback_data=f"lead:{lead_id}:status:lost",
+                ),
+            ],
+        ])
+
     async def notify_new_lead(self, lead: Lead) -> None:
         """Send a NEW lead card to admin DM + all admin groups. Never raises."""
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
-        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
         text = self._new_lead_text(lead)
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(
-                text="📌 Kanban'da ochish",
-                callback_data=f"kanban:lead:{lead.id}:new",
-            ),
-        ]])
+        keyboard = self._lead_status_keyboard(lead.id)
 
         bot = Bot(
             token=self._bot_token,
@@ -78,7 +111,6 @@ class LeadNotificationService:
         """Send a HOT lead alert once, deduped by last_action. Never raises."""
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
-        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
         factory = get_session_factory()
         async with factory() as session:
@@ -93,24 +125,7 @@ class LeadNotificationService:
                     return
 
                 text = self._hot_lead_text(lead)
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="📌 Kanban'da ochish",
-                            callback_data=f"kanban:lead:{lead_id}:hot",
-                        ),
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            text="✅ WON",
-                            callback_data=f"kanban:move:{lead_id}:won",
-                        ),
-                        InlineKeyboardButton(
-                            text="❌ LOST",
-                            callback_data=f"kanban:move:{lead_id}:lost",
-                        ),
-                    ],
-                ])
+                keyboard = self._lead_status_keyboard(lead_id)
 
                 bot = Bot(
                     token=self._bot_token,
@@ -145,13 +160,22 @@ class LeadNotificationService:
 
     @staticmethod
     def _new_lead_text(lead: Lead) -> str:
+        dims = ""
+        if lead.room_length and lead.room_width:
+            dims = f"\n📐 O'lcham: {lead.room_length} × {lead.room_width} m"
+        temp_tag = f"\n🌡 Holat: {lead.lead_temperature}" if lead.lead_temperature else ""
+        conf_tag = (
+            f"\n💡 Ishonch: {lead.closing_confidence:.0%}"
+            if lead.closing_confidence is not None
+            else ""
+        )
         return (
             f"🆕 <b>Yangi lid keldi!</b>\n\n"
             f"📋 Lid #{lead.id}\n"
             f"👤 {lead.name}\n"
             f"📱 {lead.phone}\n"
             f"📍 {lead.district}\n"
-            f"🏷 {lead.category.value}\n\n"
+            f"🏷 {lead.category.value}{dims}{temp_tag}{conf_tag}\n\n"
             f"/lead_{lead.id}"
         )
 
@@ -197,6 +221,89 @@ class LeadNotificationService:
                 await bot.send_message(gid, text, reply_markup=keyboard)  # type: ignore[union-attr]
             except Exception as exc:
                 log.warning("notify_group_failed", chat_id=gid, error=str(exc))
+
+    async def notify_measurement_lead(
+        self,
+        lead: "Lead",
+        *,
+        time_pref: str | None,
+        dimensions: str | None,
+        lead_temperature: str | None,
+        closing_confidence: float | None,
+        chat_type: str,
+        chat_id: int,
+        tg_user_id: int,
+        username: str | None,
+    ) -> None:
+        """Send a measurement-lead card to admin DM + all admin groups. Never raises."""
+        from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
+
+        conf_str = f"{closing_confidence:.0%}" if closing_confidence is not None else "—"
+        uname_str = f"@{username}" if username else "—"
+        time_str = time_pref or "Ko'rsatilmagan"
+
+        text = (
+            f"📐 <b>Bepul o'lchov so'rovi!</b>\n\n"
+            f"📋 Lid #{lead.id}\n"
+            f"👤 Ism: {lead.name}\n"
+            f"📱 Telefon: {lead.phone}\n"
+            f"📍 Manzil: {lead.district}\n"
+            f"🕐 Vaqt: {time_str}\n"
+            f"📐 O'lcham: {dimensions or '—'}\n"
+            f"🌡 Holat: {lead_temperature or '—'}\n"
+            f"💡 Ishonch: {conf_str}\n\n"
+            f"🔗 {chat_type} | {uname_str} | /lead_{lead.id}"
+        )
+        keyboard = self._lead_status_keyboard(lead.id)
+
+        bot = Bot(
+            token=self._bot_token,
+            default=DefaultBotProperties(parse_mode="HTML"),
+        )
+        try:
+            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._log_new_lead_action(lead.id)
+        except Exception:
+            log.exception("notify_measurement_lead_error", lead_id=lead.id)
+        finally:
+            await bot.session.close()
+
+    async def notify_draft_lead(
+        self,
+        *,
+        phone: str,
+        name: str | None,
+        username: str | None,
+        user_id: int | None,
+        chat_type: str,
+        chat_id: int,
+    ) -> None:
+        """Send a draft phone-capture alert to admin DM only. Never raises."""
+        from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
+
+        uname_str = f"@{username}" if username else "—"
+        name_str = name or "Noma'lum"
+        uid_str = str(user_id) if user_id else "—"
+
+        text = (
+            f"📞 <b>Telefon raqam aniqlandi!</b>\n\n"
+            f"📱 {phone}\n"
+            f"👤 {name_str}\n"
+            f"🔗 {uname_str} | #{uid_str} | {chat_type}"
+        )
+
+        bot = Bot(
+            token=self._bot_token,
+            default=DefaultBotProperties(parse_mode="HTML"),
+        )
+        try:
+            await bot.send_message(self._admin_user_id, text)
+        except Exception as exc:
+            log.warning("notify_draft_lead_failed", error=str(exc))
+        finally:
+            await bot.session.close()
 
     async def _log_new_lead_action(self, lead_id: int) -> None:
         """Insert lead_action + audit_log for a new-lead notification."""

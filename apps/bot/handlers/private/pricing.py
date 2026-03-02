@@ -336,7 +336,6 @@ async def handle_width(
 # ─── Step 3 : design selected → calculate → persist → display ─────────────────
 
 @router.callback_query(
-    F.message.chat.type == "private",
     StateFilter(PricingStates.choosing_design),
     F.data.startswith("design:"),
 )

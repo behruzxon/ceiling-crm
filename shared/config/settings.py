@@ -32,6 +32,7 @@ class BotSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BOT_", env_file=".env", extra="ignore")
 
     token: SecretStr = Field(..., description="Telegram Bot API token")
+    username: str = Field(default="potolok_x_bot", description="Bot @username without @ — used for deep links")
     webhook_url: str | None = Field(default=None, description="Webhook URL (None = polling)")
     webhook_secret: SecretStr | None = Field(default=None)
     admin_group_id: int = Field(..., description="Telegram chat_id of the admin group (for notifications)")

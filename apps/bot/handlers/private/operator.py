@@ -32,13 +32,15 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
 )
 
-from apps.bot.keyboards.main_menu import BTN_OPERATOR, main_menu_keyboard
+from apps.bot.keyboards.main_menu import BTN_OPERATOR, MAIN_MENU_BUTTONS, main_menu_keyboard
 from shared.config import get_settings
 from shared.logging import get_logger
 
@@ -65,9 +67,19 @@ def _confirm_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def _contact_keyboard() -> ReplyKeyboardMarkup:
+def _contact_keyboard(is_private: bool = True) -> ReplyKeyboardMarkup:
+    """Contact-request keyboard.
+
+    ``request_contact=True`` is only valid in private chats.  In groups we
+    fall back to a plain text button — a group handler then shows a DM deep link.
+    """
+    btn = (
+        KeyboardButton(text="📲 Nomerni yuborish", request_contact=True)
+        if is_private
+        else KeyboardButton(text="📲 Nomerni yuborish")
+    )
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📲 Nomerni yuborish", request_contact=True)]],
+        keyboard=[[btn]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
@@ -114,7 +126,7 @@ async def handle_confirm_yes(
     await message.answer(
         "📲 Quyidagi tugmani bosib raqamingizni yuboring.\n\n"
         "<i>Namuna: +998 90 123 45 67</i>",
-        reply_markup=_contact_keyboard(),
+        reply_markup=_contact_keyboard(is_private=(message.chat.type == "private")),
     )
 
 
@@ -130,7 +142,11 @@ async def handle_confirm_no(
     )
 
 
-@router.message(StateFilter(OperatorFlow.waiting_for_confirmation))
+@router.message(
+    StateFilter(OperatorFlow.waiting_for_confirmation),
+    F.text,
+    ~F.text.in_(MAIN_MENU_BUTTONS),  # let menu buttons fall through to their own handlers
+)
 async def handle_confirmation_fallback(
     message: Message, state: FSMContext, **data: object
 ) -> None:
@@ -185,14 +201,38 @@ async def handle_contact(
     )
 
 
-@router.message(StateFilter(OperatorFlow.waiting_for_contact), F.text)
+@router.message(
+    StateFilter(OperatorFlow.waiting_for_contact),
+    F.chat.type.in_({"group", "supergroup"}),
+    F.text == "📲 Nomerni yuborish",
+)
+async def handle_operator_contact_group_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """User tapped the contact button in a group — guide them to DM."""
+    settings = get_settings()
+    url = f"https://t.me/{settings.bot.username}?start=share_phone"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="📩 Botni DM da ochish", url=url)]]
+    )
+    await message.reply(
+        "📩 Raqam yuborish faqat shaxsiy chatda ishlaydi. Botni oching:",
+        reply_markup=kb,
+    )
+
+
+@router.message(
+    StateFilter(OperatorFlow.waiting_for_contact),
+    F.text,
+    ~F.text.in_(MAIN_MENU_BUTTONS),  # let menu buttons fall through to their own handlers
+)
 async def handle_contact_text_fallback(
     message: Message, state: FSMContext, **data: object
 ) -> None:
-    """User typed text instead of sharing contact — keep state and re-prompt."""
+    """Reprompt when user types something other than the contact button or a menu button."""
     await message.answer(
-        "Iltimos, pastdagi 📲 tugma orqali nomerni yuboring.",
-        reply_markup=_contact_keyboard(),
+        "Raqam yuborish uchun faqat 📲 Nomerni yuborish tugmasini bosing.",
+        reply_markup=_contact_keyboard(is_private=(message.chat.type == "private")),
     )
 
 

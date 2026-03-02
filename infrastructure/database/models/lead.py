@@ -52,6 +52,12 @@ class LeadModel(Base):
     last_action: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     score: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)
 
+    # ── AI scoring + follow-up scheduling ────────────────────────────────────
+    lead_temperature: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
+    closing_confidence: Mapped[float | None] = mapped_column(sa.Float, nullable=True)
+    next_follow_up_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    follow_up_count: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
     updated_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())
 
@@ -59,4 +65,5 @@ class LeadModel(Base):
         sa.Index("ix_leads_user_id", "user_id"),
         sa.Index("ix_leads_package_type", "package_type"),
         sa.Index("ix_leads_lead_status", "lead_status"),
+        sa.Index("ix_leads_next_follow_up_at", "next_follow_up_at"),
     )

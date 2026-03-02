@@ -6,6 +6,8 @@ from core.domain.lead import Lead
 from core.repositories.base import BaseRepository
 from shared.constants.enums import CeilingCategory, PipelineStage
 
+_UNSET = object()  # sentinel: "don't touch this column"
+
 
 class AbstractLeadRepository(BaseRepository[Lead, int]):
     """Contract for lead persistence operations."""
@@ -99,5 +101,36 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         """Return leads for a kanban bucket, ordered newest-first.
 
         kanban_stage must be one of: new | hot | measurement | won | lost
+        """
+        ...
+
+    @abstractmethod
+    async def update_ai_scoring(
+        self,
+        lead_id: int,
+        *,
+        lead_temperature: str | None = None,
+        closing_confidence: float | None = None,
+        next_follow_up_at: object = _UNSET,
+        increment_followup_count: bool = False,
+    ) -> None:
+        """Persist AI scoring columns to a lead.
+
+        Only columns with non-_UNSET values are updated.
+        Pass ``next_follow_up_at=None`` to explicitly clear the schedule.
+        Pass ``increment_followup_count=True`` to atomically increment the counter.
+        """
+        ...
+
+    @abstractmethod
+    async def get_due_followups(
+        self,
+        now: datetime,
+        limit: int = 100,
+    ) -> list[Lead]:
+        """Return leads where next_follow_up_at <= now, excluding terminal states.
+
+        Terminal states (deal / lost / won / completed) are skipped automatically.
+        Results are ordered by next_follow_up_at ascending.
         """
         ...

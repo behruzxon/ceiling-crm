@@ -60,6 +60,9 @@ class CacheTTL:
     # CTA inactivity feature
     CTA_SENT            = 172_800    # 2 days — dedup flag per user per calendar day
 
+    # Group menu injection dedup
+    GRP_MENU_SHOWN      = 86_400     # 24 hours — send selective keyboard at most once per user/day
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -160,3 +163,12 @@ class CacheKeys:
         TTL: CacheTTL.CTA_SENT (2 days).
         """
         return f"cta:sent:{user_id}:{date_str}"
+
+    # ── Group menu injection ───────────────────────────────────────────────
+    @staticmethod
+    def grp_menu_shown(chat_id: int, user_id: int) -> str:
+        """Flag set when we've sent the selective ReplyKeyboard to this user in this group.
+
+        TTL: CacheTTL.GRP_MENU_SHOWN (24 hours).
+        """
+        return f"grp:menu:{chat_id}:{user_id}"

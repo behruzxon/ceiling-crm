@@ -71,7 +71,7 @@ async def cmd_about(message: Message, **data: object) -> None:
 # open_pricing / order_start / contact_operator are registered in promotions.py
 # and will be matched there first (promotions_router is included before about_router).
 
-@router.callback_query(F.message.chat.type == "private", F.data == "open_catalog")
+@router.callback_query(F.data == "open_catalog")
 async def cb_open_catalog(callback: CallbackQuery, **data: object) -> None:
     """Open the ceiling catalog inline keyboard."""
     await callback.answer()

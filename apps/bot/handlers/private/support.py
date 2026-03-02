@@ -4,7 +4,7 @@ Routes ceiling-related questions to OpenAI with guardrails.
 """
 from __future__ import annotations
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -28,7 +28,7 @@ HELP_TEXT = (
     "🏠 <b>Ceiling CRM Bot</b>\n\n"
     "Mavjud buyruqlar:\n"
     "/start — Botni ishga tushirish\n"
-    "/catalog — Shiftlar katalogi\n"
+    "/catalog — Patalok katalogi\n"
     "/price — Narxni hisoblash\n"
     "/order — Buyurtma berish\n"
     "/help — Yordam\n"
@@ -38,15 +38,33 @@ HELP_TEXT = (
 
 
 @router.message(Command("start"), F.chat.type == "private")
-async def cmd_start(message: Message, state: FSMContext, **data) -> None:
+async def cmd_start(message: Message, command: CommandObject, state: FSMContext, **data) -> None:
     """Clear FSM state and AI conversation thread, then greet (private only).
+
+    Handles deep-link payload: ``/start share_phone`` → skip greeting and
+    go straight to the phone-number request (operator callback flow).
 
     User profile data (lead stage, phone, design interests, dimensions)
     is intentionally preserved — only the active conversation thread is reset.
     Group /start is handled by group:start router.
     """
-    await state.clear()
     user_id = message.from_user.id if message.from_user else 0
+
+    # ── Deep link: share_phone ──────────────────────────────────────────────
+    if command.args == "share_phone":
+        from apps.bot.handlers.private.operator import OperatorFlow, _contact_keyboard
+        await state.clear()
+        await state.set_state(OperatorFlow.waiting_for_contact)
+        await message.answer(
+            "📲 Quyidagi tugmani bosib raqamingizni yuboring.\n\n"
+            "<i>Namuna: +998 90 123 45 67</i>",
+            reply_markup=_contact_keyboard(is_private=True),
+        )
+        log.info("start_share_phone", user_id=user_id)
+        return
+
+    # ── Normal /start ───────────────────────────────────────────────────────
+    await state.clear()
     await clear_ai_conversation(user_id)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
     await message.answer(

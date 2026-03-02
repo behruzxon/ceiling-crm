@@ -51,7 +51,7 @@ PACKAGE_INFO: dict[str, dict] = {
         "name": "🥉 Standard",
         "description": (
             "🥉 <b>STANDARD — Eng arzon va tez variant</b>\n\n"
-            "• Oddiy va ishonchli natijnoy shift\n"
+            "• Oddiy va ishonchli natijnoy patalok\n"
             "• ⚡ Eng tez o'rnatish\n"
             "• 💸 Har qanday boshqa potolok turidan arzon\n"
             "• 🎨 10+ rang tanlov\n"
@@ -130,6 +130,15 @@ def _package_detail_keyboard(pkg_key: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📞 Operator", callback_data="pkg:operator")],
         [InlineKeyboardButton(text="⬅️ Ortga", callback_data="pkg:back_list")],
     ])
+
+
+async def show_packages_list(message: Message) -> None:
+    """Show the package list inline keyboard.
+
+    Public helper so the group menu callback in group/start.py can reuse
+    this without duplicating the text + keyboard.
+    """
+    await message.answer(_PACKAGES_LIST_TEXT, reply_markup=_packages_list_keyboard())
 
 
 def _price_estimate_keyboard(pkg_key: str) -> InlineKeyboardMarkup:
