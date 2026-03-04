@@ -169,13 +169,14 @@ class LeadNotificationService:
             if lead.closing_confidence is not None
             else ""
         )
+        category_str = lead.category.value if lead.category else "—"
         return (
             f"🆕 <b>Yangi lid keldi!</b>\n\n"
             f"📋 Lid #{lead.id}\n"
             f"👤 {lead.name}\n"
             f"📱 {lead.phone}\n"
             f"📍 {lead.district}\n"
-            f"🏷 {lead.category.value}{dims}{temp_tag}{conf_tag}\n\n"
+            f"🏷 {category_str}{dims}{temp_tag}{conf_tag}\n\n"
             f"/lead_{lead.id}"
         )
 
@@ -302,6 +303,91 @@ class LeadNotificationService:
             await bot.send_message(self._admin_user_id, text)
         except Exception as exc:
             log.warning("notify_draft_lead_failed", error=str(exc))
+        finally:
+            await bot.session.close()
+
+    # Shared score badges used by several notification methods
+    _SCORE_BADGES: dict[str, str] = {
+        "hot":  "🔥 HOT LEAD",
+        "warm": "🟡 WARM LEAD",
+        "cold": "⚪ COLD LEAD",
+    }
+
+    async def notify_ai_lead_collected(
+        self,
+        *,
+        phone: str,
+        district: str,
+        area: float | None,
+        room: str | None,
+        name: str | None,
+        username: str | None,
+        user_id: int | None,
+        score: str = "hot",
+    ) -> None:
+        """Send AI-collected lead card to admin DM + all admin groups. Never raises."""
+        from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
+
+        badge = self._SCORE_BADGES.get(score, "🔥 HOT LEAD")
+        name_str = name or "Noma'lum"
+        lines = [f"<b>{badge}</b>\n", f"Ism: {name_str}"]
+        if username:
+            lines.append(f"Username: @{username}")
+        elif user_id:
+            lines.append(f"Telegram: <a href='tg://user?id={user_id}'>{user_id}</a>")
+        if district:
+            lines.append(f"Tuman: {district}")
+        if area is not None:
+            lines.append(f"Maydon: {area:g} m²")
+        if room:
+            lines.append(f"Xona: {room}")
+        lines.append(f"Tel: {phone}")
+        text = "\n".join(lines)
+
+        bot = Bot(
+            token=self._bot_token,
+            default=DefaultBotProperties(parse_mode="HTML"),
+        )
+        try:
+            await self._send_to_groups_and_dm(bot, text, None)
+        except Exception as exc:
+            log.warning("notify_ai_lead_failed", error=str(exc))
+        finally:
+            await bot.session.close()
+
+    async def notify_lead_interest(
+        self,
+        *,
+        score: str,
+        name: str | None,
+        username: str | None,
+        user_id: int | None,
+        topic: str,
+    ) -> None:
+        """Send a WARM/COLD interest signal to admin DM + all admin groups. Never raises."""
+        from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
+
+        badge = self._SCORE_BADGES.get(score, "🟡 WARM LEAD")
+        lines = [f"<b>{badge}</b>\n"]
+        if name:
+            lines.append(f"Ism: {name}")
+        if username:
+            lines.append(f"Username: @{username}")
+        elif user_id:
+            lines.append(f"Telegram: <a href='tg://user?id={user_id}'>{user_id}</a>")
+        lines.append(f"Savol: {topic}")
+        text = "\n".join(lines)
+
+        bot = Bot(
+            token=self._bot_token,
+            default=DefaultBotProperties(parse_mode="HTML"),
+        )
+        try:
+            await self._send_to_groups_and_dm(bot, text, None)
+        except Exception as exc:
+            log.warning("notify_lead_interest_failed", error=str(exc))
         finally:
             await bot.session.close()
 

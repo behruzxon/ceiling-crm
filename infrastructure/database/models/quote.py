@@ -16,7 +16,12 @@ class QuoteModel(Base):
     id: Mapped[int] = mapped_column(sa.BigInteger, sa.Identity(), primary_key=True)
     lead_id: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("leads.id"), nullable=False)
     category: Mapped[str] = mapped_column(
-        sa.Enum(CeilingCategory, name="ceiling_category_quotes", create_constraint=False),
+        sa.Enum(
+            CeilingCategory,
+            name="ceiling_category_quotes",
+            create_constraint=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
     )
     base_price_per_sqm: Mapped[float] = mapped_column(sa.Numeric(12, 2), nullable=False)

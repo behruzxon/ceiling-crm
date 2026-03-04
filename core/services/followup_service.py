@@ -7,7 +7,7 @@ The scheduler calls ``process_due_followups()`` every 60 seconds.
 For each lead whose ``next_follow_up_at`` is in the past the service:
   1. Sends a reminder message to the admin with quick-action buttons.
   2. Increments ``follow_up_count``.
-  3. Schedules the next reminder in ``_RESCHEDULE_HOURS`` hours.
+  3. Schedules the next reminder based on ``_RESCHEDULE_BY_TEMP`` (hot=1h, warm=6h, cold=24h).
 """
 from __future__ import annotations
 
@@ -19,7 +19,16 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 
-_RESCHEDULE_HOURS = 6  # hours between automatic follow-up reminders
+# Hours until next reminder, keyed by lead_temperature.
+# Mirrors the initial scheduling logic in shared/utils/lead_scoring.py:
+#   hot → 20 min (initial), then 1 h cadence
+#   warm → 3 h (initial), then 6 h cadence
+#   cold → 24 h both
+_RESCHEDULE_BY_TEMP: dict[str | None, int] = {
+    "hot": 1,
+    "warm": 6,
+    "cold": 24,
+}
 
 
 class FollowupService:
@@ -50,7 +59,6 @@ class FollowupService:
                 token=self._bot_token,
                 default=DefaultBotProperties(parse_mode="HTML"),
             )
-            next_fu = now + timedelta(hours=_RESCHEDULE_HOURS)
             processed = 0
             try:
                 for lead in leads:
@@ -91,6 +99,8 @@ class FollowupService:
                         await bot.send_message(
                             self._admin_user_id, text, reply_markup=keyboard
                         )
+                        reschedule_h = _RESCHEDULE_BY_TEMP.get(lead.lead_temperature, 6)
+                        next_fu = now + timedelta(hours=reschedule_h)
                         await repo.update_ai_scoring(
                             lead.id,
                             next_follow_up_at=next_fu,

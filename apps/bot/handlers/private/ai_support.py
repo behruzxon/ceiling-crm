@@ -58,12 +58,8 @@ from openai import AsyncOpenAI
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from apps.bot.handlers.private.pricing import start_pricing_flow
-from apps.bot.keyboards.catalog import catalog_design_keyboard, catalog_list_keyboard
-from apps.bot.states.catalog import CatalogStates
-from shared.constants.catalog import CATALOG
+from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
-from apps.bot.keyboards.pricing import design_keyboard
-from apps.bot.states.pricing import PricingStates
 from infrastructure.database.models.ai_conversation import AiConversationModel
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
@@ -98,17 +94,21 @@ def _is_measurement_request(text: str) -> bool:
     return any(t in lower for t in _MEASUREMENT_TRIGGERS)
 
 
-# ── Catalog title lookup (built once at import) ───────────────────────────────
-# Keys are the display titles from CATALOG (e.g. "🌸 Gulli").
-_CATALOG_BY_TITLE = {s.title: s for s in CATALOG}
-
-
 # ── Catalog link shortcut ─────────────────────────────────────────────────────
 
 _CATALOG_TRIGGERS: frozenset[str] = frozenset({
-    "katalog", "catalog", "rasm", "foto", "surat",
-    "ishlar", "portfolio", "namuna", "dizayn ko'rsat",
-    "dizaynlar", "работы", "фото", "каталог",
+    # Catalog / portfolio / design intent
+    "katalog", "katolog", "catalog", "portfolio",
+    "variant", "dizayn", "design",
+    "rasm", "foto", "surat", "namuna", "misol",
+    "ko'rsat", "korsat", "tashla", "yubor", "kanal", "link",
+    "ishlar", "dizaynlar", "работы", "фото", "каталог",
+    # Design type names
+    "gulli", "mramor", "naqsh", "hi tech", "hitech", "kosmos", "osmon",
+    # Room types (when asking for designs)
+    "mehmonxona", "mehmon xona", "zal",
+    "yotoqxona", "oshxona", "hammom", "dush",
+    "detskiy", "bolalar",
 })
 
 
@@ -117,10 +117,53 @@ def _is_catalog_request(text: str) -> bool:
     return any(t in lower for t in _CATALOG_TRIGGERS)
 
 
+_CATALOG_RESPONSE_TEXT = (
+    "Albatta 🙂\n"
+    "📌 Bizda **har qanday xona** uchun natijnoy potolok dizaynlarimiz bor:\n\n"
+    "🏠 Mehmonxona\n"
+    "🛏 Yotoqxona\n"
+    "🍳 Oshxona\n"
+    "🚿 Hammom\n"
+    "👶 Bolalar xonasi\n\n"
+    "👇 To'liq katalogni shu tugma orqali ko'rishingiz mumkin."
+)
+
+_CATALOG_FOLLOWUP_TEXT = (
+    "Xonangiz taxminan **necha m²**?\n\n"
+    "Masalan:\n"
+    "• 20 m²\n"
+    "• 5x3"
+)
+
+
 def _catalog_link_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📸 Katalogni ko'rish", url="https://t.me/vashpotolokuz"),
+        InlineKeyboardButton(text="📂 To'liq katalogimiz", url="https://t.me/vashpotolokuz"),
     ]])
+
+
+# ── Room synonym normalisation ────────────────────────────────────────────────
+# Maps user-written variants to the canonical Uzbek room name.
+# Applied before the LLM so the model always receives a consistent term.
+
+_ROOM_SYNONYMS: dict[str, list[str]] = {
+    "mehmonxona": ["mehmon xona", "zal", "katta xona"],
+    "yotoqxona":  ["yotoq xona", "spalnya"],
+    "oshxona":    ["osh xona", "кухня"],
+    "hammom":     ["vanna", "sanuzel"],
+}
+
+
+def _normalize_room(text: str) -> str:
+    """Replace room synonyms with their canonical names (case-insensitive)."""
+    lower = text.lower()
+    for canonical, synonyms in _ROOM_SYNONYMS.items():
+        for synonym in synonyms:
+            if synonym in lower:
+                # Replace only the first occurrence, preserve surrounding text
+                text = text.lower().replace(synonym, canonical, 1)
+                return text
+    return text
 
 
 # ── Generic confirmation intercept ───────────────────────────────────────────
@@ -137,6 +180,68 @@ _NEUTRAL_REPLY = (
     "Tushunarli 🙂\n\n"
     "Narx hisoblaymizmi, katalog ko'ramizmi yoki bepul o'lchov kerakmi?"
 )
+
+# ── Price intent detection ────────────────────────────────────────────────────
+
+_PRICE_KEYWORDS: frozenset[str] = frozenset({
+    # Uzbek
+    "narx", "narxlar", "narxi qancha", "qancha turadi", "qancha pul",
+    "nech pul", "nech pul bo'ladi", "nechadan qilyapsizlar", "qanchadan",
+    "nechadan", "hisoblab ber", "narxini ayt", "narxini hisobla",
+    "narxini chiqar", "narx kalkulyator", "narx hisoblash",
+    # Russian
+    "сколько", "сколько стоит", "цена", "цены", "рассчитать цену",
+})
+
+
+def _is_price_query(text: str) -> bool:
+    lower = text.lower()
+    return any(kw in lower for kw in _PRICE_KEYWORDS)
+
+
+# CASE A — price query with area: calculate totals per design type
+def _build_price_calc(area: float) -> str:
+    """Build a price calculation table for the given area in m²."""
+    def _fmt(v: int) -> str:
+        return f"{v:,}".replace(",", " ")
+
+    a_str = f"{area:g}"
+    return (
+        f"{a_str} m² uchun taxminiy narx:\n\n"
+        f"• Adnatonniy — {_fmt(int(area * 80_000))} so'm\n"
+        f"• Hi Tech / Mramor / Naqsh / Kosmos / Osmon — {_fmt(int(area * 120_000))} so'm\n"
+        f"• Qora UF — {_fmt(int(area * 140_000))} so'm\n"
+        f"• Gulli — {_fmt(int(area * 120_000))}–{_fmt(int(area * 140_000))} so'm\n\n"
+        "Qaysi turini tanlaysiz? 🙂"
+    )
+
+
+# CASE B — price query but no area detected
+_PRICE_ASK_AREA_TEXT = (
+    "Natijnoy potolok narxi xona maydoniga bog'liq 🙂\n\n"
+    "Xona taxminan necha m²?\n\n"
+    "Masalan:\n"
+    "• 20 m²\n"
+    "• 5x3"
+)
+
+# CASE C — price shown, upsell to free measurement
+_UPSELL_ASK_DISTRICT = (
+    "Agar xohlasangiz ustamiz kelib **bepul o'lchov qilib beradi** 🙂\n\n"
+    "Qaysi tumandasiz?"
+)
+
+
+async def _show_price_upsell(
+    message: Message,
+    state: FSMContext,
+    area: float,
+) -> None:
+    """Show price calculation then transition to lead-collection (district) state."""
+    await message.answer(_build_price_calc(area), reply_markup=_ai_keyboard())
+    await state.set_state(AiSupportStates.waiting_for_district)
+    await state.update_data(price_area=area)
+    await message.answer(_UPSELL_ASK_DISTRICT, reply_markup=_ai_keyboard())
 
 
 # ── AI scoring → lead persistence (non-fatal, fire-and-forget) ───────────────
@@ -198,10 +303,58 @@ async def _notify_phone_captured(
         log.warning("phone_capture_notify_failed", phone=phone)
 
 
+async def _notify_ai_lead_collected(
+    *,
+    phone: str,
+    district: str,
+    area: float | None,
+    room: str | None,
+    name: str | None,
+    from_user: Any,
+) -> None:
+    """Fire-and-forget admin notification for AI-collected lead. Never raises."""
+    try:
+        svc = get_lead_notification_service()
+        await svc.notify_ai_lead_collected(
+            phone=phone,
+            district=district,
+            area=area,
+            room=room,
+            name=name,
+            username=from_user.username if from_user else None,
+            user_id=from_user.id if from_user else None,
+        )
+    except Exception:
+        log.warning("notify_ai_lead_collected_failed", phone=phone)
+
+
+async def _notify_warm_interest(
+    *,
+    topic: str,
+    from_user: Any,
+    name: str | None = None,
+) -> None:
+    """Fire-and-forget WARM lead interest notification. Never raises."""
+    try:
+        svc = get_lead_notification_service()
+        await svc.notify_lead_interest(
+            score="warm",
+            name=name,
+            username=from_user.username if from_user else None,
+            user_id=from_user.id if from_user else None,
+            topic=topic,
+        )
+    except Exception:
+        log.warning("notify_warm_interest_failed", topic=topic)
+
+
 # ── Explicit AI-mode FSM ──────────────────────────────────────────────────────
 
 class AiSupportStates(StatesGroup):
+    waiting_for_name = State()
     waiting_for_ai_question = State()
+    waiting_for_district = State()
+    waiting_for_phone = State()
 
 
 _EXIT_TEXTS: frozenset[str] = frozenset({"⬅️ Menyu", "🔙 Menyu"})
@@ -223,47 +376,7 @@ _SUMMARY_EVERY_N_TURNS = 10  # regenerate summary every N user turns
 
 # ── Dimension extraction ──────────────────────────────────────────────────────
 
-# Pair: "5x4", "5*4", "5×4", "5.2x3.8", "5m x 4m", "5м 4м"
-_PAIR_RE: re.Pattern[str] = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(?:m|м)?\s*[xX×*]\s*(\d+(?:[.,]\d+)?)\s*(?:m|м)?"
-    r"|(?<!\d)(\d+(?:[.,]\d+)?)\s+(?:m|м)\s+(\d+(?:[.,]\d+)?)\s*(?:m|м)?(?!\d)",
-    re.IGNORECASE,
-)
-# Bare number — whole message is just a number
-_SINGLE_RE: re.Pattern[str] = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*$")
-
-
-def _parse_dim(s: str) -> float | None:
-    try:
-        v = float(s.replace(",", "."))
-    except (ValueError, AttributeError):
-        return None
-    return v if 0 < v <= 50 else None
-
-
-def _extract_dims(text: str) -> tuple[float, float] | tuple[float, None] | None:
-    """
-    Returns:
-      (length, width) — dimension pair found
-      (length, None)  — single bare number in a very short message
-      None            — no dimension detected
-    """
-    m = _PAIR_RE.search(text)
-    if m:
-        a = m.group(1) or m.group(3)
-        b = m.group(2) or m.group(4)
-        length, width = _parse_dim(a or ""), _parse_dim(b or "")
-        if length and width:
-            return length, width
-
-    if len(text.strip()) <= 6:
-        m2 = _SINGLE_RE.match(text)
-        if m2:
-            v = _parse_dim(m2.group(1))
-            if v:
-                return v, None
-
-    return None
+from shared.utils.area_parser import parse_area as _parse_area
 
 
 # ── OpenAI client (lazy singleton) ───────────────────────────────────────────
@@ -566,20 +679,6 @@ async def _call_ai(
     return json.loads(raw)
 
 
-# ── Intent keyboards ──────────────────────────────────────────────────────────
-# All intents return None — AI replies are text-only; no inline CTA buttons.
-
-_INTENT_KEYBOARDS: dict[str, InlineKeyboardMarkup | None] = {
-    "greeting":    None,
-    "price":       None,
-    "measurement": None,
-    "objection":   None,
-    "catalog":     None,
-    "operator":    None,
-    "faq":         None,
-    "other":       None,
-}
-
 _FAILSAFE_TEXT = (
     "⚠️ Kechirasiz, texnik nosozlik yuz berdi.\n\n"
     "Operatorga murojaat qilishingiz mumkin:"
@@ -601,17 +700,132 @@ _CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 async def cmd_ai_start(
     message: Message, state: FSMContext, **data: object
 ) -> None:
-    """Enter dedicated AI chat mode."""
+    """Enter dedicated AI chat mode (private only; redirect groups to DM)."""
     if message.from_user is None:
-        await message.answer("Iltimos, botni shaxsiy chatda oching. 📩")
+        return
+    # AI FSM must never activate in group chats — redirect to DM instead.
+    if message.chat.type != "private":
+        settings = get_settings()
+        bot_username = settings.bot.username or "bot"
+        kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="💬 Madina bilan suhbat",
+                url=f"https://t.me/{bot_username}?start=ai",
+            )
+        ]])
+        await message.answer(
+            "🤖 AI yordamchisi faqat shaxsiy chatda ishlaydi. "
+            "Quyidagi tugma orqali bot bilan to'g'ridan-to'g'ri yozing:",
+            reply_markup=kb,
+        )
         return
     await state.clear()
-    await state.set_state(AiSupportStates.waiting_for_ai_question)
+    await state.set_state(AiSupportStates.waiting_for_name)
     await message.answer(
         "Salom! 👋\n\n"
-        "Men Madina — VashPotolok kompaniyasining sun'iy intellekt mutaxassisiman.\n"
-        "Sizga narx hisoblash, dizayn tanlash yoki bepul o'lchov bo'yicha yordam bera olaman.\n\n"
-        "Qanday savolingiz bor?",
+        "Men Madina — VashPotolok kompaniyasining AI mutaxassisiman. 🤖\n"
+        "Sizga natijnoy potolok bo'yicha maslahat beraman.\n\n"
+        "Masalan men sizga yordam bera olaman:\n\n"
+        "💰 Potolok narxini hisoblash\n"
+        "🎨 Dizayn variantlarini tanlash\n"
+        "📐 Xona uchun eng yaxshi potolok turini tavsiya qilish\n"
+        "🧾 Zakaz qoldirish yoki operator bilan bog'lash\n\n"
+        "Avval tanishib olaylik 🙂\n\n"
+        "Ismingiz nima?",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_name),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_name_input(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Collect user's name (or detect price query) and enter AI question mode."""
+    text = (message.text or "").strip()
+    _area = _parse_area(text)
+
+    if _is_price_query(text) or _area is not None:
+        if _area is not None:
+            await _show_price_upsell(message, state, _area)
+        else:
+            await state.set_state(AiSupportStates.waiting_for_ai_question)
+            await message.answer(_PRICE_ASK_AREA_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # Name input
+    await state.set_state(AiSupportStates.waiting_for_ai_question)
+    await state.update_data(user_name=text)
+    await message.answer(
+        f"Juda yaxshi, {text} 🙂\n\n"
+        "Sizga tezroq yordam berishim uchun kichkina savol:\n\n"
+        "Potolok qaysi xona uchun kerak?\n\n"
+        "🏠 Mehmonxona\n"
+        "🛏 Yotoqxona\n"
+        "🍳 Oshxona\n"
+        "🚿 Hammom\n\n"
+        "Va taxminan xona **necha m²**?",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_district),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_district_input(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Collect district, then ask for phone number."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+    await state.update_data(price_district=text)
+    await state.set_state(AiSupportStates.waiting_for_phone)
+    await message.answer(
+        "Telefon raqamingizni yozib qoldirsangiz ustamiz siz bilan bog'lanadi 🙂",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_phone),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_phone_input(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Collect phone, confirm, and fire admin notification."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+    phone = extract_phone_from_text(text) or text
+    fsm_data = await state.get_data()
+    await state.set_state(AiSupportStates.waiting_for_ai_question)
+    await message.answer(
+        "Rahmat 🙂\n"
+        "Ma'lumotlaringiz qabul qilindi.\n"
+        "Mutaxassisimiz tez orada siz bilan bog'lanadi.",
+        reply_markup=_ai_keyboard(),
+    )
+    asyncio.create_task(
+        _notify_ai_lead_collected(
+            phone=phone,
+            district=fsm_data.get("price_district") or "",
+            area=fsm_data.get("price_area"),
+            room=fsm_data.get("price_room"),
+            name=fsm_data.get("price_name") or fsm_data.get("user_name"),
+            from_user=message.from_user,
+        )
     )
 
 
@@ -646,7 +860,7 @@ async def handle_ai_question(
     message: Message, state: FSMContext, **data: object
 ) -> None:
     """Answer questions with the AI service while in explicit AI mode."""
-    text = message.text or ""
+    text = _normalize_room(message.text or "")
     user_id = message.from_user.id if message.from_user else 0
 
     # Measurement shortcut — exit AI mode, start FSM immediately
@@ -655,21 +869,20 @@ async def handle_ai_question(
         await start_measurement_flow(message, state)
         return
 
-    # Catalog shortcut — user typed a design title while in AI mode
-    catalog_section = _CATALOG_BY_TITLE.get(text)
-    if catalog_section is not None:
-        await state.set_state(CatalogStates.waiting_for_design)
-        await message.answer(
-            f"<b>{catalog_section.title}</b>\n\n📎 {catalog_section.group_url}",
-            reply_markup=catalog_design_keyboard(),
-        )
-        return
-
     # Catalog link shortcut — generic catalog/photo request
     if _is_catalog_request(text):
         await message.answer(
-            "Katalogimizni shu yerda ko'rishingiz mumkin 👇",
+            _CATALOG_RESPONSE_TEXT,
             reply_markup=_catalog_link_kb(),
+        )
+        await message.answer(_CATALOG_FOLLOWUP_TEXT)
+        fsm_data = await state.get_data()
+        asyncio.create_task(
+            _notify_warm_interest(
+                topic="katalog / dizayn",
+                from_user=message.from_user,
+                name=fsm_data.get("user_name"),
+            )
         )
         return
 
@@ -677,6 +890,15 @@ async def handle_ai_question(
     _norm = (message.text or "").lower().strip()
     if _norm in _GENERIC_CONFIRMATIONS:
         await message.answer(_NEUTRAL_REPLY)
+        return
+
+    # Price intent or bare area — calculate and upsell
+    _price_area = _parse_area(text)
+    if _is_price_query(text) or _price_area is not None:
+        if _price_area is not None:
+            await _show_price_upsell(message, state, _price_area)
+        else:
+            await message.answer(_PRICE_ASK_AREA_TEXT, reply_markup=_ai_keyboard())
         return
 
     if message.bot:
@@ -703,10 +925,6 @@ async def handle_ai_question(
 
     # Reply with the AI text + persistent exit keyboard
     await message.answer(reply_text, reply_markup=_ai_keyboard())
-    # Follow-up CTA: only send when there's a meaningful inline keyboard for this intent
-    cta_kb = _INTENT_KEYBOARDS.get(intent)
-    if cta_kb is not None:
-        await message.answer("👇", reply_markup=cta_kb)
 
     await _persist_exchange(
         user_id=user_id,
@@ -786,8 +1004,15 @@ async def handle_ai_message(
     # ── Catalog link shortcut — generic catalog/photo request ────────────
     if _is_catalog_request(text):
         await message.answer(
-            "Katalogimizni shu yerda ko'rishingiz mumkin 👇",
+            _CATALOG_RESPONSE_TEXT,
             reply_markup=_catalog_link_kb(),
+        )
+        await message.answer(_CATALOG_FOLLOWUP_TEXT)
+        asyncio.create_task(
+            _notify_warm_interest(
+                topic="katalog / dizayn",
+                from_user=message.from_user,
+            )
         )
         return
 
@@ -797,28 +1022,13 @@ async def handle_ai_message(
         await message.answer(_NEUTRAL_REPLY)
         return
 
-    # ── Dimension shortcut — skip AI, jump straight into pricing FSM ──────
-    dims = _extract_dims(text)
-    if dims is not None:
-        length, width = dims
-        if width is not None:
-            area = round(length * width, 2)
-            await state.set_state(PricingStates.choosing_design)
-            await state.update_data(length=length, width=width, area=area)
-            await message.answer(
-                f"✅ O'lcham aniqlandi: <b>{length} × {width} m</b>  "
-                f"|  Maydon: <b>{area:.2f} m²</b>\n\n"
-                "Qaysi dizaynni tanlaysiz?",
-                reply_markup=design_keyboard(),
-            )
+    # ── Price intent or bare area — calculate and upsell ─────────────────
+    area = _parse_area(text)
+    if _is_price_query(text) or area is not None:
+        if area is not None:
+            await _show_price_upsell(message, state, area)
         else:
-            await state.set_state(PricingStates.waiting_for_width)
-            await state.update_data(length=length)
-            await message.answer(
-                f"✅ Uzunlik: <b>{length} m</b>\n\n"
-                "Xona <b>kengligini</b> metrda kiriting:\n"
-                "<i>Masalan: <code>3.8</code></i>",
-            )
+            await message.answer(_PRICE_ASK_AREA_TEXT, reply_markup=_ai_keyboard())
         return
 
     # ── Typing indicator — shown while the LLM call runs ─────────────────
@@ -848,9 +1058,7 @@ async def handle_ai_message(
         await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
         return
 
-    # Intent-based inline CTA (None → no second message)
-    cta_kb = _INTENT_KEYBOARDS.get(intent)
-    await message.answer(reply_text, reply_markup=cta_kb)
+    await message.answer(reply_text)
 
     # ── Persist exchange (non-fatal) ──────────────────────────────────────
     await _persist_exchange(

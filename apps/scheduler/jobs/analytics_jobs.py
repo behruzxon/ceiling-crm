@@ -1,6 +1,9 @@
 """Daily analytics aggregation jobs."""
 from __future__ import annotations
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from shared.logging import get_logger
+
+log = get_logger(__name__)
 
 
 def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
@@ -15,4 +18,4 @@ def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
 
 async def aggregate_daily_stats() -> None:
     """Aggregate daily business metrics. TODO: implement via AnalyticsService."""
-    raise NotImplementedError
+    log.debug("analytics_daily_not_implemented")

@@ -29,6 +29,7 @@ from core.services.user_service import UserService
 from core.services.warranty_service import WarrantyService
 from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.database.repositories.audit_log_repo import PostgresAuditLogRepository
+from infrastructure.database.repositories.blocked_chat_repo import PostgresBlockedChatRepository
 from infrastructure.database.repositories.broadcast_repo import PostgresBroadcastRepository
 from infrastructure.database.repositories.group_settings_repo import PostgresGroupSettingsRepository
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
@@ -146,3 +147,8 @@ def get_lead_notification_service() -> "LeadNotificationService":
         admin_user_id=settings.bot.admin_user_id,
         bot_token=settings.bot.token.get_secret_value(),
     )
+
+
+def get_blocked_chat_repo(session: AsyncSession) -> PostgresBlockedChatRepository:
+    """Return a BlockedChatRepository for the given session."""
+    return PostgresBlockedChatRepository(session)

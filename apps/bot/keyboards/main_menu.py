@@ -53,6 +53,43 @@ def main_menu_keyboard(
     )
 
 
+def group_menu_kb_full() -> InlineKeyboardMarkup:
+    """Full 9-button URL inline keyboard for group chats.
+
+    Each button deep-links into the bot's private DM with a /start payload,
+    routing users to the appropriate feature flow.
+    """
+    from shared.config import get_settings
+    bot_username = get_settings().bot.username
+
+    def _url(payload: str) -> str:
+        return f"https://t.me/{bot_username}?start={payload}"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=BTN_ORDER,     url=_url("zakaz")),
+                InlineKeyboardButton(text=BTN_PRICE,     url=_url("price")),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_CATALOG,   url=_url("katalog")),
+                InlineKeyboardButton(text=BTN_PACKAGES,  url=_url("paketlar")),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_MY_ORDERS, url=_url("orders")),
+                InlineKeyboardButton(text=BTN_OPERATOR,  url=_url("operator")),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_PROMOS,    url=_url("discounts")),
+                InlineKeyboardButton(text=BTN_AI,        url=_url("ai")),
+            ],
+            [
+                InlineKeyboardButton(text=BTN_ABOUT,     url=_url("about")),
+            ],
+        ]
+    )
+
+
 def group_menu_inline_keyboard() -> InlineKeyboardMarkup:
     """Inline menu for group/supergroup chats.
 

@@ -61,7 +61,8 @@ class CacheTTL:
     CTA_SENT            = 172_800    # 2 days — dedup flag per user per calendar day
 
     # Group menu injection dedup
-    GRP_MENU_SHOWN      = 86_400     # 24 hours — send selective keyboard at most once per user/day
+    GRP_MENU_SHOWN        = 86_400   # 24 hours — send selective keyboard at most once per user/day
+    GRP_INLINE_MENU_SHOWN = 86_400   # 24 hours — send URL inline menu at most once per user/day
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -172,3 +173,11 @@ class CacheKeys:
         TTL: CacheTTL.GRP_MENU_SHOWN (24 hours).
         """
         return f"grp:menu:{chat_id}:{user_id}"
+
+    @staticmethod
+    def grp_inline_menu_shown(chat_id: int, user_id: int) -> str:
+        """Flag set when we've sent the URL inline menu to this user in this group.
+
+        TTL: CacheTTL.GRP_INLINE_MENU_SHOWN (24 hours).
+        """
+        return f"grp:inline_menu:{chat_id}:{user_id}"

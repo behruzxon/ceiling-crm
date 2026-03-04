@@ -20,3 +20,8 @@ class AbstractAdminGroupRepository(ABC):
     async def list_all_chat_ids(self) -> list[int]:
         """Return all tracked admin-group chat IDs."""
         ...
+
+    @abstractmethod
+    async def remove(self, chat_id: int) -> None:
+        """Remove a group from admin_groups (no-op if not present)."""
+        ...

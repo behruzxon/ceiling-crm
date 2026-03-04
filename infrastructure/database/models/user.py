@@ -30,3 +30,8 @@ class UserModel(Base):
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+
+    __table_args__ = (
+        sa.Index("ix_users_username", "username"),
+        sa.Index("ix_users_role", "role"),
+    )

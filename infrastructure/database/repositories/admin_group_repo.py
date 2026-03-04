@@ -32,3 +32,8 @@ class PostgresAdminGroupRepository(AbstractAdminGroupRepository):
         stmt = sa.select(AdminGroupModel.chat_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def remove(self, chat_id: int) -> None:
+        """DELETE FROM admin_groups WHERE chat_id = :chat_id (no-op if missing)."""
+        stmt = sa.delete(AdminGroupModel).where(AdminGroupModel.chat_id == chat_id)
+        await self._session.execute(stmt)

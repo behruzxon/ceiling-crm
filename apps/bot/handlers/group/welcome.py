@@ -19,13 +19,10 @@ import asyncio
 
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatMemberStatus
-from aiogram.types import (
-    ChatMemberUpdated,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from aiogram.types import ChatMemberUpdated
 
 from apps.bot.handlers.group._moderation import dm_log, try_delete
+from apps.bot.keyboards.main_menu import group_menu_kb_full
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_group_join_repo, get_group_settings_service
 from shared.config import get_settings
@@ -79,27 +76,19 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     chat_title = event.chat.title or str(chat_id)
 
     text = (
-        f"👋 Assalomu alaykum, {mention}!\n\n"
-        "VashPotolok kompaniyasining rasmiy savol-javob guruhiga xush kelibsiz.\n\n"
-        "Bu yerda:\n"
-        "• 📐 Potolok bo'yicha savollar berishingiz mumkin\n"
-        "• 📸 Rasm yuborib maslahat olishingiz mumkin\n"
-        "• 👷‍♂️ Mutaxassislar javob beradi\n\n"
-        "📩 Narx hisoblash va katalog uchun:\n"
-        "👉 @potolok_x_bot\n\n"
-        "🚫 Reklama va linklar taqiqlanadi."
+        "🤖 VashPotolok AI Bot — rasmiy yordamchi\n\n"
+        f"Assalomu alaykum, {mention}! 👋\n"
+        "VashPotolok savol-javob guruhiga xush kelibsiz.\n\n"
+        "Men sizga tez yordam beraman:\n"
+        "💰 Narxni m² bo'yicha hisoblayman\n"
+        "🎨 Dizayn/variantlar tavsiya qilaman (rasm yuborsangiz ham bo'ladi)\n"
+        "📂 Katalog va tayyor paketlarni ko'rsataman\n"
+        "🧑‍🔧 Zakaz qoldirsangiz, operator/usta bog'lanadi\n"
+        "🤖 AI mutaxassis Madina savollaringizga javob beradi\n\n"
+        "👇 Boshlash uchun pastdagi tugmalardan birini bosing."
     )
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text="📐 Narx hisoblash",
-            url="https://t.me/potolok_x_bot?start=price",
-        ),
-        InlineKeyboardButton(
-            text="📂 Katalog",
-            url="https://t.me/potolok_x_bot?start=catalog",
-        ),
-    ]])
+    keyboard = group_menu_kb_full()
 
     try:
         msg = await bot.send_message(

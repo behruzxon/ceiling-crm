@@ -16,3 +16,8 @@ class PipelineStageModel(Base):
     changed_by: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=False)
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+
+    __table_args__ = (
+        # Speeds up _latest_stage_subquery() which orders by (lead_id, created_at DESC)
+        sa.Index("ix_pipeline_stages_lead_created", "lead_id", "created_at"),
+    )

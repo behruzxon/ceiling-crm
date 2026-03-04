@@ -97,17 +97,19 @@ class PostgresLeadRepository(AbstractLeadRepository):
         return leads
 
     async def list_by_user(self, user_id: int, limit: int = 5) -> list[Lead]:
+        latest = self._latest_stage_subquery()
         stmt = (
-            select(LeadModel)
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
             .where(LeadModel.user_id == user_id)
             .order_by(LeadModel.created_at.desc())
             .limit(limit)
         )
         result = await self._session.execute(stmt)
         leads = []
-        for model in result.scalars().all():
-            stage = await self._get_current_stage(model.id)
-            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
+        for model, stage_val in result.all():
+            stage = PipelineStage(stage_val) if stage_val else PipelineStage.NEW
+            leads.append(self._to_domain(model, stage))
         return leads
 
     async def get_by_stage(self, stage: PipelineStage) -> list[Lead]:
@@ -372,7 +374,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
         limit: int = 100,
     ) -> list[Lead]:
         """Return leads with next_follow_up_at <= now, skipping terminal statuses."""
-        _SKIP = {"order", "lost", "won", "deal", "completed"}
+        _SKIP = frozenset({"deal", "lost"})
         stmt = (
             select(LeadModel)
             .where(

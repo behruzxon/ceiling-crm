@@ -32,6 +32,7 @@ AsyncEngine and disposes it in a finally block.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from infrastructure.database.models.user import UserModel
 from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
+from infrastructure.database.repositories.blocked_chat_repo import PostgresBlockedChatRepository
 from infrastructure.database.repositories.broadcast_repo import PostgresBroadcastRepository
 from infrastructure.queue.app import celery_app
 from shared.config import get_settings
@@ -73,6 +75,77 @@ def _is_terminal_error(exc: Exception) -> bool:
         return True
     msg = str(exc).lower()
     return any(phrase in msg for phrase in _BLOCK_PHRASES)
+
+
+def _classify_error(exc: Exception) -> str:
+    """Classify a send failure into one of three stat buckets.
+
+    Returns one of: ``"blocked"`` | ``"forbidden"`` | ``"other"``.
+
+    Priority order:
+    1. "bot was blocked by the user" in message → blocked
+    2. TelegramForbiddenError (403) or known forbidden phrases → forbidden
+    3. Anything else → other
+    """
+    msg = str(exc).lower()
+    if "bot was blocked by the user" in msg:
+        return "blocked"
+    if isinstance(exc, TelegramForbiddenError):
+        return "forbidden"
+    if any(p in msg for p in ("forbidden", "not enough rights", "chat not found", "kicked")):
+        return "forbidden"
+    return "other"
+
+
+@dataclasses.dataclass
+class _Stats:
+    """In-memory stats accumulator for a single broadcast run.
+
+    Passed through the send loop and serialised into the admin DM report
+    after the broadcast completes.
+    """
+
+    broadcast_id: int
+    started_at: datetime
+
+    # Targets (by chat type — negative id = group/supergroup)
+    users_total: int = 0
+    groups_total: int = 0
+
+    # Successful deliveries
+    users_sent: int = 0
+    groups_sent: int = 0
+
+    # Failure breakdown
+    failed_blocked: int = 0    # bot was blocked by the user
+    failed_forbidden: int = 0  # forbidden / kicked / no rights / chat not found
+    failed_other: int = 0      # network, timeout, unexpected errors
+
+    # Operational counters
+    retry_count: int = 0   # number of TelegramRetryAfter back-offs triggered
+    batch_count: int = 0   # number of DB counter-flush operations performed
+
+    # Auto-clean counters
+    newly_blocked: int = 0         # chat IDs added to blocked_chats this run
+    skipped_by_blocklist: int = 0  # targets excluded at resolution time
+
+    finished_at: datetime | None = None
+
+    # ── Computed ─────────────────────────────────────────────────────────────
+
+    @property
+    def total_targets(self) -> int:
+        return self.users_total + self.groups_total
+
+    @property
+    def failed_total(self) -> int:
+        return self.failed_blocked + self.failed_forbidden + self.failed_other
+
+    @property
+    def duration_seconds(self) -> float:
+        if self.finished_at is None:
+            return 0.0
+        return round((self.finished_at - self.started_at).total_seconds(), 1)
 
 
 # ── Local session helpers ──────────────────────────────────────────────────────
@@ -160,6 +233,29 @@ async def _auto_block_chat(
             chat_id=chat_id,
             error=str(block_exc),
         )
+
+
+# ── Blocked-chat persistence helper ───────────────────────────────────────────
+
+
+async def _upsert_blocked_chat(
+    chat_id: int,
+    reason: str,
+    factory: async_sessionmaker[AsyncSession],
+) -> bool:
+    """Upsert *chat_id* into blocked_chats and return True if newly inserted.
+
+    Works for both private users (chat_id > 0) and groups (chat_id < 0).
+    Never raises — a DB failure is logged at WARNING level so it never
+    interrupts the broadcast loop.
+    """
+    try:
+        async with _rw_session(factory) as session:
+            repo = PostgresBlockedChatRepository(session)
+            return await repo.upsert_block(chat_id, reason)
+    except Exception:
+        log.warning("blocked_chat_upsert_failed", chat_id=chat_id, reason=reason)
+        return False
 
 
 # ── Celery entry points ────────────────────────────────────────────────────────
@@ -253,7 +349,7 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
 
             if seg_type == SegmentType.ALL_PRIVATE.value:
                 user_ids = await bcast_repo.get_all_private_user_ids()
-                group_ids = await ag_repo.list_all_chat_ids()
+                group_ids = []  # private-only: no groups
             elif seg_type == SegmentType.LEAD_STAGE.value:
                 lead_stage = broadcast.lead_stage or ""
                 user_ids = await bcast_repo.get_user_ids_by_stage(lead_stage)
@@ -262,9 +358,36 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
                 user_ids = []
                 group_ids = await ag_repo.list_all_chat_ids()
 
+        # Ensure main_group_id is included in ADMIN_GROUPS broadcasts even if
+        # it was never upserted into admin_groups via the tracker.
+        main_group_id = settings.bot.main_group_id
+        if main_group_id and seg_type == SegmentType.ADMIN_GROUPS.value:
+            if main_group_id not in group_ids:
+                group_ids.append(main_group_id)
+
         all_chat_ids: list[int] = user_ids + group_ids
+
+        # Filter out permanently blocked chats so we never waste API calls on
+        # them.  LEAD_STAGE and ADMIN_GROUPS are intentionally skipped:
+        #   - LEAD_STAGE: qualified leads must not be silently dropped.
+        #   - ADMIN_GROUPS: targets are fetched directly from admin_groups
+        #     table; applying the blocklist would hide valid groups whose
+        #     IDs were added to blocked_chats after a transient send error.
+        skipped_by_blocklist = 0
+        if seg_type == SegmentType.ALL_PRIVATE.value and all_chat_ids:
+            async with _ro_session(Session) as session:
+                block_repo = PostgresBlockedChatRepository(session)
+                allowed = await block_repo.bulk_filter_blocked(all_chat_ids)
+                skipped_by_blocklist = len(all_chat_ids) - len(allowed)
+                all_chat_ids = allowed
+
         total = len(all_chat_ids)
-        log.info("broadcast_targets_resolved", broadcast_id=broadcast_id, total=total)
+        log.info(
+            "broadcast_targets_resolved",
+            broadcast_id=broadcast_id,
+            total=total,
+            skipped_blocked=skipped_by_blocklist,
+        )
 
         # 4. Create bot
         bot = Bot(
@@ -272,19 +395,55 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
 
+        # ── Per-broadcast stats ───────────────────────────────────────────────
+        stats = _Stats(
+            broadcast_id=broadcast_id,
+            started_at=datetime.now(timezone.utc),
+            users_total=sum(1 for cid in all_chat_ids if cid > 0),
+            groups_total=sum(1 for cid in all_chat_ids if cid <= 0),
+            skipped_by_blocklist=skipped_by_blocklist,
+        )
+
         sent = 0
         failed = 0
 
         try:
             for chat_id in all_chat_ids:
-                success = await _send_one(bot, broadcast, chat_id, sleep_per_msg, Session)
-                if success:
+                result_code, retried = await _send_one(
+                    bot, broadcast, chat_id, sleep_per_msg, Session
+                )
+                if retried:
+                    stats.retry_count += 1
+
+                is_group = chat_id < 0
+                if result_code == "ok":
+                    if is_group:
+                        stats.groups_sent += 1
+                    else:
+                        stats.users_sent += 1
                     sent += 1
                 else:
+                    if result_code == "blocked":
+                        stats.failed_blocked += 1
+                    elif result_code == "forbidden":
+                        stats.failed_forbidden += 1
+                    else:
+                        stats.failed_other += 1
                     failed += 1
+
+                    # Persist permanent failures to blocked_chats so they are
+                    # excluded from future broadcasts automatically.
+                    # Transient "other" errors (network, timeout) are also
+                    # recorded so repeated soft failures accumulate a seen_count.
+                    is_new = await _upsert_blocked_chat(
+                        chat_id, result_code, Session
+                    )
+                    if is_new:
+                        stats.newly_blocked += 1
 
                 # Flush counters to DB every COUNTER_BATCH sends
                 if (sent + failed) % _COUNTER_BATCH == 0:
+                    stats.batch_count += 1
                     async with _rw_session(Session) as session:
                         repo = PostgresBroadcastRepository(session)
                         await repo.inc_sent(broadcast_id, sent)
@@ -296,22 +455,45 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
             await bot.session.close()
 
         # 5. Final counter flush + finalize
+        now_done = datetime.now(timezone.utc)
+        stats.finished_at = now_done
+
         async with _rw_session(Session) as session:
             repo = PostgresBroadcastRepository(session)
             if sent or failed:
                 await repo.inc_sent(broadcast_id, sent)
                 await repo.inc_failed(broadcast_id, failed)
-            await repo.finalize(broadcast_id, datetime.now(timezone.utc))
+            await repo.finalize(broadcast_id, now_done)
             await repo.mark_status(broadcast_id, BroadcastStatus.DONE)
 
         log.info(
             "broadcast_completed",
             broadcast_id=broadcast_id,
-            sent=sent,
-            failed=failed,
+            sent=stats.users_sent + stats.groups_sent,
+            failed=stats.failed_total,
             total=total,
         )
-        return {"status": "done", "sent": sent, "failed": failed, "total": total}
+
+        # 6. Send final statistics report to admin DM only
+        admin_user_id = settings.bot.admin_user_id
+        if admin_user_id:
+            await _send_admin_report(
+                stats=stats,
+                bot_token=settings.bot.token.get_secret_value(),
+                admin_user_id=admin_user_id,
+            )
+        else:
+            log.warning(
+                "broadcast_report_skipped_no_admin_id",
+                broadcast_id=broadcast_id,
+            )
+
+        return {
+            "status": "done",
+            "sent": stats.users_sent + stats.groups_sent,
+            "failed": stats.failed_total,
+            "total": total,
+        }
 
     finally:
         await engine.dispose()
@@ -323,12 +505,15 @@ async def _send_one(
     chat_id: int,
     sleep_after: float,
     factory: async_sessionmaker[AsyncSession],
-) -> bool:
-    """Send one message to one chat.  Returns True on success, False on failure.
+) -> tuple[str, bool]:
+    """Send one message to one chat.
 
-    On terminal Telegram errors ("chat not found", "bot was blocked by the
-    user", any 403 Forbidden) the user row is automatically marked
-    ``is_blocked = true`` via ``_auto_block_chat`` before returning False.
+    Returns ``(result_code, retried)`` where:
+    - *result_code*: ``"ok"`` | ``"blocked"`` | ``"forbidden"`` | ``"other"``
+    - *retried*:     ``True`` if a ``TelegramRetryAfter`` back-off was triggered.
+
+    On terminal Telegram errors the user row is automatically marked
+    ``is_blocked = true`` via ``_auto_block_chat``.
     The broadcast loop is never interrupted — all errors are caught here.
     """
     payload_type = broadcast.payload_type
@@ -356,7 +541,7 @@ async def _send_one(
     try:
         await _do_send()
         await asyncio.sleep(sleep_after)
-        return True
+        return "ok", False
 
     except TelegramRetryAfter as exc:
         log.warning(
@@ -369,7 +554,7 @@ async def _send_one(
         try:
             await _do_send()
             await asyncio.sleep(sleep_after)
-            return True
+            return "ok", True
         except Exception as retry_exc:
             if _is_terminal_error(retry_exc):
                 await _auto_block_chat(chat_id, factory)
@@ -384,13 +569,13 @@ async def _send_one(
                     chat_id=chat_id,
                     error=str(retry_exc),
                 )
-            return False
+            return _classify_error(retry_exc), True
 
     except TelegramForbiddenError as exc:
         # 403 — bot was blocked by the user, or was kicked from the chat.
         await _auto_block_chat(chat_id, factory)
         log.info("broadcast_forbidden", chat_id=chat_id, error=str(exc))
-        return False
+        return _classify_error(exc), False
 
     except Exception as exc:
         if _is_terminal_error(exc):
@@ -403,4 +588,52 @@ async def _send_one(
             )
         else:
             log.error("broadcast_send_error", chat_id=chat_id, error=str(exc))
-        return False
+        return _classify_error(exc), False
+
+
+# ── Admin DM report ────────────────────────────────────────────────────────────
+
+
+async def _send_admin_report(
+    stats: _Stats,
+    bot_token: str,
+    admin_user_id: int,
+) -> None:
+    """Send a final broadcast statistics report to the admin's private DM.
+
+    Creates a short-lived Bot instance — safe to call from inside asyncio.run().
+    Never raises: a failure is logged at WARNING level so it never masks
+    the broadcast's own success status.
+    """
+    text = (
+        f"✅ Rassilka #{stats.broadcast_id} yakunlandi\n\n"
+        f"🎯 Total targets: {stats.total_targets}\n\n"
+        f"👤 Userlar: {stats.users_sent}/{stats.users_total}\n"
+        f"👥 Guruhlar: {stats.groups_sent}/{stats.groups_total}\n\n"
+        f"❌ Yuborilmadi: {stats.failed_total}\n"
+        f"   🚫 Blocked: {stats.failed_blocked}\n"
+        f"   ⛔ Forbidden: {stats.failed_forbidden}\n"
+        f"   ⚠️ Other: {stats.failed_other}\n\n"
+        f"📦 Batchlar: {stats.batch_count}\n"
+        f"🔁 Retry urinishlar: {stats.retry_count}\n"
+        f"⏱ Davomiyligi: {stats.duration_seconds} sec\n\n"
+        f"🧹 Auto-blocked (new): {stats.newly_blocked}\n"
+        f"🚫 Skipped (already blocked): {stats.skipped_by_blocklist}"
+    )
+
+    bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode="HTML"))
+    try:
+        await bot.send_message(admin_user_id, text)
+        log.info(
+            "broadcast_admin_report_sent",
+            broadcast_id=stats.broadcast_id,
+            admin_user_id=admin_user_id,
+        )
+    except Exception:
+        log.warning(
+            "broadcast_admin_report_failed",
+            broadcast_id=stats.broadcast_id,
+            admin_user_id=admin_user_id,
+        )
+    finally:
+        await bot.session.close()

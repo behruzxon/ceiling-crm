@@ -21,13 +21,27 @@ async def run_scheduler() -> None:
     await connect_database()
     await connect_redis()
 
-    scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
+    scheduler = AsyncIOScheduler(
+        timezone="Asia/Tashkent",
+        job_defaults={
+            "coalesce": True,         # collapse missed runs into one execution
+            "max_instances": 1,       # never run the same job twice in parallel
+            "misfire_grace_time": 60, # tolerate up to 60 s late start before skipping
+        },
+    )
     register_followup_jobs(scheduler)
     register_broadcast_jobs(scheduler)
     register_analytics_jobs(scheduler)
     register_cache_jobs(scheduler)
 
     scheduler.start()
+    for job in scheduler.get_jobs():
+        log.info(
+            "scheduler_job_registered",
+            job_id=job.id,
+            trigger=str(job.trigger),
+            next_run_time=str(job.next_run_time),
+        )
     log.info("scheduler_started", job_count=len(scheduler.get_jobs()))
 
     try:

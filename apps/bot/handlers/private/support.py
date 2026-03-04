@@ -63,20 +63,77 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
         log.info("start_share_phone", user_id=user_id)
         return
 
+    # ── Deep links from group URL inline menu ───────────────────────────────
+    if command.args == "zakaz":
+        from apps.bot.handlers.private.order import cmd_order_start
+        await state.clear()
+        await cmd_order_start(message, state, **data)
+        return
+
+    if command.args == "price":
+        from apps.bot.handlers.private.pricing import cmd_pricing_start
+        await state.clear()
+        await cmd_pricing_start(message, state, **data)
+        return
+
+    if command.args == "katalog":
+        from apps.bot.handlers.private.catalog import cmd_catalog
+        await state.clear()
+        await cmd_catalog(message, state, **data)
+        return
+
+    if command.args == "paketlar":
+        from apps.bot.handlers.private.packages import cmd_packages
+        await state.clear()
+        await cmd_packages(message, **data)
+        return
+
+    if command.args == "orders":
+        from apps.bot.handlers.private.my_orders import cmd_my_orders
+        await state.clear()
+        await cmd_my_orders(message, **data)
+        return
+
+    if command.args == "operator":
+        from apps.bot.handlers.private.operator import handle_operator_entry
+        await state.clear()
+        await handle_operator_entry(message, state, **data)
+        return
+
+    if command.args == "discounts":
+        from apps.bot.handlers.private.promotions import cmd_promotions
+        await state.clear()
+        await cmd_promotions(message, **data)
+        return
+
+    if command.args == "ai":
+        from apps.bot.handlers.private.ai_support import cmd_ai_start
+        await state.clear()
+        await cmd_ai_start(message, state, **data)
+        return
+
+    if command.args == "about":
+        from apps.bot.handlers.private.about import cmd_about
+        await state.clear()
+        await cmd_about(message, **data)
+        return
+
     # ── Normal /start ───────────────────────────────────────────────────────
     await state.clear()
     await clear_ai_conversation(user_id)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
     await message.answer(
-        f"Assalomu alaykum, {message.from_user.first_name}! 👋\n\n"
-        "VashPotolok kompaniyasining rasmiy Potolok X botiga xush kelibsiz.\n\n"
-        "Biz Qashqadaryo bo'ylab yuqori sifatli natijoy potolok xizmatini taqdim etamiz.\n"
-        "Professional yondashuv va 15 yilgacha kafolat bilan.\n\n"
-        "• 📐 Aniq narx hisoblash\n"
-        "• 🎨 10+ turdagi dizayn\n"
-        "• 📂 Real loyihalar katalogi\n"
-        "• 📞 Tezkor operator aloqasi\n\n"
-        "👇 Quyidagi bo'limlardan birini tanlang:",
+        "🤖 VashPotolok AI Bot\n\n"
+        f"Assalomu alaykum, {message.from_user.first_name}! 👋\n"
+        "VashPotolok kompaniyasining rasmiy AI yordamchisiga xush kelibsiz.\n\n"
+        "Qashqadaryo bo'ylab yuqori sifatli natijnoy potolok xizmatlarini taqdim etamiz.\n\n"
+        "Siz bu yerda:\n"
+        "💰 Potolok narxini aniq hisoblay olasiz\n"
+        "🎨 10+ turdagi dizayn variantlarini ko'rishingiz mumkin\n"
+        "📂 Real loyihalar katalogini ko'rasiz\n"
+        "🧑‍🔧 Buyurtma qoldirib operator bilan bog'lanasiz\n"
+        "🤖 AI mutaxassis Madina 24/7 savollaringizga javob beradi\n\n"
+        "👇 Boshlash uchun kerakli bo'limni tanlang",
         reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
     )
 

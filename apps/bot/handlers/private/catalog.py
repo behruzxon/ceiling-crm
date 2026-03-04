@@ -16,7 +16,7 @@ from __future__ import annotations
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from apps.bot.keyboards.catalog import BTN_CATALOG_BACK, catalog_design_keyboard
 from apps.bot.keyboards.main_menu import BTN_CATALOG, MAIN_MENU_BUTTONS, main_menu_keyboard
@@ -81,10 +81,9 @@ async def handle_design_choice(
         )
         return
 
-    # Send link + caption; keep state so user can keep browsing
-    await message.answer(
-        f"<b>{section.title}</b>\n\n"
-        f"📎 {section.group_url}",
-        reply_markup=catalog_design_keyboard(),
-    )
+    # Send inline button link; the persistent ReplyKeyboard from cmd_catalog remains visible.
+    link_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="📎 Katalogda ko'rish", url=section.group_url),
+    ]])
+    await message.answer(f"<b>{section.title}</b>", reply_markup=link_kb)
     log.info("catalog_design_viewed", key=section.key, user_id=getattr(message.from_user, "id", 0))
