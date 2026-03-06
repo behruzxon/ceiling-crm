@@ -138,9 +138,9 @@ async def _notify_ai_lead_collected(
 ) -> None:
     """Fire-and-forget admin notification for AI-collected lead. Never raises."""
     try:
-        from core.services.ai_sales_brain_service import build_sales_brain
+        from core.services.ai_orchestrator_service import build_ai_orchestrator_state
 
-        brain = build_sales_brain(
+        orch = build_ai_orchestrator_state(
             name=name,
             district=district,
             phone=phone,
@@ -161,6 +161,7 @@ async def _notify_ai_lead_collected(
             last_activity_ts=last_activity_ts,
             memory_created_at=memory_created_at,
         )
+        brain = orch.sales_brain
 
         svc = get_lead_notification_service()
         await svc.notify_ai_lead_collected(
