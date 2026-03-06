@@ -1,0 +1,262 @@
+"""
+apps.bot.handlers.private.ai_notifications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Admin notification helpers and AI scoring persistence.
+
+Orchestrates deal probability, buyer type, revenue, conversation graph,
+and follow-up brain for the admin lead card.
+"""
+from __future__ import annotations
+
+import asyncio
+from typing import Any
+
+from infrastructure.database.session import get_session_factory
+from infrastructure.di import get_lead_notification_service
+from shared.logging import get_logger
+
+log = get_logger(__name__)
+
+
+# ── AI scoring -> lead persistence (non-fatal, fire-and-forget) ─────────────
+
+async def _update_lead_ai_scoring(
+    *,
+    user_id: int,
+    lead_temperature: str | None,
+    closing_confidence: float | None,
+) -> None:
+    """Find the latest lead for *user_id* and persist AI scoring. Never raises."""
+    from shared.utils.lead_scoring import compute_next_followup
+    try:
+        factory = get_session_factory()
+        async with factory() as session:
+            from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+            repo = PostgresLeadRepository(session)
+            leads = await repo.list_by_user(user_id, limit=1)
+            if not leads:
+                return
+            lead = leads[0]
+
+            # Try brain-driven scheduling, fallback to simple delay
+            next_fu = None
+            try:
+                from core.services.followup_brain_service import decide_follow_up
+                from apps.bot.handlers.private.ai_memory import (
+                    _load_ai_memory,
+                    _save_ai_memory,
+                )
+                _mem = await _load_ai_memory(user_id)
+                _brain = decide_follow_up(
+                    score=lead.score or 0,
+                    phone_captured=bool(lead.phone),
+                    has_area=lead.room_area is not None,
+                    has_district=bool(lead.district),
+                    follow_up_count=lead.follow_up_count or 0,
+                    closing_confidence=closing_confidence,
+                    lead_temperature=lead_temperature,
+                    last_objection=_mem.get("last_objection"),
+                    buyer_type=_mem.get("buyer_type"),
+                    last_activity_ts=_mem.get("updated_at"),
+                )
+                if _brain.should_follow_up and _brain.follow_up_delay_minutes:
+                    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+                    next_fu = _dt.now(_tz.utc) + _td(
+                        minutes=_brain.follow_up_delay_minutes
+                    )
+                    _mem["last_fu_type"] = _brain.follow_up_type
+                    asyncio.create_task(_save_ai_memory(user_id, _mem))
+            except Exception:
+                pass  # fallback below
+
+            if next_fu is None:
+                next_fu = compute_next_followup(lead_temperature, closing_confidence)
+
+            await repo.update_ai_scoring(
+                lead.id,
+                lead_temperature=lead_temperature,
+                closing_confidence=closing_confidence,
+                next_follow_up_at=next_fu,
+            )
+            await session.commit()
+    except Exception:
+        log.warning("update_lead_ai_scoring_failed", user_id=user_id)
+
+
+# ── Phone capture helper ────────────────────────────────────────────────────
+
+async def _notify_phone_captured(
+    *,
+    phone: str,
+    profile: dict[str, Any],
+    from_user: Any,
+    chat_type: str,
+    chat_id: int,
+) -> None:
+    """Fire-and-forget admin alert when a phone is detected in free text."""
+    try:
+        name = profile.get("name") or (from_user.first_name if from_user else None)
+        username = from_user.username if from_user else None
+        user_id = from_user.id if from_user else None
+        svc = get_lead_notification_service()
+        await svc.notify_draft_lead(
+            phone=phone,
+            name=name,
+            username=username,
+            user_id=user_id,
+            chat_type=chat_type,
+            chat_id=chat_id,
+        )
+    except Exception:
+        log.warning("phone_capture_notify_failed", phone=phone)
+
+
+# ── AI lead collected (full intelligence stack) ─────────────────────────────
+
+async def _notify_ai_lead_collected(
+    *,
+    phone: str,
+    district: str,
+    area: float | None,
+    room: str | None,
+    design: str | None = None,
+    name: str | None,
+    from_user: Any,
+    score: int = 0,
+    last_message: str = "",
+    lead_id: int | None = None,
+    last_objection: str | None = None,
+    closing_attempted: bool = False,
+    closing_action: str | None = None,
+    intent: str | None = None,
+    follow_up_count: int = 0,
+    closing_confidence: float | None = None,
+    negotiation_tactic: str | None = None,
+    negotiation_escalated: bool = False,
+    last_activity_ts: int | None = None,
+    memory_created_at: int | None = None,
+) -> None:
+    """Fire-and-forget admin notification for AI-collected lead. Never raises."""
+    try:
+        from shared.utils.deal_probability import evaluate_deal_probability
+        from core.services.lead_intelligence_service import analyze_buyer_type
+        from core.services.revenue_predictor_service import predict_lead_revenue
+        from core.services.conversation_memory_graph_service import analyze_conversation_graph
+        from core.services.followup_brain_service import decide_follow_up
+
+        _signal_kwargs = dict(
+            score=score,
+            closing_confidence=closing_confidence,
+            phone_captured=bool(phone),
+            has_area=area is not None,
+            area_m2=area,
+            has_district=bool(district),
+            closing_attempted=closing_attempted,
+            closing_action=closing_action,
+            last_objection=last_objection,
+            intent=intent,
+            follow_up_count=follow_up_count,
+            design_type=design,
+        )
+
+        dp = evaluate_deal_probability(**_signal_kwargs)
+
+        _bt_kwargs = {k: v for k, v in _signal_kwargs.items() if k != "area_m2"}
+        _bt_kwargs["deal_probability_percent"] = dp.deal_probability_percent
+        bp = analyze_buyer_type(**_bt_kwargs)
+
+        re = predict_lead_revenue(
+            area_m2=area,
+            design_type=design,
+            buyer_type=bp.buyer_type,
+            last_objection=last_objection,
+            closing_attempted=closing_attempted,
+            deal_probability_percent=dp.deal_probability_percent,
+        )
+
+        cg = analyze_conversation_graph(
+            score=score,
+            phone_captured=bool(phone),
+            has_area=area is not None,
+            has_district=bool(district),
+            has_design=bool(design),
+            closing_attempted=closing_attempted,
+            last_objection=last_objection,
+            intent=intent,
+            follow_up_count=follow_up_count,
+            deal_probability_percent=dp.deal_probability_percent,
+            buyer_type=bp.buyer_type,
+            negotiation_tactic=negotiation_tactic,
+            negotiation_escalated=negotiation_escalated,
+            closing_confidence=closing_confidence,
+            last_activity_ts=last_activity_ts,
+            memory_created_at=memory_created_at,
+        )
+
+        fd = decide_follow_up(
+            score=score,
+            deal_probability_percent=dp.deal_probability_percent,
+            buyer_type=bp.buyer_type,
+            decision_stage=cg.current_decision_stage,
+            engagement_trend=cg.engagement_trend,
+            last_objection=last_objection,
+            phone_captured=bool(phone),
+            has_area=area is not None,
+            has_district=bool(district),
+            has_design=bool(design),
+            closing_attempted=closing_attempted,
+            negotiation_tactic=negotiation_tactic,
+            negotiation_escalated=negotiation_escalated,
+            follow_up_count=follow_up_count,
+            last_activity_ts=last_activity_ts,
+            closing_confidence=closing_confidence,
+        )
+
+        svc = get_lead_notification_service()
+        await svc.notify_ai_lead_collected(
+            phone=phone,
+            district=district,
+            area=area,
+            room=room,
+            design=design,
+            name=name,
+            username=from_user.username if from_user else None,
+            user_id=from_user.id if from_user else None,
+            score=score,
+            last_message=last_message,
+            lead_id=lead_id,
+            last_objection=last_objection,
+            closing_attempted=closing_attempted,
+            closing_action=closing_action,
+            deal_probability=dp,
+            buyer_profile=bp,
+            revenue_estimate=re,
+            negotiation_tactic=negotiation_tactic,
+            negotiation_escalated=negotiation_escalated,
+            conversation_graph=cg,
+            followup_decision=fd,
+        )
+    except Exception:
+        log.warning("notify_ai_lead_collected_failed", phone=phone)
+
+
+# ── Warm interest notification ──────────────────────────────────────────────
+
+async def _notify_warm_interest(
+    *,
+    topic: str,
+    from_user: Any,
+    name: str | None = None,
+) -> None:
+    """Fire-and-forget WARM lead interest notification. Never raises."""
+    try:
+        svc = get_lead_notification_service()
+        await svc.notify_lead_interest(
+            score="warm",
+            name=name,
+            username=from_user.username if from_user else None,
+            user_id=from_user.id if from_user else None,
+            topic=topic,
+        )
+    except Exception:
+        log.warning("notify_warm_interest_failed", topic=topic)

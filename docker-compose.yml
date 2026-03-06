@@ -8,8 +8,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    # No host port binding — avoids conflicts with other projects.
+    # All app services connect via Docker network (service name "postgres").
+    # To access from host (e.g. pgAdmin), uncomment:
+    #   ports: ["15432:5432"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +24,10 @@ services:
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # No host port binding — avoids conflicts with other projects.
+    # All app services connect via Docker network (service name "redis").
+    # To access from host (e.g. redis-cli), uncomment:
+    #   ports: ["16379:6379"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -57,7 +61,7 @@ services:
         condition: service_healthy
     command: python -m apps.bot.main
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',9090)); s.close()\""]
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',9090)); s.close()\""]
       interval: 30s
       timeout: 10s
       retries: 3
