@@ -138,13 +138,12 @@ async def _notify_ai_lead_collected(
 ) -> None:
     """Fire-and-forget admin notification for AI-collected lead. Never raises."""
     try:
-        from shared.utils.deal_probability import evaluate_deal_probability
-        from core.services.lead_intelligence_service import analyze_buyer_type
-        from core.services.revenue_predictor_service import predict_lead_revenue
-        from core.services.conversation_memory_graph_service import analyze_conversation_graph
-        from core.services.followup_brain_service import decide_follow_up
+        from core.services.ai_sales_brain_service import build_sales_brain
 
-        _signal_kwargs = dict(
+        brain = build_sales_brain(
+            name=name,
+            district=district,
+            phone=phone,
             score=score,
             closing_confidence=closing_confidence,
             phone_captured=bool(phone),
@@ -157,59 +156,10 @@ async def _notify_ai_lead_collected(
             intent=intent,
             follow_up_count=follow_up_count,
             design_type=design,
-        )
-
-        dp = evaluate_deal_probability(**_signal_kwargs)
-
-        _bt_kwargs = {k: v for k, v in _signal_kwargs.items() if k != "area_m2"}
-        _bt_kwargs["deal_probability_percent"] = dp.deal_probability_percent
-        bp = analyze_buyer_type(**_bt_kwargs)
-
-        re = predict_lead_revenue(
-            area_m2=area,
-            design_type=design,
-            buyer_type=bp.buyer_type,
-            last_objection=last_objection,
-            closing_attempted=closing_attempted,
-            deal_probability_percent=dp.deal_probability_percent,
-        )
-
-        cg = analyze_conversation_graph(
-            score=score,
-            phone_captured=bool(phone),
-            has_area=area is not None,
-            has_district=bool(district),
-            has_design=bool(design),
-            closing_attempted=closing_attempted,
-            last_objection=last_objection,
-            intent=intent,
-            follow_up_count=follow_up_count,
-            deal_probability_percent=dp.deal_probability_percent,
-            buyer_type=bp.buyer_type,
             negotiation_tactic=negotiation_tactic,
             negotiation_escalated=negotiation_escalated,
-            closing_confidence=closing_confidence,
             last_activity_ts=last_activity_ts,
             memory_created_at=memory_created_at,
-        )
-
-        fd = decide_follow_up(
-            score=score,
-            deal_probability_percent=dp.deal_probability_percent,
-            buyer_type=bp.buyer_type,
-            decision_stage=cg.current_decision_stage,
-            engagement_trend=cg.engagement_trend,
-            last_objection=last_objection,
-            phone_captured=bool(phone),
-            has_area=area is not None,
-            has_district=bool(district),
-            has_design=bool(design),
-            closing_attempted=closing_attempted,
-            negotiation_tactic=negotiation_tactic,
-            negotiation_escalated=negotiation_escalated,
-            follow_up_count=follow_up_count,
-            last_activity_ts=last_activity_ts,
-            closing_confidence=closing_confidence,
         )
 
         svc = get_lead_notification_service()
@@ -228,13 +178,19 @@ async def _notify_ai_lead_collected(
             last_objection=last_objection,
             closing_attempted=closing_attempted,
             closing_action=closing_action,
-            deal_probability=dp,
-            buyer_profile=bp,
-            revenue_estimate=re,
-            negotiation_tactic=negotiation_tactic,
+            deal_probability=brain.deal_probability,
+            buyer_profile=brain.buyer_profile,
+            revenue_estimate=brain.revenue_estimate,
+            negotiation_tactic=(
+                brain.negotiation_result.tactic  # type: ignore[union-attr]
+                if brain.negotiation_result
+                and brain.negotiation_result.negotiation_detected  # type: ignore[union-attr]
+                else negotiation_tactic
+            ),
             negotiation_escalated=negotiation_escalated,
-            conversation_graph=cg,
-            followup_decision=fd,
+            conversation_graph=brain.conversation_graph,
+            followup_decision=brain.followup_decision,
+            sales_brain=brain,
         )
     except Exception:
         log.warning("notify_ai_lead_collected_failed", phone=phone)

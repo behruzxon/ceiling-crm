@@ -81,8 +81,14 @@ class LeadNotificationService:
             ],
             [
                 InlineKeyboardButton(
-                    text="❌ Yo'qotildi",
+                    text="\u274c Yo'qotildi",
                     callback_data=f"lead:{lead_id}:status:lost",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="\U0001f4a1 Operator yordam",
+                    callback_data=f"op:menu:{lead_id}",
                 ),
             ],
         ])
@@ -320,37 +326,247 @@ class LeadNotificationService:
         district: str,
         area: float | None,
         room: str | None,
+        design: str | None = None,
         name: str | None,
         username: str | None,
         user_id: int | None,
-        score: str = "hot",
+        score: int = 0,
+        last_message: str = "",
+        lead_id: int | None = None,
+        last_objection: str | None = None,
+        closing_attempted: bool = False,
+        closing_action: str | None = None,
+        deal_probability: object | None = None,
+        buyer_profile: object | None = None,
+        revenue_estimate: object | None = None,
+        negotiation_tactic: str | None = None,
+        negotiation_escalated: bool = False,
+        conversation_graph: object | None = None,
+        followup_decision: object | None = None,
+        sales_brain: object | None = None,
     ) -> None:
         """Send AI-collected lead card to admin DM + all admin groups. Never raises."""
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
 
-        badge = self._SCORE_BADGES.get(score, "🔥 HOT LEAD")
+        if score >= 60:
+            badge = "\U0001f525 HOT LEAD"
+        elif score >= 30:
+            badge = "\U0001f7e1 WARM LEAD"
+        else:
+            badge = "\u2744\ufe0f COLD LEAD"
+
+        # Recommended action: prefer probability engine, fallback to simple rules
+        if deal_probability is not None:
+            rec_action = deal_probability.recommended_action  # type: ignore[union-attr]
+        elif score >= 60:
+            rec_action = "\U0001f4de Zudlik bilan qo'ng'iroq qiling!"
+        elif last_objection == "expensive":
+            rec_action = "\U0001f4b0 Byudjet variantini taklif qiling"
+        elif last_objection == "delay":
+            rec_action = "\u23f0 24 soatdan keyin follow-up"
+        elif score >= 30:
+            rec_action = "\U0001f4cb O'lchov taklif qiling"
+        else:
+            rec_action = "\U0001f4e8 Ma'lumot yuboring"
+
         name_str = name or "Noma'lum"
-        lines = [f"<b>{badge}</b>\n", f"Ism: {name_str}"]
+        lines = [f"<b>{badge}</b> (score: {score})\n", f"Ism: {name_str}"]
         if username:
             lines.append(f"Username: @{username}")
         elif user_id:
             lines.append(f"Telegram: <a href='tg://user?id={user_id}'>{user_id}</a>")
+        lines.append(f"Tel: {phone}")
         if district:
             lines.append(f"Tuman: {district}")
         if area is not None:
-            lines.append(f"Maydon: {area:g} m²")
+            lines.append(f"Maydon: {area:g} m\u00b2")
+        if design:
+            lines.append(f"Dizayn: {design}")
         if room:
             lines.append(f"Xona: {room}")
-        lines.append(f"Tel: {phone}")
+        if last_objection:
+            _obj_labels = {
+                "expensive": "\U0001f4b8 Qimmat",
+                "trust": "\U0001f914 Ishonch",
+                "compare": "\u2696\ufe0f Taqqoslash",
+                "delay": "\u23f3 Keyinroq",
+                "angry": "\U0001f624 Norozilik",
+            }
+            lines.append(f"E'tiroz: {_obj_labels.get(last_objection, last_objection)}")
+        if closing_attempted:
+            _action_labels = {
+                "measurement": "Bepul o'lchov",
+                "call": "Menejer qo'ng'iroq",
+                "catalog": "Katalog yuborish",
+            }
+            action_label = _action_labels.get(closing_action or "", closing_action or "\u2014")
+            lines.append(f"Closing: Ha \u2705 ({action_label})")
+
+        # ── Deal probability + revenue section (concise) ─────────────────
+        if deal_probability is not None:
+            dp = deal_probability
+            _conf_labels = {"high": "yuqori", "medium": "o'rtacha", "low": "past"}
+            conf_label = _conf_labels.get(dp.confidence_level, dp.confidence_level)  # type: ignore[union-attr]
+            lines.append("")
+            lines.append(
+                f"\U0001f4ca Ehtimol: {dp.deal_probability_percent}%"  # type: ignore[union-attr]
+                f" ({conf_label})"
+            )
+            # Revenue range (preferred) or simple expected value
+            if revenue_estimate is not None and revenue_estimate.predicted_revenue_best is not None:  # type: ignore[union-attr]
+                re = revenue_estimate
+                lines.append(
+                    f"\U0001f4b0 Daromad: {re.predicted_revenue_min:,}"  # type: ignore[union-attr]
+                    f" \u2013 {re.predicted_revenue_max:,} UZS"  # type: ignore[union-attr]
+                )
+                lines.append(
+                    f"\U0001f4b5 Eng yaxshi: {re.predicted_revenue_best:,} UZS"  # type: ignore[union-attr]
+                )
+                _upsell_labels = {"high": "yuqori", "medium": "o'rtacha", "low": "past"}
+                lines.append(
+                    f"\U0001f4e6 Upsell: {_upsell_labels.get(re.upsell_potential, re.upsell_potential)}"  # type: ignore[union-attr]
+                    f" \u2014 {re.recommended_upsell}"  # type: ignore[union-attr]
+                )
+            elif dp.expected_deal_value is not None:  # type: ignore[union-attr]
+                lines.append(
+                    f"\U0001f4b0 Kutilgan: {dp.expected_deal_value:,} UZS"  # type: ignore[union-attr]
+                )
+            lines.append(f"Tavsiya: {rec_action}")
+        else:
+            lines.append(f"Tavsiya: {rec_action}")
+
+        # ── Buyer type section (concise) ──────────────────────────────
+        if buyer_profile is not None:
+            bp = buyer_profile
+            _bt_labels = {
+                "price_sensitive": "\U0001f4b2 Narxga sezgir",
+                "quality_buyer": "\u2b50 Sifat xaridori",
+                "fast_buyer": "\u26a1 Tez qaror",
+                "research_buyer": "\U0001f50d Tadqiqotchi",
+            }
+            bt_label = _bt_labels.get(bp.buyer_type, bp.buyer_type)  # type: ignore[union-attr]
+            lines.append(
+                f"\U0001f9e0 Xaridor: {bt_label}"
+                f" ({bp.confidence:.0%})"  # type: ignore[union-attr]
+            )
+            lines.append(f"\U0001f4de Strategiya: {bp.strategy}")  # type: ignore[union-attr]
+
+        # ── Negotiation section (concise) ───────────────────────────
+        if negotiation_tactic and negotiation_tactic != "none":
+            from core.services.negotiation_engine_service import TACTIC_LABELS
+            tactic_label = TACTIC_LABELS.get(negotiation_tactic, negotiation_tactic)
+            esc_flag = " \u26a0\ufe0f ESCALATE" if negotiation_escalated else ""
+            lines.append(f"\U0001f91d Muzokara: {tactic_label}{esc_flag}")
+
+        # ── Conversation graph section (concise) ──────────────────
+        if conversation_graph is not None:
+            from core.services.conversation_memory_graph_service import (
+                STAGE_LABELS,
+                TREND_LABELS,
+            )
+            cg = conversation_graph
+            stage_label = STAGE_LABELS.get(
+                cg.current_decision_stage, cg.current_decision_stage  # type: ignore[union-attr]
+            )
+            trend_label = TREND_LABELS.get(
+                cg.engagement_trend, cg.engagement_trend  # type: ignore[union-attr]
+            )
+            lines.append(
+                f"\U0001f4cd Bosqich: {stage_label} | {trend_label}"
+            )
+            if cg.recommended_next_step:  # type: ignore[union-attr]
+                lines.append(f"\u27a1 Keyingi: {cg.recommended_next_step}")  # type: ignore[union-attr]
+
+        # ── Follow-up decision section (concise) ──────────────────
+        if followup_decision is not None and followup_decision.should_follow_up:  # type: ignore[union-attr]
+            from core.services.followup_brain_service import FU_TYPE_LABELS
+            fd = followup_decision
+            fd_label = FU_TYPE_LABELS.get(
+                fd.follow_up_type, fd.follow_up_type  # type: ignore[union-attr]
+            )
+            _dm = fd.follow_up_delay_minutes  # type: ignore[union-attr]
+            if _dm and _dm < 60:
+                delay_str = f"{_dm} daqiqa"
+            elif _dm:
+                delay_str = f"{_dm // 60} soat"
+            else:
+                delay_str = "\u2014"
+            lines.append(f"\u23f0 FU: {fd_label} | {delay_str}")
+
+        # ── Sales Brain unified section (replaces standalone radar) ──
+        if sales_brain is not None:
+            from core.services.deal_radar_service import BUCKET_LABELS
+            _bl = BUCKET_LABELS.get(
+                sales_brain.priority, sales_brain.priority  # type: ignore[union-attr]
+            )
+            lines.append(
+                f"\U0001f9e0 Brain: {_bl} | "
+                f"{sales_brain.win_probability}% ehtimol"  # type: ignore[union-attr]
+            )
+            lines.append(
+                f"\u27a1 {sales_brain.recommended_action}"  # type: ignore[union-attr]
+            )
+            if sales_brain.risk_flags:  # type: ignore[union-attr]
+                lines.append(
+                    f"\u26a0\ufe0f {sales_brain.risk_flags[0]}"  # type: ignore[union-attr]
+                )
+        else:
+            # Fallback: inline radar for callers that don't pass sales_brain
+            try:
+                from core.services.deal_radar_service import (
+                    BUCKET_LABELS as _BL,
+                    rank_lead_for_radar,
+                )
+                _radar = rank_lead_for_radar(
+                    score=score,
+                    deal_probability_percent=(
+                        deal_probability.deal_probability_percent  # type: ignore[union-attr]
+                        if deal_probability else None
+                    ),
+                    predicted_revenue_best=(
+                        revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
+                        if revenue_estimate else None
+                    ),
+                    buyer_type=(
+                        buyer_profile.buyer_type  # type: ignore[union-attr]
+                        if buyer_profile else None
+                    ),
+                    negotiation_escalated=negotiation_escalated,
+                    decision_stage=(
+                        conversation_graph.current_decision_stage  # type: ignore[union-attr]
+                        if conversation_graph else None
+                    ),
+                    engagement_trend=(
+                        conversation_graph.engagement_trend  # type: ignore[union-attr]
+                        if conversation_graph else None
+                    ),
+                    phone_captured=bool(phone),
+                    has_area=area is not None,
+                    has_district=bool(district),
+                    closing_attempted=closing_attempted,
+                    closing_confidence=None,
+                    lead_status=None,
+                )
+                _bl2 = _BL.get(_radar.radar_bucket, _radar.radar_bucket)
+                lines.append(
+                    f"\U0001f4e1 Radar: {_bl2} | {_radar.radar_priority_score}%"
+                )
+            except Exception:
+                pass
+
+        if last_message:
+            lines.append(f"So'nggi xabar: {last_message[:120]}")
         text = "\n".join(lines)
+
+        keyboard = self._lead_status_keyboard(lead_id) if lead_id else None
 
         bot = Bot(
             token=self._bot_token,
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, None)
+            await self._send_to_groups_and_dm(bot, text, keyboard)
         except Exception as exc:
             log.warning("notify_ai_lead_failed", error=str(exc))
         finally:
