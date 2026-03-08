@@ -45,6 +45,8 @@ class LeadModel(Base):
     utm_source: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     utm_campaign: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     assigned_manager_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=True)
+    assigned_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    assignment_reason: Mapped[str | None] = mapped_column(sa.String(200), nullable=True)
 
     # ── Package / funnel fields ───────────────────────────────────────────────
     package_type: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
@@ -58,12 +60,53 @@ class LeadModel(Base):
     next_follow_up_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     follow_up_count: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)
 
+    # ── User-facing follow-up (long-term re-engagement) ───────────────────
+    user_followup_stage: Mapped[int] = mapped_column(
+        sa.Integer, server_default="0", nullable=False,
+    )
+    user_followup_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True,
+    )
+    user_followup_closed: Mapped[bool] = mapped_column(
+        sa.Boolean, server_default="false", nullable=False,
+    )
+
+    # ── Scoring engine signals ────────────────────────────────────────
+    urgency_signal: Mapped[str | None] = mapped_column(sa.String(8), nullable=True)
+    budget_signal: Mapped[str | None] = mapped_column(sa.String(8), nullable=True)
+    engagement_signal: Mapped[str | None] = mapped_column(sa.String(8), nullable=True)
+    objection_signal: Mapped[str | None] = mapped_column(sa.String(8), nullable=True)
+    scoring_reasons: Mapped[list | None] = mapped_column(sa.JSON, nullable=True)
+    last_scored_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True,
+    )
+    operator_attention: Mapped[bool] = mapped_column(
+        sa.Boolean, server_default="false", nullable=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
     updated_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())
+
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
 
     __table_args__ = (
         sa.Index("ix_leads_user_id", "user_id"),
         sa.Index("ix_leads_package_type", "package_type"),
         sa.Index("ix_leads_lead_status", "lead_status"),
         sa.Index("ix_leads_next_follow_up_at", "next_follow_up_at"),
+        sa.Index("ix_leads_tenant_id", "tenant_id"),
+        sa.Index(
+            "ix_leads_user_followup_at", "user_followup_at",
+            postgresql_where=sa.text(
+                "user_followup_at IS NOT NULL AND NOT user_followup_closed"
+            ),
+        ),
+        sa.Index(
+            "ix_leads_operator_attention", "operator_attention",
+            postgresql_where=sa.text("operator_attention = true"),
+        ),
+        sa.Index("ix_leads_last_scored_at", "last_scored_at"),
     )

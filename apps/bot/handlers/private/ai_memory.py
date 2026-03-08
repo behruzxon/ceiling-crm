@@ -18,17 +18,17 @@ log = get_logger(__name__)
 
 # ── Redis AI memory (30-day per-user context) ────────────────────────────────
 
-async def _load_ai_memory(user_id: int) -> dict[str, Any]:
+async def _load_ai_memory(user_id: int, *, bot_id: int | None = None) -> dict[str, Any]:
     """Load per-user AI memory from Redis. Returns {} on any error."""
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
-        return (await get_redis().get_json(CacheKeys.ai_memory(user_id))) or {}
+        return (await get_redis().get_json(CacheKeys.ai_memory(user_id, bot_id=bot_id))) or {}
     except Exception:
         return {}
 
 
-async def _save_ai_memory(user_id: int, memory: dict[str, Any]) -> None:
+async def _save_ai_memory(user_id: int, memory: dict[str, Any], *, bot_id: int | None = None) -> None:
     """Persist AI memory to Redis with 30-day TTL. Never raises."""
     try:
         from infrastructure.cache.client import get_redis
@@ -37,7 +37,7 @@ async def _save_ai_memory(user_id: int, memory: dict[str, Any]) -> None:
         if "created_at" not in memory:
             memory["created_at"] = now
         memory["updated_at"] = now
-        await get_redis().set_json(CacheKeys.ai_memory(user_id), memory, ttl=CacheTTL.AI_MEMORY)
+        await get_redis().set_json(CacheKeys.ai_memory(user_id, bot_id=bot_id), memory, ttl=CacheTTL.AI_MEMORY)
     except Exception:
         pass
 
@@ -69,6 +69,7 @@ async def _update_ai_memory_from_interaction(
     text: str,
     fsm_data: dict[str, Any],
     first_name: str | None = None,
+    bot_id: int | None = None,
 ) -> None:
     """Extract context from text + FSM and merge into Redis AI memory. Never raises."""
     try:
@@ -76,7 +77,7 @@ async def _update_ai_memory_from_interaction(
         from apps.bot.handlers.private.ai_detection import parse_combo
         from apps.bot.handlers.private.ai_scoring import _get_lead_score
 
-        memory = await _load_ai_memory(user_id)
+        memory = await _load_ai_memory(user_id, bot_id=bot_id)
 
         # Name from FSM; fallback to Telegram first_name on first interaction
         if name := (fsm_data.get("user_name") or ""):
@@ -102,14 +103,14 @@ async def _update_ai_memory_from_interaction(
             memory["design_type"] = dsg
 
         # Lead score
-        score = await _get_lead_score(user_id)
+        score = await _get_lead_score(user_id, bot_id=bot_id)
         if score > 0:
             memory["lead_score"] = score
 
         # Last message
         memory["last_user_message"] = text[:200]
 
-        await _save_ai_memory(user_id, memory)
+        await _save_ai_memory(user_id, memory, bot_id=bot_id)
     except Exception:
         log.warning("update_ai_memory_failed", user_id=user_id)
 
@@ -123,7 +124,7 @@ _AI_STATS_FIELDS = frozenset({
 })
 
 
-async def _ai_stats_incr(field: str) -> None:
+async def _ai_stats_incr(field: str, *, bot_id: int | None = None) -> None:
     """Increment today's AI stats counter by 1. Non-fatal, fire-and-forget."""
     import datetime
     try:
@@ -131,14 +132,14 @@ async def _ai_stats_incr(field: str) -> None:
         from infrastructure.cache.keys import CacheKeys, CacheTTL
         date_str = datetime.date.today().isoformat()
         redis = get_redis()
-        key = CacheKeys.ai_stats_field(date_str, field)
+        key = CacheKeys.ai_stats_field(date_str, field, bot_id=bot_id)
         await redis.incr(key)
         await redis.expire(key, CacheTTL.AI_STATS)
     except Exception:
         pass
 
 
-async def _ai_stats_count_user(user_id: int) -> None:
+async def _ai_stats_count_user(user_id: int, *, bot_id: int | None = None) -> None:
     """Increment users_started once per user per calendar day (NX dedup). Non-fatal."""
     import datetime
     try:
@@ -147,13 +148,13 @@ async def _ai_stats_count_user(user_id: int) -> None:
         date_str = datetime.date.today().isoformat()
         redis = get_redis()
         acquired = await redis.set(
-            CacheKeys.ai_stats_user_day(date_str, user_id),
+            CacheKeys.ai_stats_user_day(date_str, user_id, bot_id=bot_id),
             "1",
             ttl=CacheTTL.AI_STATS_USER_DAY,
             nx=True,
         )
         if acquired:
-            key = CacheKeys.ai_stats_field(date_str, "users_started")
+            key = CacheKeys.ai_stats_field(date_str, "users_started", bot_id=bot_id)
             await redis.incr(key)
             await redis.expire(key, CacheTTL.AI_STATS)
     except Exception:

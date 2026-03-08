@@ -17,7 +17,13 @@ class PipelineStageModel(Base):
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         # Speeds up _latest_stage_subquery() which orders by (lead_id, created_at DESC)
         sa.Index("ix_pipeline_stages_lead_created", "lead_id", "created_at"),
+        sa.Index("ix_pipeline_stages_tenant_id", "tenant_id"),
     )

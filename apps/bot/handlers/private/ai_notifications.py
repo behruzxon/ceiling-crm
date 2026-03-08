@@ -8,10 +8,8 @@ and follow-up brain for the admin lead card.
 """
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
-from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_notification_service
 from shared.logging import get_logger
 
@@ -27,60 +25,14 @@ async def _update_lead_ai_scoring(
     closing_confidence: float | None,
 ) -> None:
     """Find the latest lead for *user_id* and persist AI scoring. Never raises."""
-    from shared.utils.lead_scoring import compute_next_followup
-    try:
-        factory = get_session_factory()
-        async with factory() as session:
-            from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
-            repo = PostgresLeadRepository(session)
-            leads = await repo.list_by_user(user_id, limit=1)
-            if not leads:
-                return
-            lead = leads[0]
+    from core.services.lead_scoring_service import LeadScoringService
 
-            # Try brain-driven scheduling, fallback to simple delay
-            next_fu = None
-            try:
-                from core.services.followup_brain_service import decide_follow_up
-                from apps.bot.handlers.private.ai_memory import (
-                    _load_ai_memory,
-                    _save_ai_memory,
-                )
-                _mem = await _load_ai_memory(user_id)
-                _brain = decide_follow_up(
-                    score=lead.score or 0,
-                    phone_captured=bool(lead.phone),
-                    has_area=lead.room_area is not None,
-                    has_district=bool(lead.district),
-                    follow_up_count=lead.follow_up_count or 0,
-                    closing_confidence=closing_confidence,
-                    lead_temperature=lead_temperature,
-                    last_objection=_mem.get("last_objection"),
-                    buyer_type=_mem.get("buyer_type"),
-                    last_activity_ts=_mem.get("updated_at"),
-                )
-                if _brain.should_follow_up and _brain.follow_up_delay_minutes:
-                    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
-                    next_fu = _dt.now(_tz.utc) + _td(
-                        minutes=_brain.follow_up_delay_minutes
-                    )
-                    _mem["last_fu_type"] = _brain.follow_up_type
-                    asyncio.create_task(_save_ai_memory(user_id, _mem))
-            except Exception:
-                pass  # fallback below
-
-            if next_fu is None:
-                next_fu = compute_next_followup(lead_temperature, closing_confidence)
-
-            await repo.update_ai_scoring(
-                lead.id,
-                lead_temperature=lead_temperature,
-                closing_confidence=closing_confidence,
-                next_follow_up_at=next_fu,
-            )
-            await session.commit()
-    except Exception:
-        log.warning("update_lead_ai_scoring_failed", user_id=user_id)
+    await LeadScoringService().rescore_lead(
+        user_id=user_id,
+        lead_temperature=lead_temperature,
+        closing_confidence=closing_confidence,
+        trigger="ai_message",
+    )
 
 
 # ── Phone capture helper ────────────────────────────────────────────────────

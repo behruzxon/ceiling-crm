@@ -17,3 +17,12 @@ class GroupModel(Base):
     is_active: Mapped[bool] = mapped_column(sa.Boolean, server_default="true")
     member_count: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
+    __table_args__ = (
+        sa.Index("ix_groups_tenant_id", "tenant_id"),
+    )

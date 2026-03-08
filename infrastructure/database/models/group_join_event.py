@@ -28,7 +28,13 @@ class GroupJoinEventModel(Base):
         nullable=False,
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.UniqueConstraint("group_id", "user_id", name="uq_group_join_events_group_user"),
         sa.Index("ix_group_join_events_group_joined", "group_id", "joined_at"),
+        sa.Index("ix_group_join_events_tenant_id", "tenant_id"),
     )

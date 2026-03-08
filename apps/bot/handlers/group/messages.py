@@ -31,7 +31,8 @@ async def on_group_message(message: Message, category: str | None, **data) -> No
 
     chat_id = message.chat.id
     user_id = from_user.id
-    key = CacheKeys.grp_inline_menu_shown(chat_id, user_id)
+    _bot_id = message.bot.id if message.bot else None
+    key = CacheKeys.grp_inline_menu_shown(chat_id, user_id, bot_id=_bot_id)
 
     try:
         cache = get_redis()

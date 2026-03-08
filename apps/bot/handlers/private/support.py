@@ -10,6 +10,7 @@ from aiogram.types import Message
 
 from apps.bot.handlers.private.ai_support import clear_ai_conversation
 from apps.bot.keyboards.main_menu import main_menu_keyboard
+from infrastructure.di import get_tenant_menu_config
 from shared.config import get_settings
 from shared.logging import get_logger
 
@@ -122,19 +123,62 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
     await state.clear()
     await clear_ai_conversation(user_id)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
+
+    db_user = data.get("db_user")
+    db_session = data.get("db_session")
+    user_role = data.get("user_role")
+
+    # Load tenant for tenant-aware welcome
+    tenant = None
+    menu_config = None
+    if db_user and db_session and getattr(db_user, "tenant_id", None):
+        from infrastructure.database.models.tenant import TenantModel
+        tenant = await db_session.get(TenantModel, db_user.tenant_id)
+        if tenant:
+            menu_config = tenant.menu_config or None
+
+    # Determine owner status
+    is_owner = False
+    if tenant and tenant.admin_user_id == user_id:
+        is_owner = True
+    if user_role and hasattr(user_role, "value") and user_role.value in ("admin", "superadmin"):
+        is_owner = True
+
+    is_admin = _is_bot_admin(user_id) or is_owner
+    first_name = message.from_user.first_name or ""
+
+    # Build welcome text
+    if tenant:
+        from shared.templates.business_templates import get_welcome_text
+        greeting = get_welcome_text(
+            business_type=tenant.business_type,
+            tenant_name=tenant.name,
+            first_name=first_name,
+            is_owner=is_owner,
+        )
+    else:
+        # Default VashPotolok (backward compatible)
+        greeting = (
+            "\U0001f916 VashPotolok AI Bot\n\n"
+            f"Assalomu alaykum, {first_name}! \U0001f44b\n"
+            "VashPotolok kompaniyasining rasmiy AI yordamchisiga xush kelibsiz.\n\n"
+            "Qashqadaryo bo\u02bbylab yuqori sifatli natijnoy potolok "
+            "xizmatlarini taqdim etamiz.\n\n"
+            "Siz bu yerda:\n"
+            "\U0001f4b0 Potolok narxini aniq hisoblay olasiz\n"
+            "\U0001f3a8 10+ turdagi dizayn variantlarini ko\u02bbrishingiz mumkin\n"
+            "\U0001f4c2 Real loyihalar katalogini ko\u02bbrasiz\n"
+            "\U0001f9d1\u200d\U0001f527 Buyurtma qoldirib operator bilan bog\u02bblanasiz\n"
+            "\U0001f916 AI mutaxassis Madina 24/7 savollaringizga javob beradi\n\n"
+            "\U0001f447 Boshlash uchun kerakli bo\u02bblimni tanlang"
+        )
+        if is_owner:
+            from shared.templates.business_templates import OWNER_SECTION
+            greeting += OWNER_SECTION
+
     await message.answer(
-        "🤖 VashPotolok AI Bot\n\n"
-        f"Assalomu alaykum, {message.from_user.first_name}! 👋\n"
-        "VashPotolok kompaniyasining rasmiy AI yordamchisiga xush kelibsiz.\n\n"
-        "Qashqadaryo bo'ylab yuqori sifatli natijnoy potolok xizmatlarini taqdim etamiz.\n\n"
-        "Siz bu yerda:\n"
-        "💰 Potolok narxini aniq hisoblay olasiz\n"
-        "🎨 10+ turdagi dizayn variantlarini ko'rishingiz mumkin\n"
-        "📂 Real loyihalar katalogini ko'rasiz\n"
-        "🧑‍🔧 Buyurtma qoldirib operator bilan bog'lanasiz\n"
-        "🤖 AI mutaxassis Madina 24/7 savollaringizga javob beradi\n\n"
-        "👇 Boshlash uchun kerakli bo'limni tanlang",
-        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
+        greeting,
+        reply_markup=main_menu_keyboard(is_admin=is_admin, menu_config=menu_config),
     )
 
 
@@ -142,9 +186,16 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
 async def cmd_menu(message: Message, **data) -> None:
     """Show the main menu keyboard in a private chat."""
     user_id = message.from_user.id if message.from_user else 0
+    db_user = data.get("db_user")
+    db_session = data.get("db_session")
+    menu_config = None
+    if db_user and db_session:
+        menu_config = await get_tenant_menu_config(db_session, db_user.tenant_id)
     await message.answer(
         "Menyu:",
-        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
+        reply_markup=main_menu_keyboard(
+            is_admin=_is_bot_admin(user_id), menu_config=menu_config,
+        ),
     )
 
 
@@ -160,7 +211,14 @@ async def cmd_cancel(message: Message, state: FSMContext, **data) -> None:
     """Cancel any in-progress flow, clear FSM state, and return to main menu."""
     await state.clear()
     user_id = message.from_user.id if message.from_user else 0
+    db_user = data.get("db_user")
+    db_session = data.get("db_session")
+    menu_config = None
+    if db_user and db_session:
+        menu_config = await get_tenant_menu_config(db_session, db_user.tenant_id)
     await message.answer(
         "❎ Amal bekor qilindi.",
-        reply_markup=main_menu_keyboard(is_admin=_is_bot_admin(user_id)),
+        reply_markup=main_menu_keyboard(
+            is_admin=_is_bot_admin(user_id), menu_config=menu_config,
+        ),
     )

@@ -37,7 +37,13 @@ class WarrantyModel(Base):
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_warranties_lead",       "lead_id"),
         sa.Index("ix_warranties_expires_at",  "expires_at"),
+        sa.Index("ix_warranties_tenant_id", "tenant_id"),
     )

@@ -36,6 +36,12 @@ class QuoteModel(Base):
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_quotes_lead", "lead_id"),
+        sa.Index("ix_quotes_tenant_id", "tenant_id"),
     )

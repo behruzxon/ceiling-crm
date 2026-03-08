@@ -19,6 +19,10 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
+class LeadLimitExceeded(Exception):
+    """Raised when a tenant's monthly lead quota is exhausted."""
+
+
 class LeadService:
     """
     Handles lead creation, assignment, and pipeline-aware queries.
@@ -50,11 +54,31 @@ class LeadService:
         notes: str | None = None,
         utm_source: str | None = None,
         utm_campaign: str | None = None,
+        *,
+        tenant_id: int | None = None,
+        plan_name: str | None = None,
     ) -> Lead:
         """
         Create a new lead and initialise it in the NEW pipeline stage.
         Logs lead_created action. Emits LeadCreated event.
+
+        If *tenant_id* and *plan_name* are provided, checks the monthly
+        lead quota before creating.  Raises ``LeadLimitExceeded`` if over
+        the plan limit.
         """
+        # ── Plan-based lead quota check ──────────────────────────────────
+        if tenant_id is not None:
+            try:
+                from core.services.usage_service import check_lead_limit
+
+                result = await check_lead_limit(tenant_id, plan_name)
+                if not result.allowed:
+                    raise LeadLimitExceeded(result.reason or "Lid limiti tugadi.")
+            except LeadLimitExceeded:
+                raise
+            except Exception:
+                pass  # fail open
+
         # Build domain object (id=0 placeholder, DB assigns real ID)
         lead = Lead(
             id=0,
@@ -98,6 +122,15 @@ class LeadService:
             source=source.value,
         )
 
+        # Track usage for billing
+        if tenant_id is not None:
+            try:
+                from core.services.usage_service import track_lead_created
+
+                await track_lead_created(tenant_id)
+            except Exception:
+                pass  # never block lead creation for tracking failure
+
         # Emit domain event
         await self._events.emit(LeadCreated(
             lead_id=created_lead.id,
@@ -108,13 +141,20 @@ class LeadService:
 
         return created_lead
 
-    async def assign_manager(self, lead_id: int, manager_id: int, actor_id: int) -> Lead:
+    async def assign_manager(
+        self,
+        lead_id: int,
+        manager_id: int,
+        actor_id: int,
+        *,
+        reason: str = "admin_manual",
+    ) -> Lead:
         """Assign a manager to a lead."""
         lead = await self._leads.get_by_id(lead_id)
         if lead is None:
             raise NotFoundError("Lead", lead_id)
 
-        result = await self._leads.assign_manager(lead_id, manager_id)
+        result = await self._leads.assign_manager(lead_id, manager_id, reason=reason)
         log.info("lead_assigned", lead_id=lead_id, manager_id=manager_id, actor_id=actor_id)
         return result
 

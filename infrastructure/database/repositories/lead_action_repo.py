@@ -21,6 +21,7 @@ from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.lead_action import LeadActionModel
 from infrastructure.database.models.pipeline_stage import PipelineStageModel
 from infrastructure.database.models.user import UserModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -34,9 +35,9 @@ def _since_utc(days: int) -> datetime:
     return (now_tz - timedelta(days=days)).astimezone(timezone.utc)
 
 
-class PostgresLeadActionRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+class PostgresLeadActionRepository(TenantScopedRepository):
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     # ── Write ─────────────────────────────────────────────────────────────────
 
@@ -54,14 +55,14 @@ class PostgresLeadActionRepository:
         aborts the primary business operation.
         """
         try:
-            self._session.add(
-                LeadActionModel(
-                    lead_id=lead_id,
-                    actor_user_id=actor_user_id,
-                    action_type=action_type,
-                    payload=payload,
-                )
+            model = LeadActionModel(
+                lead_id=lead_id,
+                actor_user_id=actor_user_id,
+                action_type=action_type,
+                payload=payload,
             )
+            self._stamp_tenant_id(model)
+            self._session.add(model)
         except Exception:
             log.exception(
                 "lead_action_insert_error",
@@ -111,6 +112,7 @@ class PostgresLeadActionRepository:
             .order_by(sa.desc("total"))
             .limit(5)
         )
+        stmt = self._apply_tenant_filter(stmt, LeadActionModel)
         rows = (await self._session.execute(stmt)).mappings().all()
         if not rows:
             return []
@@ -178,6 +180,7 @@ class PostgresLeadActionRepository:
             .order_by(sa.desc("handled_leads"))
             .limit(10)
         )
+        stmt = self._apply_tenant_filter(stmt, LeadActionModel)
         rows = (await self._session.execute(stmt)).mappings().all()
         if not rows:
             return []
@@ -222,11 +225,12 @@ class PostgresLeadActionRepository:
         since_dt = _since_utc(days)
 
         # Subquery A: leads created in period
-        leads_subq = (
+        leads_stmt = (
             sa.select(LeadModel.id, LeadModel.created_at)
             .where(LeadModel.created_at >= since_dt)
-            .subquery("leads_in_period")
         )
+        leads_stmt = self._apply_tenant_filter(leads_stmt, LeadModel)
+        leads_subq = leads_stmt.subquery("leads_in_period")
 
         # Subquery B: first action timestamp per lead
         first_action_subq = (
@@ -281,23 +285,26 @@ class PostgresLeadActionRepository:
         since_dt = _since_utc(days)
 
         # 1. Total leads created in period
+        total_stmt = (
+            sa.select(sa.func.count())
+            .select_from(LeadModel)
+            .where(LeadModel.created_at >= since_dt)
+        )
+        total_stmt = self._apply_tenant_filter(total_stmt, LeadModel)
         total: int = (
-            await self._session.execute(
-                sa.select(sa.func.count())
-                .select_from(LeadModel)
-                .where(LeadModel.created_at >= since_dt)
-            )
+            await self._session.execute(total_stmt)
         ).scalar() or 0
 
         if total == 0:
             return {"total": 0, "stage_counts": {}, "status_counts": {}}
 
         # 2. Latest pipeline stage per lead (for leads in cohort)
-        lead_ids_subq = (
+        lead_ids_stmt = (
             sa.select(LeadModel.id)
             .where(LeadModel.created_at >= since_dt)
-            .subquery("cohort_ids")
         )
+        lead_ids_stmt = self._apply_tenant_filter(lead_ids_stmt, LeadModel)
+        lead_ids_subq = lead_ids_stmt.subquery("cohort_ids")
         latest_stage_subq = (
             sa.select(
                 PipelineStageModel.lead_id,
@@ -322,18 +329,20 @@ class PostgresLeadActionRepository:
         stage_counts: dict[str, int] = {r.stage: r.cnt for r in stage_rows}
 
         # 3. lead_status distribution
-        status_rows = (
-            await self._session.execute(
-                sa.select(
-                    LeadModel.lead_status,
-                    sa.func.count().label("cnt"),
-                )
-                .where(
-                    LeadModel.created_at >= since_dt,
-                    LeadModel.lead_status.isnot(None),
-                )
-                .group_by(LeadModel.lead_status)
+        status_stmt = (
+            sa.select(
+                LeadModel.lead_status,
+                sa.func.count().label("cnt"),
             )
+            .where(
+                LeadModel.created_at >= since_dt,
+                LeadModel.lead_status.isnot(None),
+            )
+            .group_by(LeadModel.lead_status)
+        )
+        status_stmt = self._apply_tenant_filter(status_stmt, LeadModel)
+        status_rows = (
+            await self._session.execute(status_stmt)
         ).all()
         status_counts: dict[str, int] = {r.lead_status: r.cnt for r in status_rows}
 
@@ -373,5 +382,6 @@ class PostgresLeadActionRepository:
             .order_by(LeadActionModel.created_at.desc())
             .limit(limit)
         )
+        stmt = self._apply_tenant_filter(stmt, LeadActionModel)
         rows = (await self._session.execute(stmt)).mappings().all()
         return [dict(r) for r in rows]

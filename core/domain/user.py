@@ -21,6 +21,7 @@ class User(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_seen_at: datetime | None = None
+    tenant_id: int | None = None
 
     @property
     def full_name(self) -> str:

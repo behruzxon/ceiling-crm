@@ -26,7 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.pipeline_stage import PipelineStageModel
-from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.queue.app import celery_app
 from shared.config import get_settings
 from shared.constants.enums import PipelineStage
@@ -137,28 +136,17 @@ async def _async_check_followup(lead_id: int) -> None:
         )
 
         try:
-            # Admin DM
-            try:
-                await bot.send_message(settings.bot.admin_user_id, text)
-            except Exception as exc:
-                log.warning("pkg_followup_admin_dm_failed", error=str(exc))
-
-            # All admin groups
-            async with _ro_session(Session) as session:
-                ag_repo = PostgresAdminGroupRepository(session)
-                group_ids = await ag_repo.list_all_chat_ids()
-
-            for gid in group_ids:
+            # Admin group only (no DM, no all-groups broadcast)
+            admin_group_id = settings.bot.admin_group_id
+            if admin_group_id:
                 try:
-                    await bot.send_message(gid, text)
+                    await bot.send_message(admin_group_id, text)
                 except Exception as exc:
-                    log.warning("pkg_followup_group_failed", chat_id=gid, error=str(exc))
+                    log.warning("pkg_followup_group_failed", chat_id=admin_group_id, error=str(exc))
+            else:
+                log.warning("pkg_followup_admin_group_id_not_configured", lead_id=lead_id)
 
-            log.info(
-                "pkg_followup_notified",
-                lead_id=lead_id,
-                groups=len(group_ids),
-            )
+            log.info("pkg_followup_notified", lead_id=lead_id)
         finally:
             await bot.session.close()
 

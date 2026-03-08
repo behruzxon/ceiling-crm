@@ -12,14 +12,15 @@ from infrastructure.database.models.broadcast import BroadcastModel
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.pipeline_stage import PipelineStageModel
 from infrastructure.database.models.user import UserModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 from shared.constants.enums import BroadcastStatus, PayloadType, SegmentType
 
 
-class PostgresBroadcastRepository(AbstractBroadcastRepository):
+class PostgresBroadcastRepository(TenantScopedRepository, AbstractBroadcastRepository):
     """Concrete SQLAlchemy/PostgreSQL broadcast repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     # ── helpers ───────────────────────────────────────────────────────────
 
@@ -55,7 +56,11 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
 
     async def get_by_id(self, id: int) -> Broadcast | None:
         model = await self._session.get(BroadcastModel, id)
-        return self._to_domain(model) if model else None
+        if model is None:
+            return None
+        if self._tenant_id is not None and model.tenant_id != self._tenant_id:
+            return None
+        return self._to_domain(model)
 
     async def create(self, entity: Broadcast) -> Broadcast:
         raise NotImplementedError("Use create_broadcast() for v2 creation.")
@@ -65,6 +70,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
 
     async def delete(self, id: int) -> bool:
         stmt = sa.delete(BroadcastModel).where(BroadcastModel.id == id)
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         result = await self._session.execute(stmt)
         return result.rowcount > 0
 
@@ -78,6 +85,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
                 BroadcastModel.scheduled_at <= as_of,
             )
         )
+        stmt = self._apply_tenant_filter(stmt, BroadcastModel)
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
 
@@ -92,6 +100,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
                 failed_count=BroadcastModel.failed_count + failed_delta,
             )
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         await self._session.execute(stmt)
 
     async def get_segment_user_ids(self, segment: SegmentFilter) -> list[int]:
@@ -132,6 +142,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             status=BroadcastStatus.PENDING.value,
             created_by=created_by,
         )
+        self._stamp_tenant_id(model)
         self._session.add(model)
         await self._session.flush()
         return model.id
@@ -142,6 +153,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             .where(BroadcastModel.id == broadcast_id)
             .values(status=status.value)
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         await self._session.execute(stmt)
 
     async def inc_sent(self, broadcast_id: int, n: int = 1) -> None:
@@ -150,6 +163,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             .where(BroadcastModel.id == broadcast_id)
             .values(sent_count=BroadcastModel.sent_count + n)
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         await self._session.execute(stmt)
 
     async def inc_failed(self, broadcast_id: int, n: int = 1) -> None:
@@ -158,6 +173,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             .where(BroadcastModel.id == broadcast_id)
             .values(failed_count=BroadcastModel.failed_count + n)
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         await self._session.execute(stmt)
 
     async def finalize(self, broadcast_id: int, finished_at: datetime) -> None:
@@ -166,6 +183,8 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             .where(BroadcastModel.id == broadcast_id)
             .values(finished_at=finished_at)
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(BroadcastModel.tenant_id == self._tenant_id)
         await self._session.execute(stmt)
 
     async def get_all_private_user_ids(self) -> list[int]:
@@ -178,6 +197,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             UserModel.is_blocked.is_(False),
             UserModel.id > 0,
         )
+        stmt = self._apply_tenant_filter(stmt, UserModel)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
@@ -213,5 +233,6 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
             .where(latest_stages.c.stage == lead_stage)
             .distinct()
         )
+        stmt = self._apply_tenant_filter(stmt, LeadModel)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

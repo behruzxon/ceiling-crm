@@ -5,6 +5,7 @@ Runs as a separate process alongside the bot.
 from __future__ import annotations
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apps.scheduler.jobs.billing_jobs import register_billing_jobs
 from apps.scheduler.jobs.followup_jobs import register_followup_jobs
 from apps.scheduler.jobs.broadcast_jobs import register_broadcast_jobs
 from apps.scheduler.jobs.analytics_jobs import register_analytics_jobs
@@ -29,6 +30,7 @@ async def run_scheduler() -> None:
             "misfire_grace_time": 60, # tolerate up to 60 s late start before skipping
         },
     )
+    register_billing_jobs(scheduler)
     register_followup_jobs(scheduler)
     register_broadcast_jobs(scheduler)
     register_analytics_jobs(scheduler)

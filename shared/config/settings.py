@@ -40,6 +40,9 @@ class BotSettings(BaseSettings):
     admin_user_id: int | None = Field(default=None, description="Telegram user_id for DM operator alerts (ADMIN_USER_ID)")
     support_chat_id: int | None = Field(default=None)
 
+    # Runtime
+    runtime_mode: str = Field(default="single", description="'single' = one bot from BOT_TOKEN, 'multi' = load tenant bots from DB")
+
     # Telegram API limits
     max_connections: int = Field(default=40, ge=1, le=100)
     parse_mode: str = Field(default="HTML")
@@ -164,6 +167,51 @@ class RateLimitSettings(BaseSettings):
     max_requests: int = Field(default=30, description="Per user per window")
 
 
+class AIRateLimitSettings(BaseSettings):
+    """Per-user and per-tenant rate limiting for AI (OpenAI) calls."""
+
+    model_config = SettingsConfigDict(env_prefix="AI_RATE_LIMIT_", env_file=".env", extra="ignore")
+
+    user_window_seconds: int = Field(default=60, description="Per-user sliding window (seconds)")
+    user_max_requests: int = Field(default=10, description="Max AI calls per user per window")
+    tenant_daily_limit: int = Field(default=5000, description="Max AI calls per tenant per UTC day (0 = unlimited)")
+
+
+class ClickSettings(BaseSettings):
+    """Click.uz payment gateway configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="CLICK_", env_file=".env", extra="ignore")
+
+    merchant_id: int | None = Field(default=None, description="Click merchant ID")
+    service_id: int | None = Field(default=None, description="Click service ID")
+    secret_key: SecretStr | None = Field(default=None, description="Click secret key for signature verification")
+    merchant_user_id: int | None = Field(default=None, description="Click merchant user ID")
+
+    @property
+    def is_configured(self) -> bool:
+        return all([self.merchant_id, self.service_id, self.secret_key])
+
+
+class PaymeSettings(BaseSettings):
+    """Payme.uz payment gateway configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="PAYME_", env_file=".env", extra="ignore")
+
+    merchant_id: str | None = Field(default=None, description="Payme merchant ID")
+    merchant_key: SecretStr | None = Field(default=None, description="Payme merchant key for auth + signature")
+    test_mode: bool = Field(default=True, description="Use Payme test environment")
+
+    @property
+    def is_configured(self) -> bool:
+        return all([self.merchant_id, self.merchant_key])
+
+    @property
+    def checkout_base_url(self) -> str:
+        if self.test_mode:
+            return "https://test.paycom.uz"
+        return "https://checkout.paycom.uz"
+
+
 class PaymentSettings(BaseSettings):
     """Payment card requisites shown to clients before they transfer money."""
 
@@ -244,20 +292,92 @@ class Settings(BaseSettings):
     sentry: SentrySettings = Field(default_factory=SentrySettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
+    ai_rate_limit: AIRateLimitSettings = Field(default_factory=AIRateLimitSettings)
     business: BusinessSettings = Field(default_factory=BusinessSettings)
     payment: PaymentSettings = Field(default_factory=PaymentSettings)
     cta: CTASettings = Field(default_factory=CTASettings)
+    click: ClickSettings = Field(default_factory=ClickSettings)
+    payme: PaymeSettings = Field(default_factory=PaymeSettings)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
-        """Enforce production-specific requirements."""
+        """Enforce production-specific requirements.
+
+        In production mode, fail-fast on missing or placeholder secrets.
+        In staging mode, emit warnings via stderr (non-blocking).
+        """
+        _PLACEHOLDER_SECRETS = frozenset({
+            "change-me-to-random-64-char-secret",
+            "change-me-random-webhook-secret",
+            "change-me-strong-password",
+            "sk-proj-...",
+        })
+
         if self.app_env == "production":
             if self.app_debug:
-                raise ValueError("DEBUG must be False in production")
+                raise ValueError("APP_DEBUG must be False in production")
             if not self.bot.webhook_url:
                 raise ValueError("BOT_WEBHOOK_URL is required in production")
             if not self.sentry.dsn:
                 raise ValueError("SENTRY_DSN is required in production")
+
+            # Secrets must not be placeholders
+            secret_key = self.app_secret_key.get_secret_value()
+            if secret_key in _PLACEHOLDER_SECRETS:
+                raise ValueError(
+                    "APP_SECRET_KEY is still a placeholder — generate a real secret"
+                )
+            if len(secret_key) < 32:
+                raise ValueError(
+                    "APP_SECRET_KEY must be at least 32 characters in production"
+                )
+            if self.db.password.get_secret_value() in _PLACEHOLDER_SECRETS:
+                raise ValueError(
+                    "POSTGRES_PASSWORD is still a placeholder — set a strong password"
+                )
+            if len(self.db.password.get_secret_value()) < 12:
+                raise ValueError(
+                    "POSTGRES_PASSWORD must be at least 12 characters in production"
+                )
+            if self.openai.api_key.get_secret_value() in _PLACEHOLDER_SECRETS:
+                raise ValueError(
+                    "OPENAI_API_KEY is still a placeholder — set a real API key"
+                )
+            if not self.bot.admin_group_id:
+                raise ValueError(
+                    "BOT_ADMIN_GROUP_ID is required in production"
+                )
+            # Webhook secret is required in production (webhook mode)
+            if not self.bot.webhook_secret:
+                raise ValueError(
+                    "BOT_WEBHOOK_SECRET is required in production for webhook verification"
+                )
+            if self.bot.webhook_secret.get_secret_value() in _PLACEHOLDER_SECRETS:
+                raise ValueError(
+                    "BOT_WEBHOOK_SECRET is still a placeholder — generate a random string"
+                )
+            # Redis should have a password in production
+            if not self.redis.password:
+                import sys
+                print(
+                    "WARNING: REDIS_PASSWORD is empty in production — "
+                    "set a password for Redis auth",
+                    file=sys.stderr,
+                )
+
+        elif self.app_env == "staging":
+            import sys
+            if self.app_secret_key.get_secret_value() in _PLACEHOLDER_SECRETS:
+                print(
+                    "WARNING: APP_SECRET_KEY is a placeholder in staging",
+                    file=sys.stderr,
+                )
+            if self.db.password.get_secret_value() in _PLACEHOLDER_SECRETS:
+                print(
+                    "WARNING: POSTGRES_PASSWORD is a placeholder in staging",
+                    file=sys.stderr,
+                )
+
         return self
 
     @property

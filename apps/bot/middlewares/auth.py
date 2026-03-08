@@ -70,6 +70,24 @@ class AuthMiddleware(BaseMiddleware):
                 data["user_role"] = db_user.role
                 data["db_session"] = session
 
+                # Inject tenant billing plan for usage enforcement
+                _tid = getattr(db_user, "tenant_id", None)
+                if _tid:
+                    try:
+                        from infrastructure.database.models.tenant import TenantModel
+                        from sqlalchemy import select
+
+                        _plan_row = await session.execute(
+                            select(TenantModel.billing_plan).where(
+                                TenantModel.id == _tid,
+                            )
+                        )
+                        data["tenant_plan"] = _plan_row.scalar_one_or_none()
+                    except Exception:
+                        data["tenant_plan"] = None
+                else:
+                    data["tenant_plan"] = None
+
                 # Track last private-chat activity for CTA inactivity feature.
                 # Only record for real human users in private chats; non-fatal.
                 if isinstance(event, (Message, CallbackQuery)):
@@ -80,8 +98,10 @@ class AuthMiddleware(BaseMiddleware):
                     )
                     if _chat and _chat.type == "private":
                         try:
+                            _bot = data.get("bot")
+                            _bot_id = _bot.id if _bot else None
                             await get_redis().zadd(
-                                CacheKeys.cta_user_activity(),
+                                CacheKeys.cta_user_activity(bot_id=_bot_id),
                                 {str(tg_user.id): float(int(time.time()))},
                             )
                         except Exception:

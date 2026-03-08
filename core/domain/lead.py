@@ -37,6 +37,8 @@ class Lead(BaseModel):
     utm_source: str | None = None
     utm_campaign: str | None = None
     assigned_manager_id: int | None = None
+    assigned_at: datetime | None = None
+    assignment_reason: str | None = None
     current_stage: PipelineStage = PipelineStage.NEW
 
     # Package / funnel fields (nullable for non-package leads)
@@ -50,6 +52,20 @@ class Lead(BaseModel):
     closing_confidence: float | None = None
     next_follow_up_at: datetime | None = None
     follow_up_count: int = 0
+
+    # User-facing follow-up (long-term re-engagement)
+    user_followup_stage: int = 0
+    user_followup_at: datetime | None = None
+    user_followup_closed: bool = False
+
+    # Scoring engine signals
+    urgency_signal: str | None = None
+    budget_signal: str | None = None
+    engagement_signal: str | None = None
+    objection_signal: str | None = None
+    scoring_reasons: list[str] | None = None
+    last_scored_at: datetime | None = None
+    operator_attention: bool = False
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

@@ -1,15 +1,16 @@
 """
 Seed database with initial required data:
+- Default tenant (VashPotolok)
 - 10 ceiling category groups
 - Pricing config in Redis cache
 - Default superadmin user
 - District zone modifiers
+- Backfill tenant_id on all existing rows
 """
 from __future__ import annotations
 
 import asyncio
 import os
-from decimal import Decimal
 
 from shared.logging import configure_logging, get_logger
 
@@ -67,6 +68,7 @@ async def seed() -> None:
     from infrastructure.cache.client import connect_redis, get_redis
     from infrastructure.database.session import connect_database, get_session_factory
     from infrastructure.database.models.user import UserModel
+    from shared.config import get_settings
     from shared.constants.enums import UserRole
 
     await connect_database()
@@ -83,27 +85,98 @@ async def seed() -> None:
         await cache.set(f"district_mod:{district}", modifier)
     log.info("seeded_district_modifiers", count=len(DISTRICT_MODIFIERS))
 
+    # ── Seed default tenant ───────────────────────────────────────────────
+    from infrastructure.database.models.tenant import TenantModel
+    from sqlalchemy.dialects.postgresql import insert
+    from sqlalchemy import text
+    from apps.bot.ai.system_prompt import get_default_system_prompt, get_default_knowledge_base
+
+    factory = get_session_factory()
+    async with factory() as session:
+        settings = get_settings()
+
+        default_menu_config = {
+            "buttons": [
+                ["🛒 Zakaz berish", "💰 Narx kalkulyator"],
+                ["📂 Katalog", "🎁 Tayyor paketlar"],
+                ["📦 Buyurtmalarim", "☎️ Operator"],
+                ["🎉 Chegirmalar", "🤖 AI yordam"],
+                ["⭐ Biz haqimizda"],
+            ],
+            "admin_buttons": [["📣 Rassilka"]],
+        }
+
+        default_ai_prompt = get_default_system_prompt()
+        default_kb = get_default_knowledge_base()
+
+        stmt = insert(TenantModel).values(
+            name="VashPotolok",
+            slug="vashpotolok",
+            business_type="ceiling",
+            bot_username="vashpotolokbot",
+            admin_group_id=settings.bot.admin_group_id,
+            main_group_id=settings.bot.main_group_id,
+            admin_user_id=settings.bot.admin_user_id,
+            menu_config=default_menu_config,
+            ai_system_prompt=default_ai_prompt,
+            knowledge_base=default_kb,
+            is_active=True,
+        ).on_conflict_do_update(
+            index_elements=["slug"],
+            set_={
+                "business_type": "ceiling",
+                "admin_group_id": settings.bot.admin_group_id,
+                "main_group_id": settings.bot.main_group_id,
+                "admin_user_id": settings.bot.admin_user_id,
+                "menu_config": default_menu_config,
+                "ai_system_prompt": default_ai_prompt,
+                "knowledge_base": default_kb,
+            },
+        ).returning(TenantModel.id)
+
+        result = await session.execute(stmt)
+        default_tenant_id = result.scalar_one()
+        await session.commit()
+        log.info("seeded_default_tenant", tenant_id=default_tenant_id, name="VashPotolok")
+
     # ── Seed superadmin user ────────────────────────────────────────────
     superadmin_id = os.environ.get("SUPERADMIN_TELEGRAM_ID")
     if superadmin_id:
-        factory = get_session_factory()
         async with factory() as session:
-            from sqlalchemy.dialects.postgresql import insert
-
             stmt = insert(UserModel).values(
                 id=int(superadmin_id),
                 first_name="Superadmin",
                 role=UserRole.SUPERADMIN.value,
                 language_code="uz",
+                tenant_id=default_tenant_id,
             ).on_conflict_do_update(
                 index_elements=["id"],
-                set_={"role": UserRole.SUPERADMIN.value},
+                set_={
+                    "role": UserRole.SUPERADMIN.value,
+                    "tenant_id": default_tenant_id,
+                },
             )
             await session.execute(stmt)
             await session.commit()
             log.info("seeded_superadmin", telegram_id=superadmin_id)
     else:
         log.warning("SUPERADMIN_TELEGRAM_ID not set — skipping superadmin creation")
+
+    # ── Backfill tenant_id on all existing rows ───────────────────────
+    _BACKFILL_TABLES = [
+        "users", "leads", "groups", "admin_groups", "ai_user_memory",
+        "ai_conversations", "broadcasts", "pipeline_stages", "payments",
+        "quotes", "appointments", "audit_logs", "blocked_chats",
+        "group_settings", "group_join_events", "lead_actions", "warranties",
+    ]
+    async with factory() as session:
+        for table in _BACKFILL_TABLES:
+            await session.execute(
+                text(f"UPDATE {table} SET tenant_id = :tid WHERE tenant_id IS NULL"),
+                {"tid": default_tenant_id},
+            )
+        await session.commit()
+        log.info("backfilled_tenant_id", tenant_id=default_tenant_id, tables=len(_BACKFILL_TABLES))
 
     log.info("seeding_complete")
 

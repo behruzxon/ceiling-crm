@@ -67,7 +67,8 @@ async def group_start(message: Message, **data: object) -> None:
     await message.reply("📋 Menyu:", reply_markup=kb)
     # Set Redis key so GroupMenuInjectorMiddleware won't double-inject
     cache = get_redis()
-    key = CacheKeys.grp_menu_shown(message.chat.id, message.from_user.id)
+    _bot_id = message.bot.id if message.bot else None
+    key = CacheKeys.grp_menu_shown(message.chat.id, message.from_user.id, bot_id=_bot_id)
     await cache.set(key, "1", ttl=CacheTTL.GRP_MENU_SHOWN)
 
 
@@ -81,7 +82,8 @@ async def group_menu_cmd(message: Message, **data: object) -> None:
     kb = main_menu_keyboard(locale=locale, selective=True)
     await message.reply("📋 Menyu:", reply_markup=kb)
     cache = get_redis()
-    key = CacheKeys.grp_menu_shown(message.chat.id, message.from_user.id)
+    _bot_id = message.bot.id if message.bot else None
+    key = CacheKeys.grp_menu_shown(message.chat.id, message.from_user.id, bot_id=_bot_id)
     await cache.set(key, "1", ttl=CacheTTL.GRP_MENU_SHOWN)
 
 

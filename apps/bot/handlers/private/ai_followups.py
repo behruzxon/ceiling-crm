@@ -97,11 +97,12 @@ async def _catalog_followup_task(
     from infrastructure.cache.client import get_redis
     from infrastructure.cache.keys import CacheKeys, CacheTTL
 
+    _bot_id = bot.id
     await asyncio.sleep(random.randint(300, 600))
     try:
         redis = get_redis()
         acquired = await redis.set(
-            CacheKeys.catalog_followup_sent(user_id),
+            CacheKeys.catalog_followup_sent(user_id, bot_id=_bot_id),
             "1",
             ttl=CacheTTL.CATALOG_FOLLOWUP_SENT,
             nx=True,
@@ -119,10 +120,10 @@ async def _catalog_followup_task(
 
         current: str | None = await storage.get_state(key=state_key)  # type: ignore[union-attr]
         if current in _skip_states:
-            await redis.delete(CacheKeys.catalog_followup_sent(user_id))
+            await redis.delete(CacheKeys.catalog_followup_sent(user_id, bot_id=_bot_id))
             return
         if current is not None and any(g in current for g in _CATALOG_FOLLOWUP_SKIP_GROUPS):
-            await redis.delete(CacheKeys.catalog_followup_sent(user_id))
+            await redis.delete(CacheKeys.catalog_followup_sent(user_id, bot_id=_bot_id))
             return
 
         await storage.set_state(  # type: ignore[union-attr]
@@ -164,7 +165,7 @@ def _schedule_catalog_followup(
 
 # ── AI interaction follow-up reminders ──────────────────────────────────────
 
-async def _refresh_ai_followup_nonce(user_id: int) -> str:
+async def _refresh_ai_followup_nonce(user_id: int, *, bot_id: int | None = None) -> str:
     """Store a fresh random nonce in Redis and return it."""
     from infrastructure.cache.client import get_redis
     from infrastructure.cache.keys import CacheKeys, CacheTTL
@@ -173,18 +174,18 @@ async def _refresh_ai_followup_nonce(user_id: int) -> str:
     try:
         redis = get_redis()
         await redis.set(
-            CacheKeys.ai_followup_nonce(user_id),
+            CacheKeys.ai_followup_nonce(user_id, bot_id=bot_id),
             nonce,
             ttl=CacheTTL.AI_FOLLOWUP_NONCE,
         )
         await redis.set(
-            CacheKeys.ai_last_interaction(user_id),
+            CacheKeys.ai_last_interaction(user_id, bot_id=bot_id),
             str(int(time.time())),
             ttl=CacheTTL.AI_LAST_INTERACTION,
         )
-        existing = (await redis.get_json(CacheKeys.ai_followup_state(user_id))) or {}
+        existing = (await redis.get_json(CacheKeys.ai_followup_state(user_id, bot_id=bot_id))) or {}
         await redis.set_json(
-            CacheKeys.ai_followup_state(user_id),
+            CacheKeys.ai_followup_state(user_id, bot_id=bot_id),
             {
                 "first_sent": False,
                 "second_sent": False,
@@ -209,6 +210,8 @@ async def _ai_followup_task(
     from infrastructure.cache.client import get_redis
     from infrastructure.cache.keys import CacheKeys, CacheTTL
 
+    _bot_id = bot.id
+
     _skip_states = frozenset({
         AiSupportStates.waiting_for_phone.state,
         AiSupportStates.waiting_for_district.state,
@@ -220,13 +223,13 @@ async def _ai_followup_task(
     async def _cancelled() -> bool:
         try:
             redis = get_redis()
-            stored = await redis.get(CacheKeys.ai_followup_nonce(user_id))
+            stored = await redis.get(CacheKeys.ai_followup_nonce(user_id, bot_id=_bot_id))
             if stored != nonce:
                 return True
             current = await storage.get_state(key=state_key)  # type: ignore[union-attr]
             if current in _skip_states:
                 return True
-            fu_state = (await redis.get_json(CacheKeys.ai_followup_state(user_id))) or {}
+            fu_state = (await redis.get_json(CacheKeys.ai_followup_state(user_id, bot_id=_bot_id))) or {}
             return bool(fu_state.get("lead_created"))
         except Exception:
             return True
@@ -234,10 +237,10 @@ async def _ai_followup_task(
     async def _mark_sent(key: str) -> None:
         try:
             redis = get_redis()
-            fu_state = (await redis.get_json(CacheKeys.ai_followup_state(user_id))) or {}
+            fu_state = (await redis.get_json(CacheKeys.ai_followup_state(user_id, bot_id=_bot_id))) or {}
             fu_state[key] = True
             await redis.set_json(
-                CacheKeys.ai_followup_state(user_id),
+                CacheKeys.ai_followup_state(user_id, bot_id=_bot_id),
                 fu_state,
                 ttl=CacheTTL.AI_FOLLOWUP_STATE,
             )

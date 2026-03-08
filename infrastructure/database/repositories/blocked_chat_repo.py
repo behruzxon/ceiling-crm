@@ -9,13 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.repositories.blocked_chat_repo import AbstractBlockedChatRepository
 from infrastructure.database.models.blocked_chat import BlockedChatModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 
 
-class PostgresBlockedChatRepository(AbstractBlockedChatRepository):
+class PostgresBlockedChatRepository(TenantScopedRepository, AbstractBlockedChatRepository):
     """Concrete SQLAlchemy / PostgreSQL blocked-chat repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     # ── Read ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ class PostgresBlockedChatRepository(AbstractBlockedChatRepository):
         stmt = sa.select(BlockedChatModel.chat_id).where(
             BlockedChatModel.chat_id.in_(chat_ids)
         )
+        stmt = self._apply_tenant_filter(stmt, BlockedChatModel)
         result = await self._session.execute(stmt)
         blocked: frozenset[int] = frozenset(result.scalars().all())
         return [cid for cid in chat_ids if cid not in blocked]

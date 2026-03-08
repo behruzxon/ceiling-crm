@@ -34,13 +34,17 @@ from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
+from apps.bot.handlers.admin.billing import router as billing_router
+from apps.bot.handlers.admin.bot_manager import router as bot_manager_router
 from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
+from apps.bot.handlers.admin.analytics import router as analytics_router
 from apps.bot.handlers.admin.dashboard import router as dashboard_router
 from apps.bot.handlers.admin.lead_status import router as lead_status_router
 from apps.bot.handlers.admin.leads import router as admin_leads_router
 from apps.bot.handlers.admin.media import router as media_router
 from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
+from apps.bot.handlers.admin.radar import router as radar_router
 from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.stats import router as stats_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
@@ -50,6 +54,8 @@ from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_
 from apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
+from apps.bot.handlers.callbacks.operator_callbacks import router as operator_callbacks_router
+from apps.bot.handlers.callbacks.sales_closer_callbacks import router as sales_closer_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
@@ -69,6 +75,10 @@ from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.promotions import router as promotions_router
+from apps.bot.handlers.private.menu_builder import router as menu_builder_router
+from apps.bot.handlers.private.onboarding import router as onboarding_router
+from apps.bot.handlers.private.owner_dashboard import router as owner_dashboard_router
+from apps.bot.handlers.private.knowledge import router as knowledge_router
 from apps.bot.handlers.private.support import router as support_router
 from apps.bot.tasks import daily_report, inactive_cta
 from apps.bot.middlewares.audit import AuditMiddleware
@@ -77,8 +87,10 @@ from apps.bot.middlewares.group_context import GroupContextMiddleware
 from apps.bot.middlewares.group_menu_injector import GroupMenuInjectorMiddleware
 from apps.bot.middlewares.locale import LocaleMiddleware
 from apps.bot.middlewares.rate_limit import RateLimitMiddleware
+from apps.bot.middlewares.tenant_context import TenantContextMiddleware
+from core.services.bot_registry import get_bot_registry
 from infrastructure.cache.client import connect_redis, disconnect_redis, get_sessions_redis
-from infrastructure.database.session import connect_database, disconnect_database
+from infrastructure.database.session import connect_database, disconnect_database, get_session_factory
 from infrastructure.monitoring.prometheus import setup_prometheus
 from shared.config import get_settings
 from shared.logging import configure_logging, get_logger
@@ -130,6 +142,8 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Outer middlewares (run for every update) ──────────────────────────
     # Order matters: each wraps the next.
     dp.update.outer_middleware(AuthMiddleware())
+    if get_settings().bot.runtime_mode == "multi":
+        dp.update.outer_middleware(TenantContextMiddleware())
     dp.update.outer_middleware(LocaleMiddleware())
     dp.update.outer_middleware(GroupContextMiddleware())
     dp.update.outer_middleware(RateLimitMiddleware())
@@ -142,12 +156,16 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         dashboard_router,
         admin_leads_router,
         pipeline_router,
+        radar_router,
+        analytics_router,
         broadcasts_router,
         scheduler_router,
         operator_stats_router,
         reports_router,
         media_router,
         stats_router,          # /stats + stats:period:* callbacks
+        bot_manager_router,    # /bots + botmgr:* — SUPERADMIN bot management
+        billing_router,        # /tenants + billing:* — SUPERADMIN billing management
     )
 
     # ── Callbacks router ───────────────────────────────────────────────────
@@ -157,6 +175,8 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         kanban_callbacks_router,    # kanban:* — visual pipeline management
         lead_status_router,         # lead:{id}:status:{status} — quick admin status updates
         cta_callbacks_router,       # cta:* — discount / order / pricing / operator / catalog
+        sales_closer_callbacks_router,  # closer:* — AI sales closer CTA buttons
+        operator_callbacks_router,     # op:* — on-demand operator assist suggestions
         pipeline_callbacks_router,
         payment_callbacks_router,
         package_callbacks_router,   # pkg:admin:* inline buttons from notifications
@@ -192,6 +212,10 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         order_router,        # must precede lead_capture_router
         operator_router,          # must precede ai_support_router
         measurement_lead_router,  # FSM for bepul o'lchov — before ai_support catch-all
+        onboarding_router,        # SaaS tenant onboarding wizard — before catch-all
+        menu_builder_router,      # SaaS menu builder — before catch-all
+        owner_dashboard_router,   # SaaS owner CRM dashboard — before catch-all
+        knowledge_router,         # SaaS AI knowledge base manager — before catch-all
         lead_capture_router,
         ai_support_router,  # free-text catch-all — commands already excluded by guard
     )
@@ -287,6 +311,112 @@ async def on_shutdown(bot: Bot) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Multi-bot lifecycle (runtime_mode = "multi")
+# ─────────────────────────────────────────────────────────────────────────────
+
+_multi_infra_connected = False  # ensure DB/Redis connect only once across bots
+
+
+async def on_startup_multi(bot: Bot) -> None:
+    """Called once per bot when multi-bot runtime starts."""
+    global _multi_infra_connected
+
+    if not _multi_infra_connected:
+        await connect_database()
+        await connect_redis()
+        _multi_infra_connected = True
+
+    await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeDefault())
+
+    settings = get_settings()
+    if settings.bot.webhook_url:
+        await bot.set_webhook(
+            url=f"{settings.bot.webhook_url}/webhook/{bot.id}",
+            secret_token=settings.bot.webhook_secret.get_secret_value()
+            if settings.bot.webhook_secret
+            else None,
+            drop_pending_updates=True,
+            max_connections=settings.bot.max_connections,
+        )
+        log.info("multi_webhook_registered", bot_id=bot.id, url=f"{settings.bot.webhook_url}/webhook/{bot.id}")
+    else:
+        await bot.delete_webhook(drop_pending_updates=True)
+
+    registry = get_bot_registry()
+    config = registry.get_config_by_bot_id(bot.id)
+    tenant_label = config.bot_username if config else bot.id
+    log.info("multi_bot_started", bot_id=bot.id, tenant=tenant_label)
+
+    # Background tasks run on the first registered bot only (Phase 1)
+    bots = registry.all_bots()
+    if bots and bots[0].id == bot.id:
+        daily_report.start(bot)
+        inactive_cta.start(bot)
+
+
+async def on_shutdown_multi(bot: Bot) -> None:
+    """Called once per bot during multi-bot shutdown."""
+    registry = get_bot_registry()
+    bots = registry.all_bots()
+
+    # Stop background tasks (only first bot started them)
+    if bots and bots[0].id == bot.id:
+        daily_report.stop()
+        inactive_cta.stop()
+
+    await bot.session.close()
+
+    # Disconnect infra on the last bot shutdown
+    if bots and bots[-1].id == bot.id:
+        await disconnect_database()
+        await disconnect_redis()
+        log.info("multi_bot_shutdown_complete")
+
+
+async def run_polling_multi() -> None:
+    """
+    Multi-bot polling mode.
+
+    Loads all active tenant bots from the database and starts polling
+    for all of them on a shared Dispatcher.
+    """
+    # Connect DB early to load tenant bots
+    await connect_database()
+
+    registry = get_bot_registry()
+    factory = get_session_factory()
+    async with factory() as session:
+        await registry.load_from_db(session)
+
+    bots = registry.all_bots()
+    if not bots:
+        log.error("no_active_tenant_bots_found")
+        await disconnect_database()
+        return
+
+    storage = await create_storage()
+    dp = build_dispatcher(storage)
+
+    dp.startup.register(on_startup_multi)
+    dp.shutdown.register(on_shutdown_multi)
+
+    log.info("starting_multi_bot_polling", bot_count=len(bots))
+    try:
+        await dp.start_polling(
+            *bots,
+            allowed_updates=[
+                "message",
+                "callback_query",
+                "chat_member",
+                "my_chat_member",
+            ],
+            handle_signals=True,
+        )
+    finally:
+        log.info("multi_bot_polling_stopped")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Application factory
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -320,13 +450,35 @@ async def run_polling() -> None:
     """
     Run the bot in long-polling mode.
     Used for local development.  Not suitable for production.
+
+    When ``BOT_RUNTIME_MODE=multi``, loads all tenant bots from the
+    database and polls for all of them on a shared Dispatcher.
     """
+    settings = get_settings()
+    if settings.bot.runtime_mode == "multi":
+        await run_polling_multi()
+        return
+
+    # ── Single-bot mode (default) ────────────────────────────────────────
     bot = create_bot()
     storage = await create_storage()
     dp = build_dispatcher(storage)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
+
+    # Start background HTTP server for payment webhooks (if any provider configured)
+    webhook_runner = None
+    if settings.click.is_configured or settings.payme.is_configured:
+        webhook_app = web.Application()
+        _register_payment_webhooks(webhook_app, settings)
+        if settings.prometheus_enabled:
+            setup_prometheus(webhook_app)
+        webhook_runner = web.AppRunner(webhook_app)
+        await webhook_runner.setup()
+        site = web.TCPSite(webhook_runner, "0.0.0.0", 8080)
+        await site.start()
+        log.info("payment_webhook_server_started", port=8080)
 
     log.info("starting_polling")
     try:
@@ -341,6 +493,8 @@ async def run_polling() -> None:
             handle_signals=True,
         )
     finally:
+        if webhook_runner:
+            await webhook_runner.cleanup()
         log.info("polling_stopped")
 
 
@@ -355,27 +509,74 @@ async def create_bot_async() -> tuple[Bot, Dispatcher]:
 
 async def build_web_app() -> web.Application:
     settings = get_settings()
-
-    bot, dp = await create_bot_async()
-
     app = web.Application()
 
-    SimpleRequestHandler(
-        dispatcher=dp,
-        bot=bot,
-        secret_token=(
+    if settings.bot.runtime_mode == "multi":
+        # ── Multi-bot webhook ────────────────────────────────────────────
+        await connect_database()
+
+        registry = get_bot_registry()
+        factory = get_session_factory()
+        async with factory() as session:
+            await registry.load_from_db(session)
+
+        storage = await create_storage()
+        dp = build_dispatcher(storage)
+        dp.startup.register(on_startup_multi)
+        dp.shutdown.register(on_shutdown_multi)
+
+        secret = (
             settings.bot.webhook_secret.get_secret_value()
             if settings.bot.webhook_secret
             else None
-        ),
-    ).register(app, path="/webhook")
+        )
 
-    setup_application(app, dp, bot=bot)
+        for bot in registry.all_bots():
+            SimpleRequestHandler(
+                dispatcher=dp,
+                bot=bot,
+                secret_token=secret,
+            ).register(app, path=f"/webhook/{bot.id}")
+
+        setup_application(app, dp, bot=registry.all_bots()[0])
+        log.info("multi_bot_webhook_configured", bot_count=registry.bot_count)
+    else:
+        # ── Single-bot webhook (default) ─────────────────────────────────
+        bot, dp = await create_bot_async()
+
+        SimpleRequestHandler(
+            dispatcher=dp,
+            bot=bot,
+            secret_token=(
+                settings.bot.webhook_secret.get_secret_value()
+                if settings.bot.webhook_secret
+                else None
+            ),
+        ).register(app, path="/webhook")
+
+        setup_application(app, dp, bot=bot)
 
     if settings.prometheus_enabled:
         setup_prometheus(app)
 
+    # ── Payment provider webhooks ─────────────────────────────────────
+    _register_payment_webhooks(app, settings)
+
     return app
+
+
+def _register_payment_webhooks(app: web.Application, settings: Any = None) -> None:
+    """Conditionally register Click.uz and Payme.uz webhook routes."""
+    if settings is None:
+        settings = get_settings()
+    if settings.click.is_configured:
+        from apps.bot.webhooks.click_webhook import setup_click_routes
+        setup_click_routes(app)
+        log.info("click_webhook_routes_registered")
+    if settings.payme.is_configured:
+        from apps.bot.webhooks.payme_webhook import setup_payme_routes
+        setup_payme_routes(app)
+        log.info("payme_webhook_routes_registered")
 
 
 def run_webhook() -> None:
@@ -403,6 +604,7 @@ def main() -> None:
         "bot_initialising",
         app_env=settings.app_env,
         mode="webhook" if settings.bot.webhook_url else "polling",
+        runtime_mode=settings.bot.runtime_mode,
     )
 
     # Step 2: Initialise Sentry

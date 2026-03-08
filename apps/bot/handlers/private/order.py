@@ -47,7 +47,6 @@ from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -609,13 +608,11 @@ async def _notify_admin(
     location: str | None,
 ) -> None:
     """
-    Send a formatted new-order alert to the admin group (BOT_ADMIN_GROUP_ID)
-    and, if configured, also to the admin DM (BOT_ADMIN_USER_ID).
+    Send a formatted new-order alert to the admin group (BOT_ADMIN_GROUP_ID).
     Non-fatal: any exception is logged and swallowed so the user's
     confirmation flow is never affected.
     """
     settings = get_settings()
-    admin_user_id = settings.bot.admin_user_id
     admin_group_id = settings.bot.admin_group_id
 
     area_line = f"📐 Maydon:   <b>{area} m²</b>\n" if area is not None else ""
@@ -653,19 +650,6 @@ async def _notify_admin(
     else:
         log.warning("admin_group_id_not_set_skipping_order_notify", lead_id=lead_id)
 
-    # ── Admin DM (secondary, optional) ───────────────────────────────────
-    if admin_user_id:
-        try:
-            await bot.send_message(chat_id=admin_user_id, text=text)
-            log.info("admin_dm_notified", lead_id=lead_id, admin_user_id=admin_user_id)
-        except TelegramForbiddenError:
-            log.warning(
-                "admin_notify_forbidden_admin_must_start_bot",
-                lead_id=lead_id,
-                admin_user_id=admin_user_id,
-            )
-        except Exception:
-            log.exception("admin_dm_notify_failed", lead_id=lead_id)
 
 
 # ─── Persistence + confirmation ──────────────────────────────────────────────────

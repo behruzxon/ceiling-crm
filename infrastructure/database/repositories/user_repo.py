@@ -10,14 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.domain.user import User
 from core.repositories.user_repo import AbstractUserRepository
 from infrastructure.database.models.user import UserModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 from shared.constants.enums import UserRole
 
 
-class PostgresUserRepository(AbstractUserRepository):
+class PostgresUserRepository(TenantScopedRepository, AbstractUserRepository):
     """Concrete SQLAlchemy/PostgreSQL user repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     def _to_domain(self, model: UserModel) -> User:
         """Convert ORM model to immutable domain object."""
@@ -34,16 +35,22 @@ class PostgresUserRepository(AbstractUserRepository):
             created_at=model.created_at,
             updated_at=model.updated_at,
             last_seen_at=model.last_seen_at,
+            tenant_id=model.tenant_id,
         )
 
     async def get_by_id(self, id: int) -> User | None:
         """SELECT user by primary key (Telegram user_id)."""
         result = await self._session.get(UserModel, id)
-        return self._to_domain(result) if result else None
+        if result is None:
+            return None
+        if self._tenant_id is not None and result.tenant_id != self._tenant_id:
+            return None
+        return self._to_domain(result)
 
     async def get_by_username(self, username: str) -> User | None:
         """SELECT user by Telegram username."""
         stmt = select(UserModel).where(UserModel.username == username)
+        stmt = self._apply_tenant_filter(stmt, UserModel)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
@@ -71,6 +78,7 @@ class PostgresUserRepository(AbstractUserRepository):
             source=user.source,
             is_blocked=user.is_blocked,
             last_seen_at=datetime.now(timezone.utc),
+            tenant_id=self._tenant_id,
         ).on_conflict_do_update(
             index_elements=["id"],
             set_={
@@ -94,6 +102,7 @@ class PostgresUserRepository(AbstractUserRepository):
             .where(UserModel.role == role, UserModel.is_blocked.is_(False))
             .order_by(UserModel.first_name)
         )
+        stmt = self._apply_tenant_filter(stmt, UserModel)
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
 
@@ -102,6 +111,7 @@ class PostgresUserRepository(AbstractUserRepository):
         stmt = select(func.count()).select_from(UserModel).where(
             UserModel.is_blocked.is_(False)
         )
+        stmt = self._apply_tenant_filter(stmt, UserModel)
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
@@ -118,6 +128,7 @@ class PostgresUserRepository(AbstractUserRepository):
             source=entity.source,
             is_blocked=entity.is_blocked,
         )
+        self._stamp_tenant_id(model)
         self._session.add(model)
         await self._session.flush()
         await self._session.refresh(model)
@@ -141,6 +152,8 @@ class PostgresUserRepository(AbstractUserRepository):
             )
             .returning(UserModel)
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(UserModel.tenant_id == self._tenant_id)
         result = await self._session.execute(stmt)
         model = result.scalar_one()
         return self._to_domain(model)
@@ -152,5 +165,7 @@ class PostgresUserRepository(AbstractUserRepository):
             .where(UserModel.id == id)
             .values(is_blocked=True, updated_at=datetime.now(timezone.utc))
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(UserModel.tenant_id == self._tenant_id)
         result = await self._session.execute(stmt)
         return result.rowcount > 0

@@ -20,3 +20,12 @@ class AiMemoryModel(Base):
         server_default=sa.func.now(),
         onupdate=sa.func.now(),
     )
+
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
+    __table_args__ = (
+        sa.Index("ix_ai_user_memory_tenant_id", "tenant_id"),
+    )

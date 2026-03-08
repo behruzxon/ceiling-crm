@@ -15,7 +15,6 @@ Public API
 from __future__ import annotations
 
 from core.domain.lead import Lead
-from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.database.repositories.audit_log_repo import PostgresAuditLogRepository
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
@@ -106,7 +105,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_new_lead_error", lead_id=lead.id)
@@ -138,7 +137,7 @@ class LeadNotificationService:
                     default=DefaultBotProperties(parse_mode="HTML"),
                 )
                 try:
-                    await self._send_to_groups_and_dm(bot, text, keyboard)
+                    await self._send_to_admin_group(bot, text, keyboard)
 
                     # Dedupe marker + audit trail (same session — atomic)
                     await lead_repo.update_last_action(lead_id, "hot_alert_sent")
@@ -199,35 +198,16 @@ class LeadNotificationService:
             f"/lead_{lead.id}"
         )
 
-    async def _send_to_groups_and_dm(self, bot: object, text: str, keyboard: object) -> None:
-        """Deliver *text*+*keyboard* to admin DM and all tracked admin groups."""
-        # Admin DM
-        try:
-            await bot.send_message(self._admin_user_id, text, reply_markup=keyboard)  # type: ignore[union-attr]
-        except Exception as exc:
-            log.warning("notify_admin_dm_failed", error=str(exc))
-
-        # Admin groups
-        try:
-            factory = get_session_factory()
-            async with factory() as session:
-                group_ids = await PostgresAdminGroupRepository(session).list_all_chat_ids()
-        except Exception:
-            log.exception("notify_get_groups_error")
-            return
-
+    async def _send_to_admin_group(self, bot: object, text: str, keyboard: object) -> None:
+        """Deliver *text*+*keyboard* to the configured admin group only."""
         admin_group_id = get_settings().bot.admin_group_id
-        for gid in group_ids:
-            # Hard whitelist: only send to the designated admin group.
-            # Prevents the main customer group (BOT_MAIN_GROUP_ID) from
-            # receiving lead cards even if it was previously recorded.
-            if gid != admin_group_id:
-                log.warning("notify_skip_non_admin_group", chat_id=gid)
-                continue
-            try:
-                await bot.send_message(gid, text, reply_markup=keyboard)  # type: ignore[union-attr]
-            except Exception as exc:
-                log.warning("notify_group_failed", chat_id=gid, error=str(exc))
+        if not admin_group_id:
+            log.warning("admin_group_id_not_configured")
+            return
+        try:
+            await bot.send_message(admin_group_id, text, reply_markup=keyboard)  # type: ignore[union-attr]
+        except Exception as exc:
+            log.warning("notify_group_failed", chat_id=admin_group_id, error=str(exc))
 
     async def notify_measurement_lead(
         self,
@@ -269,7 +249,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_measurement_lead_error", lead_id=lead.id)
@@ -286,7 +266,7 @@ class LeadNotificationService:
         chat_type: str,
         chat_id: int,
     ) -> None:
-        """Send a draft phone-capture alert to admin DM only. Never raises."""
+        """Send a draft phone-capture alert to admin group. Never raises."""
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
 
@@ -306,7 +286,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await bot.send_message(self._admin_user_id, text)
+            await self._send_to_admin_group(bot, text, None)
         except Exception as exc:
             log.warning("notify_draft_lead_failed", error=str(exc))
         finally:
@@ -566,7 +546,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
         except Exception as exc:
             log.warning("notify_ai_lead_failed", error=str(exc))
         finally:
@@ -601,7 +581,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, None)
+            await self._send_to_admin_group(bot, text, None)
         except Exception as exc:
             log.warning("notify_lead_interest_failed", error=str(exc))
         finally:

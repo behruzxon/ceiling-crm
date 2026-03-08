@@ -472,7 +472,7 @@ async def cb_kanban_assign_mgr(callback: CallbackQuery, **data: object) -> None:
             action_repo = get_lead_action_repo(session)
             audit_repo  = get_audit_log_repo(session)
 
-            lead = await lead_repo.assign_manager(lead_id, mgr_id)
+            lead = await lead_repo.assign_manager(lead_id, mgr_id, reason="kanban_manual")
 
             await action_repo.insert(
                 lead_id=lead_id,

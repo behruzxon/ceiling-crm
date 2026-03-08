@@ -25,26 +25,26 @@ log = get_logger(__name__)
 
 # ── Lead scoring (0-100, Redis-backed) ───────────────────────────────────────
 
-async def _get_lead_score(user_id: int) -> int:
+async def _get_lead_score(user_id: int, *, bot_id: int | None = None) -> int:
     """Return current score from Redis, 0 if not set."""
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
-        raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
+        raw = await get_redis().get(CacheKeys.ai_lead_score(user_id, bot_id=bot_id))
         return int(raw) if raw else 0
     except Exception:
         return 0
 
 
-async def _add_lead_score(user_id: int, delta: int) -> int:
+async def _add_lead_score(user_id: int, delta: int, *, bot_id: int | None = None) -> int:
     """Increment score by delta, clamp to [0, 100], persist 30-day TTL. Returns new score."""
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
-        current = await _get_lead_score(user_id)
+        current = await _get_lead_score(user_id, bot_id=bot_id)
         new_score = max(0, min(100, current + delta))
         await get_redis().set(
-            CacheKeys.ai_lead_score(user_id), str(new_score), ttl=CacheTTL.AI_LEAD_SCORE
+            CacheKeys.ai_lead_score(user_id, bot_id=bot_id), str(new_score), ttl=CacheTTL.AI_LEAD_SCORE
         )
         return new_score
     except Exception:
@@ -53,9 +53,9 @@ async def _add_lead_score(user_id: int, delta: int) -> int:
 
 def classify_score(score: int) -> str:
     """Map 0-100 numeric score to 'hot' | 'warm' | 'cold'."""
-    if score >= 60:
+    if score >= 70:
         return "hot"
-    if score >= 30:
+    if score >= 35:
         return "warm"
     return "cold"
 
@@ -224,12 +224,14 @@ async def _handle_objection(
     # Lazy imports to avoid circular deps
     from apps.bot.handlers.private.ai_memory import _load_ai_memory, _save_ai_memory
 
+    _bot_id = message.bot.id if message.bot else None
+
     # Resolve name + load memory for dedup check
     fsm_data = await state.get_data()
     name: str | None = fsm_data.get("user_name") or None
     _mem: dict[str, Any] = {}
     if user_id:
-        _mem = await _load_ai_memory(user_id)
+        _mem = await _load_ai_memory(user_id, bot_id=_bot_id)
         if not name:
             name = _mem.get("name") or None
 
@@ -241,7 +243,7 @@ async def _handle_objection(
         ):
             delta = _OBJECTION_SCORE_DELTAS.get(obj_type, 0)
             if delta:
-                asyncio.create_task(_add_lead_score(user_id, delta))
+                asyncio.create_task(_add_lead_score(user_id, delta, bot_id=_bot_id))
             return
 
     # ── Negotiation engine: replace canned reply for price objections ──
@@ -253,7 +255,7 @@ async def _handle_objection(
                 objection_type=obj_type,
                 area_m2=_mem.get("area_m2"),
                 design_type=_mem.get("design_type"),
-                score=await _get_lead_score(user_id),
+                score=await _get_lead_score(user_id, bot_id=_bot_id),
                 buyer_type=_mem.get("buyer_type"),
                 closing_confidence=None,
                 phone_captured=bool(_mem.get("phone_captured")),
@@ -276,7 +278,7 @@ async def _handle_objection(
     delta = _OBJECTION_SCORE_DELTAS.get(obj_type, 0)
     if user_id:
         if delta:
-            asyncio.create_task(_add_lead_score(user_id, delta))
+            asyncio.create_task(_add_lead_score(user_id, delta, bot_id=_bot_id))
         # Persist objection type + negotiation state to memory
         _mem["last_objection"] = obj_type
         _mem["last_objection_at"] = int(time.time())
@@ -285,7 +287,7 @@ async def _handle_objection(
             _mem["last_negotiation_at"] = int(time.time())
             if negotiation_result.escalate_to_manager:
                 _mem["negotiation_escalated"] = True
-        asyncio.create_task(_save_ai_memory(user_id, _mem))
+        asyncio.create_task(_save_ai_memory(user_id, _mem, bot_id=_bot_id))
         # Extend follow-up by 24h on delay objection
         if obj_type == "delay":
             asyncio.create_task(_extend_followup_on_delay(user_id))

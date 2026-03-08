@@ -62,7 +62,7 @@ async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
 
     # ── C3-3: Link blocking ───────────────────────────────────────────────
     if settings.link_block_enabled and has_link(message):
-        count = await incr_link_violations(chat_id, user_id)
+        count = await incr_link_violations(chat_id, user_id, bot_id=bot.id)
         await try_delete(message)
 
         if count >= 2:

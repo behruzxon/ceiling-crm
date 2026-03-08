@@ -35,6 +35,11 @@ class LeadActionModel(Base):
         nullable=False,
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         # Primary query pattern: "all actions by operator in time window"
         sa.Index("ix_lead_actions_actor_created", "actor_user_id", "created_at"),
@@ -42,4 +47,5 @@ class LeadActionModel(Base):
         sa.Index("ix_lead_actions_lead_created", "lead_id", "created_at"),
         # Broad time-range scans / retention cleanup
         sa.Index("ix_lead_actions_created", "created_at"),
+        sa.Index("ix_lead_actions_tenant_id", "tenant_id"),
     )

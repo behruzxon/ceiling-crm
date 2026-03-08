@@ -35,10 +35,28 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         ...
 
     @abstractmethod
-    async def assign_manager(self, lead_id: int, manager_id: int) -> Lead: ...
+    async def assign_manager(
+        self, lead_id: int, manager_id: int, *, reason: str | None = None,
+    ) -> Lead: ...
 
     @abstractmethod
-    async def get_pipeline_counts(self) -> dict[PipelineStage, int]:
+    async def unassign_manager(self, lead_id: int) -> Lead: ...
+
+    @abstractmethod
+    async def get_assigned_leads(
+        self,
+        manager_id: int,
+        *,
+        tenant_id: int | None = None,
+        limit: int = 20,
+    ) -> list[Lead]:
+        """Return leads assigned to a specific manager, ordered by score DESC."""
+        ...
+
+    @abstractmethod
+    async def get_pipeline_counts(
+        self, *, tenant_id: int | None = None,
+    ) -> dict[PipelineStage, int]:
         """Return count of leads per pipeline stage."""
         ...
 
@@ -51,6 +69,8 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         district: str | None = None,
         created_after: datetime | None = None,
         created_before: datetime | None = None,
+        lead_temperature: str | None = None,
+        tenant_id: int | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Lead]: ...
@@ -83,7 +103,9 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         ...
 
     @abstractmethod
-    async def get_counts_by_stage(self) -> dict[str, int]:
+    async def get_counts_by_stage(
+        self, *, tenant_id: int | None = None,
+    ) -> dict[str, int]:
         """Return lead counts grouped into 5 kanban buckets.
 
         Buckets: new | hot | measurement | won | lost
@@ -97,6 +119,8 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         kanban_stage: str,
         limit: int = 10,
         offset: int = 0,
+        *,
+        tenant_id: int | None = None,
     ) -> list[Lead]:
         """Return leads for a kanban bucket, ordered newest-first.
 
@@ -123,6 +147,28 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         ...
 
     @abstractmethod
+    async def get_leads_for_analytics(
+        self,
+        days: int = 30,
+        limit: int = 500,
+    ) -> list[Lead]:
+        """Return ALL leads (including terminal) created within *days*, newest first.
+
+        Used by the Sales Analytics engine to compute aggregate metrics.
+        Includes won/lost leads for conversion rate calculations.
+        """
+        ...
+
+    @abstractmethod
+    async def get_active_leads(self, limit: int = 50) -> list[Lead]:
+        """Return non-terminal leads ordered by updated_at desc.
+
+        Terminal statuses (deal, lost) are excluded.
+        Used by the Deal Radar to rank active pipeline leads.
+        """
+        ...
+
+    @abstractmethod
     async def get_due_followups(
         self,
         now: datetime,
@@ -133,4 +179,89 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         Terminal states (deal / lost / won / completed) are skipped automatically.
         Results are ordered by next_follow_up_at ascending.
         """
+        ...
+
+    @abstractmethod
+    async def get_due_user_followups(
+        self,
+        now: datetime,
+        limit: int = 50,
+    ) -> list[Lead]:
+        """Return leads due for user-facing follow-up messages.
+
+        Conditions: user_followup_at <= now, stage < 3, not closed, not terminal.
+        """
+        ...
+
+    @abstractmethod
+    async def update_user_followup(
+        self,
+        lead_id: int,
+        *,
+        user_followup_stage: int | None = None,
+        user_followup_at: object = _UNSET,
+        user_followup_closed: bool | None = None,
+    ) -> None:
+        """Update user follow-up tracking columns."""
+        ...
+
+    @abstractmethod
+    async def update_scoring_engine(
+        self,
+        lead_id: int,
+        *,
+        score: int | None = None,
+        lead_temperature: str | None = None,
+        closing_confidence: float | None = None,
+        urgency_signal: str | None = None,
+        budget_signal: str | None = None,
+        engagement_signal: str | None = None,
+        objection_signal: str | None = None,
+        scoring_reasons: list[str] | None = None,
+        operator_attention: bool | None = None,
+        next_follow_up_at: object = _UNSET,
+        increment_followup_count: bool = False,
+    ) -> None:
+        """Persist all scoring engine output columns atomically."""
+        ...
+
+    @abstractmethod
+    async def get_hot_leads(
+        self,
+        *,
+        tenant_id: int | None = None,
+        limit: int = 10,
+    ) -> list[Lead]:
+        """Return hot leads (temperature='hot' OR score>=60), ordered by score DESC."""
+        ...
+
+    @abstractmethod
+    async def get_attention_leads(
+        self,
+        *,
+        tenant_id: int | None = None,
+        limit: int = 10,
+    ) -> list[Lead]:
+        """Return leads with operator_attention=TRUE, ordered by score DESC."""
+        ...
+
+    @abstractmethod
+    async def get_temperature_counts(
+        self, *, tenant_id: int | None = None,
+    ) -> dict[str, int]:
+        """Return lead counts grouped by lead_temperature (hot/warm/cold)."""
+        ...
+
+    @abstractmethod
+    async def get_recent_leads(
+        self, *, tenant_id: int | None = None, limit: int = 10,
+    ) -> list[Lead]:
+        """Return the most recent leads, ordered by created_at DESC."""
+        ...
+
+    @abstractmethod
+    async def get_unassigned_leads(
+        self, *, tenant_id: int | None = None, limit: int = 10,
+    ) -> list[Lead]:
+        """Return leads with no assigned_manager_id."""
         ...

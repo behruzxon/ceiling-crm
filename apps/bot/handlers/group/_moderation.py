@@ -107,12 +107,12 @@ async def dm_log(bot: Bot, text: str) -> None:
 _link_violations: dict[tuple[int, int], tuple[int, float]] = {}
 
 
-async def incr_link_violations(chat_id: int, user_id: int) -> int:
+async def incr_link_violations(chat_id: int, user_id: int, *, bot_id: int | None = None) -> int:
     """
     Increment the link-violation counter within a 10-minute window.
     Returns the new count. Falls back to an in-memory dict if Redis is unavailable.
     """
-    key = CacheKeys.mod_link_violations(chat_id, user_id)
+    key = CacheKeys.mod_link_violations(chat_id, user_id, bot_id=bot_id)
     try:
         redis = get_redis()
         count = await redis.incr(key)

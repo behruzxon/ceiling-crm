@@ -21,3 +21,12 @@ class AdminGroupModel(Base):
     added_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
     )
+
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
+    __table_args__ = (
+        sa.Index("ix_admin_groups_tenant_id", "tenant_id"),
+    )

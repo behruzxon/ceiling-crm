@@ -31,7 +31,13 @@ class UserModel(Base):
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_users_username", "username"),
         sa.Index("ix_users_role", "role"),
+        sa.Index("ix_users_tenant_id", "tenant_id"),
     )

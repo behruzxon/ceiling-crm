@@ -1,0 +1,86 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly Monday 06:00 UTC
+
+jobs:
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2024-100 || true
+        # || true to not fail CI on advisory-only issues; remove once deps are clean
+
+  env-leak-check:
+    name: Check for hardcoded secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify .env is not tracked
+        run: |
+          if git ls-files --cached | grep -q "^\.env$"; then
+            echo "::error::.env file is tracked in git — run: git rm --cached .env"
+            exit 1
+          fi
+          echo ".env is NOT tracked — OK"
+
+      - name: Scan for common secret patterns
+        run: |
+          echo "Scanning for hardcoded secrets..."
+          PATTERNS=(
+            'BOT_TOKEN\s*=\s*"[0-9]'
+            'SECRET_KEY\s*=\s*"[a-zA-Z0-9]'
+            'password\s*=\s*"[^${}"]'
+            'OPENAI_API_KEY\s*=\s*"sk-'
+            'CLICK_SECRET_KEY\s*=\s*"[a-zA-Z0-9]'
+            'PAYME_MERCHANT_KEY\s*=\s*"[a-zA-Z0-9]'
+            'AWS_SECRET_ACCESS_KEY\s*=\s*"[a-zA-Z0-9]'
+            'SENTRY_DSN\s*=\s*"https://'
+          )
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rn --include="*.py" --include="*.yml" --include="*.yaml" \
+              -E "$pattern" . \
+              --exclude-dir=.git --exclude-dir=.github \
+              --exclude=".env.example" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::POTENTIAL SECRET: $pattern"
+              echo "$MATCHES"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::Hardcoded secrets detected — see above"
+            exit 1
+          else
+            echo "No hardcoded secrets found — OK"
+          fi

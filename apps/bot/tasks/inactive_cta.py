@@ -74,7 +74,7 @@ async def _run(bot: Bot) -> None:
 
             # Members inactive between 5 and 10 minutes ago
             candidates: list[str] = await redis.zrangebyscore(
-                CacheKeys.cta_user_activity(),
+                CacheKeys.cta_user_activity(bot_id=bot.id),
                 now - _INACTIVE_MAX_SEC,
                 now - _INACTIVE_MIN_SEC,
             )
@@ -90,9 +90,9 @@ async def _run(bot: Bot) -> None:
                     continue
 
                 # 1. Dedup: skip if already sent today
-                if await redis.exists(CacheKeys.cta_sent(user_id, today)):
+                if await redis.exists(CacheKeys.cta_sent(user_id, today, bot_id=bot.id)):
                     # Still remove from sorted set so we don't re-scan it
-                    await redis.zrem(CacheKeys.cta_user_activity(), uid_str)
+                    await redis.zrem(CacheKeys.cta_user_activity(bot_id=bot.id), uid_str)
                     continue
 
                 # 2. Role check via DB (lightweight — happens only once per day per user)
@@ -107,7 +107,7 @@ async def _run(bot: Bot) -> None:
 
                 if db_user is None or db_user.role.value != "client":
                     # Non-client — remove from set, no CTA needed
-                    await redis.zrem(CacheKeys.cta_user_activity(), uid_str)
+                    await redis.zrem(CacheKeys.cta_user_activity(bot_id=bot.id), uid_str)
                     continue
 
                 # 3. Send CTA (TelegramForbiddenError = user blocked bot — skip quietly)
@@ -115,7 +115,7 @@ async def _run(bot: Bot) -> None:
                     await send_cta(bot, user_id, reason="inactive_5m")
                 except TelegramForbiddenError:
                     log.info("inactive_cta_bot_blocked", user_id=user_id)
-                    await redis.zrem(CacheKeys.cta_user_activity(), uid_str)
+                    await redis.zrem(CacheKeys.cta_user_activity(bot_id=bot.id), uid_str)
                     continue
                 except Exception:
                     log.exception("inactive_cta_send_error", user_id=user_id)
@@ -123,13 +123,13 @@ async def _run(bot: Bot) -> None:
 
                 # 4. Mark sent with 2-day TTL
                 await redis.set(
-                    CacheKeys.cta_sent(user_id, today),
+                    CacheKeys.cta_sent(user_id, today, bot_id=bot.id),
                     "1",
                     ttl=CacheTTL.CTA_SENT,
                 )
 
                 # 5. Remove from sorted set (processed)
-                await redis.zrem(CacheKeys.cta_user_activity(), uid_str)
+                await redis.zrem(CacheKeys.cta_user_activity(bot_id=bot.id), uid_str)
                 sent_count += 1
 
             if sent_count:

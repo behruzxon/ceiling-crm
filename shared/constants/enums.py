@@ -108,3 +108,31 @@ class PaymentMethod(str, Enum):
     CARD     = "card"
     TRANSFER = "transfer"
     MANUAL   = "manual"   # bot-submitted payment awaiting admin approval
+
+
+class BillingStatus(str, Enum):
+    TRIAL     = "trial"       # free trial period active
+    ACTIVE    = "active"      # paid subscription active
+    EXPIRED   = "expired"     # trial or subscription expired, bot paused
+    SUSPENDED = "suspended"   # manually suspended by admin
+
+
+class SubscriptionPlan(str, Enum):
+    FREE       = "free"
+    BASIC      = "basic"
+    PRO        = "pro"
+    ENTERPRISE = "enterprise"
+
+
+class SubscriptionPaymentStatus(str, Enum):
+    PENDING   = "pending"     # invoice created, awaiting payment
+    PREPARING = "preparing"   # Click "prepare" phase
+    PAID      = "paid"        # payment confirmed by provider
+    CANCELED  = "canceled"    # canceled by user or provider
+    FAILED    = "failed"      # provider reported failure
+
+
+class SubscriptionPaymentProvider(str, Enum):
+    CLICK  = "click"
+    PAYME  = "payme"
+    MANUAL = "manual"         # superadmin manual extension (no provider)

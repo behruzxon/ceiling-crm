@@ -26,24 +26,59 @@ def main_menu_keyboard(
     locale: str = "uz",
     is_admin: bool = False,
     selective: bool = False,
+    menu_config: dict | None = None,
 ) -> ReplyKeyboardMarkup:
     """Build main menu keyboard.
 
     Args:
         locale: Language code (unused for now, reserved for i18n).
-        is_admin: When True, appends the admin-only "📣 Rassilka" button.
+        is_admin: When True, appends admin-only broadcast button(s).
         selective: When True, keyboard is shown only to the replied-to user
                    (use with message.reply()).  Sets is_persistent=False.
+        menu_config: Optional tenant menu_config JSONB dict.  When provided
+                     with a ``"buttons"`` key, builds the keyboard from it
+                     instead of the hardcoded constants.  Falls back to
+                     hardcoded buttons when *None* or empty.
     """
-    rows = [
-        [KeyboardButton(text=BTN_ORDER),     KeyboardButton(text=BTN_PRICE)],
-        [KeyboardButton(text=BTN_CATALOG),   KeyboardButton(text=BTN_PACKAGES)],
-        [KeyboardButton(text=BTN_MY_ORDERS), KeyboardButton(text=BTN_OPERATOR)],
-        [KeyboardButton(text=BTN_PROMOS),    KeyboardButton(text=BTN_AI)],
-        [KeyboardButton(text=BTN_ABOUT)],
-    ]
+    buttons = menu_config.get("buttons") if menu_config else None
+
+    if buttons:
+        rows = []
+        for row in buttons:
+            kb_row: list[KeyboardButton] = []
+            for item in row:
+                if isinstance(item, str):
+                    kb_row.append(KeyboardButton(text=item))
+                elif isinstance(item, dict) and "text" in item:
+                    kb_row.append(KeyboardButton(text=item["text"]))
+            if kb_row:
+                rows.append(kb_row)
+    else:
+        # Hardcoded VashPotolok default (backward compatibility)
+        rows = [
+            [KeyboardButton(text=BTN_ORDER),     KeyboardButton(text=BTN_PRICE)],
+            [KeyboardButton(text=BTN_CATALOG),   KeyboardButton(text=BTN_PACKAGES)],
+            [KeyboardButton(text=BTN_MY_ORDERS), KeyboardButton(text=BTN_OPERATOR)],
+            [KeyboardButton(text=BTN_PROMOS),    KeyboardButton(text=BTN_AI)],
+            [KeyboardButton(text=BTN_ABOUT)],
+        ]
+
     if is_admin:
-        rows.append([KeyboardButton(text="📣 Rassilka")])
+        admin_buttons = (
+            menu_config.get("admin_buttons", [["📣 Rassilka"]])
+            if menu_config
+            else [["📣 Rassilka"]]
+        )
+        for row in admin_buttons:
+            admin_row: list[KeyboardButton] = []
+            for item in row:
+                if isinstance(item, str):
+                    admin_row.append(KeyboardButton(text=item))
+                elif isinstance(item, dict) and "text" in item:
+                    admin_row.append(KeyboardButton(text=item["text"]))
+            if admin_row:
+                rows.append(admin_row)
+
     return ReplyKeyboardMarkup(
         keyboard=rows,
         resize_keyboard=True,

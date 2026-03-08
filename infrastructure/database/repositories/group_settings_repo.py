@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.domain.group_settings import GroupSettings
 from core.repositories.group_settings_repo import AbstractGroupSettingsRepository
 from infrastructure.database.models.group_settings import GroupSettingsModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 
 # Whitelist — only these fields may be toggled or set via set_field().
 _ALLOWED_FIELDS: frozenset[str] = frozenset({
@@ -20,11 +21,11 @@ _ALLOWED_FIELDS: frozenset[str] = frozenset({
 })
 
 
-class PostgresGroupSettingsRepository(AbstractGroupSettingsRepository):
+class PostgresGroupSettingsRepository(TenantScopedRepository, AbstractGroupSettingsRepository):
     """Concrete SQLAlchemy/PostgreSQL group settings repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     def _to_domain(self, model: GroupSettingsModel) -> GroupSettings:
         return GroupSettings(
@@ -40,13 +41,20 @@ class PostgresGroupSettingsRepository(AbstractGroupSettingsRepository):
 
     async def get_by_id(self, id: int) -> GroupSettings | None:
         model = await self._session.get(GroupSettingsModel, id)
-        return self._to_domain(model) if model else None
+        if model is None:
+            return None
+        if self._tenant_id is not None and model.tenant_id != self._tenant_id:
+            return None
+        return self._to_domain(model)
 
     async def get_or_create(self, chat_id: int) -> GroupSettings:
         """Insert with all defaults if missing; always returns current row."""
+        values: dict = {"chat_id": chat_id}
+        if self._tenant_id is not None:
+            values["tenant_id"] = self._tenant_id
         await self._session.execute(
             pg_insert(GroupSettingsModel)
-            .values(chat_id=chat_id)
+            .values(**values)
             .on_conflict_do_nothing(index_elements=["chat_id"])
         )
         # Flush so the row is visible to the subsequent SELECT.
@@ -60,9 +68,12 @@ class PostgresGroupSettingsRepository(AbstractGroupSettingsRepository):
         if field not in _ALLOWED_FIELDS:
             raise ValueError(f"Unknown group settings field: {field!r}")
 
+        insert_values: dict = {"chat_id": chat_id, field: value}
+        if self._tenant_id is not None:
+            insert_values["tenant_id"] = self._tenant_id
         stmt = (
             pg_insert(GroupSettingsModel)
-            .values(chat_id=chat_id, **{field: value})
+            .values(**insert_values)
             .on_conflict_do_update(
                 index_elements=["chat_id"],
                 set_={
@@ -82,20 +93,23 @@ class PostgresGroupSettingsRepository(AbstractGroupSettingsRepository):
         return await self.get_or_create(entity.chat_id)
 
     async def update(self, entity: GroupSettings) -> GroupSettings:
-        model = GroupSettingsModel(
-            chat_id=entity.chat_id,
-            welcome_enabled=entity.welcome_enabled,
-            welcome_autodelete_seconds=entity.welcome_autodelete_seconds,
-            captcha_enabled=entity.captcha_enabled,
-            link_block_enabled=entity.link_block_enabled,
-            flood_enabled=entity.flood_enabled,
-            logs_enabled=entity.logs_enabled,
-        )
-        merged = await self._session.merge(model)
+        model = await self._session.get(GroupSettingsModel, entity.chat_id)
+        if model is None:
+            raise ValueError(f"GroupSettings {entity.chat_id} not found")
+        if self._tenant_id is not None and model.tenant_id != self._tenant_id:
+            raise ValueError(f"GroupSettings {entity.chat_id} not found")
+        model.welcome_enabled = entity.welcome_enabled
+        model.welcome_autodelete_seconds = entity.welcome_autodelete_seconds
+        model.captcha_enabled = entity.captcha_enabled
+        model.link_block_enabled = entity.link_block_enabled
+        model.flood_enabled = entity.flood_enabled
+        model.logs_enabled = entity.logs_enabled
         await self._session.flush()
-        return self._to_domain(merged)
+        return self._to_domain(model)
 
     async def delete(self, id: int) -> bool:
         stmt = sa.delete(GroupSettingsModel).where(GroupSettingsModel.chat_id == id)
+        if self._tenant_id is not None:
+            stmt = stmt.where(GroupSettingsModel.tenant_id == self._tenant_id)
         result = await self._session.execute(stmt)
         return result.rowcount > 0

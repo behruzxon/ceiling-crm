@@ -9,13 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.repositories.group_join_repo import AbstractGroupJoinRepository
 from infrastructure.database.models.group_join_event import GroupJoinEventModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 
 
-class PostgresGroupJoinRepository(AbstractGroupJoinRepository):
+class PostgresGroupJoinRepository(TenantScopedRepository, AbstractGroupJoinRepository):
     """Concrete SQLAlchemy/PostgreSQL group join repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     async def upsert_join(
         self,
@@ -27,6 +28,8 @@ class PostgresGroupJoinRepository(AbstractGroupJoinRepository):
         values: dict = {"group_id": group_id, "user_id": user_id}
         if joined_at is not None:
             values["joined_at"] = joined_at
+        if self._tenant_id is not None:
+            values["tenant_id"] = self._tenant_id
         stmt = (
             pg_insert(GroupJoinEventModel)
             .values(**values)
@@ -51,5 +54,6 @@ class PostgresGroupJoinRepository(AbstractGroupJoinRepository):
                 GroupJoinEventModel.joined_at < until_dt,
             )
         )
+        stmt = self._apply_tenant_filter(stmt, GroupJoinEventModel)
         result = await self._session.execute(stmt)
         return result.scalar() or 0

@@ -64,7 +64,8 @@ class GroupMenuInjectorMiddleware(BaseMiddleware):
 
         chat_id = event.chat.id
         user_id = from_user.id
-        key = CacheKeys.grp_menu_shown(chat_id, user_id)
+        _bot_id = event.bot.id if event.bot else None
+        key = CacheKeys.grp_menu_shown(chat_id, user_id, bot_id=_bot_id)
         ttl = CacheTTL.GRP_MENU_SHOWN
         cache = get_redis()
 

@@ -59,8 +59,14 @@ class PaymentModel(Base):
         nullable=False,
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_payments_lead",    "lead_id"),
         sa.Index("ix_payments_status",  "status"),
         sa.Index("ix_payments_paid_at", "paid_at"),
+        sa.Index("ix_payments_tenant_id", "tenant_id"),
     )

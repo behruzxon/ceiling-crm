@@ -23,7 +23,7 @@ ASOSIY QOIDALAR
 - 1–2 ta mos emoji ishlat (haddan oshma).
 - Keraksiz uzun matn yozma.
 - Faqat natijnoy patalok mavzusida gapir.
-- Boshqa mavzuda: "Bu savolga javob bera olmayman, lekin natijnoy patalok haqida yordam bera olaman."
+- Boshqa mavzuda: foydalanuvchini natijnoy patalok haqida so'rashga yo'naltir. HECH QACHON "Bu savolga javob bera olmayman" dema.
 
 - Odatda javobni savol bilan tugat.
 - Ammo agar foydalanuvchi aniq ma'lumot so'rasa (telefon, kafolat), savolsiz yakunlash mumkin.
@@ -45,22 +45,20 @@ Agar foydalanuvchi faqat salomlashsa (Salom, Assalomu alaykum, Hey, Kimsan va sh
 ========================
 NARX HISOBLASH LOGIKASI
 ========================
-- Odnotonniy: 80 000 UZS / m²
-- Gulli dizayn: 120 000 UZS / m²
-- LED lenta: +10 000 UZS / metr
-
-Chegirma:
-- 20 m² dan → 5%
-- 40 m² dan → 10%
+Asosiy narxlar (m² uchun):
+- Adnatonniy: 80 000 so'm/m²
+- Hi Tech / Mramor / Naqsh / Kosmos / Osmon: 120 000 so'm/m²
+- Qora UF: 140 000 so'm/m²
+- Gulli: 120 000–140 000 so'm/m²
 
 Formula:
 Maydon = uzunlik × kenglik
 Jami = Maydon × m² narx
-So'ng chegirma qo'llanadi.
 
-- Agar dizayn aytilmasa → Odnotonniy hisobla.
+- Agar dizayn aytilmasa → barcha turlar uchun narx jadvalini ko'rsat.
 - Agar o'lcham yetarli bo'lmasa → narx aytma, so'ra.
 - Taxminiy narxni aniq deb ko'rsatma.
+- "Gullili" dema, faqat "Gulli" de.
 
 ========================
 SAVDO STRATEGIYASI
@@ -170,6 +168,50 @@ Faqat to'g'ri JSON. Hech qanday qo'shimcha matn yo'q.
 --- BILIMLAR BAZASI ---
 {_KNOWLEDGE_BASE}
 """.strip()
+
+# ── Tenant-aware prompt builder ────────────────────────────────────────────────
+
+def get_default_system_prompt() -> str:
+    """Return the hardcoded VashPotolok system prompt (with embedded KB).
+
+    Used for seeding the default tenant and as the fallback when a tenant
+    has no custom ``ai_system_prompt``.
+    """
+    return _SYSTEM_PROMPT
+
+
+def get_default_knowledge_base() -> str:
+    """Return the hardcoded Uzbek knowledge base text.
+
+    Used for seeding the default tenant's ``knowledge_base`` column.
+    """
+    return _KNOWLEDGE_BASE
+
+
+def build_system_prompt(
+    ai_system_prompt: str | None = None,
+    knowledge_base: str | None = None,
+) -> str:
+    """Build the final system prompt for an OpenAI call.
+
+    Resolution order:
+    1. If *ai_system_prompt* is provided (tenant-specific), use it.
+       If *knowledge_base* is also provided, append it after a separator.
+    2. If *ai_system_prompt* is None/empty, return the hardcoded
+       ``_SYSTEM_PROMPT`` (which already contains ``_KNOWLEDGE_BASE``).
+
+    Tenant-provided text is sanitised (control chars stripped, length-limited).
+    """
+    from shared.utils.prompt_safety import sanitize_knowledge_base, sanitize_tenant_prompt
+
+    safe_prompt = sanitize_tenant_prompt(ai_system_prompt) if ai_system_prompt else None
+    if safe_prompt:
+        safe_kb = sanitize_knowledge_base(knowledge_base) if knowledge_base else None
+        if safe_kb:
+            return f"{safe_prompt}\n\n--- BILIMLAR BAZASI ---\n{safe_kb}"
+        return safe_prompt
+    return _SYSTEM_PROMPT
+
 
 # Prompt for the cheap summary regeneration call
 _SUMMARY_SYSTEM = (

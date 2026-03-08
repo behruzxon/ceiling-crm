@@ -18,8 +18,14 @@ class AuditLogModel(Base):
     new_value: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_audit_entity", "entity_type", "entity_id"),
         sa.Index("ix_audit_actor", "actor_id"),
         sa.Index("ix_audit_created", "created_at"),
+        sa.Index("ix_audit_logs_tenant_id", "tenant_id"),
     )

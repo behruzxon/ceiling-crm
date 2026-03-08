@@ -37,8 +37,14 @@ class AppointmentModel(Base):
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_appointments_lead", "lead_id"),
         sa.Index("ix_appointments_installer_date", "installer_id", "scheduled_at"),
         sa.Index("ix_appointments_status", "status"),
+        sa.Index("ix_appointments_tenant_id", "tenant_id"),
     )

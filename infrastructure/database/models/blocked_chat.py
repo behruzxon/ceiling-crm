@@ -39,6 +39,12 @@ class BlockedChatModel(Base):
         sa.Integer, server_default="1", nullable=False
     )
 
+    # ── Tenant ─────────────────────────────────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_blocked_chats_last_seen_at", "last_seen_at"),
+        sa.Index("ix_blocked_chats_tenant_id", "tenant_id"),
     )
