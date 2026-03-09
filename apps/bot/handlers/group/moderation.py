@@ -48,10 +48,11 @@ async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
     if await is_chat_admin(bot, chat_id, user_id):
         return
 
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            service = get_group_settings_service(session)
+            service = get_group_settings_service(session, tenant_id=_tid)
             settings = await service.get_or_create(chat_id)
     except Exception:
         log.warning("moderation_settings_load_failed", chat_id=chat_id)

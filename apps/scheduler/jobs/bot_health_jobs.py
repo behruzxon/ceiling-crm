@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from infrastructure.cache.distributed_lock import scheduler_lock
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -31,6 +32,7 @@ def register_bot_health_jobs(scheduler: AsyncIOScheduler) -> None:
     )
 
 
+@scheduler_lock("bot_health_check")
 async def check_bot_health() -> None:
     """Health-check all running tenant bots."""
     from datetime import datetime, timezone
@@ -66,12 +68,18 @@ async def check_bot_health() -> None:
                 if tenant:
                     tenant.last_health_check = now
                     await session.commit()
+
+            # Sync updated health check to Redis
+            await registry._sync_state_to_redis(state)
             healthy += 1
         except Exception:
             state.last_error = "health_check_failed"
             state.last_error_at = now
             state.error_count += 1
             failed += 1
+
+            # Sync error state to Redis
+            await registry._sync_state_to_redis(state)
             log.warning(
                 "bot_health_check_failed",
                 tenant_id=tenant_id,

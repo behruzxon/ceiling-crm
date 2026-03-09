@@ -173,6 +173,12 @@ async def click_complete_handler(request: web.Request) -> web.Response:
         # 4. Mark PAID and extend subscription
         from shared.constants.enums import SubscriptionPaymentStatus
         if payment.status == SubscriptionPaymentStatus.PAID:
+            log.info(
+                "duplicate_webhook",
+                provider="click",
+                click_trans_id=click_trans_id,
+                merchant_trans_id=merchant_trans_id,
+            )
             return web.json_response({
                 "click_trans_id": click_trans_id,
                 "merchant_trans_id": merchant_trans_id,
@@ -181,15 +187,35 @@ async def click_complete_handler(request: web.Request) -> web.Response:
                 "error_note": "Already paid",
             })
 
-        await svc.handle_payment_success(
-            merchant_trans_id=merchant_trans_id,
-            provider_trans_id=str(click_trans_id),
-            provider_meta={
-                "sign_time": data.get("sign_time"),
+        try:
+            await svc.handle_payment_success(
+                merchant_trans_id=merchant_trans_id,
+                provider_trans_id=str(click_trans_id),
+                provider_meta={
+                    "sign_time": data.get("sign_time"),
+                    "click_trans_id": click_trans_id,
+                },
+            )
+            await session.commit()
+            log.info(
+                "payment_processed",
+                provider="click",
+                merchant_trans_id=merchant_trans_id,
+                click_trans_id=click_trans_id,
+            )
+        except Exception:
+            await session.rollback()
+            log.exception(
+                "payment_failed",
+                provider="click",
+                merchant_trans_id=merchant_trans_id,
+            )
+            return web.json_response({
                 "click_trans_id": click_trans_id,
-            },
-        )
-        await session.commit()
+                "merchant_trans_id": merchant_trans_id,
+                "error": _BAD_REQUEST,
+                "error_note": "Processing failed",
+            })
 
     return web.json_response({
         "click_trans_id": click_trans_id,

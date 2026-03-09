@@ -93,6 +93,8 @@ class LeadSource(str, Enum):
     ADS      = "ads"
     DEEPLINK = "deeplink"
     REFERRAL = "referral"
+    WEB      = "web"
+    CHAT     = "chat"
 
 
 class PaymentStatus(str, Enum):

@@ -33,6 +33,7 @@ from apps.bot.filters.role import RoleFilter
 from core.services.billing_service import BillingService
 from core.services.bot_registry import BotStatus, get_bot_registry
 from infrastructure.database.session import get_session_factory
+from infrastructure.di import get_billing_service
 from shared.constants.enums import BillingStatus, UserRole
 from shared.logging import get_logger
 
@@ -188,7 +189,7 @@ async def cmd_tenants(message: Message, **data: object) -> None:
     """List all tenants with billing status."""
     factory = get_session_factory()
     async with factory() as session:
-        svc = BillingService(session)
+        svc = get_billing_service(session)
         tenants = await svc.list_all_tenants()
 
     text = _format_tenant_list(tenants)
@@ -230,7 +231,7 @@ async def cb_back(callback: CallbackQuery, **data: object) -> None:
     await callback.answer()
     factory = get_session_factory()
     async with factory() as session:
-        svc = BillingService(session)
+        svc = get_billing_service(session)
         tenants = await svc.list_all_tenants()
 
     text = _format_tenant_list(tenants)
@@ -275,7 +276,7 @@ async def cb_extend(callback: CallbackQuery, **data: object) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = BillingService(session)
+        svc = get_billing_service(session)
         tenant = await svc.extend_subscription(tenant_id)
         await session.commit()
 
@@ -305,7 +306,7 @@ async def cb_activate(callback: CallbackQuery, **data: object) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = BillingService(session)
+        svc = get_billing_service(session)
         tenant = await svc.activate_tenant(tenant_id)
         await session.commit()
 
@@ -342,7 +343,7 @@ async def cb_suspend(callback: CallbackQuery, **data: object) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = BillingService(session)
+        svc = get_billing_service(session)
         tenant = await svc.suspend_tenant(tenant_id)
         await session.commit()
 

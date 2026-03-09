@@ -287,6 +287,13 @@ class Settings(BaseSettings):
     prometheus_enabled: bool = Field(default=True)
     prometheus_port: int = Field(default=9090)
 
+    # Web API CORS
+    cors_origins: list[str] = Field(
+        default=["http://localhost:3000", "http://localhost:8000"],
+        alias="WEB_CORS_ORIGINS",
+        description="Allowed CORS origins for the web chat API. Never use '*' in production.",
+    )
+
     # Nested settings (instantiated from env in validators)
     bot: BotSettings = Field(default_factory=BotSettings)
     db: DatabaseSettings = Field(default_factory=DatabaseSettings)
@@ -354,6 +361,11 @@ class Settings(BaseSettings):
             if self.openai.api_key.get_secret_value() in _PLACEHOLDER_SECRETS:
                 raise ValueError(
                     "OPENAI_API_KEY is still a placeholder — set a real API key"
+                )
+            if "*" in self.cors_origins:
+                raise ValueError(
+                    "WEB_CORS_ORIGINS must not contain '*' in production — "
+                    "set explicit allowed origins"
                 )
             if not self.bot.admin_group_id:
                 raise ValueError(

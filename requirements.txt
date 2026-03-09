@@ -7,8 +7,10 @@
 aiogram>=3.7.0,<4
 aiogram-dialog>=2.1.0,<3
 
-# Web
+# Web / API
 aiohttp>=3.9.5,<4
+fastapi>=0.111.0,<1
+uvicorn[standard]>=0.29.0,<1
 
 # Database
 sqlalchemy[asyncio]>=2.0.30,<3
@@ -32,6 +34,10 @@ prometheus-client>=0.20.0,<1
 
 # AI
 openai>=1.30.0,<3
+
+# Auth (admin panel JWT + password hashing)
+python-jose[cryptography]>=3.3.0,<4
+bcrypt>=4.0.0,<6
 
 # Utilities
 python-dotenv>=1.0.1,<2

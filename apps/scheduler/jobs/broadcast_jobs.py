@@ -1,6 +1,7 @@
 """Scheduled broadcast execution jobs."""
 from __future__ import annotations
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from infrastructure.cache.distributed_lock import scheduler_lock
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -17,6 +18,7 @@ def register_broadcast_jobs(scheduler: AsyncIOScheduler) -> None:
     )
 
 
+@scheduler_lock("process_broadcasts", ttl=55)
 async def process_scheduled_broadcasts() -> None:
     """Find due broadcasts and enqueue Celery tasks.
 

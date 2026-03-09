@@ -115,6 +115,14 @@ class CacheTTL:
     # Usage tracking (core.services.usage_service)
     MONTHLY_LEAD_COUNTER    = 2_764_800  # 32 days — monthly lead creation counter
 
+    # Distributed scheduler lock (infrastructure.cache.distributed_lock)
+    SCHEDULER_LOCK          = 300        # 5 min — auto-release if worker crashes
+
+    # Bot registry (Redis-backed state persistence)
+    BOT_REGISTRY_STATE      = 86_400     # 24 hours — bot state hash (refreshed on every change)
+    BOT_REGISTRY_OWNER      = 30         # 30 sec — per-bot ownership lock (must be renewed)
+    BOT_REGISTRY_HEARTBEAT  = 30         # 30 sec — instance heartbeat (must be renewed)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -403,6 +411,47 @@ class CacheKeys:
         TTL: CacheTTL.SUBSCRIPTION_PAYMENT_LOCK (5 min).
         """
         return f"billing:pay_lock:{tenant_id}"
+
+    # ── Distributed scheduler lock ─────────────────────────────────────
+    @staticmethod
+    def scheduler_lock(job_id: str) -> str:
+        """Distributed lock for scheduler jobs. Prevents duplicate execution
+        across multiple app instances.
+        TTL: CacheTTL.SCHEDULER_LOCK (5 min).
+        """
+        return f"scheduler:lock:{job_id}"
+
+    # ── Bot registry (Redis-backed state) ─────────────────────────────
+    @staticmethod
+    def bot_registry_state(tenant_id: int) -> str:
+        """Per-tenant bot runtime state hash.
+        Fields: status, bot_id, instance_id, last_started, last_health_check, error_count, last_error.
+        TTL: CacheTTL.BOT_REGISTRY_STATE (24 hours, refreshed on every write).
+        """
+        return f"bot_registry:state:{tenant_id}"
+
+    @staticmethod
+    def bot_registry_owner(tenant_id: int) -> str:
+        """Ownership lock: which instance controls this tenant's bot.
+        Value: instance_id. Renewed every heartbeat cycle.
+        TTL: CacheTTL.BOT_REGISTRY_OWNER (30 sec).
+        """
+        return f"bot_registry:owner:{tenant_id}"
+
+    @staticmethod
+    def bot_registry_heartbeat(instance_id: str) -> str:
+        """Instance heartbeat. If missing, the instance is considered dead
+        and its bot ownership locks can be reclaimed.
+        TTL: CacheTTL.BOT_REGISTRY_HEARTBEAT (30 sec).
+        """
+        return f"bot_registry:heartbeat:{instance_id}"
+
+    @staticmethod
+    def bot_registry_tenants() -> str:
+        """Set of all tenant IDs that have bot state in Redis.
+        Used for recovery: iterate to find bots that need restart.
+        """
+        return "bot_registry:tenants"
 
     @staticmethod
     def billing_notification_sent(tenant_id: int, notification_type: str) -> str:

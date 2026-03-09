@@ -13,8 +13,8 @@ FSM flow
                                   ├─ "📞 Operator"        → show contact + main menu
                                   └─ "🔄 Qayta hisoblash" → restart flow
 
-Business rules (isolated in _calculate, not in handlers)
----------------------------------------------------------
+Business rules (in core.services.ceiling_calculator)
+------------------------------------------------------
   Pricing  : per-design price_per_sqm (see keyboards/pricing.py → DESIGN_BY_KEY)
   Discount : area > 40 m²              → 10 %
              area > DISCOUNT_THRESHOLD →  5 %
@@ -24,9 +24,6 @@ Business rules (isolated in _calculate, not in handlers)
   Safe input: dimension > 20 m triggers a one-shot confirmation prompt
 """
 from __future__ import annotations
-
-import re
-from dataclasses import dataclass
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
@@ -38,6 +35,12 @@ from apps.bot.keyboards.main_menu import BTN_OPERATOR, BTN_PRICE, MAIN_MENU_BUTT
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from apps.bot.states.pricing import PricingStates
+from core.services.ceiling_calculator import (
+    calculate_quote,
+    is_led_promo_eligible,
+    parse_dimension,
+    parse_two_dimensions,
+)
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
 from shared.constants.enums import CeilingCategory, LeadSource
@@ -45,135 +48,6 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:pricing")
-
-# Matches "LENGTHxWIDTH" (or *, ×, ga, spaces) with optional decimal commas/dots.
-# Group 1 = length, Group 2 = width.
-# Examples: "5ga4", "5*4", "5 x 4", "5 4", "5,2x3,3", "5.2 * 3.3"
-_TWO_DIMS_RE: re.Pattern[str] = re.compile(
-    r"^\s*([0-9]+(?:[.,][0-9]+)?)"           # first number
-    r"(?:\s*(?:x|×|\*|ga)\s*|\s+)"           # separator: keyword/symbol OR whitespace
-    r"([0-9]+(?:[.,][0-9]+)?)\s*$",           # second number
-    re.IGNORECASE,
-)
-
-
-# ─── Promotion / discount constants ──────────────────────────────────────────
-
-# Minimum area (m²) that qualifies for the 5 % volume discount.
-DISCOUNT_THRESHOLD: float = 20.0
-
-# Minimum area (m²) required for the LED strip promotional offer.
-LED_PROMO_THRESHOLD: float = 50.0
-
-# Design key that triggers the LED promo (must match DESIGN_BY_KEY in keyboards/pricing.py).
-LED_PROMO_DESIGN: str = "gulli"
-
-
-# ─── Business logic (pure, no I/O) ───────────────────────────────────────────
-
-_TIERS: tuple[tuple[float, int], ...] = (
-    (40.0,              10),  # area > 40 m²             → 10 %
-    (DISCOUNT_THRESHOLD, 5),  # area > DISCOUNT_THRESHOLD →  5 %
-)
-
-
-@dataclass(frozen=True)
-class _Quote:
-    """Immutable result of one pricing calculation."""
-
-    length: float
-    width: float
-    area: float
-    design_name: str
-    price_per_sqm: int
-    gross_amount: int
-    discount_pct: int
-    discount_amount: int
-    final_total: int
-
-    def format_breakdown(self) -> str:
-        """Return HTML-formatted price breakdown for Telegram."""
-        discount_line = (
-            f"\n🎁 Chegirma ({self.discount_pct}%): −{self.discount_amount:,} UZS"
-            if self.discount_pct else ""
-        )
-        return (
-            "📊 <b>Hisob-kitob natijasi</b>\n\n"
-            f"📐 Uzunlik:   {self.length} m\n"
-            f"📐 Kenglik:   {self.width} m\n"
-            f"📐 Maydon:    <b>{self.area:.2f} m²</b>\n\n"
-            f"🎨 Dizayn:    <b>{self.design_name}</b>\n"
-            f"💵 Narx (m²): {self.price_per_sqm:,} UZS\n"
-            f"💵 Umumiy:    {self.gross_amount:,} UZS"
-            f"{discount_line}\n\n"
-            f"💰 Jami: <b>{self.final_total:,} UZS</b>"
-        )
-
-
-def _calculate(
-    length: float,
-    width: float,
-    price_per_sqm: int,
-    design_name: str,
-) -> _Quote:
-    """Apply tiered discount and return a fully-populated quote."""
-    area = round(length * width, 2)
-
-    discount_pct = 0
-    for threshold, pct in _TIERS:
-        if area > threshold:
-            discount_pct = pct
-            break
-
-    gross = int(area * price_per_sqm)
-    discount_amount = int(gross * discount_pct / 100)
-    final_total = gross - discount_amount
-
-    return _Quote(
-        length=length,
-        width=width,
-        area=area,
-        design_name=design_name,
-        price_per_sqm=price_per_sqm,
-        gross_amount=gross,
-        discount_pct=discount_pct,
-        discount_amount=discount_amount,
-        final_total=final_total,
-    )
-
-
-def _parse_dimension(text: str | None) -> float | None:
-    """
-    Parse a user-supplied room dimension.
-    Accepts comma or dot decimal separator.
-    Returns None if the value is not a positive float in (0, 50].
-    """
-    try:
-        v = float((text or "").replace(",", ".").strip())
-    except ValueError:
-        return None
-    return v if 0 < v <= 50 else None
-
-
-def _parse_two_dimensions(text: str) -> tuple[float, float] | None:
-    """Try to extract two dimensions from a single message.
-
-    Returns ``(length, width)`` as floats, or ``None`` if fewer than two
-    valid dimensions are found (caller should fall back to the step-by-step flow).
-    """
-    m = _TWO_DIMS_RE.match(text)
-    if m is None:
-        return None
-    a = _parse_dimension(m.group(1))
-    b = _parse_dimension(m.group(2))
-    if a is None or b is None:
-        return None
-    return a, b
-
-
-def _led_promo_eligible(area: float, design_key: str) -> bool:
-    """Return True when the LED strip promo applies (informational only, no price change)."""
-    return area >= LED_PROMO_THRESHOLD and design_key == LED_PROMO_DESIGN
 
 
 # ─── Shared entry-point helper ────────────────────────────────────────────────
@@ -251,7 +125,7 @@ async def handle_length(
     fsm = await state.get_data()
 
     # ── Fast path: two dimensions in one message ──────────────────────────
-    pair = _parse_two_dimensions(text)
+    pair = parse_two_dimensions(text)
     if pair is not None:
         length, width = pair
         if (length > 20 or width > 20) and not fsm.get("_warned_pair"):
@@ -272,7 +146,7 @@ async def handle_length(
         return
 
     # ── Slow path: single dimension (original step-by-step flow) ─────────
-    length = _parse_dimension(text)
+    length = parse_dimension(text)
     if length is None:
         await message.answer("Masalan: <code>5x4</code> yoki <code>5 4</code>")
         return
@@ -306,7 +180,7 @@ async def handle_width(
     is shown. Any valid re-entry in the same state is accepted unconditionally.
     """
     fsm = await state.get_data()
-    width = _parse_dimension(message.text)
+    width = parse_dimension(message.text)
     if width is None:
         await message.answer(
             "Son kiriting (masalan: <code>3.8</code>) yoki /cancel bosing."
@@ -357,17 +231,18 @@ async def handle_design_callback(
     length: float = fsm["length"]
     width: float = fsm["width"]
     area: float = fsm["area"]
-    quote = _calculate(length, width, design.price_per_sqm, design.label)
+    quote = calculate_quote(length, width, design.price_per_sqm, design.label)
 
     # ── Persist as a draft lead (non-fatal if DB is unavailable) ──────────
     user = callback.from_user
     placeholder_phone = f"TG:{user.id}"
 
+    _tid = data.get("tenant_id")
     lead_id: int | None = None
     try:
         factory = get_session_factory()
         async with factory() as session:
-            lead_service = get_lead_service(session)
+            lead_service = get_lead_service(session, tenant_id=_tid)
             lead = await lead_service.create_lead(
                 user_id=user.id,
                 category=CeilingCategory.ODNOTONNY,
@@ -416,7 +291,7 @@ async def handle_design_callback(
         reply_markup=after_quote_keyboard(),
     )
 
-    if _led_promo_eligible(area, key):
+    if is_led_promo_eligible(area, key):
         await callback.message.answer(
             "🎁 Siz 50 m² dan oshganingiz uchun GULLI dizaynga "
             "LED lenta bepul aksiyasiga tushdingiz!"

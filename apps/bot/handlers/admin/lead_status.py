@@ -11,8 +11,8 @@ import re
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.session import get_session_factory
+from infrastructure.di import get_lead_repo
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -51,10 +51,11 @@ async def cb_lead_status_update(callback: CallbackQuery, **data: object) -> None
         await callback.answer("Noto'g'ri status.", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            repo = PostgresLeadRepository(session)
+            repo = get_lead_repo(session, tenant_id=_tid)
             await repo.update_lead_status(lead_id, new_status)
             if new_status in _TERMINAL_STATUSES:
                 # Explicitly clear follow-up schedule for terminal states

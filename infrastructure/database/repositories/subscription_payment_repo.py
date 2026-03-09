@@ -53,23 +53,27 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
         return self._to_domain(model)
 
     async def get_by_merchant_trans_id(
-        self, merchant_trans_id: str,
+        self, merchant_trans_id: str, *, for_update: bool = False,
     ) -> SubscriptionPayment | None:
         stmt = sa.select(SubscriptionPaymentModel).where(
             SubscriptionPaymentModel.merchant_trans_id == merchant_trans_id,
         )
         stmt = self._apply_tenant_filter(stmt, SubscriptionPaymentModel)
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
 
     async def get_by_provider_trans_id(
-        self, provider_trans_id: str,
+        self, provider_trans_id: str, *, for_update: bool = False,
     ) -> SubscriptionPayment | None:
         stmt = sa.select(SubscriptionPaymentModel).where(
             SubscriptionPaymentModel.provider_trans_id == provider_trans_id,
         )
         stmt = self._apply_tenant_filter(stmt, SubscriptionPaymentModel)
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None

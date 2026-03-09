@@ -26,10 +26,8 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.user import UserModel
-from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
-from infrastructure.database.repositories.pipeline_repo import PostgresPipelineRepository
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_action_repo
+from infrastructure.di import get_lead_action_repo, get_lead_repo, get_pipeline_repo
 from shared.constants.enums import PipelineStage
 from shared.logging import get_logger
 
@@ -117,12 +115,13 @@ async def cb_set_status(callback: CallbackQuery, **data: object) -> None:
 
     actor_id = callback.from_user.id  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_repo = PostgresLeadRepository(session)
+            lead_repo = get_lead_repo(session, tenant_id=_tid)
             await lead_repo.update_lead_status(lead_id, new_status)
-            await get_lead_action_repo(session).insert(lead_id, actor_id, new_status)
+            await get_lead_action_repo(session, tenant_id=_tid).insert(lead_id, actor_id, new_status)
             await session.commit()
         except Exception:
             await session.rollback()
@@ -162,6 +161,7 @@ async def cb_show_phone(callback: CallbackQuery, **data: object) -> None:
 
     actor_id = callback.from_user.id  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         model = await _get_lead_model(session, lead_id)
@@ -169,7 +169,7 @@ async def cb_show_phone(callback: CallbackQuery, **data: object) -> None:
             await callback.answer("Lead topilmadi", show_alert=True)
             return
         phone = model.phone or "—"
-        await get_lead_action_repo(session).insert(lead_id, actor_id, "phone")
+        await get_lead_action_repo(session, tenant_id=_tid).insert(lead_id, actor_id, "phone")
         await session.commit()
 
     await callback.answer(f"📱 Telefon: {phone}", show_alert=True)
@@ -185,17 +185,18 @@ async def cb_schedule_measurement(callback: CallbackQuery, **data: object) -> No
 
     actor_id = callback.from_user.id  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            pipeline_repo = PostgresPipelineRepository(session)
+            pipeline_repo = get_pipeline_repo(session, tenant_id=_tid)
             await pipeline_repo.insert_stage(
                 lead_id=lead_id,
                 stage=PipelineStage.MEASUREMENT,
                 changed_by=actor_id,
                 note="O'lchov tayinlandi (admin paneldan)",
             )
-            await get_lead_action_repo(session).insert(lead_id, actor_id, "measurement")
+            await get_lead_action_repo(session, tenant_id=_tid).insert(lead_id, actor_id, "measurement")
             await session.commit()
         except Exception:
             await session.rollback()
@@ -216,9 +217,10 @@ async def cb_add_note(callback: CallbackQuery, **data: object) -> None:
         return
 
     actor_id = callback.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        await get_lead_action_repo(session).insert(lead_id, actor_id, "note")
+        await get_lead_action_repo(session, tenant_id=_tid).insert(lead_id, actor_id, "note")
         await session.commit()
 
     await callback.answer(
@@ -236,6 +238,7 @@ async def cb_block_lead(callback: CallbackQuery, **data: object) -> None:
         return
 
     actor_id = callback.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
@@ -257,7 +260,7 @@ async def cb_block_lead(callback: CallbackQuery, **data: object) -> None:
                 .where(LeadModel.id == lead_id)
                 .values(lead_status="blocked", updated_at=datetime.now(timezone.utc))
             )
-            await get_lead_action_repo(session).insert(lead_id, actor_id, "block")
+            await get_lead_action_repo(session, tenant_id=_tid).insert(lead_id, actor_id, "block")
             await session.commit()
         except Exception:
             await session.rollback()

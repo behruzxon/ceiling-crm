@@ -38,75 +38,11 @@ from infrastructure.di import get_lead_service
 from infrastructure.queue.tasks.package_tasks import check_package_followup
 from apps.bot.keyboards.main_menu import BTN_PACKAGES
 from shared.config import get_settings
+from shared.constants.packages import PACKAGES, PACKAGES_LIST_TEXT
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:packages")
-
-# ── Package catalogue (hardcoded) ──────────────────────────────────────────────
-
-PACKAGE_INFO: dict[str, dict] = {
-    "standard": {
-        "name": "🥉 Standard",
-        "description": (
-            "🥉 <b>STANDARD — Eng arzon va tez variant</b>\n\n"
-            "• Oddiy va ishonchli natijnoy patalok\n"
-            "• ⚡ Eng tez o'rnatish\n"
-            "• 💸 Har qanday boshqa potolok turidan arzon\n"
-            "• 🎨 10+ rang tanlov\n"
-            "• 🛡 10 yil kafolat\n\n"
-            "💰 Narx: <b>80 000 UZS/m²</b>\n\n"
-            "🎯 <i>Ijara uylari va byudjet variant uchun ideal</i>"
-        ),
-        "price_per_m2": 80_000,
-        "score_delta": 5,
-        "status": "warm",
-    },
-    "premium": {
-        "name": "🥈 Premium ⭐",
-        "description": (
-            "🥈 <b>PREMIUM ⭐ Eng ko'p tanlanadi</b>\n\n"
-            "• 🌸 Gulli dizayn variantlar\n"
-            "• 🧩 Hi-tech zamonaviy uslub\n"
-            "• 🪨 Mramor (marmar) effektli naqshlar\n"
-            "• 🎨 10 000+ dizayn va faktura\n"
-            "• 💡 LED bilan uyg'un dizayn\n"
-            "• 🛡 10 yil kafolat\n\n"
-            "💰 Narx: <b>120 000 UZS/m²</b>"
-        ),
-        "price_per_m2": 120_000,
-        "score_delta": 10,
-        "status": "hot",
-    },
-    "vip": {
-        "name": "🥇 VIP 👑",
-        "description": (
-            "🥇 <b>VIP 👑 Eksklyuziv dizayn</b>\n\n"
-            "• 🧩 Murakkab hi-tech dizaynlar\n"
-            "• 💡 Spot chiroqlar integratsiyasi\n"
-            "• ➖ Trek sistema\n"
-            "• ✨ Svetavoy liniya\n"
-            "• 🌈 RGB + ko'p darajali yoritish\n"
-            "• 🏗 Ko'p bosqichli konstruktsiya\n"
-            "• 🎨 Individual loyiha asosida dizayn\n"
-            "• 📐 Bepul o'lchov + dizayn loyiha\n"
-            "• 🛡 15 yil kafolat\n\n"
-            "💰 Narx: <b>140 000 – 1 000 000 UZS/m²</b>"
-        ),
-        "price_per_m2": 140_000,
-        "score_delta": 15,
-        "status": "hot",
-    },
-}
-
-_PACKAGES_LIST_TEXT = (
-    "📦 <b>Tayyor paketlar</b>\n\n"
-    "Eng qulay paketni tanlang va operator tez orada bog'lanadi:\n\n"
-    "🥉 <b>Standard</b> — 80 000 UZS/m²\n"
-    "🥈 <b>Premium</b> ⭐ — 120 000 UZS/m²  <i>(eng ko'p tanlanadi)</i>\n"
-    "🥇 <b>VIP</b> 👑 — 140 000 – 1 000 000 UZS/m²\n\n"
-    "👇 Paketni tanlang:"
-)
 
 
 # ── Keyboards ──────────────────────────────────────────────────────────────────
@@ -137,7 +73,7 @@ async def show_packages_list(message: Message) -> None:
     Public helper so the group menu callback in group/start.py can reuse
     this without duplicating the text + keyboard.
     """
-    await message.answer(_PACKAGES_LIST_TEXT, reply_markup=_packages_list_keyboard())
+    await message.answer(PACKAGES_LIST_TEXT, reply_markup=_packages_list_keyboard())
 
 
 def _price_estimate_keyboard(pkg_key: str) -> InlineKeyboardMarkup:
@@ -242,7 +178,7 @@ async def _send_admin_notifications(
 async def cmd_packages(message: Message, **data: object) -> None:
     """Show the package selection menu."""
     await message.answer(
-        _PACKAGES_LIST_TEXT,
+        PACKAGES_LIST_TEXT,
         reply_markup=_packages_list_keyboard(),
     )
 
@@ -251,7 +187,7 @@ async def cmd_packages(message: Message, **data: object) -> None:
 async def cb_back_to_list(callback: CallbackQuery, **data: object) -> None:
     """Return to the package list from a detail view."""
     await callback.message.edit_text(  # type: ignore[union-attr]
-        _PACKAGES_LIST_TEXT,
+        PACKAGES_LIST_TEXT,
         reply_markup=_packages_list_keyboard(),
     )
     await callback.answer()
@@ -268,13 +204,13 @@ async def cb_back_main(callback: CallbackQuery, **data: object) -> None:
 async def cb_package_detail(callback: CallbackQuery, **data: object) -> None:
     """Show detailed description + action buttons for one package."""
     pkg_key = callback.data.split(":")[-1]  # type: ignore[union-attr]
-    info = PACKAGE_INFO.get(pkg_key)
+    info = PACKAGES.get(pkg_key)
     if info is None:
         await callback.answer("Noma'lum paket", show_alert=True)
         return
 
     await callback.message.edit_text(  # type: ignore[union-attr]
-        info["description"],
+        info.description,
         reply_markup=_package_detail_keyboard(pkg_key),
     )
     await callback.answer()
@@ -284,14 +220,14 @@ async def cb_package_detail(callback: CallbackQuery, **data: object) -> None:
 async def cb_package_calc(callback: CallbackQuery, **data: object) -> None:
     """Show a quick price estimate table for the selected package."""
     pkg_key = callback.data.split(":")[-1]  # type: ignore[union-attr]
-    info = PACKAGE_INFO.get(pkg_key)
+    info = PACKAGES.get(pkg_key)
     if info is None:
         await callback.answer("Noma'lum paket", show_alert=True)
         return
 
-    price = info["price_per_m2"]
+    price = info.price_per_m2
     text = (
-        f"📐 <b>{info['name']} — taxminiy narxlar</b>\n\n"
+        f"📐 <b>{info.name} — taxminiy narxlar</b>\n\n"
         f"• 10 m² → {price * 10:,} UZS\n"
         f"• 20 m² → {price * 20:,} UZS\n"
         f"• 30 m² → {price * 30:,} UZS\n"
@@ -320,23 +256,24 @@ async def cb_operator(callback: CallbackQuery, **data: object) -> None:
 async def cb_package_order(callback: CallbackQuery, **data: object) -> None:
     """Create / update lead, notify admins, schedule follow-up."""
     pkg_key = callback.data.split(":")[-1]  # type: ignore[union-attr]
-    info = PACKAGE_INFO.get(pkg_key)
+    info = PACKAGES.get(pkg_key)
     if info is None:
         await callback.answer("Noma'lum paket", show_alert=True)
         return
 
     user = callback.from_user  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_service = get_lead_service(session)
+            lead_service = get_lead_service(session, tenant_id=_tid)
             lead = await lead_service.select_package(
                 user_id=user.id,
                 package_type=pkg_key,
                 first_name=user.first_name,
-                score_delta=info["score_delta"],
-                lead_status=info["status"],
+                score_delta=info.score_delta,
+                lead_status=info.status,
             )
             await session.commit()
         except Exception:
@@ -348,7 +285,7 @@ async def cb_package_order(callback: CallbackQuery, **data: object) -> None:
     # Confirm to user immediately (non-blocking — admin notifications happen after)
     await callback.message.edit_text(  # type: ignore[union-attr]
         f"✅ <b>So'rovingiz qabul qilindi!</b>\n\n"
-        f"📦 Paket: <b>{info['name']}</b>\n\n"
+        f"📦 Paket: <b>{info.name}</b>\n\n"
         f"👤 Operator tez orada bog'lanadi.\n"
         f"📞 Tezroq aloqa uchun /operator buyrug'ini yuboring.",
         reply_markup=None,
@@ -363,8 +300,8 @@ async def cb_package_order(callback: CallbackQuery, **data: object) -> None:
             username=user.username,
             user_id=user.id,
             phone=lead.phone,
-            pkg_name=info["name"],
-            lead_status=info["status"],
+            pkg_name=info.name,
+            lead_status=info.status,
             score=lead.score,
         )
     except Exception:

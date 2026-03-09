@@ -25,9 +25,10 @@ _TEMP_EMOJI: dict[str, str] = {"hot": "\U0001f525", "warm": "\U0001f7e1", "cold"
 @router.message(Command("leads"), RoleFilter(*_MGMT_ROLES))
 async def cmd_leads(message: Message, **data: object) -> None:
     """List 10 most recent leads with action buttons."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
         leads = await lead_repo.search(limit=10, offset=0)
 
         if not leads:
@@ -59,9 +60,10 @@ async def cmd_leads(message: Message, **data: object) -> None:
 @router.message(Command("hot"), RoleFilter(*_MGMT_ROLES))
 async def cmd_hot(message: Message, **data: object) -> None:
     """Top hot leads sorted by score."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
         leads = await lead_repo.get_hot_leads(limit=10)
 
     if not leads:
@@ -85,9 +87,10 @@ async def cmd_hot(message: Message, **data: object) -> None:
 @router.message(Command("attention"), RoleFilter(*_MGMT_ROLES))
 async def cmd_attention(message: Message, **data: object) -> None:
     """Leads needing immediate operator attention."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
         leads = await lead_repo.get_attention_leads(limit=10)
 
     if not leads:

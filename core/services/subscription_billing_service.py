@@ -81,10 +81,18 @@ class SubscriptionBillingService:
         provider_meta: dict | None = None,
     ) -> SubscriptionPayment:
         """Mark payment as PREPARING (Click prepare phase)."""
-        payment = await self._payment_repo.get_by_merchant_trans_id(merchant_trans_id)
+        payment = await self._payment_repo.get_by_merchant_trans_id(
+            merchant_trans_id, for_update=True,
+        )
         if payment is None:
             raise ValueError(f"Payment not found: {merchant_trans_id}")
         if payment.status != SubscriptionPaymentStatus.PENDING:
+            log.info(
+                "duplicate_webhook",
+                merchant_trans_id=merchant_trans_id,
+                current_status=payment.status,
+                action="prepare",
+            )
             return payment  # idempotent
 
         return await self._payment_repo.update_status(
@@ -103,15 +111,23 @@ class SubscriptionBillingService:
         """Mark payment as PAID and extend tenant subscription.
 
         Idempotent: if already PAID, returns existing record without
-        double-extending.
+        double-extending. Uses ``FOR UPDATE`` row lock to prevent race
+        conditions from concurrent webhook retries.
         """
-        payment = await self._payment_repo.get_by_merchant_trans_id(merchant_trans_id)
+        payment = await self._payment_repo.get_by_merchant_trans_id(
+            merchant_trans_id, for_update=True,
+        )
         if payment is None:
             raise ValueError(f"Payment not found: {merchant_trans_id}")
 
-        # Idempotency guard
+        # Idempotency guard (race-safe: row is locked via FOR UPDATE)
         if payment.status == SubscriptionPaymentStatus.PAID:
-            log.info("subscription_payment_already_paid", id=payment.id)
+            log.info(
+                "duplicate_webhook",
+                merchant_trans_id=merchant_trans_id,
+                payment_id=payment.id,
+                action="payment_success",
+            )
             return payment
 
         updated = await self._payment_repo.update_status(
@@ -155,13 +171,21 @@ class SubscriptionBillingService:
         provider_meta: dict | None = None,
     ) -> SubscriptionPayment:
         """Mark payment as FAILED."""
-        payment = await self._payment_repo.get_by_merchant_trans_id(merchant_trans_id)
+        payment = await self._payment_repo.get_by_merchant_trans_id(
+            merchant_trans_id, for_update=True,
+        )
         if payment is None:
             raise ValueError(f"Payment not found: {merchant_trans_id}")
         if payment.status in (
             SubscriptionPaymentStatus.PAID,
             SubscriptionPaymentStatus.FAILED,
         ):
+            log.info(
+                "duplicate_webhook",
+                merchant_trans_id=merchant_trans_id,
+                current_status=payment.status,
+                action="payment_failure",
+            )
             return payment  # idempotent
 
         meta = provider_meta or {}
@@ -187,10 +211,17 @@ class SubscriptionBillingService:
         provider_meta: dict | None = None,
     ) -> SubscriptionPayment:
         """Mark payment as CANCELED."""
-        payment = await self._payment_repo.get_by_merchant_trans_id(merchant_trans_id)
+        payment = await self._payment_repo.get_by_merchant_trans_id(
+            merchant_trans_id, for_update=True,
+        )
         if payment is None:
             raise ValueError(f"Payment not found: {merchant_trans_id}")
         if payment.status == SubscriptionPaymentStatus.CANCELED:
+            log.info(
+                "duplicate_webhook",
+                merchant_trans_id=merchant_trans_id,
+                action="payment_cancel",
+            )
             return payment  # idempotent
 
         updated = await self._payment_repo.update_status(

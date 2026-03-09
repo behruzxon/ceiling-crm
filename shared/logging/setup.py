@@ -71,6 +71,7 @@ def rename_event_key(
 def _build_shared_processors(is_dev: bool) -> list[Processor]:
     """Build the shared processor chain, choosing the right exception formatter."""
     processors: list[Processor] = [
+        structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", utc=True),

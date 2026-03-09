@@ -118,8 +118,9 @@ async def _notify_admin(
 @router.message(F.chat.type == "private", F.text == "💳 To'lov qilish")
 async def cmd_payment_start(message: Message, state: FSMContext, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
+    _tid = data.get("tenant_id")
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
-    lead_repo = get_lead_repo(db_session)
+    lead_repo = get_lead_repo(db_session, tenant_id=_tid)
     leads = await lead_repo.list_by_user(user_id, limit=1)
 
     if not leads:
@@ -131,7 +132,7 @@ async def cmd_payment_start(message: Message, state: FSMContext, **data: object)
         return
 
     await state.clear()
-    await state.set_data({"lead_id": leads[0].id})
+    await state.set_data({"lead_id": leads[0].id, "_tenant_id": _tid})
     await state.set_state(PaymentSubmitFSM.waiting_amount)
 
     ps = get_settings().payment
@@ -200,6 +201,7 @@ async def _save_and_confirm(
     is_photo: bool,
 ) -> None:
     fsm = await state.get_data()
+    _tid = fsm.get("_tenant_id")
     lead_id: int = fsm["lead_id"]
     amount: int = fsm["amount"]
     user_id: int = message.from_user.id if message.from_user else 0
@@ -210,7 +212,7 @@ async def _save_and_confirm(
     try:
         factory = get_session_factory()
         async with factory() as session:
-            svc = get_payment_service(session)
+            svc = get_payment_service(session, tenant_id=_tid)
             payment = await svc.create_payment(
                 lead_id=lead_id,
                 amount=amount,

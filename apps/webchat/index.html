@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SystemaX Chat Widget — Demo</title>
+  <link rel="stylesheet" href="widget.css" />
+  <style>
+    /* ── Demo page styles only — not part of the widget ────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    /* Fake business site hero */
+    .demo-hero {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      color: white;
+      padding: 64px 24px;
+      text-align: center;
+    }
+    .demo-hero h1 { font-size: 36px; font-weight: 800; margin-bottom: 12px; }
+    .demo-hero p  { font-size: 18px; opacity: 0.85; max-width: 560px; margin: 0 auto 28px; }
+    .demo-hero .hero-btn {
+      display: inline-block;
+      background: white;
+      color: #1e40af;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 15px;
+    }
+
+    /* Service cards */
+    .demo-cards {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .demo-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .demo-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #111827; }
+    .demo-card p  { font-size: 14px; color: #6b7280; line-height: 1.5; }
+    .card-icon    { font-size: 28px; margin-bottom: 12px; }
+
+    /* ── Config panel ─────────────────────────────────────────────────── */
+    .config-panel {
+      max-width: 900px;
+      margin: 0 auto 32px;
+      padding: 0 24px;
+    }
+    .panel-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .panel-card h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .panel-card .hint { font-size: 13px; color: #6b7280; margin-bottom: 18px; }
+
+    .cfg-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .cfg-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      flex: 1;
+      min-width: 150px;
+    }
+    .cfg-row input[type="text"],
+    .cfg-row input[type="url"] {
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .cfg-row input:focus { border-color: #2563eb; }
+    .cfg-row input[type="color"] {
+      height: 36px;
+      width: 60px;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      padding: 2px;
+      cursor: pointer;
+    }
+
+    .btn-apply {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-apply:hover { background: #1d4ed8; }
+
+    /* ── Embed snippet ────────────────────────────────────────────────── */
+    pre.snippet {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 18px 20px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    code { font-family: 'Fira Code', 'Courier New', monospace; }
+
+    /* ── Options table ────────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    th { font-weight: 600; color: #374151; background: #f9fafb; }
+    td code {
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    em { color: #6b7280; font-style: normal; }
+
+    .note {
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #1e40af;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .demo-hero h1 { font-size: 26px; }
+      .demo-hero p  { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Fake business website backdrop ────────────────────────────────────── -->
+<div class="demo-hero">
+  <h1>Stretch Ceiling Pro</h1>
+  <p>Har qanday xonaga mos zamonaviy cho'zma shiftlar — tez, sifatli, kafolatli.</p>
+  <a href="#" class="hero-btn">Narxlarni ko'rish</a>
+</div>
+
+<div class="demo-cards">
+  <div class="demo-card">
+    <div class="card-icon">🎨</div>
+    <h3>150+ Dizayn</h3>
+    <p>Oddiy rangli shiftlardan tortib yulduzli osmongacha — har xil uslub.</p>
+  </div>
+  <div class="demo-card">
+    <div class="card-icon">📐</div>
+    <h3>Bepul O'lchov</h3>
+    <p>Mutaxassisimiz uyingizga kelib bepul o'lchov oladi va narx taklif qiladi.</p>
+  </div>
+  <div class="demo-card">
+    <div class="card-icon">🛡️</div>
+    <h3>5 Yil Kafolat</h3>
+    <p>Barcha ishlarimizga 5 yillik yozma kafolat beramiz.</p>
+  </div>
+</div>
+
+<!-- ── Widget config panel ────────────────────────────────────────────────── -->
+<div class="config-panel">
+
+  <div class="panel-card">
+    <h2>Live Widget Demo</h2>
+    <p class="hint">
+      Configure the widget and click <strong>Apply</strong> to reload it with the new settings.
+      The chat button appears at the bottom-right corner of this page.
+    </p>
+    <div class="cfg-row">
+      <label>
+        API Base URL
+        <input id="cfg-url" type="url" value="http://localhost:8000"
+               placeholder="http://localhost:8000" />
+      </label>
+      <label>
+        Tenant Slug
+        <input id="cfg-slug" type="text" value="demo-company"
+               placeholder="your-company" />
+      </label>
+      <label>
+        Widget Title
+        <input id="cfg-title" type="text" value="AI Yordamchi"
+               placeholder="AI Yordamchi" />
+      </label>
+      <label>
+        Primary Color
+        <input id="cfg-color" type="color" value="#2563eb" />
+      </label>
+    </div>
+    <button class="btn-apply" onclick="applyConfig()">Apply &amp; Reload Widget</button>
+  </div>
+
+  <div class="panel-card">
+    <h2>Embed on Your Website</h2>
+    <p class="hint">
+      Add these lines before <code>&lt;/body&gt;</code> on any page:
+    </p>
+    <pre class="snippet" id="embed-snippet">&lt;link rel="stylesheet" href="https://cdn.example.com/widget.css"&gt;
+&lt;script src="https://cdn.example.com/widget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.SystemXChat.init({
+    tenantSlug:     "your-company",
+    apiBaseUrl:     "https://api.example.com",
+    title:          "AI Yordamchi",
+    primaryColor:   "#2563eb",
+    welcomeMessage: "Salom! Sizga qanday yordam bera olaman?"
+  });
+&lt;/script&gt;</pre>
+    <div class="note">
+      No secrets are embedded in the widget. <code>tenantSlug</code> is a public
+      identifier — the backend enforces all access control.
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <h2>Configuration Options</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>tenantSlug</code></td>
+          <td>string</td>
+          <td>yes</td>
+          <td>Sent as <code>X-Tenant-Slug</code> header on every request</td>
+        </tr>
+        <tr>
+          <td><code>apiBaseUrl</code></td>
+          <td>string</td>
+          <td>yes</td>
+          <td>Base URL of the FastAPI server (no trailing slash)</td>
+        </tr>
+        <tr>
+          <td><code>title</code></td>
+          <td>string</td>
+          <td>—</td>
+          <td>Chat window header title</td>
+        </tr>
+        <tr>
+          <td><code>primaryColor</code></td>
+          <td>hex string</td>
+          <td>—</td>
+          <td>Main brand color (button, header, user bubbles)</td>
+        </tr>
+        <tr>
+          <td><code>welcomeMessage</code></td>
+          <td>string</td>
+          <td>—</td>
+          <td>First bot message shown when chat opens</td>
+        </tr>
+        <tr>
+          <td><code>leadCaptureMessage</code></td>
+          <td>string</td>
+          <td>—</td>
+          <td>Prompt shown in the lead capture form</td>
+        </tr>
+        <tr>
+          <td><code>placeholder</code></td>
+          <td>string</td>
+          <td>—</td>
+          <td>Text input placeholder</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel-card">
+    <h2>API Endpoints Used</h2>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>POST</td>
+          <td><code>/api/chat/message</code></td>
+          <td>Send message, receive AI reply</td>
+        </tr>
+        <tr>
+          <td>POST</td>
+          <td><code>/api/leads</code></td>
+          <td>Submit contact form (name + phone)</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      Session ID is stored in <code>localStorage</code> under
+      <code>sx_session_{tenantSlug}</code> and reused across page reloads.
+    </div>
+  </div>
+
+</div><!-- /config-panel -->
+
+<!-- ── Widget ─────────────────────────────────────────────────────────────── -->
+<script src="widget.js"></script>
+<script>
+  // Initialize with demo defaults immediately on page load
+  window.SystemXChat.init({
+    tenantSlug:     'demo-company',
+    apiBaseUrl:     'http://localhost:8000',
+    title:          'AI Yordamchi',
+    primaryColor:   '#2563eb',
+    welcomeMessage: 'Salom! Bu demo sahifa. API serverini ishga tushirib, widgetni sinab ko\u02bcring.'
+  });
+
+  // "Apply" button handler — re-initializes widget with new config
+  function applyConfig() {
+    var url   = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+    var slug  = document.getElementById('cfg-slug').value.trim();
+    var title = document.getElementById('cfg-title').value.trim() || 'AI Yordamchi';
+    var color = document.getElementById('cfg-color').value;
+
+    if (!slug) { alert('Tenant Slug is required.'); return; }
+    if (!url)  { alert('API Base URL is required.'); return; }
+
+    window.SystemXChat._reset();
+    window.SystemXChat.init({
+      tenantSlug:     slug,
+      apiBaseUrl:     url,
+      title:          title,
+      primaryColor:   color,
+      welcomeMessage: 'Salom! Men ' + title + ' — sizga qanday yordam bera olaman?'
+    });
+  }
+
+  // Live-update embed snippet when config fields change
+  function updateSnippet() {
+    var url   = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+    var slug  = document.getElementById('cfg-slug').value.trim() || 'your-company';
+    var title = document.getElementById('cfg-title').value.trim() || 'AI Yordamchi';
+    var color = document.getElementById('cfg-color').value;
+    var cdn   = 'https://cdn.example.com';
+    document.getElementById('embed-snippet').textContent =
+      '<link rel="stylesheet" href="' + cdn + '/widget.css">\n' +
+      '<script src="' + cdn + '/widget.js"><\/script>\n' +
+      '<script>\n' +
+      '  window.SystemXChat.init({\n' +
+      '    tenantSlug:   "' + slug + '",\n' +
+      '    apiBaseUrl:   "' + (url || 'https://api.example.com') + '",\n' +
+      '    title:        "' + title + '",\n' +
+      '    primaryColor: "' + color + '",\n' +
+      '  });\n' +
+      '<\/script>';
+  }
+
+  ['cfg-url', 'cfg-slug', 'cfg-title', 'cfg-color'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', updateSnippet);
+  });
+</script>
+</body>
+</html>

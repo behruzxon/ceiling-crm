@@ -133,8 +133,7 @@ async def _ai_stats_incr(field: str, *, bot_id: int | None = None) -> None:
         date_str = datetime.date.today().isoformat()
         redis = get_redis()
         key = CacheKeys.ai_stats_field(date_str, field, bot_id=bot_id)
-        await redis.incr(key)
-        await redis.expire(key, CacheTTL.AI_STATS)
+        await redis.incr_with_ttl(key, CacheTTL.AI_STATS)
     except Exception:
         pass
 
@@ -155,7 +154,6 @@ async def _ai_stats_count_user(user_id: int, *, bot_id: int | None = None) -> No
         )
         if acquired:
             key = CacheKeys.ai_stats_field(date_str, "users_started", bot_id=bot_id)
-            await redis.incr(key)
-            await redis.expire(key, CacheTTL.AI_STATS)
+            await redis.incr_with_ttl(key, CacheTTL.AI_STATS)
     except Exception:
         pass

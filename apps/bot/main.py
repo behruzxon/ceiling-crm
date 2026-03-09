@@ -319,11 +319,27 @@ async def on_shutdown(bot: Bot) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _multi_infra_connected = False  # ensure DB/Redis connect only once across bots
+_heartbeat_task: asyncio.Task[None] | None = None  # periodic ownership renewal
+
+
+async def _heartbeat_loop() -> None:
+    """Periodically renew instance heartbeat and bot ownership locks.
+
+    Runs every 10 seconds. Ownership TTL is 30s, so 10s gives 2 renewals
+    per TTL window — safe even if one renewal is delayed.
+    """
+    registry = get_bot_registry()
+    while True:
+        try:
+            await registry.heartbeat()
+        except Exception:
+            log.debug("heartbeat_loop_error")
+        await asyncio.sleep(10)
 
 
 async def on_startup_multi(bot: Bot) -> None:
     """Called once per bot when multi-bot runtime starts."""
-    global _multi_infra_connected
+    global _multi_infra_connected, _heartbeat_task
 
     if not _multi_infra_connected:
         await connect_database()
@@ -357,9 +373,16 @@ async def on_startup_multi(bot: Bot) -> None:
         daily_report.start(bot)
         inactive_cta.start(bot)
 
+        # Start heartbeat loop for ownership renewal
+        if _heartbeat_task is None:
+            _heartbeat_task = asyncio.create_task(_heartbeat_loop())
+            log.info("heartbeat_loop_started", instance_id=registry.instance_id)
+
 
 async def on_shutdown_multi(bot: Bot) -> None:
     """Called once per bot during multi-bot shutdown."""
+    global _heartbeat_task
+
     registry = get_bot_registry()
     bots = registry.all_bots()
 
@@ -368,10 +391,18 @@ async def on_shutdown_multi(bot: Bot) -> None:
         daily_report.stop()
         inactive_cta.stop()
 
+        # Cancel heartbeat loop
+        if _heartbeat_task is not None:
+            _heartbeat_task.cancel()
+            _heartbeat_task = None
+            log.info("heartbeat_loop_stopped")
+
     await bot.session.close()
 
     # Disconnect infra on the last bot shutdown
     if bots and bots[-1].id == bot.id:
+        # Release all ownership locks and sync STOPPED state to Redis
+        await registry.shutdown_all()
         await disconnect_database()
         await disconnect_redis()
         log.info("multi_bot_shutdown_complete")
@@ -390,6 +421,12 @@ async def run_polling_multi() -> None:
     registry = get_bot_registry()
     factory = get_session_factory()
     async with factory() as session:
+        # Recover orphaned bots from crashed instances first
+        recovery = await registry.recover_from_redis(session)
+        if any(v > 0 for v in recovery.values()):
+            log.info("multi_bot_recovery_done", **recovery)
+
+        # Then load remaining bots from DB
         await registry.load_from_db(session)
 
     bots = registry.all_bots()
@@ -522,6 +559,12 @@ async def build_web_app() -> web.Application:
         registry = get_bot_registry()
         factory = get_session_factory()
         async with factory() as session:
+            # Recover orphaned bots from crashed instances first
+            recovery = await registry.recover_from_redis(session)
+            if any(v > 0 for v in recovery.values()):
+                log.info("multi_bot_recovery_done", **recovery)
+
+            # Then load remaining bots from DB
             await registry.load_from_db(session)
 
         storage = await create_storage()

@@ -118,10 +118,11 @@ def _parse_lead_id_from_text(text: str | None) -> int | None:
 async def cmd_opstats(message: Message, **data: object) -> None:
     """Operator leaderboard + first-response time + funnel summary."""
     days = _parse_days(message.text)
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_lead_analytics_service(session)
+        svc = get_lead_analytics_service(session, tenant_id=_tid)
         stats = await svc.opstats(days)
 
     leaderboard: list[dict] = stats["leaderboard"]
@@ -190,10 +191,11 @@ async def cmd_opstats(message: Message, **data: object) -> None:
 async def cmd_funnel(message: Message, **data: object) -> None:
     """Conversion funnel with stage counts and percentages."""
     days = _parse_days(message.text)
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_lead_analytics_service(session)
+        svc = get_lead_analytics_service(session, tenant_id=_tid)
         data_funnel = await svc.funnel(days)
 
     total: int = data_funnel.get("total", 0)
@@ -250,9 +252,10 @@ async def cmd_lead_card(message: Message, **data: object) -> None:
         )
         return
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_lead_analytics_service(session)
+        svc = get_lead_analytics_service(session, tenant_id=_tid)
         lead, timeline = await svc.lead_card(lead_id)
 
     if lead is None:

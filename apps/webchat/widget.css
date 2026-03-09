@@ -1,0 +1,341 @@
+/*
+ * SystemaX Chat Widget — styles v1.0
+ *
+ * All selectors are scoped to #sx-chat-root (IDs) or
+ * "#sx-chat-root .class" to prevent leaking into the host page.
+ *
+ * CSS variables are set by widget.js on the :root element.
+ */
+
+/* ── Variables (defaults — overridden by widget.js) ──────────────────────── */
+:root {
+  --sx-primary:       #2563eb;
+  --sx-primary-dark:  #1d4ed8;
+  --sx-text:          #1f2937;
+  --sx-text-light:    #6b7280;
+  --sx-bg:            #ffffff;
+  --sx-border:        #e5e7eb;
+  --sx-bot-bg:        #f3f4f6;
+  --sx-error-bg:      #fee2e2;
+  --sx-error-text:    #991b1b;
+  --sx-radius:        12px;
+  --sx-shadow:        0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Isolation reset ─────────────────────────────────────────────────────── */
+#sx-chat-root *,
+#sx-chat-root *::before,
+#sx-chat-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Root container ──────────────────────────────────────────────────────── */
+#sx-chat-root {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* ── Floating action button ──────────────────────────────────────────────── */
+#sx-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sx-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
+}
+#sx-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+#sx-fab:focus-visible {
+  outline: 3px solid var(--sx-primary);
+  outline-offset: 3px;
+}
+#sx-fab-open,
+#sx-fab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* ── Chat window ─────────────────────────────────────────────────────────── */
+#sx-chat-window {
+  width: 360px;
+  height: 520px;
+  background: var(--sx-bg);
+  border-radius: var(--sx-radius);
+  box-shadow: var(--sx-shadow);
+  display: flex;           /* toggled to 'none' by JS when hidden */
+  flex-direction: column;
+  overflow: hidden;
+  animation: sx-slide-in 0.2s ease;
+}
+
+@keyframes sx-slide-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+#sx-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--sx-primary);
+  color: #fff;
+  flex-shrink: 0;
+}
+#sx-chat-title {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+}
+#sx-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  line-height: 0;
+  transition: color 0.15s;
+}
+#sx-close-btn:hover  { color: #fff; }
+
+/* ── Messages area ───────────────────────────────────────────────────────── */
+#sx-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+#sx-messages::-webkit-scrollbar       { width: 4px; }
+#sx-messages::-webkit-scrollbar-thumb { background: var(--sx-border); border-radius: 2px; }
+
+/* ── Message rows ────────────────────────────────────────────────────────── */
+#sx-chat-root .sx-msg {
+  display: flex;
+  max-width: 84%;
+}
+#sx-chat-root .sx-msg-user  { align-self: flex-end;  justify-content: flex-end; }
+#sx-chat-root .sx-msg-bot   { align-self: flex-start; }
+#sx-chat-root .sx-msg-error { align-self: flex-start; }
+
+/* ── Bubbles ─────────────────────────────────────────────────────────────── */
+#sx-chat-root .sx-bubble {
+  padding: 9px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+#sx-chat-root .sx-msg-user  .sx-bubble {
+  background: var(--sx-primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+#sx-chat-root .sx-msg-bot   .sx-bubble {
+  background: var(--sx-bot-bg);
+  color: var(--sx-text);
+  border-bottom-left-radius: 4px;
+}
+#sx-chat-root .sx-msg-error .sx-bubble {
+  background: var(--sx-error-bg);
+  color: var(--sx-error-text);
+  border-bottom-left-radius: 4px;
+  font-size: 13px;
+}
+
+/* ── Loading dots ────────────────────────────────────────────────────────── */
+#sx-chat-root .sx-loading {
+  display: flex;
+  gap: 5px;
+  padding: 12px 16px;
+  align-items: center;
+}
+#sx-chat-root .sx-loading span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sx-text-light);
+  animation: sx-blink 1.3s ease-in-out infinite;
+}
+#sx-chat-root .sx-loading span:nth-child(2) { animation-delay: 0.2s; }
+#sx-chat-root .sx-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes sx-blink {
+  0%, 80%, 100% { opacity: 0.2;  transform: scale(0.8); }
+  40%            { opacity: 1;   transform: scale(1);   }
+}
+
+/* ── Lead capture form ───────────────────────────────────────────────────── */
+#sx-lead-capture {
+  background: #f8fafc;
+  border-top: 1px solid var(--sx-border);
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+#sx-lead-msg {
+  font-size: 13px;
+  color: var(--sx-text-light);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+#sx-lead-capture input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--sx-border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--sx-text);
+  background: var(--sx-bg);
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#sx-lead-capture input:focus { border-color: var(--sx-primary); }
+
+#sx-lead-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+#sx-chat-root .sx-btn-primary {
+  flex: 1;
+  padding: 8px;
+  background: var(--sx-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#sx-chat-root .sx-btn-primary:hover     { background: var(--sx-primary-dark); }
+#sx-chat-root .sx-btn-primary:disabled  { opacity: 0.55; cursor: not-allowed; }
+
+#sx-chat-root .sx-btn-secondary {
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--sx-text-light);
+  border: 1px solid var(--sx-border);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#sx-chat-root .sx-btn-secondary:hover { background: var(--sx-border); }
+
+#sx-lead-status {
+  font-size: 12px;
+  min-height: 16px;
+  line-height: 1.4;
+}
+#sx-chat-root .sx-status-ok    { color: #166534; }
+#sx-chat-root .sx-status-error { color: var(--sx-error-text); }
+
+/* ── Input area ──────────────────────────────────────────────────────────── */
+#sx-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--sx-border);
+  background: var(--sx-bg);
+  flex-shrink: 0;
+}
+#sx-input {
+  flex: 1;
+  border: 1px solid var(--sx-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--sx-text);
+  resize: none;
+  outline: none;
+  line-height: 1.45;
+  max-height: 100px;
+  overflow-y: auto;
+  background: var(--sx-bg);
+  transition: border-color 0.15s;
+}
+#sx-input:focus   { border-color: var(--sx-primary); }
+#sx-input:disabled { opacity: 0.55; }
+
+#sx-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--sx-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  transition: background 0.15s;
+}
+#sx-send-btn:hover    { background: var(--sx-primary-dark); }
+#sx-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#sx-contact-btn {
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sx-text-light);
+  border: 1px solid var(--sx-border);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+#sx-contact-btn:hover {
+  background: var(--sx-bot-bg);
+  color: var(--sx-text);
+}
+
+/* ── Mobile responsive ───────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #sx-chat-root {
+    bottom: 12px;
+    right: 12px;
+  }
+  #sx-chat-window {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}

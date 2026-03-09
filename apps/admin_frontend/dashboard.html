@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SystemaX Admin Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>SystemaX</h2>
+      <span>Admin Panel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item" data-section="dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-section="leads">
+        <span class="icon">👤</span> Leads
+      </div>
+      <div class="nav-item" data-section="chats">
+        <span class="icon">💬</span> Chats
+      </div>
+      <div class="nav-item" data-section="analytics">
+        <span class="icon">📈</span> Analytics
+      </div>
+      <div class="nav-item" data-section="billing">
+        <span class="icon">💳</span> Billing
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-name" id="admin-name">Loading…</div>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────────────── -->
+  <div class="main-content">
+    <div class="topbar">
+      <span class="topbar-title" id="topbar-title">Dashboard</span>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary btn-sm" id="logout-btn">Logout</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- ── Dashboard section ──────────────────────────────────────────── -->
+      <div class="section" id="section-dashboard">
+        <div class="section-header">
+          <h2>Overview</h2>
+        </div>
+        <div class="cards-grid" id="dashboard-cards">
+          <div class="loading">Loading…</div>
+        </div>
+      </div>
+
+      <!-- ── Leads section ──────────────────────────────────────────────── -->
+      <div class="section" id="section-leads">
+        <div class="section-header">
+          <h2>Leads</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="form-input" id="leads-filter-status" style="width:140px;padding:6px 10px;">
+              <option value="">All statuses</option>
+              <option value="hot">Hot</option>
+              <option value="warm">Warm</option>
+              <option value="cold">Cold</option>
+            </select>
+            <select class="form-input" id="leads-filter-source" style="width:140px;padding:6px 10px;">
+              <option value="">All sources</option>
+              <option value="telegram">Telegram</option>
+              <option value="web">Web</option>
+              <option value="chat">Chat</option>
+              <option value="group">Group</option>
+              <option value="site">Site</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>District</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="leads-tbody">
+              <tr><td colspan="7" class="loading">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button class="btn btn-secondary btn-sm" id="leads-prev" disabled>← Prev</button>
+          <span id="leads-page-info">Page 1</span>
+          <button class="btn btn-secondary btn-sm" id="leads-next">Next →</button>
+        </div>
+      </div>
+
+      <!-- ── Chats section ──────────────────────────────────────────────── -->
+      <div class="section" id="section-chats">
+        <div class="section-header">
+          <h2>Chat History</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" id="chats-prev" disabled>← Prev</button>
+            <span id="chats-page-info" style="color:#64748b;font-size:.85rem;line-height:30px;">Page 1</span>
+            <button class="btn btn-secondary btn-sm" id="chats-next">Next →</button>
+          </div>
+        </div>
+        <div class="chat-layout">
+          <div class="card" style="padding:0;">
+            <div class="chat-list" id="chat-list">
+              <div class="loading">Loading…</div>
+            </div>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="empty">Select a conversation on the left</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Analytics section ──────────────────────────────────────────── -->
+      <div class="section" id="section-analytics">
+        <div class="section-header"><h2>Analytics</h2></div>
+        <div id="analytics-content">
+          <div class="loading">Loading…</div>
+        </div>
+      </div>
+
+      <!-- ── Billing section ────────────────────────────────────────────── -->
+      <div class="section" id="section-billing">
+        <div class="section-header"><h2>Billing &amp; Plan</h2></div>
+        <div id="billing-content">
+          <div class="loading">Loading…</div>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+
+</div><!-- /app-layout -->
+
+<script src="dashboard.js"></script>
+</body>
+</html>

@@ -168,9 +168,10 @@ def _format_lead_card(lead) -> str:  # type: ignore[type-arg]
 @router.callback_query(F.data == "kanban:back", RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_back(callback: CallbackQuery, **data: object) -> None:
     """Return to the main kanban board with refreshed counts."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         counts = await pipeline_svc.get_stage_counts()
 
     total = sum(counts.values())
@@ -194,9 +195,10 @@ async def cb_kanban_back_stage(callback: CallbackQuery, **data: object) -> None:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         leads = await pipeline_svc.get_leads_by_stage(kanban_stage, limit=_PAGE_SIZE + 1)
 
     has_more = len(leads) > _PAGE_SIZE
@@ -232,9 +234,10 @@ async def cb_kanban_stage(callback: CallbackQuery, **data: object) -> None:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         leads = await pipeline_svc.get_leads_by_stage(kanban_stage, limit=_PAGE_SIZE + 1)
 
     has_more = len(leads) > _PAGE_SIZE
@@ -278,10 +281,11 @@ async def cb_kanban_page(callback: CallbackQuery, **data: object) -> None:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     offset = page * _PAGE_SIZE
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         leads = await pipeline_svc.get_leads_by_stage(
             kanban_stage, limit=_PAGE_SIZE + 1, offset=offset
         )
@@ -317,9 +321,10 @@ async def cb_kanban_lead(callback: CallbackQuery, **data: object) -> None:
         return
     from_stage = parts[3] if len(parts) > 3 else KANBAN_STAGES[0]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         lead = await pipeline_svc.get_lead(lead_id)
 
     if lead is None:
@@ -355,10 +360,11 @@ async def cb_kanban_move(callback: CallbackQuery, **data: object) -> None:
     actor_id: int = callback.from_user.id  # type: ignore[union-attr]
     actor_name: str = callback.from_user.full_name  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            pipeline_svc = get_pipeline_service(session)
+            pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
             lead = await pipeline_svc.move_stage(
                 lead_id=lead_id,
                 new_kanban_stage=new_stage,
@@ -367,7 +373,7 @@ async def cb_kanban_move(callback: CallbackQuery, **data: object) -> None:
             await session.commit()
 
             # Notify admin groups
-            admin_group_svc = get_admin_group_service(session)
+            admin_group_svc = get_admin_group_service(session, tenant_id=_tid)
             chat_ids = await admin_group_svc.list_all_chat_ids()
         except NotFoundError:
             await callback.answer("Lid topilmadi", show_alert=True)
@@ -415,9 +421,10 @@ async def cb_kanban_assign(callback: CallbackQuery, **data: object) -> None:
         await callback.answer("Noto'g'ri ID", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        user_svc = get_user_service(session)
+        user_svc = get_user_service(session, tenant_id=_tid)
         managers = await user_svc.get_managers()
 
     if not managers:
@@ -465,12 +472,13 @@ async def cb_kanban_assign_mgr(callback: CallbackQuery, **data: object) -> None:
 
     actor_id: int = callback.from_user.id  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_repo   = get_lead_repo(session)
-            action_repo = get_lead_action_repo(session)
-            audit_repo  = get_audit_log_repo(session)
+            lead_repo   = get_lead_repo(session, tenant_id=_tid)
+            action_repo = get_lead_action_repo(session, tenant_id=_tid)
+            audit_repo  = get_audit_log_repo(session, tenant_id=_tid)
 
             lead = await lead_repo.assign_manager(lead_id, mgr_id, reason="kanban_manual")
 

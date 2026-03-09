@@ -88,5 +88,10 @@ class SubscriptionPaymentModel(Base):
     __table_args__ = (
         sa.Index("ix_sub_payments_tenant_id", "tenant_id"),
         sa.Index("ix_sub_payments_status", "status"),
-        sa.Index("ix_sub_payments_provider_trans_id", "provider_trans_id"),
+        sa.Index(
+            "uq_sub_payments_provider_trans_id",
+            "provider_trans_id",
+            unique=True,
+            postgresql_where=sa.text("provider_trans_id IS NOT NULL"),
+        ),
     )

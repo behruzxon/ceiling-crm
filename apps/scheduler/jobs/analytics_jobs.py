@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from infrastructure.cache.distributed_lock import scheduler_lock
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -38,11 +39,13 @@ def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
     )
 
 
+@scheduler_lock("analytics_daily")
 async def aggregate_daily_stats() -> None:
     """Aggregate daily business metrics. TODO: implement via AnalyticsService."""
     log.debug("analytics_daily_not_implemented")
 
 
+@scheduler_lock("ai_daily_report")
 async def send_ai_daily_report() -> None:
     """
     Read today's AI stats from Redis, format a Uzbek-language report, and

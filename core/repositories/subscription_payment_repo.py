@@ -17,12 +17,12 @@ class AbstractSubscriptionPaymentRepository(BaseRepository[SubscriptionPayment, 
 
     @abstractmethod
     async def get_by_merchant_trans_id(
-        self, merchant_trans_id: str,
+        self, merchant_trans_id: str, *, for_update: bool = False,
     ) -> SubscriptionPayment | None: ...
 
     @abstractmethod
     async def get_by_provider_trans_id(
-        self, provider_trans_id: str,
+        self, provider_trans_id: str, *, for_update: bool = False,
     ) -> SubscriptionPayment | None: ...
 
     @abstractmethod

@@ -99,6 +99,8 @@ async def _run(bot: Bot) -> None:
                 try:
                     factory = get_session_factory()
                     async with factory() as session:
+                        # Intentionally global (no tenant_id) — system task
+                        # scanning all users across all tenants by user_id
                         user_repo = get_user_repo(session)
                         db_user = await user_repo.get_by_id(user_id)
                 except Exception:

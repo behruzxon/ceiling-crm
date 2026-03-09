@@ -174,13 +174,18 @@ def get_stats_service(
 
 
 def get_lead_notification_service() -> "LeadNotificationService":
-    """Return a LeadNotificationService wired with bot credentials from settings."""
+    """Return a LeadNotificationService wired with the Telegram channel."""
+    from apps.bot.channels.telegram_delivery import TelegramChannelDelivery
     from core.services.lead_notification_service import LeadNotificationService
     from shared.config import get_settings
     settings = get_settings()
+    channel = TelegramChannelDelivery(
+        bot_token=settings.bot.token.get_secret_value(),
+        admin_group_id=settings.bot.admin_group_id,
+    )
     return LeadNotificationService(
         admin_user_id=settings.bot.admin_user_id,
-        bot_token=settings.bot.token.get_secret_value(),
+        channel=channel,
     )
 
 

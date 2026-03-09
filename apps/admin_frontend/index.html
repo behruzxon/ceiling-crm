@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SystemaX Admin — Login</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:#0f1117; }
+    .login-card { background:#1a1d27; border:1px solid #2a2d3e; border-radius:12px; padding:40px 48px; width:100%; max-width:400px; }
+    .login-card h1 { color:#e2e8f0; font-size:1.5rem; margin-bottom:8px; font-weight:600; }
+    .login-card p { color:#64748b; font-size:.9rem; margin-bottom:28px; }
+    .error-msg { background:#2d1515; border:1px solid #7f1d1d; color:#fca5a5; padding:10px 14px; border-radius:8px; font-size:.85rem; margin-bottom:16px; display:none; }
+    .error-msg.visible { display:block; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>SystemaX Admin</h1>
+    <p>Sign in to your dashboard</p>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label">Tenant Slug</label>
+        <input class="form-input" type="text" id="tenant-slug" placeholder="your-company" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="email" placeholder="admin@company.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button class="btn btn-primary" type="submit" id="login-btn" style="width:100%;margin-top:8px;">
+        Sign In
+      </button>
+    </form>
+  </div>
+
+  <script>
+    const API = (localStorage.getItem('sx_api_url') || 'http://localhost:8000');
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const err = document.getElementById('error-msg');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      err.className = 'error-msg';
+
+      const payload = {
+        tenant_slug: document.getElementById('tenant-slug').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      };
+
+      try {
+        const res = await fetch(`${API}/admin/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Login failed');
+        localStorage.setItem('sx_token', data.access_token);
+        localStorage.setItem('sx_tenant_slug', payload.tenant_slug);
+        window.location.href = 'dashboard.html';
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.className = 'error-msg visible';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+
+    // Redirect if already logged in
+    if (localStorage.getItem('sx_token')) {
+      window.location.href = 'dashboard.html';
+    }
+  </script>
+</body>
+</html>

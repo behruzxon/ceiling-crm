@@ -52,10 +52,11 @@ async def _edit_admin_caption(callback: CallbackQuery, suffix: str) -> None:
 @router.callback_query(F.data.startswith("pay:a:"))
 async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
     payment_id, user_id = _parse_callback(callback.data or "")
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_payment_service(session)
+        svc = get_payment_service(session, tenant_id=_tid)
         try:
             await svc.mark_paid(payment_id)
             await session.commit()
@@ -85,10 +86,11 @@ async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("pay:r:"))
 async def cb_reject_payment(callback: CallbackQuery, **data: object) -> None:
     payment_id, user_id = _parse_callback(callback.data or "")
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_payment_service(session)
+        svc = get_payment_service(session, tenant_id=_tid)
         try:
             await svc.reject_payment(payment_id)
             await session.commit()

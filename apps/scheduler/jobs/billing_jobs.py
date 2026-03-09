@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from infrastructure.cache.distributed_lock import scheduler_lock
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -29,6 +30,7 @@ def register_billing_jobs(scheduler: AsyncIOScheduler) -> None:
     )
 
 
+@scheduler_lock("billing_expiration_check")
 async def check_billing_expirations() -> None:
     """Scan all tenants for upcoming or past billing expirations."""
     from core.services.billing_service import BillingService

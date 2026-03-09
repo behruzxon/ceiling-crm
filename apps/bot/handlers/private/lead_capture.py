@@ -80,10 +80,11 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
     phone = fsm_data["phone"]
     user_id = message.from_user.id  # type: ignore[union-attr]
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_service = get_lead_service(session)
+            lead_service = get_lead_service(session, tenant_id=_tid)
             lead = await lead_service.create_lead(
                 user_id=user_id,
                 category=CeilingCategory.ODNOTONNY,  # default, can be refined later
@@ -111,7 +112,7 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
             try:
                 log_factory = get_session_factory()
                 async with log_factory() as log_session:
-                    await get_lead_action_repo(log_session).insert(
+                    await get_lead_action_repo(log_session, tenant_id=_tid).insert(
                         lead.id, user_id, "lead_created"
                     )
                     await log_session.commit()

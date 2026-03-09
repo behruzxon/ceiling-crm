@@ -20,10 +20,11 @@ router = Router(name="callbacks:leads")
 async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
     """Show full lead details."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        lead_service = get_lead_service(session)
+        lead_service = get_lead_service(session, tenant_id=_tid)
         try:
             lead = await lead_service.get_lead(lead_id)
         except NotFoundError:
@@ -56,10 +57,11 @@ async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
 async def cb_assign_lead(callback: CallbackQuery, **data: object) -> None:
     """Show manager selection keyboard for lead assignment."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        user_service = get_user_service(session)
+        user_service = get_user_service(session, tenant_id=_tid)
         managers = await user_service.get_managers()
 
         if not managers:
@@ -90,12 +92,13 @@ async def cb_do_assign(callback: CallbackQuery, **data: object) -> None:
     manager_id = int(parts[3])
     actor_id = callback.from_user.id
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_service = get_lead_service(session)
+            lead_service = get_lead_service(session, tenant_id=_tid)
             lead = await lead_service.assign_manager(lead_id, manager_id, actor_id)
-            await get_lead_action_repo(session).insert(
+            await get_lead_action_repo(session, tenant_id=_tid).insert(
                 lead_id, actor_id, "lead_assigned", payload={"manager_id": manager_id}
             )
             await session.commit()

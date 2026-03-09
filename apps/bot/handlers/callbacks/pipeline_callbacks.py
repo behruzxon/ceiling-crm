@@ -90,6 +90,8 @@ async def _log_stage_action(
     old_stage: PipelineStage,
     new_stage: PipelineStage,
     extra: dict | None = None,  # type: ignore[type-arg]
+    *,
+    tenant_id: int | None = None,
 ) -> None:
     """Insert the right action_type based on which stage we moved to."""
     if new_stage == PipelineStage.MEASUREMENT:
@@ -103,7 +105,7 @@ async def _log_stage_action(
     if extra:
         payload.update(extra)
 
-    await get_lead_action_repo(session).insert(lead_id, actor_id, action, payload=payload)  # type: ignore[arg-type]
+    await get_lead_action_repo(session, tenant_id=tenant_id).insert(lead_id, actor_id, action, payload=payload)  # type: ignore[arg-type]
 
 
 # ── Legacy: show menu of valid next stages ────────────────────────────────────
@@ -112,11 +114,12 @@ async def _log_stage_action(
 async def cb_advance_stage(callback: CallbackQuery, **data: object) -> None:
     """Show valid next stages for the lead (legacy menu approach)."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        crm = get_crm_service(session)
-        lead_repo = get_lead_repo(session)
+        crm = get_crm_service(session, tenant_id=_tid)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
 
         lead = await lead_repo.get_by_id(lead_id)
         if lead is None:
@@ -154,16 +157,17 @@ async def cb_do_advance(callback: CallbackQuery, **data: object) -> None:
     lead_id = int(parts[2])
     new_stage = PipelineStage(parts[3])
     actor_id = callback.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
         try:
-            crm = get_crm_service(session)
-            lead = await get_lead_repo(session).get_by_id(lead_id)
+            crm = get_crm_service(session, tenant_id=_tid)
+            lead = await get_lead_repo(session, tenant_id=_tid).get_by_id(lead_id)
             old_stage = lead.current_stage if lead else PipelineStage.NEW
 
             await crm.advance_stage(lead_id, new_stage, actor_id)
-            await _log_stage_action(session, lead_id, actor_id, old_stage, new_stage)
+            await _log_stage_action(session, lead_id, actor_id, old_stage, new_stage, tenant_id=_tid)
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
@@ -188,10 +192,11 @@ async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
     """Directly advance to the next stage in the natural pipeline order."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
     actor_id = callback.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        lead = await get_lead_repo(session).get_by_id(lead_id)
+        lead = await get_lead_repo(session, tenant_id=_tid).get_by_id(lead_id)
         if lead is None:
             await callback.answer("Lid topilmadi", show_alert=True)
             return
@@ -206,9 +211,9 @@ async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
         new_stage = _LINEAR_ORDER[idx + 1]
 
         try:
-            crm = get_crm_service(session)
+            crm = get_crm_service(session, tenant_id=_tid)
             await crm.advance_stage(lead_id, new_stage, actor_id)
-            await _log_stage_action(session, lead_id, actor_id, current, new_stage)
+            await _log_stage_action(session, lead_id, actor_id, current, new_stage, tenant_id=_tid)
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
@@ -233,10 +238,11 @@ async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
     """Go back one step in the natural pipeline order (undo / correction)."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
     actor_id = callback.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        lead = await get_lead_repo(session).get_by_id(lead_id)
+        lead = await get_lead_repo(session, tenant_id=_tid).get_by_id(lead_id)
         if lead is None:
             await callback.answer("Lid topilmadi", show_alert=True)
             return
@@ -258,7 +264,7 @@ async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
         prev_stage = _LINEAR_ORDER[idx - 1]
 
         try:
-            crm = get_crm_service(session)
+            crm = get_crm_service(session, tenant_id=_tid)
             await crm.advance_stage(
                 lead_id, prev_stage, actor_id,
                 note=f"Qaytarildi ({current.value} → {prev_stage.value})",
@@ -266,6 +272,7 @@ async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
             await _log_stage_action(
                 session, lead_id, actor_id, current, prev_stage,
                 extra={"reason": "undo"},
+                tenant_id=_tid,
             )
             await session.commit()
 
@@ -320,15 +327,16 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
     reason_slug = parts[3]
     actor_id = callback.from_user.id  # type: ignore[union-attr]
     reason_text = _LOST_REASON_TEXT.get(reason_slug, reason_slug)
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
         try:
-            crm = get_crm_service(session)
+            crm = get_crm_service(session, tenant_id=_tid)
             await crm.advance_stage(
                 lead_id, PipelineStage.LOST, actor_id, note=reason_text
             )
-            await get_lead_action_repo(session).insert(
+            await get_lead_action_repo(session, tenant_id=_tid).insert(
                 lead_id, actor_id, "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
@@ -385,15 +393,16 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
         return
 
     actor_id = message.from_user.id  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
         try:
-            crm = get_crm_service(session)
+            crm = get_crm_service(session, tenant_id=_tid)
             await crm.advance_stage(
                 lead_id, PipelineStage.LOST, actor_id, note=reason_text
             )
-            await get_lead_action_repo(session).insert(
+            await get_lead_action_repo(session, tenant_id=_tid).insert(
                 lead_id, actor_id, "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
@@ -423,10 +432,11 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
 async def cb_timeline(callback: CallbackQuery, **data: object) -> None:
     """Show last 20 actions for a lead as a chronological timeline."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    _tid = data.get("tenant_id")
 
     factory = get_session_factory()
     async with factory() as session:
-        action_repo = get_lead_action_repo(session)
+        action_repo = get_lead_action_repo(session, tenant_id=_tid)
         actions = await action_repo.get_lead_timeline(lead_id, limit=20)
 
     if not actions:
@@ -472,10 +482,11 @@ async def cb_stage_page(callback: CallbackQuery, **data: object) -> None:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return
 
+    _tid = data.get("tenant_id")
     page_size = 10
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
         leads = await lead_repo.search(
             stage=stage,
             limit=page_size + 1,

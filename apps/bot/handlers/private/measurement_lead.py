@@ -293,6 +293,7 @@ async def handle_ml_time(message: Message, state: FSMContext, **data: object) ->
     await message.answer("Asosiy menyu:", reply_markup=main_menu_keyboard())
 
     # Load AI scores and dimensions from DB (non-fatal, fire-and-forget via task)
+    _tid = data.get("tenant_id")
     asyncio.create_task(
         _create_lead_and_notify(
             user_id=user_id,
@@ -303,6 +304,7 @@ async def handle_ml_time(message: Message, state: FSMContext, **data: object) ->
             username=username,
             chat_type=message.chat.type,
             chat_id=message.chat.id,
+            tenant_id=_tid,
         )
     )
 
@@ -317,6 +319,7 @@ async def _create_lead_and_notify(
     username: str | None,
     chat_type: str,
     chat_id: int,
+    tenant_id: int | None = None,
 ) -> None:
     """Create a lead in DB and send admin notification. Fire-and-forget, never raises."""
     try:
@@ -330,20 +333,21 @@ async def _create_lead_and_notify(
         closing_confidence: float | None = None
         dimensions: str | None = None
         try:
-            async with factory() as session:
-                conv = await session.get(AiConversationModel, user_id)
-                mem  = await session.get(AiMemoryModel, user_id)
-                if conv:
-                    lead_temperature   = conv.lead_temperature
-                    closing_confidence = conv.closing_confidence
-                if mem and mem.profile:
-                    dimensions = mem.profile.get("last_dimensions")
+            if tenant_id is not None:
+                async with factory() as session:
+                    conv = await session.get(AiConversationModel, (tenant_id, user_id))
+                    mem  = await session.get(AiMemoryModel, (tenant_id, user_id))
+                    if conv:
+                        lead_temperature   = conv.lead_temperature
+                        closing_confidence = conv.closing_confidence
+                    if mem and mem.profile:
+                        dimensions = mem.profile.get("last_dimensions")
         except Exception:
             log.warning("measurement_lead_ai_score_load_failed", user_id=user_id)
 
         # Create the lead
         async with factory() as session:
-            svc = get_lead_service(session)
+            svc = get_lead_service(session, tenant_id=tenant_id)
             lead = await svc.create_lead(
                 user_id=user_id,
                 category=CeilingCategory.ODNOTONNY,
@@ -361,7 +365,7 @@ async def _create_lead_and_notify(
                 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
                 next_fu = compute_next_followup(lead_temperature, closing_confidence)
                 async with factory() as session:
-                    await PostgresLeadRepository(session).update_ai_scoring(
+                    await PostgresLeadRepository(session, tenant_id).update_ai_scoring(
                         lead.id,
                         lead_temperature=lead_temperature,
                         closing_confidence=closing_confidence,

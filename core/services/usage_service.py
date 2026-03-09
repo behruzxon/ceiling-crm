@@ -6,17 +6,23 @@ Tracks and enforces per-tenant usage limits based on subscription plan.
 Uses Redis counters for real-time tracking (leads/month, AI messages/day)
 and plan configuration from ``shared.constants.plans`` for limit enforcement.
 
-Fails open: if Redis is unreachable or plan lookup fails, the action is allowed.
+Fails safe: if Redis is unreachable, usage checks DENY the action to
+prevent unlimited usage bypassing billing limits.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from shared.constants.plans import PlanConfig, get_plan_config
+from shared.constants.plans import get_plan_config
 from shared.logging import get_logger
 
 log = get_logger(__name__)
+
+_REDIS_UNAVAILABLE_MSG = (
+    "Tizim vaqtincha mavjud emas. "
+    "Iltimos biroz kutib qayta urinib ko'ring."
+)
 
 
 @dataclass(slots=True)
@@ -59,13 +65,13 @@ async def check_lead_limit(
 ) -> LimitCheckResult:
     """Check if the tenant can create another lead this month.
 
-    Fails open if Redis is unreachable.
+    Fails safe: if Redis is unreachable, denies the action.
     """
-    try:
-        config = get_plan_config(plan_name)
-        if config.leads_per_month == 0:
-            return LimitCheckResult(allowed=True)
+    config = get_plan_config(plan_name)
+    if config.leads_per_month == 0:
+        return LimitCheckResult(allowed=True)
 
+    try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
 
@@ -98,8 +104,15 @@ async def check_lead_limit(
         return LimitCheckResult(allowed=True, used=used, limit=config.leads_per_month)
 
     except Exception:
-        log.warning("lead_limit_check_failed", tenant_id=tenant_id)
-        return LimitCheckResult(allowed=True)
+        log.warning(
+            "redis_usage_check_failed",
+            tenant_id=tenant_id,
+            operation="check_lead_limit",
+        )
+        return LimitCheckResult(
+            allowed=False,
+            reason=_REDIS_UNAVAILABLE_MSG,
+        )
 
 
 async def check_ai_limit(
@@ -109,13 +122,13 @@ async def check_ai_limit(
     """Check if the tenant can make another AI call today.
 
     This is separate from the per-user rate limit in ai_openai.py.
-    Fails open if Redis is unreachable.
+    Fails safe: if Redis is unreachable, denies the action.
     """
-    try:
-        config = get_plan_config(plan_name)
-        if config.ai_messages_per_day == 0:
-            return LimitCheckResult(allowed=True)
+    config = get_plan_config(plan_name)
+    if config.ai_messages_per_day == 0:
+        return LimitCheckResult(allowed=True)
 
+    try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
 
@@ -148,8 +161,15 @@ async def check_ai_limit(
         return LimitCheckResult(allowed=True, used=used, limit=config.ai_messages_per_day)
 
     except Exception:
-        log.warning("ai_limit_check_failed", tenant_id=tenant_id)
-        return LimitCheckResult(allowed=True)
+        log.warning(
+            "redis_usage_check_failed",
+            tenant_id=tenant_id,
+            operation="check_ai_limit",
+        )
+        return LimitCheckResult(
+            allowed=False,
+            reason=_REDIS_UNAVAILABLE_MSG,
+        )
 
 
 def check_feature(
@@ -179,7 +199,11 @@ def check_feature(
 
 
 async def track_lead_created(tenant_id: int) -> None:
-    """Increment the monthly lead counter for a tenant."""
+    """Increment the monthly lead counter for a tenant.
+
+    Non-fatal: if Redis is down, the lead is still created but the
+    counter may be inaccurate. Logged for operator attention.
+    """
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
@@ -189,12 +213,14 @@ async def track_lead_created(tenant_id: int) -> None:
         key = CacheKeys.monthly_lead_count(tenant_id, year_month=ym)
         cache = get_redis()
 
-        count = await cache.incr(key)
-        if count == 1:
-            await cache.expire(key, CacheTTL.MONTHLY_LEAD_COUNTER)
+        await cache.incr_with_ttl(key, CacheTTL.MONTHLY_LEAD_COUNTER)
 
     except Exception:
-        log.warning("track_lead_failed", tenant_id=tenant_id)
+        log.warning(
+            "redis_usage_counter_failed",
+            tenant_id=tenant_id,
+            operation="track_lead_created",
+        )
 
 
 async def get_usage_summary(
@@ -225,7 +251,11 @@ async def get_usage_summary(
         ai_used = int(raw_ai) if raw_ai else 0
 
     except Exception:
-        log.warning("usage_summary_failed", tenant_id=tenant_id)
+        log.warning(
+            "redis_usage_check_failed",
+            tenant_id=tenant_id,
+            operation="get_usage_summary",
+        )
 
     return UsageStatus(
         plan_name=config.name,
@@ -251,4 +281,8 @@ async def reset_monthly_usage(tenant_id: int) -> None:
         log.info("usage_reset", tenant_id=tenant_id, month=ym)
 
     except Exception:
-        log.warning("usage_reset_failed", tenant_id=tenant_id)
+        log.warning(
+            "redis_usage_counter_failed",
+            tenant_id=tenant_id,
+            operation="reset_monthly_usage",
+        )

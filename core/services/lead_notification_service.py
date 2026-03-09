@@ -3,23 +3,28 @@ core.services.lead_notification_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Admin-group notification service for new and HOT leads.
 
-This service manages its own Bot lifecycle and DB sessions so it can be
-called fire-and-forget after the main transaction has committed.
+Delegates message delivery to a ChannelDelivery implementation so the
+service contains no aiogram/transport dependencies. Each notify method
+is fire-and-forget — exceptions are caught and logged.
 
 Public API
 ----------
   is_hot_lead(lead) -> bool               — pure predicate
-  LeadNotificationService.notify_new_lead(lead)   — "🆕 Yangi lid" card
-  LeadNotificationService.notify_hot_lead(lead_id) — "🔥 HOT LEAD" alert (deduped)
+  LeadNotificationService.notify_new_lead(lead)          — "🆕 Yangi lid" card
+  LeadNotificationService.notify_hot_lead(lead_id)       — "🔥 HOT LEAD" alert (deduped)
+  LeadNotificationService.notify_measurement_lead(...)   — measurement request card
+  LeadNotificationService.notify_draft_lead(...)         — phone-capture alert
+  LeadNotificationService.notify_ai_lead_collected(...)  — AI-collected lead card
+  LeadNotificationService.notify_lead_interest(...)      — WARM/COLD interest signal
 """
 from __future__ import annotations
 
+from core.channels.base import ChannelDelivery
 from core.domain.lead import Lead
 from infrastructure.database.repositories.audit_log_repo import PostgresAuditLogRepository
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.session import get_session_factory
-from shared.config import get_settings
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -36,87 +41,27 @@ class LeadNotificationService:
     """
     Sends admin-group notifications for new and HOT leads.
 
-    Each public method creates its own Bot instance + DB session so the
-    caller never needs to worry about session state or Bot lifecycle.
-    Methods never raise — all exceptions are caught and logged.
+    Delivery is delegated to *channel* so this class has no transport
+    dependency. Methods never raise — all exceptions are caught and logged.
     """
 
-    def __init__(self, admin_user_id: int, bot_token: str) -> None:
+    def __init__(self, admin_user_id: int, channel: ChannelDelivery) -> None:
         self._admin_user_id = admin_user_id
-        self._bot_token = bot_token
+        self._channel = channel
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    @staticmethod
-    def _lead_status_keyboard(lead_id: int) -> "InlineKeyboardMarkup":
-        """Build the quick-action inline keyboard appended to every lead card."""
-        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="📌 Kanban'da ochish",
-                    callback_data=f"kanban:lead:{lead_id}:new",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✅ Bog'landim",
-                    callback_data=f"lead:{lead_id}:status:contacted",
-                ),
-                InlineKeyboardButton(
-                    text="📅 O'lchov",
-                    callback_data=f"lead:{lead_id}:status:measurement",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="💰 Narx yuborildi",
-                    callback_data=f"lead:{lead_id}:status:quoted",
-                ),
-                InlineKeyboardButton(
-                    text="🧾 Zakaz",
-                    callback_data=f"lead:{lead_id}:status:deal",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="\u274c Yo'qotildi",
-                    callback_data=f"lead:{lead_id}:status:lost",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="\U0001f4a1 Operator yordam",
-                    callback_data=f"op:menu:{lead_id}",
-                ),
-            ],
-        ])
-
     async def notify_new_lead(self, lead: Lead) -> None:
-        """Send a NEW lead card to admin DM + all admin groups. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
+        """Send a NEW lead card to the admin channel. Never raises."""
         text = self._new_lead_text(lead)
-        keyboard = self._lead_status_keyboard(lead.id)
-
-        bot = Bot(
-            token=self._bot_token,
-            default=DefaultBotProperties(parse_mode="HTML"),
-        )
         try:
-            await self._send_to_admin_group(bot, text, keyboard)
+            await self._channel.send_admin_notification(text, lead_id=lead.id)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_new_lead_error", lead_id=lead.id)
-        finally:
-            await bot.session.close()
 
     async def notify_hot_lead(self, lead_id: int) -> None:
         """Send a HOT lead alert once, deduped by last_action. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
         factory = get_session_factory()
         async with factory() as session:
             try:
@@ -130,14 +75,8 @@ class LeadNotificationService:
                     return
 
                 text = self._hot_lead_text(lead)
-                keyboard = self._lead_status_keyboard(lead_id)
-
-                bot = Bot(
-                    token=self._bot_token,
-                    default=DefaultBotProperties(parse_mode="HTML"),
-                )
                 try:
-                    await self._send_to_admin_group(bot, text, keyboard)
+                    await self._channel.send_admin_notification(text, lead_id=lead_id)
 
                     # Dedupe marker + audit trail (same session — atomic)
                     await lead_repo.update_last_action(lead_id, "hot_alert_sent")
@@ -155,8 +94,6 @@ class LeadNotificationService:
                 except Exception:
                     log.exception("notify_hot_lead_error", lead_id=lead_id)
                     await session.rollback()
-                finally:
-                    await bot.session.close()
 
             except Exception:
                 log.exception("notify_hot_lead_outer_error", lead_id=lead_id)
@@ -198,17 +135,6 @@ class LeadNotificationService:
             f"/lead_{lead.id}"
         )
 
-    async def _send_to_admin_group(self, bot: object, text: str, keyboard: object) -> None:
-        """Deliver *text*+*keyboard* to the configured admin group only."""
-        admin_group_id = get_settings().bot.admin_group_id
-        if not admin_group_id:
-            log.warning("admin_group_id_not_configured")
-            return
-        try:
-            await bot.send_message(admin_group_id, text, reply_markup=keyboard)  # type: ignore[union-attr]
-        except Exception as exc:
-            log.warning("notify_group_failed", chat_id=admin_group_id, error=str(exc))
-
     async def notify_measurement_lead(
         self,
         lead: "Lead",
@@ -222,10 +148,7 @@ class LeadNotificationService:
         tg_user_id: int,
         username: str | None,
     ) -> None:
-        """Send a measurement-lead card to admin DM + all admin groups. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
+        """Send a measurement-lead card to the admin channel. Never raises."""
         conf_str = f"{closing_confidence:.0%}" if closing_confidence is not None else "—"
         uname_str = f"@{username}" if username else "—"
         time_str = time_pref or "Ko'rsatilmagan"
@@ -242,19 +165,11 @@ class LeadNotificationService:
             f"💡 Ishonch: {conf_str}\n\n"
             f"🔗 {chat_type} | {uname_str} | /lead_{lead.id}"
         )
-        keyboard = self._lead_status_keyboard(lead.id)
-
-        bot = Bot(
-            token=self._bot_token,
-            default=DefaultBotProperties(parse_mode="HTML"),
-        )
         try:
-            await self._send_to_admin_group(bot, text, keyboard)
+            await self._channel.send_admin_notification(text, lead_id=lead.id)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_measurement_lead_error", lead_id=lead.id)
-        finally:
-            await bot.session.close()
 
     async def notify_draft_lead(
         self,
@@ -266,10 +181,7 @@ class LeadNotificationService:
         chat_type: str,
         chat_id: int,
     ) -> None:
-        """Send a draft phone-capture alert to admin group. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
+        """Send a draft phone-capture alert to admin channel. Never raises."""
         uname_str = f"@{username}" if username else "—"
         name_str = name or "Noma'lum"
         uid_str = str(user_id) if user_id else "—"
@@ -280,17 +192,10 @@ class LeadNotificationService:
             f"👤 {name_str}\n"
             f"🔗 {uname_str} | #{uid_str} | {chat_type}"
         )
-
-        bot = Bot(
-            token=self._bot_token,
-            default=DefaultBotProperties(parse_mode="HTML"),
-        )
         try:
-            await self._send_to_admin_group(bot, text, None)
+            await self._channel.send_admin_notification(text)
         except Exception as exc:
             log.warning("notify_draft_lead_failed", error=str(exc))
-        finally:
-            await bot.session.close()
 
     # Shared score badges used by several notification methods
     _SCORE_BADGES: dict[str, str] = {
@@ -325,10 +230,7 @@ class LeadNotificationService:
         followup_decision: object | None = None,
         sales_brain: object | None = None,
     ) -> None:
-        """Send AI-collected lead card to admin DM + all admin groups. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
+        """Send AI-collected lead card to the admin channel. Never raises."""
         if score >= 60:
             badge = "\U0001f525 HOT LEAD"
         elif score >= 30:
@@ -539,18 +441,10 @@ class LeadNotificationService:
             lines.append(f"So'nggi xabar: {last_message[:120]}")
         text = "\n".join(lines)
 
-        keyboard = self._lead_status_keyboard(lead_id) if lead_id else None
-
-        bot = Bot(
-            token=self._bot_token,
-            default=DefaultBotProperties(parse_mode="HTML"),
-        )
         try:
-            await self._send_to_admin_group(bot, text, keyboard)
+            await self._channel.send_admin_notification(text, lead_id=lead_id)
         except Exception as exc:
             log.warning("notify_ai_lead_failed", error=str(exc))
-        finally:
-            await bot.session.close()
 
     async def notify_lead_interest(
         self,
@@ -561,10 +455,7 @@ class LeadNotificationService:
         user_id: int | None,
         topic: str,
     ) -> None:
-        """Send a WARM/COLD interest signal to admin DM + all admin groups. Never raises."""
-        from aiogram import Bot
-        from aiogram.client.default import DefaultBotProperties
-
+        """Send a WARM/COLD interest signal to the admin channel. Never raises."""
         badge = self._SCORE_BADGES.get(score, "🟡 WARM LEAD")
         lines = [f"<b>{badge}</b>\n"]
         if name:
@@ -576,16 +467,10 @@ class LeadNotificationService:
         lines.append(f"Savol: {topic}")
         text = "\n".join(lines)
 
-        bot = Bot(
-            token=self._bot_token,
-            default=DefaultBotProperties(parse_mode="HTML"),
-        )
         try:
-            await self._send_to_admin_group(bot, text, None)
+            await self._channel.send_admin_notification(text)
         except Exception as exc:
             log.warning("notify_lead_interest_failed", error=str(exc))
-        finally:
-            await bot.session.close()
 
     async def _log_new_lead_action(self, lead_id: int) -> None:
         """Insert lead_action + audit_log for a new-lead notification."""

@@ -121,7 +121,11 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
 
     # ── Normal /start ───────────────────────────────────────────────────────
     await state.clear()
-    await clear_ai_conversation(user_id)
+    _start_tid = data.get("tenant_id")
+    if not _start_tid:
+        _start_db_user = data.get("db_user")
+        _start_tid = getattr(_start_db_user, "tenant_id", None)
+    await clear_ai_conversation(user_id, tenant_id=_start_tid)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
 
     db_user = data.get("db_user")

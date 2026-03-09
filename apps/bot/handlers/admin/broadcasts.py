@@ -99,6 +99,7 @@ async def cmd_broadcast_entry(message: Message, state: FSMContext, **data: objec
         return
 
     await state.clear()
+    await state.update_data(_tenant_id=data.get("tenant_id"))
     await state.set_state(BroadcastStates.choosing_segment)
     await message.answer(
         "📣 <b>Yangi rassilka</b>\n\n"
@@ -243,11 +244,12 @@ async def _show_preview(message: Message, state: FSMContext) -> None:
 
     # Estimate reach
     count: int | str = "?"
+    _tid = fsm.get("_tenant_id")
     try:
         segment_type = _SEGMENT_TYPE_MAP[seg_key]
         factory = get_session_factory()
         async with factory() as session:
-            svc = get_broadcast_service(session)
+            svc = get_broadcast_service(session, tenant_id=_tid)
             count = await svc.estimate_reach_v2(segment_type, lead_stage)
     except Exception:
         log.exception("broadcast_reach_estimate_failed")
@@ -287,11 +289,12 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, **data: object)
     payload_type = _PAYLOAD_TYPE_MAP.get(pay_key, PayloadType.TEXT)
     created_by = callback.from_user.id if callback.from_user else 0
 
+    _tid = fsm.get("_tenant_id")
     broadcast_id: int | None = None
     try:
         factory = get_session_factory()
         async with factory() as session:
-            svc = get_broadcast_service(session)
+            svc = get_broadcast_service(session, tenant_id=_tid)
             broadcast_id = await svc.create_broadcast_v2(
                 segment_type=segment_type,
                 payload_type=payload_type,

@@ -115,9 +115,7 @@ async def incr_link_violations(chat_id: int, user_id: int, *, bot_id: int | None
     key = CacheKeys.mod_link_violations(chat_id, user_id, bot_id=bot_id)
     try:
         redis = get_redis()
-        count = await redis.incr(key)
-        if count == 1:
-            await redis.expire(key, CacheTTL.MOD_LINK_WINDOW)
+        count = await redis.incr_with_ttl(key, CacheTTL.MOD_LINK_WINDOW)
         return count
     except Exception:
         pass  # fall through to in-memory fallback

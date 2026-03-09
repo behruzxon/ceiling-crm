@@ -173,25 +173,47 @@ async def _perform_transaction(rpc_id: Any, params: dict) -> web.Response:
     factory = get_session_factory()
     async with factory() as session:
         svc = get_subscription_billing_service(session)
-        payment = await svc._payment_repo.get_by_provider_trans_id(payme_id)
+        payment = await svc._payment_repo.get_by_provider_trans_id(
+            payme_id, for_update=True,
+        )
 
         if payment is None:
             return _err(rpc_id, _ERR_TRANSACTION_NOT_FOUND, "Transaction not found")
 
         if payment.status == SubscriptionPaymentStatus.PAID:
-            # Idempotent
+            log.info(
+                "duplicate_webhook",
+                provider="payme",
+                payme_id=payme_id,
+                merchant_trans_id=payment.merchant_trans_id,
+            )
             return _ok(rpc_id, {
                 "transaction": payme_id,
                 "perform_time": perform_time,
                 "state": 2,
             })
 
-        await svc.handle_payment_success(
-            merchant_trans_id=payment.merchant_trans_id,
-            provider_trans_id=payme_id,
-            provider_meta={"payme_perform_time": perform_time},
-        )
-        await session.commit()
+        try:
+            await svc.handle_payment_success(
+                merchant_trans_id=payment.merchant_trans_id,
+                provider_trans_id=payme_id,
+                provider_meta={"payme_perform_time": perform_time},
+            )
+            await session.commit()
+            log.info(
+                "payment_processed",
+                provider="payme",
+                merchant_trans_id=payment.merchant_trans_id,
+                payme_id=payme_id,
+            )
+        except Exception:
+            await session.rollback()
+            log.exception(
+                "payment_failed",
+                provider="payme",
+                payme_id=payme_id,
+            )
+            return _err(rpc_id, _ERR_SERVER, "Processing failed")
 
     return _ok(rpc_id, {
         "transaction": payme_id,
@@ -209,7 +231,9 @@ async def _cancel_transaction(rpc_id: Any, params: dict) -> web.Response:
     factory = get_session_factory()
     async with factory() as session:
         svc = get_subscription_billing_service(session)
-        payment = await svc._payment_repo.get_by_provider_trans_id(payme_id)
+        payment = await svc._payment_repo.get_by_provider_trans_id(
+            payme_id, for_update=True,
+        )
 
         if payment is None:
             return _err(rpc_id, _ERR_TRANSACTION_NOT_FOUND, "Transaction not found")

@@ -279,6 +279,8 @@ async def _start_order_flow(
     state: FSMContext,
     user_id: int,
     first_name: str,
+    *,
+    tenant_id: int | None = None,
 ) -> None:
     """Core order-start logic — callable from message handlers AND callbacks.
 
@@ -287,6 +289,7 @@ async def _start_order_flow(
     """
     log.debug("order_flow_start", user_id=user_id)
     await state.clear()
+    await state.update_data(_tenant_id=tenant_id)
 
     # ── Ensure a CRM lead exists for this user ────────────────────────────────
     # Creates a minimal placeholder if none exists; updates tracking fields
@@ -296,7 +299,7 @@ async def _start_order_flow(
         try:
             factory = get_session_factory()
             async with factory() as session:
-                lead_repo = get_lead_repo(session)
+                lead_repo = get_lead_repo(session, tenant_id=tenant_id)
                 existing = await lead_repo.get_by_user_id(user_id)
 
                 # Pick the most recent lead that is still open.
@@ -324,7 +327,7 @@ async def _start_order_flow(
                 else:
                     # No active lead — create a minimal placeholder so the
                     # lead appears in the kanban immediately
-                    lead = await get_lead_service(session).create_lead(
+                    lead = await get_lead_service(session, tenant_id=tenant_id).create_lead(
                         user_id=user_id,
                         category=CeilingCategory.ODNOTONNY,
                         name=first_name,
@@ -374,11 +377,13 @@ async def cmd_order_start(message: Message, state: FSMContext, **data: object) -
         await message.answer("Iltimos, botni shaxsiy chatda oching. 📩")
         return
     user = message.from_user
+    _tid = data.get("tenant_id")
     await _start_order_flow(
         message=message,
         state=state,
         user_id=user.id if user else 0,
         first_name=(user.first_name or "—") if user else "—",
+        tenant_id=_tid,
     )
 
 
@@ -657,6 +662,7 @@ async def _notify_admin(
 async def _save_and_confirm(message: Message, state: FSMContext) -> None:
     """Persist the lead and send confirmation + CTA. Non-fatal on DB error."""
     fsm = await state.get_data()
+    _tid = fsm.get("_tenant_id")
     name: str             = fsm["name"]
     phone: str            = fsm["phone"]
     district: str         = fsm["district"]
@@ -723,7 +729,7 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
                 # ── Fallback: create a full lead (cmd_order_start did not run) ─
                 # CeilingCategory(category_value) resolves the enum member from
                 # the DB value string so SQLAlchemy sends the correct .value to PG.
-                lead_service = get_lead_service(session)
+                lead_service = get_lead_service(session, tenant_id=_tid)
                 lead = await lead_service.create_lead(
                     user_id=user_id,
                     category=CeilingCategory(category_value),
@@ -750,7 +756,7 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
             # ── Pipeline stage: advance to QUOTE (idempotent) ─────────────────
             # Insert a QUOTE row unless the lead is already at QUOTE or later.
             # This is what makes the order visible in Kanban and Mening buyurtmalarim.
-            pipeline_repo = get_pipeline_repo(session)
+            pipeline_repo = get_pipeline_repo(session, tenant_id=_tid)
             current_stage = await pipeline_repo.get_current_stage(pending_lead_id)
             if current_stage not in _QUOTE_OR_BEYOND:
                 await pipeline_repo.insert_stage(

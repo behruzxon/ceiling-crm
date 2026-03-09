@@ -11,6 +11,8 @@ from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
+import structlog
+
 from core.domain.user import User
 from infrastructure.cache.client import get_redis
 from infrastructure.cache.keys import CacheKeys
@@ -70,8 +72,19 @@ class AuthMiddleware(BaseMiddleware):
                 data["user_role"] = db_user.role
                 data["db_session"] = session
 
-                # Inject tenant billing plan for usage enforcement
+                # Inject tenant_id so it's always available in handler data
+                # (TenantContextMiddleware may override in multi-bot mode)
                 _tid = getattr(db_user, "tenant_id", None)
+                if _tid and "tenant_id" not in data:
+                    data["tenant_id"] = _tid
+
+                # Bind tenant/user context to structlog so ALL log entries
+                # within this request include tenant_id and user_id
+                structlog.contextvars.clear_contextvars()
+                _ctx: dict[str, Any] = {"user_id": tg_user.id}
+                if _tid:
+                    _ctx["tenant_id"] = _tid
+                structlog.contextvars.bind_contextvars(**_ctx)
                 if _tid:
                     try:
                         from infrastructure.database.models.tenant import TenantModel

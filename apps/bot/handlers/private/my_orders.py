@@ -122,8 +122,9 @@ async def cmd_my_orders(message: Message, **data: object) -> None:
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📊 Mening buyurtmalarim")
 async def cmd_orders_list(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
+    _tid = data.get("tenant_id")
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
-    lead_repo = get_lead_repo(db_session)
+    lead_repo = get_lead_repo(db_session, tenant_id=_tid)
     leads = await lead_repo.list_by_user(user_id, limit=5)
 
     if not leads:
@@ -160,8 +161,9 @@ async def cmd_orders_list(message: Message, **data: object) -> None:
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📦 Buyurtma holati")
 async def cmd_order_status(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
+    _tid = data.get("tenant_id")
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
-    lead_repo = get_lead_repo(db_session)
+    lead_repo = get_lead_repo(db_session, tenant_id=_tid)
     leads = await lead_repo.list_by_user(user_id, limit=1)
 
     if not leads:
@@ -188,9 +190,10 @@ async def cmd_order_status(message: Message, **data: object) -> None:
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🧾 Hisob-kitob tarixi")
 async def cmd_payment_history(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
+    _tid = data.get("tenant_id")
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
-    lead_repo = get_lead_repo(db_session)
-    payment_service = get_payment_service(db_session)
+    lead_repo = get_lead_repo(db_session, tenant_id=_tid)
+    payment_service = get_payment_service(db_session, tenant_id=_tid)
 
     leads = await lead_repo.list_by_user(user_id, limit=5)
     if not leads:
@@ -239,9 +242,10 @@ async def cmd_payment_history(message: Message, **data: object) -> None:
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🛠 Kafolat ma'lumoti")
 async def cmd_warranty_info(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
+    _tid = data.get("tenant_id")
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
-    lead_repo = get_lead_repo(db_session)
-    warranty_service = get_warranty_service(db_session)
+    lead_repo = get_lead_repo(db_session, tenant_id=_tid)
+    warranty_service = get_warranty_service(db_session, tenant_id=_tid)
 
     leads = await lead_repo.list_by_user(user_id, limit=5)
     if not leads:

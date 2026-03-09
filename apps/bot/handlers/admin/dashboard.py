@@ -20,10 +20,11 @@ router = Router(name="admin:dashboard")
 @router.message(Command("dashboard"), RoleFilter(UserRole.ADMIN, UserRole.SUPERADMIN))
 async def cmd_dashboard(message: Message, **data: object) -> None:
     """Show admin dashboard with CRM summary stats."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
-        user_repo = get_user_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=_tid)
+        user_repo = get_user_repo(session, tenant_id=_tid)
 
         pipeline_counts = await lead_repo.get_pipeline_counts()
         active_users = await user_repo.count_active()

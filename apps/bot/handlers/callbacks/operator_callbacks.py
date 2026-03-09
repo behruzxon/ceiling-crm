@@ -25,8 +25,8 @@ from aiogram.types import (
     InlineKeyboardMarkup,
 )
 
-from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.session import get_session_factory
+from infrastructure.di import get_lead_repo
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -105,10 +105,11 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
     action = m.group(2)
 
     # Load lead from DB
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            repo = PostgresLeadRepository(session)
+            repo = get_lead_repo(session, tenant_id=_tid)
             lead = await repo.get_by_id(lead_id)
     except Exception:
         log.exception("operator_assist_load_failed", lead_id=lead_id)
@@ -236,10 +237,11 @@ async def cb_operator_autoclose(callback: CallbackQuery, **data: object) -> None
     lead_id = int(m.group(1))
 
     # Load lead from DB
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            repo = PostgresLeadRepository(session)
+            repo = get_lead_repo(session, tenant_id=_tid)
             lead = await repo.get_by_id(lead_id)
     except Exception:
         log.exception("autoclose_load_failed", lead_id=lead_id)

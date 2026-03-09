@@ -7,6 +7,12 @@ Manages Bot instances for all active tenants, provides lookups by
 bot_id -> tenant_id, tracks per-bot runtime status, and supports
 dynamic lifecycle operations (start/stop/restart/resync).
 
+Redis-backed state persistence:
+  - Bot status, health check timestamps, and error info are persisted
+    to Redis hashes so state survives process restarts.
+  - Per-bot ownership locks prevent two instances from polling the same bot.
+  - Instance heartbeat signals liveness; dead instances' bots can be reclaimed.
+
 Usage:
     from core.services.bot_registry import get_bot_registry
     registry = get_bot_registry()
@@ -16,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import hashlib
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -28,6 +35,7 @@ from core.security.token_encryption import decrypt_token, is_encrypted
 from shared.logging import get_logger
 
 if TYPE_CHECKING:
+    from infrastructure.cache.bot_registry_state import BotRegistryRedisState
     from sqlalchemy.ext.asyncio import AsyncSession
 
 log = get_logger(__name__)
@@ -48,7 +56,7 @@ class BotStatus(str, Enum):
 
 @dataclass
 class BotRuntimeState:
-    """Mutable runtime state for a single tenant bot. In-memory only."""
+    """Mutable runtime state for a single tenant bot."""
 
     tenant_id: int
     tenant_name: str
@@ -96,6 +104,12 @@ class BotRegistry:
 
     In multi-bot mode the Dispatcher is shared; each tenant has its own Bot
     instance keyed by ``bot.id`` (Telegram user-id of the bot account).
+
+    Redis integration (optional):
+      - State is persisted to Redis hashes after each status change.
+      - Per-bot ownership locks prevent duplicate polling across instances.
+      - ``recover_from_redis()`` re-creates bots after a process restart.
+      - ``heartbeat()`` renews liveness signal and ownership TTLs.
     """
 
     def __init__(self) -> None:
@@ -104,6 +118,43 @@ class BotRegistry:
         self._configs: dict[int, TenantBotConfig] = {}      # tenant_id -> config
         self._states: dict[int, BotRuntimeState] = {}       # tenant_id -> runtime state
         self._token_index: dict[str, int] = {}              # token_hash -> tenant_id
+
+        # Unique identifier for this process instance
+        self.instance_id: str = uuid.uuid4().hex[:12]
+        self._redis_state: BotRegistryRedisState | None = None
+
+    def _get_redis_state(self) -> BotRegistryRedisState | None:
+        """Lazy-init Redis state layer. Returns None if Redis unavailable."""
+        if self._redis_state is not None:
+            return self._redis_state
+        try:
+            from infrastructure.cache.bot_registry_state import BotRegistryRedisState
+            self._redis_state = BotRegistryRedisState(self.instance_id)
+            return self._redis_state
+        except Exception:
+            log.debug("redis_state_unavailable")
+            return None
+
+    async def _sync_state_to_redis(self, state: BotRuntimeState) -> None:
+        """Persist a BotRuntimeState to Redis. Best-effort (never raises)."""
+        rs = self._get_redis_state()
+        if rs is None:
+            return
+        try:
+            await rs.persist_state(
+                tenant_id=state.tenant_id,
+                status=state.status.value,
+                bot_id=state.bot_id,
+                tenant_name=state.tenant_name,
+                last_started=state.last_started,
+                last_health_check=state.last_health_check,
+                last_error=state.last_error,
+                last_error_at=state.last_error_at,
+                error_count=state.error_count,
+                pause_reason=state.pause_reason,
+            )
+        except Exception:
+            log.debug("redis_state_sync_failed", tenant_id=state.tenant_id)
 
     # ── Loading ──────────────────────────────────────────────────────────
 
@@ -129,12 +180,14 @@ class BotRegistry:
 
             # Skip inactive tenants — mark as PAUSED
             if not tenant.is_active:
-                self._states[tenant.id] = BotRuntimeState(
+                state = BotRuntimeState(
                     tenant_id=tenant.id,
                     tenant_name=tenant.name,
                     status=BotStatus.PAUSED,
                     pause_reason="inactive",
                 )
+                self._states[tenant.id] = state
+                await self._sync_state_to_redis(state)
                 counts["paused"] += 1
                 log.info("bot_paused_inactive", tenant_id=tenant.id, slug=tenant.slug)
                 continue
@@ -142,12 +195,14 @@ class BotRegistry:
             # Skip expired/suspended billing — mark as PAUSED
             _billing = getattr(tenant, "billing_status", None)
             if _billing in ("expired", "suspended"):
-                self._states[tenant.id] = BotRuntimeState(
+                state = BotRuntimeState(
                     tenant_id=tenant.id,
                     tenant_name=tenant.name,
                     status=BotStatus.PAUSED,
                     pause_reason=f"billing_{_billing}",
                 )
+                self._states[tenant.id] = state
+                await self._sync_state_to_redis(state)
                 counts["paused"] += 1
                 log.info(
                     "bot_paused_billing",
@@ -169,7 +224,7 @@ class BotRegistry:
                     _raw = decrypt_token(_raw)
                 except Exception:
                     log.error("bot_token_decrypt_failed", tenant_id=tenant.id)
-                    self._states[tenant.id] = BotRuntimeState(
+                    state = BotRuntimeState(
                         tenant_id=tenant.id,
                         tenant_name=tenant.name,
                         status=BotStatus.FAILED,
@@ -177,6 +232,8 @@ class BotRegistry:
                         last_error_at=_now(),
                         error_count=1,
                     )
+                    self._states[tenant.id] = state
+                    await self._sync_state_to_redis(state)
                     counts["failed"] += 1
                     continue
 
@@ -184,7 +241,7 @@ class BotRegistry:
             token_hash = _hash_token(_raw)
             existing_tid = self._token_index.get(token_hash)
             if existing_tid is not None and existing_tid != tenant.id:
-                self._states[tenant.id] = BotRuntimeState(
+                state = BotRuntimeState(
                     tenant_id=tenant.id,
                     tenant_name=tenant.name,
                     status=BotStatus.FAILED,
@@ -192,6 +249,8 @@ class BotRegistry:
                     last_error_at=_now(),
                     error_count=1,
                 )
+                self._states[tenant.id] = state
+                await self._sync_state_to_redis(state)
                 counts["duplicates"] += 1
                 counts["failed"] += 1
                 log.warning(
@@ -199,6 +258,17 @@ class BotRegistry:
                     tenant_id=tenant.id,
                     duplicate_of=existing_tid,
                 )
+                continue
+
+            # Acquire ownership before registering
+            owned = await self._try_acquire_ownership(tenant.id)
+            if not owned:
+                log.info(
+                    "bot_owned_by_other_instance",
+                    tenant_id=tenant.id,
+                    slug=tenant.slug,
+                )
+                counts["running"] += 1  # running on another instance
                 continue
 
             # Register the bot
@@ -209,7 +279,9 @@ class BotRegistry:
             else:
                 counts["failed"] += 1
 
-        log.info("bot_registry_loaded", **counts)
+        # Send initial heartbeat
+        await self._send_heartbeat()
+        log.info("bot_registry_loaded", instance_id=self.instance_id, **counts)
 
     async def _register_tenant(self, tenant: object) -> None:
         """Create a Bot instance for a single tenant row."""
@@ -232,6 +304,7 @@ class BotRegistry:
                 state.last_error_at = _now()
                 state.error_count += 1
                 self._states[tid] = state
+                await self._sync_state_to_redis(state)
                 return
 
         state = self._states.get(tid) or BotRuntimeState(
@@ -271,17 +344,21 @@ class BotRegistry:
             state.error_count = 0
             state.last_error = None
 
+            await self._sync_state_to_redis(state)
+
             log.info(
                 "bot_registered",
                 tenant_id=tid,
                 bot_id=bot_id,
                 bot_username=bot_info.username,
+                instance_id=self.instance_id,
             )
         except Exception as exc:
             state.status = BotStatus.FAILED
             state.last_error = str(exc)[:200]
             state.last_error_at = _now()
             state.error_count += 1
+            await self._sync_state_to_redis(state)
 
             log.exception(
                 "bot_registration_failed",
@@ -366,6 +443,8 @@ class BotRegistry:
                 self._token_index.pop(token_hash, None)
 
         state.status = BotStatus.STOPPED
+        await self._sync_state_to_redis(state)
+        await self._release_ownership(tenant_id)
         log.info("bot_stopped", tenant_id=tenant_id, bot_id=state.bot_id)
         return True
 
@@ -388,6 +467,7 @@ class BotRegistry:
             state.pause_reason = "inactive"
             state.tenant_name = tenant.name
             self._states[tenant_id] = state
+            await self._sync_state_to_redis(state)
             return BotStatus.PAUSED
 
         _billing = getattr(tenant, "billing_status", None)
@@ -399,6 +479,7 @@ class BotRegistry:
             state.pause_reason = f"billing_{_billing}"
             state.tenant_name = tenant.name
             self._states[tenant_id] = state
+            await self._sync_state_to_redis(state)
             return BotStatus.PAUSED
 
         if not tenant.bot_token or not tenant.bot_token.strip():
@@ -424,6 +505,13 @@ class BotRegistry:
             state.last_error = f"duplicate_token (same as tenant {existing_tid})"
             state.last_error_at = _now()
             self._states[tenant_id] = state
+            await self._sync_state_to_redis(state)
+            return BotStatus.FAILED
+
+        # Acquire ownership
+        owned = await self._try_acquire_ownership(tenant_id)
+        if not owned:
+            log.warning("bot_start_blocked_by_other_instance", tenant_id=tenant_id)
             return BotStatus.FAILED
 
         # Stop existing instance if any
@@ -470,6 +558,7 @@ class BotRegistry:
                     state.status = BotStatus.PAUSED
                     _bs = getattr(db_t, "billing_status", None)
                     state.pause_reason = f"billing_{_bs}" if _bs in ("expired", "suspended") else "inactive"
+                    await self._sync_state_to_redis(state)
                 removed += 1
 
         # 2. Add/update bots from DB
@@ -478,10 +567,12 @@ class BotRegistry:
             if not tenant.is_active or _billing in ("expired", "suspended"):
                 if tid not in self._states:
                     _reason = f"billing_{_billing}" if _billing in ("expired", "suspended") else "inactive"
-                    self._states[tid] = BotRuntimeState(
+                    state = BotRuntimeState(
                         tenant_id=tid, tenant_name=tenant.name,
                         status=BotStatus.PAUSED, pause_reason=_reason,
                     )
+                    self._states[tid] = state
+                    await self._sync_state_to_redis(state)
                 continue
 
             if not tenant.bot_token or not tenant.bot_token.strip():
@@ -503,21 +594,31 @@ class BotRegistry:
                 token_hash = _hash_token(_db_token)
                 dup_tid = self._token_index.get(token_hash)
                 if dup_tid is not None and dup_tid != tid:
-                    self._states[tid] = BotRuntimeState(
+                    state = BotRuntimeState(
                         tenant_id=tid, tenant_name=tenant.name,
                         status=BotStatus.FAILED,
                         last_error=f"duplicate_token (same as tenant {dup_tid})",
                         last_error_at=_now(), error_count=1,
                     )
+                    self._states[tid] = state
+                    await self._sync_state_to_redis(state)
                     log.warning("bot_duplicate_token_resync", tenant_id=tid, duplicate_of=dup_tid)
                     added += 1  # counted as attempted add
                     continue
+
+                owned = await self._try_acquire_ownership(tid)
+                if not owned:
+                    added += 1
+                    continue
+
                 await self._register_tenant(tenant)
                 added += 1
             elif existing_config.bot_token != _db_token:
                 # Token changed — restart
                 await self.stop_bot(tid)
-                await self._register_tenant(tenant)
+                owned = await self._try_acquire_ownership(tid)
+                if owned:
+                    await self._register_tenant(tenant)
                 restarted += 1
             else:
                 unchanged += 1
@@ -530,9 +631,11 @@ class BotRegistry:
         return summary
 
     async def shutdown_all(self) -> None:
-        """Close all Bot sessions gracefully."""
-        for state in self._states.values():
+        """Close all Bot sessions gracefully and release ownership."""
+        for tid, state in self._states.items():
             state.status = BotStatus.STOPPED
+            await self._sync_state_to_redis(state)
+            await self._release_ownership(tid)
 
         for bot_id, bot in self._bots.items():
             try:
@@ -544,7 +647,132 @@ class BotRegistry:
         self._tenant_map.clear()
         self._configs.clear()
         self._token_index.clear()
-        log.info("bot_registry_shutdown")
+        log.info("bot_registry_shutdown", instance_id=self.instance_id)
+
+    # ── Redis-backed recovery ────────────────────────────────────────────
+
+    async def recover_from_redis(self, session: AsyncSession) -> dict[str, int]:
+        """Recover bots that were running before a crash/restart.
+
+        1. Reads previously-running bot states from Redis.
+        2. For each, checks if the owning instance is still alive.
+        3. Reclaims orphaned bots and re-registers them from DB.
+
+        Returns counts: {"recovered": N, "skipped": N, "failed": N}
+        """
+        rs = self._get_redis_state()
+        if rs is None:
+            log.debug("redis_recovery_skipped_no_redis")
+            return {"recovered": 0, "skipped": 0, "failed": 0}
+
+        from infrastructure.database.models.tenant import TenantModel
+
+        counts = {"recovered": 0, "skipped": 0, "failed": 0}
+
+        try:
+            orphaned = await rs.get_orphaned_tenants()
+        except Exception:
+            log.warning("redis_recovery_failed_to_list")
+            return counts
+
+        for state_data in orphaned:
+            tid = state_data.get("tenant_id")
+            if tid is None or tid in self._configs:
+                counts["skipped"] += 1
+                continue
+
+            # Try to claim ownership
+            owned = await self._try_acquire_ownership(tid)
+            if not owned:
+                counts["skipped"] += 1
+                continue
+
+            # Re-register from DB
+            try:
+                tenant = await session.get(TenantModel, tid)
+                if tenant is None or not tenant.is_active:
+                    await self._release_ownership(tid)
+                    counts["skipped"] += 1
+                    continue
+
+                if not tenant.bot_token or not tenant.bot_token.strip():
+                    await self._release_ownership(tid)
+                    counts["skipped"] += 1
+                    continue
+
+                await self._register_tenant(tenant)
+                state = self._states.get(tid)
+                if state and state.status == BotStatus.RUNNING:
+                    counts["recovered"] += 1
+                    log.info("bot_recovered", tenant_id=tid, instance_id=self.instance_id)
+                else:
+                    counts["failed"] += 1
+            except Exception:
+                log.exception("bot_recovery_failed", tenant_id=tid)
+                await self._release_ownership(tid)
+                counts["failed"] += 1
+
+        if any(v > 0 for v in counts.values()):
+            log.info("bot_recovery_complete", instance_id=self.instance_id, **counts)
+
+        return counts
+
+    async def heartbeat(self) -> None:
+        """Renew instance heartbeat and all owned bot ownership locks.
+
+        Should be called periodically (e.g. every 10 seconds).
+        """
+        rs = self._get_redis_state()
+        if rs is None:
+            return
+
+        try:
+            await rs.send_heartbeat()
+        except Exception:
+            log.debug("heartbeat_send_failed")
+            return
+
+        # Renew ownership for all bots we manage
+        for tid in list(self._configs.keys()):
+            try:
+                renewed = await rs.renew_ownership(tid)
+                if not renewed:
+                    log.warning("ownership_lost", tenant_id=tid, instance_id=self.instance_id)
+            except Exception:
+                log.debug("ownership_renew_failed", tenant_id=tid)
+
+    # ── Ownership helpers ────────────────────────────────────────────────
+
+    async def _try_acquire_ownership(self, tenant_id: int) -> bool:
+        """Try to acquire ownership. Returns True if no Redis or if acquired."""
+        rs = self._get_redis_state()
+        if rs is None:
+            return True  # No Redis = single-instance mode, always proceed
+        try:
+            return await rs.acquire_ownership(tenant_id)
+        except Exception:
+            log.debug("ownership_acquire_failed", tenant_id=tenant_id)
+            return True  # Fail open — better to run than to leave bots dead
+
+    async def _release_ownership(self, tenant_id: int) -> None:
+        """Release ownership of a bot. Best-effort."""
+        rs = self._get_redis_state()
+        if rs is None:
+            return
+        try:
+            await rs.release_ownership(tenant_id)
+        except Exception:
+            log.debug("ownership_release_failed", tenant_id=tenant_id)
+
+    async def _send_heartbeat(self) -> None:
+        """Send instance heartbeat. Best-effort."""
+        rs = self._get_redis_state()
+        if rs is None:
+            return
+        try:
+            await rs.send_heartbeat()
+        except Exception:
+            log.debug("heartbeat_failed")
 
 
 # ── Module-level singleton ───────────────────────────────────────────────

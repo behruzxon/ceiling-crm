@@ -134,10 +134,11 @@ async def cb_stats_period(callback: CallbackQuery, **data: object) -> None:
 
     await callback.answer()
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     try:
         async with factory() as session:
-            stats = await get_stats_service(session).get_stats(period)
+            stats = await get_stats_service(session, tenant_id=_tid).get_stats(period)
     except Exception:
         log.exception("stats_fetch_error", period=period)
         await callback.message.edit_text(  # type: ignore[union-attr]

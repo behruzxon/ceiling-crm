@@ -127,9 +127,10 @@ def build_pipeline_keyboard(lead_id: int) -> InlineKeyboardMarkup:
 @router.message(Command("pipeline"), RoleFilter(*_MGMT_ROLES))
 async def cmd_pipeline(message: Message, **data: object) -> None:
     """Show the kanban board as an inline keyboard with live stage counts."""
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        pipeline_svc = get_pipeline_service(session)
+        pipeline_svc = get_pipeline_service(session, tenant_id=_tid)
         counts = await pipeline_svc.get_stage_counts()
 
     total = sum(counts.values())
@@ -187,7 +188,8 @@ async def cmd_stage(message: Message, command: CommandObject, **data: object) ->
         except ValueError:
             pass
 
-    await _send_stage_page(message, stage, page)
+    _tid = data.get("tenant_id")
+    await _send_stage_page(message, stage, page, tenant_id=_tid)
 
 
 async def _send_stage_page(
@@ -195,12 +197,14 @@ async def _send_stage_page(
     stage: PipelineStage,
     page: int,
     edit: bool = False,
+    *,
+    tenant_id: int | None = None,
 ) -> None:
     """Fetch a page of leads for *stage* and send/edit the message."""
     page_size = 10
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await lead_repo.search(
             stage=stage,
             limit=page_size + 1,
@@ -262,7 +266,8 @@ async def cmd_lead(message: Message, command: CommandObject, **data: object) -> 
     except ValueError:
         await message.answer("Noto'g'ri format. Misol: /lead 7")
         return
-    await _show_lead_with_timeline(message, lead_id)
+    _tid = data.get("tenant_id")
+    await _show_lead_with_timeline(message, lead_id, tenant_id=_tid)
 
 
 @router.message(F.text.regexp(r"^/?lead_(\d+)$"), RoleFilter(*_MGMT_ROLES))
@@ -271,15 +276,21 @@ async def cmd_lead_shortcut(message: Message, **data: object) -> None:
     m = re.match(r"^/?lead_(\d+)$", message.text or "")
     if not m:
         return
-    await _show_lead_with_timeline(message, int(m.group(1)))
+    _tid = data.get("tenant_id")
+    await _show_lead_with_timeline(message, int(m.group(1)), tenant_id=_tid)
 
 
-async def _show_lead_with_timeline(message: Message, lead_id: int) -> None:
+async def _show_lead_with_timeline(
+    message: Message,
+    lead_id: int,
+    *,
+    tenant_id: int | None = None,
+) -> None:
     """Fetch lead + last 20 actions and reply with card + pipeline keyboard."""
     factory = get_session_factory()
     async with factory() as session:
-        lead_repo = get_lead_repo(session)
-        action_repo = get_lead_action_repo(session)
+        lead_repo = get_lead_repo(session, tenant_id=tenant_id)
+        action_repo = get_lead_action_repo(session, tenant_id=tenant_id)
 
         lead = await lead_repo.get_by_id(lead_id)
         if lead is None:

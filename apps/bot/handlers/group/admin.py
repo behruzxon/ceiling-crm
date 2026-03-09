@@ -74,9 +74,10 @@ async def cmd_group_admin(message: Message, bot: Bot, **data: object) -> None:
         log.debug("admin_cmd_rejected_non_admin", chat_id=chat_id, user_id=user_id)
         return
 
+    _tid = data.get("tenant_id")
     factory = get_session_factory()
     async with factory() as session:
-        service = get_group_settings_service(session)
+        service = get_group_settings_service(session, tenant_id=_tid)
         settings = await service.get_or_create(chat_id)
 
     chat_title = message.chat.title or str(chat_id)
@@ -106,10 +107,11 @@ async def handle_toggle(callback: CallbackQuery, bot: Bot, **data: object) -> No
 
     field = (callback.data or "").removeprefix("gs:toggle:")
 
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            service = get_group_settings_service(session)
+            service = get_group_settings_service(session, tenant_id=_tid)
             settings = await service.toggle(chat_id, field)
             await session.commit()
     except ValueError:

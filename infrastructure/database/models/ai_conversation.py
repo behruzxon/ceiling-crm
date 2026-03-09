@@ -18,7 +18,12 @@ from infrastructure.database.session import Base
 class AiConversationModel(Base):
     __tablename__ = "ai_conversations"
 
-    user_id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True)
+    # ── Composite PK: (tenant_id, user_id) ─────────────────────────────────
+    tenant_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
+
     # Rolling window of {"role": "user"|"assistant", "text": "..."} dicts
     last_messages: Mapped[list] = mapped_column(
         JSONB, nullable=False, server_default="[]"
@@ -35,11 +40,8 @@ class AiConversationModel(Base):
         onupdate=sa.func.now(),
     )
 
-    # ── Tenant ─────────────────────────────────────────────────────────────
-    tenant_id: Mapped[int] = mapped_column(
-        sa.BigInteger, sa.ForeignKey("tenants.id"), nullable=False,
-    )
-
     __table_args__ = (
+        sa.PrimaryKeyConstraint("tenant_id", "user_id"),
         sa.Index("ix_ai_conversations_tenant_id", "tenant_id"),
+        sa.Index("ix_ai_conversations_user_id", "user_id"),
     )

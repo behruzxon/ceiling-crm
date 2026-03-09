@@ -33,9 +33,10 @@ async def cmd_radar(message: Message, **data: object) -> None:
     await message.answer("\U0001f4e1 Radar tahlil qilinmoqda...")
 
     try:
+        _tid = data.get("tenant_id")
         factory = get_session_factory()
         async with factory() as session:
-            repo = get_lead_repo(session)
+            repo = get_lead_repo(session, tenant_id=_tid)
             leads = await repo.get_active_leads(limit=30)
 
         if not leads:

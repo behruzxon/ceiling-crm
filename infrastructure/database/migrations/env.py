@@ -45,6 +45,7 @@ from infrastructure.database.models.lead_action import LeadActionModel  # noqa: 
 from infrastructure.database.models.tenant import TenantModel  # noqa: F401
 from infrastructure.database.models.subscription_payment import SubscriptionPaymentModel  # noqa: F401
 from infrastructure.database.models.ai_knowledge import TenantAiKnowledgeModel  # noqa: F401
+from infrastructure.database.models.admin_user import AdminUserModel  # noqa: F401
 
 from shared.config import get_settings
 

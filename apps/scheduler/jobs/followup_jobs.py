@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from infrastructure.cache.distributed_lock import scheduler_lock
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -33,6 +34,7 @@ def register_followup_jobs(scheduler: AsyncIOScheduler) -> None:
     )
 
 
+@scheduler_lock("check_due_followups", ttl=55)
 async def check_due_followups() -> None:
     """Send admin reminders for leads whose next_follow_up_at is now overdue."""
     from shared.config import get_settings
@@ -48,6 +50,7 @@ async def check_due_followups() -> None:
         log.info("followup_job_done", count=count)
 
 
+@scheduler_lock("check_user_followups", ttl=170)
 async def check_user_followups() -> None:
     """Send staged re-engagement messages to idle leads."""
     from core.services.user_followup_service import UserFollowupService

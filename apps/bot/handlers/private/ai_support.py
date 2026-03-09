@@ -42,7 +42,7 @@ from aiogram.types import (
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
-from apps.bot.ai.system_prompt import _parse_ai_scoring, build_system_prompt
+from apps.bot.ai.system_prompt import build_system_prompt
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_tenant_ai_config
@@ -913,7 +913,7 @@ async def handle_ai_question(
     if kb_block:
         system_prompt = system_prompt + kb_block
 
-    profile, history, summary = await _load_context(user_id)
+    profile, history, summary = await _load_context(user_id, tenant_id=_tenant_id)
     context_block = _build_context_block(profile, summary)
     _has_history = bool(history)
 
@@ -935,22 +935,31 @@ async def handle_ai_question(
         except Exception:
             log.exception("ai_call_failed", user_id=user_id)
             await _store_user_message_only(
-                user_id=user_id, user_text=text, current_messages=history
+                user_id=user_id, tenant_id=_tenant_id, user_text=text, current_messages=history
             )
             await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
             return
 
-    try:
-        intent = str(result.get("intent", "other"))
-        reply_text = str(result.get("reply", "")).strip()
-        extracted: dict[str, Any] = result.get("extracted") or {}
-        lead_temperature, closing_confidence = _parse_ai_scoring(result)
-        if not reply_text:
-            raise ValueError("empty AI reply")
-    except Exception:
-        log.exception("ai_call_failed", user_id=user_id)
+    from core.domain.ai_response import parse_ai_response
+
+    payload = parse_ai_response(result)
+    intent = payload.intent
+    reply_text = payload.reply.strip()
+    extracted: dict[str, Any] = payload.extracted.model_dump(exclude_none=True)
+    lead_temperature = payload.lead_temperature
+    closing_confidence = payload.closing_confidence
+
+    if not reply_text:
+        log.warning(
+            "ai_response_validation_failed",
+            user_id=user_id,
+            tenant_id=_tenant_id,
+            handler="handle_ai_question",
+            reason="empty_reply",
+            raw_response=str(result)[:500],
+        )
         await _store_user_message_only(
-            user_id=user_id, user_text=text, current_messages=history
+            user_id=user_id, tenant_id=_tenant_id, user_text=text, current_messages=history
         )
         await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
         return
@@ -987,6 +996,7 @@ async def handle_ai_question(
 
     await _persist_exchange(
         user_id=user_id,
+        tenant_id=_tenant_id,
         user_text=text,
         assistant_text=reply_text,
         intent=intent,
@@ -1050,11 +1060,19 @@ async def handle_ai_message(
             return
 
     detected_phone = extract_phone_from_text(text)
+    _phone_tenant_id = data.get("tenant_id") if isinstance(data, dict) else None
+    if not _phone_tenant_id:
+        db_user_ph = data.get("db_user") if isinstance(data, dict) else None
+        _phone_tenant_id = getattr(db_user_ph, "tenant_id", None)
     if detected_phone:
         try:
             factory = get_session_factory()
             async with factory() as session:
-                mem = await session.get(AiMemoryModel, user_id)
+                mem = (
+                    await session.get(AiMemoryModel, (_phone_tenant_id, user_id))
+                    if _phone_tenant_id is not None
+                    else None
+                )
                 _profile_for_phone: dict[str, Any] = mem.profile if mem else {}
         except Exception:
             _profile_for_phone = {}
@@ -1239,7 +1257,7 @@ async def handle_ai_message(
     if kb_block:
         system_prompt = system_prompt + kb_block
 
-    profile, history, summary = await _load_context(user_id)
+    profile, history, summary = await _load_context(user_id, tenant_id=_tenant_id)
     context_block = _build_context_block(profile, summary)
     _has_history = bool(history)
 
@@ -1262,23 +1280,34 @@ async def handle_ai_message(
             log.exception("ai_call_failed", user_id=user_id)
             await _store_user_message_only(
                 user_id=user_id,
+                tenant_id=_tenant_id,
                 user_text=text,
                 current_messages=history,
             )
             await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
             return
 
-    try:
-        intent = str(result.get("intent", "other"))
-        reply_text = str(result.get("reply", "")).strip()
-        extracted: dict[str, Any] = result.get("extracted") or {}
-        lead_temperature, closing_confidence = _parse_ai_scoring(result)
-        if not reply_text:
-            raise ValueError("empty AI reply")
-    except Exception:
-        log.exception("ai_call_failed", user_id=user_id)
+    from core.domain.ai_response import parse_ai_response
+
+    payload = parse_ai_response(result)
+    intent = payload.intent
+    reply_text = payload.reply.strip()
+    extracted: dict[str, Any] = payload.extracted.model_dump(exclude_none=True)
+    lead_temperature = payload.lead_temperature
+    closing_confidence = payload.closing_confidence
+
+    if not reply_text:
+        log.warning(
+            "ai_response_validation_failed",
+            user_id=user_id,
+            tenant_id=_tenant_id,
+            handler="handle_ai_message",
+            reason="empty_reply",
+            raw_response=str(result)[:500],
+        )
         await _store_user_message_only(
             user_id=user_id,
+            tenant_id=_tenant_id,
             user_text=text,
             current_messages=history,
         )
@@ -1317,6 +1346,7 @@ async def handle_ai_message(
 
     await _persist_exchange(
         user_id=user_id,
+        tenant_id=_tenant_id,
         user_text=text,
         assistant_text=reply_text,
         intent=intent,

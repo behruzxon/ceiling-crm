@@ -128,6 +128,18 @@ class CacheClient:
     async def incr(self, key: str, amount: int = 1) -> int:
         return await self._redis.incrby(self._key(key), amount)
 
+    async def incr_with_ttl(self, key: str, ttl: int) -> int:
+        """Atomically increment a counter and guarantee it has a TTL.
+
+        Uses a Lua script so there is no crash window between INCR and EXPIRE.
+        If the key was orphaned (no TTL), the TTL is restored.
+        """
+        from infrastructure.cache.redis_atomic import _INCR_WITH_TTL_LUA
+
+        prefixed = self._key(key)
+        result = await self._redis.eval(_INCR_WITH_TTL_LUA, 1, prefixed, ttl)
+        return int(result)
+
     async def keys(self, pattern: str) -> list[str]:
         raw: list[str] = await self._redis.keys(self._key(pattern))
         prefix_len = len(self._prefix)

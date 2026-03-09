@@ -77,6 +77,7 @@ async def _run(bot: Bot) -> None:
         try:
             factory = get_session_factory()
             async with factory() as session:
+                # Intentionally global (no tenant_id) — platform-wide daily report
                 stats = await get_stats_service(session).get_stats("today")
             await bot.send_message(chat_id=chat_id, text=_format_report(stats))
             log.info("daily_report_sent", chat_id=chat_id)

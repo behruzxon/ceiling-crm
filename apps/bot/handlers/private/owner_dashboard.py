@@ -107,7 +107,7 @@ async def _build_dashboard_text(tenant_id: int) -> str:
     """Build the main dashboard summary text for a tenant."""
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         stage_counts = await repo.get_counts_by_stage(tenant_id=tenant_id)
         temp_counts = await repo.get_temperature_counts(tenant_id=tenant_id)
         attention_leads = await repo.get_attention_leads(tenant_id=tenant_id, limit=100)
@@ -362,7 +362,7 @@ async def handle_list_hot(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.search(
             lead_temperature="hot", tenant_id=tenant_id,
             limit=_PAGE_SIZE + 1, offset=0,
@@ -379,7 +379,7 @@ async def handle_list_new(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.get_leads_by_kanban_stage(
             "new", limit=_PAGE_SIZE + 1, offset=0, tenant_id=tenant_id,
         )
@@ -395,7 +395,7 @@ async def handle_list_unassigned(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.get_unassigned_leads(
             tenant_id=tenant_id, limit=_PAGE_SIZE + 1,
         )
@@ -411,7 +411,7 @@ async def handle_list_attention(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.get_attention_leads(
             tenant_id=tenant_id, limit=_PAGE_SIZE + 1,
         )
@@ -427,7 +427,7 @@ async def handle_list_all(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.get_recent_leads(
             tenant_id=tenant_id, limit=_PAGE_SIZE + 1,
         )
@@ -453,7 +453,7 @@ async def handle_pagination(callback: CallbackQuery, **data) -> None:
     offset = page * _PAGE_SIZE
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
 
         if list_type == "hot":
             leads = await repo.search(
@@ -524,7 +524,7 @@ async def handle_filter_temp(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.search(
             lead_temperature=temp, tenant_id=tenant_id,
             limit=_PAGE_SIZE + 1, offset=0,
@@ -545,7 +545,7 @@ async def handle_filter_date(callback: CallbackQuery, **data) -> None:
     since = datetime.now(timezone.utc) - timedelta(days=days)
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_lead_repo(session)
+        repo = get_lead_repo(session, tenant_id=tenant_id)
         leads = await repo.search(
             created_after=since, tenant_id=tenant_id,
             limit=_PAGE_SIZE + 1, offset=0,

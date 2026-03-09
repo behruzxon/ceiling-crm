@@ -48,12 +48,14 @@ async def track_bot_group_membership(event: ChatMemberUpdated, **data: object) -
     )
 
     # ── Admin-group tracking ───────────────────────────────────────────────
+    _tid = data.get("tenant_id")
+
     if new_status in ("administrator", "creator"):
         # Bot is now admin/owner of this group — record it for ADMIN_GROUPS broadcasts.
         try:
             factory = get_session_factory()
             async with factory() as session:
-                svc = get_admin_group_service(session)
+                svc = get_admin_group_service(session, tenant_id=_tid)
                 await svc.upsert_admin_group(chat_id=chat.id, title=title)
                 await session.commit()
         except Exception:
@@ -65,7 +67,7 @@ async def track_bot_group_membership(event: ChatMemberUpdated, **data: object) -
         try:
             factory = get_session_factory()
             async with factory() as session:
-                svc = get_admin_group_service(session)
+                svc = get_admin_group_service(session, tenant_id=_tid)
                 await svc.remove_admin_group(chat_id=chat.id)
                 await session.commit()
         except Exception:

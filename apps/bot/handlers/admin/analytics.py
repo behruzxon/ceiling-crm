@@ -43,9 +43,10 @@ async def cmd_analytics(message: Message, **data: object) -> None:
 
     try:
         # Load leads from DB
+        _tid = data.get("tenant_id")
         factory = get_session_factory()
         async with factory() as session:
-            repo = get_lead_repo(session)
+            repo = get_lead_repo(session, tenant_id=_tid)
             leads = await repo.get_leads_for_analytics(days=days, limit=500)
 
         if not leads:

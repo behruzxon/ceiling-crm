@@ -42,10 +42,11 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     """Send a welcome message and schedule its auto-deletion."""
     chat_id = event.chat.id
 
+    _tid = data.get("tenant_id")
     try:
         factory = get_session_factory()
         async with factory() as session:
-            service = get_group_settings_service(session)
+            service = get_group_settings_service(session, tenant_id=_tid)
             settings = await service.get_or_create(chat_id)
     except Exception:
         log.warning("welcome_settings_load_failed", chat_id=chat_id)
@@ -60,7 +61,7 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     if _main_gid and event.chat.id == _main_gid and joined.id > 0:
         try:
             async with get_session_factory()() as _s:
-                await get_group_join_repo(_s).upsert_join(
+                await get_group_join_repo(_s, tenant_id=_tid).upsert_join(
                     group_id=_main_gid,
                     user_id=joined.id,
                     joined_at=event.date,
