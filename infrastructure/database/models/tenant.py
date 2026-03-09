@@ -28,6 +28,11 @@ class TenantModel(Base):
     # ── Bot credentials ────────────────────────────────────────────────────
     bot_token: Mapped[str | None] = mapped_column(sa.String(256), nullable=True)
     bot_username: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
+    webhook_url: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
+    webhook_set: Mapped[bool] = mapped_column(sa.Boolean, server_default="false")
+    last_health_check: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True,
+    )
 
     # ── Telegram group/user IDs ────────────────────────────────────────────
     admin_group_id: Mapped[int | None] = mapped_column(sa.BigInteger, nullable=True)

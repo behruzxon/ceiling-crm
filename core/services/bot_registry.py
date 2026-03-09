@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 
+from core.security.token_encryption import decrypt_token, is_encrypted
 from shared.logging import get_logger
 
 if TYPE_CHECKING:
@@ -161,8 +162,26 @@ class BotRegistry:
                 log.warning("bot_empty_token", tenant_id=tenant.id, slug=tenant.slug)
                 continue
 
+            # Decrypt for hashing if encrypted
+            _raw = tenant.bot_token
+            if is_encrypted(_raw):
+                try:
+                    _raw = decrypt_token(_raw)
+                except Exception:
+                    log.error("bot_token_decrypt_failed", tenant_id=tenant.id)
+                    self._states[tenant.id] = BotRuntimeState(
+                        tenant_id=tenant.id,
+                        tenant_name=tenant.name,
+                        status=BotStatus.FAILED,
+                        last_error="token_decrypt_failed",
+                        last_error_at=_now(),
+                        error_count=1,
+                    )
+                    counts["failed"] += 1
+                    continue
+
             # Duplicate token detection
-            token_hash = _hash_token(tenant.bot_token)
+            token_hash = _hash_token(_raw)
             existing_tid = self._token_index.get(token_hash)
             if existing_tid is not None and existing_tid != tenant.id:
                 self._states[tenant.id] = BotRuntimeState(
@@ -196,7 +215,24 @@ class BotRegistry:
         """Create a Bot instance for a single tenant row."""
         tid = getattr(tenant, "id", 0)
         tname = getattr(tenant, "name", "?")
-        token = getattr(tenant, "bot_token", "")
+        raw_token = getattr(tenant, "bot_token", "")
+
+        # Decrypt if stored encrypted
+        token = raw_token
+        if raw_token and is_encrypted(raw_token):
+            try:
+                token = decrypt_token(raw_token)
+            except Exception:
+                log.error("bot_token_decrypt_failed", tenant_id=tid)
+                state = self._states.get(tid) or BotRuntimeState(
+                    tenant_id=tid, tenant_name=tname,
+                )
+                state.status = BotStatus.FAILED
+                state.last_error = "token_decrypt_failed"
+                state.last_error_at = _now()
+                state.error_count += 1
+                self._states[tid] = state
+                return
 
         state = self._states.get(tid) or BotRuntimeState(
             tenant_id=tid,
@@ -368,8 +404,17 @@ class BotRegistry:
         if not tenant.bot_token or not tenant.bot_token.strip():
             return BotStatus.FAILED
 
+        # Decrypt for hashing
+        _raw = tenant.bot_token
+        if is_encrypted(_raw):
+            try:
+                _raw = decrypt_token(_raw)
+            except Exception:
+                log.error("bot_token_decrypt_failed", tenant_id=tenant_id)
+                return BotStatus.FAILED
+
         # Duplicate check
-        token_hash = _hash_token(tenant.bot_token)
+        token_hash = _hash_token(_raw)
         existing_tid = self._token_index.get(token_hash)
         if existing_tid is not None and existing_tid != tenant_id:
             state = self._states.get(tenant_id) or BotRuntimeState(
@@ -444,9 +489,18 @@ class BotRegistry:
 
             existing_config = self._configs.get(tid)
 
+            # Decrypt DB token for comparisons
+            _db_token = tenant.bot_token
+            if _db_token and is_encrypted(_db_token):
+                try:
+                    _db_token = decrypt_token(_db_token)
+                except Exception:
+                    log.error("bot_token_decrypt_failed_resync", tenant_id=tid)
+                    continue
+
             if existing_config is None:
                 # New tenant — check for duplicate before starting
-                token_hash = _hash_token(tenant.bot_token)
+                token_hash = _hash_token(_db_token)
                 dup_tid = self._token_index.get(token_hash)
                 if dup_tid is not None and dup_tid != tid:
                     self._states[tid] = BotRuntimeState(
@@ -460,7 +514,7 @@ class BotRegistry:
                     continue
                 await self._register_tenant(tenant)
                 added += 1
-            elif existing_config.bot_token != tenant.bot_token:
+            elif existing_config.bot_token != _db_token:
                 # Token changed — restart
                 await self.stop_bot(tid)
                 await self._register_tenant(tenant)

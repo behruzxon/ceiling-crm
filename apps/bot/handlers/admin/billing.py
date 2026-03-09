@@ -454,7 +454,7 @@ async def _generate_payment_link(
             )
             return
 
-        svc = get_subscription_billing_service(session)
+        svc = get_subscription_billing_service(session, tenant_id)
         payment = await svc.create_payment(
             tenant_id=tenant_id,
             provider=provider_enum,
@@ -524,7 +524,7 @@ async def cb_payment_history(callback: CallbackQuery, **data: object) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        svc = get_subscription_billing_service(session)
+        svc = get_subscription_billing_service(session, tenant_id)
         payments = await svc.list_tenant_payments(tenant_id, limit=10)
 
     if not payments:

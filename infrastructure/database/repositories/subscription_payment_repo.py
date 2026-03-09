@@ -58,6 +58,7 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
         stmt = sa.select(SubscriptionPaymentModel).where(
             SubscriptionPaymentModel.merchant_trans_id == merchant_trans_id,
         )
+        stmt = self._apply_tenant_filter(stmt, SubscriptionPaymentModel)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
@@ -68,6 +69,7 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
         stmt = sa.select(SubscriptionPaymentModel).where(
             SubscriptionPaymentModel.provider_trans_id == provider_trans_id,
         )
+        stmt = self._apply_tenant_filter(stmt, SubscriptionPaymentModel)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
@@ -75,9 +77,11 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
     async def list_by_tenant(
         self, tenant_id: int, limit: int = 20,
     ) -> list[SubscriptionPayment]:
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for list_by_tenant"
         stmt = (
             sa.select(SubscriptionPaymentModel)
-            .where(SubscriptionPaymentModel.tenant_id == tenant_id)
+            .where(SubscriptionPaymentModel.tenant_id == tid)
             .order_by(SubscriptionPaymentModel.created_at.desc())
             .limit(limit)
         )
@@ -99,6 +103,7 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
             extension_days=entity.extension_days,
             provider_meta=entity.provider_meta,
         )
+        self._stamp_tenant_id(model)
         self._session.add(model)
         await self._session.flush()
         await self._session.refresh(model)
@@ -112,6 +117,8 @@ class PostgresSubscriptionPaymentRepository(TenantScopedRepository, AbstractSubs
     ) -> SubscriptionPayment:
         model = await self._session.get(SubscriptionPaymentModel, id)
         if model is None:
+            raise ValueError(f"SubscriptionPayment {id} not found")
+        if self._tenant_id is not None and model.tenant_id != self._tenant_id:
             raise ValueError(f"SubscriptionPayment {id} not found")
 
         model.status = status.value

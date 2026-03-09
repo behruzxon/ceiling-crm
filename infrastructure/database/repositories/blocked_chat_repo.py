@@ -51,21 +51,36 @@ class PostgresBlockedChatRepository(TenantScopedRepository, AbstractBlockedChatR
         """
         now = datetime.now(timezone.utc)
 
-        insert_stmt = pg_insert(BlockedChatModel).values(
-            chat_id=chat_id,
-            reason=reason,
-            first_seen_at=now,
-            last_seen_at=now,
-            seen_count=1,
-        )
-        upsert_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=["chat_id"],
-            set_={
+        values: dict = {
+            "chat_id": chat_id,
+            "reason": reason,
+            "first_seen_at": now,
+            "last_seen_at": now,
+            "seen_count": 1,
+        }
+        if self._tenant_id is not None:
+            values["tenant_id"] = self._tenant_id
+
+        insert_stmt = pg_insert(BlockedChatModel).values(**values)
+
+        on_conflict_kwargs: dict = {
+            "index_elements": ["chat_id"],
+            "set_": {
                 "reason": insert_stmt.excluded.reason,
                 "last_seen_at": insert_stmt.excluded.last_seen_at,
                 # Increment the existing counter by 1; do NOT reset it.
                 "seen_count": BlockedChatModel.seen_count + 1,
             },
+        }
+        # Only update rows belonging to the same tenant (prevent cross-tenant
+        # data overwrite when multiple tenants encounter the same blocked chat).
+        if self._tenant_id is not None:
+            on_conflict_kwargs["where"] = (
+                BlockedChatModel.tenant_id == self._tenant_id
+            )
+
+        upsert_stmt = insert_stmt.on_conflict_do_update(
+            **on_conflict_kwargs,
         ).returning(
             # xmax = 0  →  fresh INSERT (transaction ID is 0 = never updated)
             # xmax != 0 →  row existed and was UPDATE'd

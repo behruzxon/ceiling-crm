@@ -24,7 +24,7 @@ class PostgresGroupJoinRepository(TenantScopedRepository, AbstractGroupJoinRepos
         user_id: int,
         joined_at: datetime | None = None,
     ) -> None:
-        """INSERT … ON CONFLICT DO NOTHING — first join for (group, user) wins."""
+        """INSERT … ON CONFLICT DO NOTHING — first join for (group, user, tenant) wins."""
         values: dict = {"group_id": group_id, "user_id": user_id}
         if joined_at is not None:
             values["joined_at"] = joined_at
@@ -33,7 +33,9 @@ class PostgresGroupJoinRepository(TenantScopedRepository, AbstractGroupJoinRepos
         stmt = (
             pg_insert(GroupJoinEventModel)
             .values(**values)
-            .on_conflict_do_nothing(constraint="uq_group_join_events_group_user")
+            .on_conflict_do_nothing(
+                constraint="uq_group_join_events_group_user_tenant",
+            )
         )
         await self._session.execute(stmt)
 

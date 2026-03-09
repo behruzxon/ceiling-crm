@@ -233,9 +233,12 @@ async def get_tenant_ai_config(
     return row[0], row[1]
 
 
-def get_ai_knowledge_repo(session: AsyncSession) -> "PostgresAiKnowledgeRepository":
+def get_ai_knowledge_repo(
+    session: AsyncSession,
+    tenant_id: int | None = None,
+) -> "PostgresAiKnowledgeRepository":
     from infrastructure.database.repositories.ai_knowledge_repo import PostgresAiKnowledgeRepository
-    return PostgresAiKnowledgeRepository(session)
+    return PostgresAiKnowledgeRepository(session, tenant_id)
 
 
 def get_lead_scoring_service() -> "LeadScoringService":
@@ -282,3 +285,8 @@ def get_subscription_billing_service(
         session=session,
         payment_repo=get_subscription_payment_repo(session, tenant_id),
     )
+
+
+def get_tenant_bot_service(session: AsyncSession) -> "TenantBotService":
+    from core.services.tenant_bot_service import TenantBotService
+    return TenantBotService(session)

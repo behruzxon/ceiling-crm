@@ -9,6 +9,7 @@ from apps.scheduler.jobs.billing_jobs import register_billing_jobs
 from apps.scheduler.jobs.followup_jobs import register_followup_jobs
 from apps.scheduler.jobs.broadcast_jobs import register_broadcast_jobs
 from apps.scheduler.jobs.analytics_jobs import register_analytics_jobs
+from apps.scheduler.jobs.bot_health_jobs import register_bot_health_jobs
 from apps.scheduler.jobs.cache_jobs import register_cache_jobs
 from infrastructure.database.session import connect_database, disconnect_database
 from infrastructure.cache.client import connect_redis, disconnect_redis
@@ -35,6 +36,7 @@ async def run_scheduler() -> None:
     register_broadcast_jobs(scheduler)
     register_analytics_jobs(scheduler)
     register_cache_jobs(scheduler)
+    register_bot_health_jobs(scheduler)
 
     scheduler.start()
     for job in scheduler.get_jobs():

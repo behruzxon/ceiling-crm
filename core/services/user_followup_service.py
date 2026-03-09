@@ -127,7 +127,11 @@ class UserFollowupService:
             from infrastructure.database.models.tenant import TenantModel
             tenant = await self._session.get(TenantModel, tenant_id)
             if tenant and getattr(tenant, "bot_token", None):
-                return tenant.bot_token
+                from core.security.token_encryption import decrypt_token, is_encrypted
+                raw = tenant.bot_token
+                if is_encrypted(raw):
+                    return decrypt_token(raw)
+                return raw
         return settings.bot.token.get_secret_value()
 
     async def _resolve_business_type(self, tenant_id: int | None) -> str:

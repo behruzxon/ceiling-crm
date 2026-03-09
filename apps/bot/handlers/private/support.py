@@ -137,6 +137,26 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
         if tenant:
             menu_config = tenant.menu_config or None
 
+    # ── Auto-onboarding for tenantless users ─────────────────────────────
+    # If user has no tenant and is not an admin of the platform bot,
+    # check if they already own a tenant (admin_user_id) or offer onboarding.
+    if tenant is None and not _is_bot_admin(user_id):
+        from infrastructure.di import get_tenant_service as _get_tsvc
+        if db_session:
+            _tsvc = _get_tsvc(db_session)
+            _existing = await _tsvc.get_by_admin_user(user_id)
+            if _existing:
+                # User owns a tenant but db_user.tenant_id not set yet
+                tenant = _existing
+                menu_config = _existing.menu_config or None
+            else:
+                # New user — start auto-onboarding
+                from apps.bot.handlers.private.auto_onboarding import (
+                    start_auto_onboarding,
+                )
+                await start_auto_onboarding(message, state)
+                return
+
     # Determine owner status
     is_owner = False
     if tenant and tenant.admin_user_id == user_id:
@@ -157,7 +177,7 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
             is_owner=is_owner,
         )
     else:
-        # Default VashPotolok (backward compatible)
+        # Default VashPotolok (backward compatible — platform admin sees this)
         greeting = (
             "\U0001f916 VashPotolok AI Bot\n\n"
             f"Assalomu alaykum, {first_name}! \U0001f44b\n"

@@ -21,13 +21,20 @@ class PostgresAdminGroupRepository(TenantScopedRepository, AbstractAdminGroupRep
         values: dict = {"chat_id": chat_id, "title": title}
         if self._tenant_id is not None:
             values["tenant_id"] = self._tenant_id
-        stmt = (
-            pg_insert(AdminGroupModel)
-            .values(**values)
-            .on_conflict_do_update(
-                index_elements=["chat_id"],
-                set_={"title": title},
+
+        on_conflict_kwargs: dict = {
+            "index_elements": ["chat_id"],
+            "set_": {"title": title},
+        }
+        # Only update rows belonging to the same tenant (prevent cross-tenant
+        # data overwrite when multiple tenants share the same admin group).
+        if self._tenant_id is not None:
+            on_conflict_kwargs["where"] = (
+                AdminGroupModel.tenant_id == self._tenant_id
             )
+
+        stmt = pg_insert(AdminGroupModel).values(**values).on_conflict_do_update(
+            **on_conflict_kwargs,
         )
         await self._session.execute(stmt)
 

@@ -36,6 +36,7 @@ from apps.bot.states.onboarding import OnboardingStates
 from infrastructure.database.models.tenant import TenantModel
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_tenant_service
+from shared.config import get_settings
 from shared.logging import get_logger
 from shared.templates.business_templates import (
     BusinessType,
@@ -822,11 +823,18 @@ async def handle_confirm(callback: CallbackQuery, state: FSMContext, **data) -> 
         async with factory() as session:
             from core.services.billing_service import BillingService
 
+            # Encrypt bot token before storing
+            _raw_token = fsm_data.get("bot_token")
+            _encrypted_token = None
+            if _raw_token:
+                from core.security.token_encryption import encrypt_token
+                _encrypted_token = encrypt_token(_raw_token)
+
             tenant = TenantModel(
                 name=fsm_data["business_name"],
                 slug=fsm_data["slug"],
                 business_type=fsm_data.get("business_type", "other"),
-                bot_token=fsm_data.get("bot_token"),
+                bot_token=_encrypted_token,
                 bot_username=fsm_data.get("bot_username"),
                 admin_group_id=fsm_data.get("admin_group_id"),
                 main_group_id=fsm_data.get("main_group_id"),
@@ -848,12 +856,41 @@ async def handle_confirm(callback: CallbackQuery, state: FSMContext, **data) -> 
                 admin_user_id=user_id,
             )
 
+            # Auto-connect bot in multi-bot mode
+            bot_auto_msg = ""
+            settings = get_settings()
+            if settings.bot.runtime_mode == "multi" and tenant.bot_token:
+                try:
+                    from infrastructure.di import get_tenant_bot_service
+
+                    async with factory() as bot_session:
+                        bot_svc = get_tenant_bot_service(bot_session)
+                        await bot_svc.connect_bot(tenant.id, tenant.bot_token)
+                        await bot_session.commit()
+                    bot_auto_msg = "\nBot avtomatik ulandi!"
+                    log.info(
+                        "onboarding_bot_auto_connected",
+                        tenant_id=tenant.id,
+                        slug=tenant.slug,
+                    )
+                except Exception:
+                    bot_auto_msg = (
+                        "\n⚠️ Botni avtomatik ulab bo'lmadi. "
+                        "/connect_bot buyrug'i bilan qayta urinib ko'ring."
+                    )
+                    log.warning(
+                        "onboarding_bot_auto_connect_failed",
+                        tenant_id=tenant.id,
+                        slug=tenant.slug,
+                    )
+
             await state.clear()
             await callback.message.answer(
                 f"Biznesingiz muvaffaqiyatli yaratildi!\n\n"
                 f"Nomi: {tenant.name}\n"
                 f"Slug: {tenant.slug}\n"
-                f"ID: {tenant.id}\n\n"
+                f"ID: {tenant.id}"
+                f"{bot_auto_msg}\n\n"
                 "Sozlamalarni ko'rish: /my_business",
                 reply_markup=main_menu_keyboard(),
             )

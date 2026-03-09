@@ -258,7 +258,7 @@ async def cb_list(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         if cat == "all":
             all_entries = await repo.get_by_tenant(tenant_id)
         else:
@@ -308,7 +308,7 @@ async def cb_view(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         all_entries = await repo.get_by_tenant(tenant_id)
         entry = next((e for e in all_entries if e.id == entry_id), None)
 
@@ -356,7 +356,7 @@ async def cb_stats(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         all_entries = await repo.get_by_tenant(tenant_id)
 
     # Count by category
@@ -468,7 +468,7 @@ async def msg_add_content(message: Message, state: FSMContext, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         entry = await repo.add_entry(tenant_id, category, title, content)
         await session.commit()
 
@@ -563,7 +563,7 @@ async def cb_edit_category_selected(
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         updated = await repo.update_entry(entry_id, category=new_cat)
         await session.commit()
 
@@ -614,7 +614,7 @@ async def msg_edit_value(message: Message, state: FSMContext, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         updated = await repo.update_entry(entry_id, **{field: value})
         await session.commit()
 
@@ -663,7 +663,7 @@ async def cb_delete_confirmed(callback: CallbackQuery, **data) -> None:
 
     factory = get_session_factory()
     async with factory() as session:
-        repo = get_ai_knowledge_repo(session)
+        repo = get_ai_knowledge_repo(session, tenant_id)
         # Verify ownership: entry must belong to this tenant
         all_entries = await repo.get_by_tenant(tenant_id)
         if not any(e.id == entry_id for e in all_entries):

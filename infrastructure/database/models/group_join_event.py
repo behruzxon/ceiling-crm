@@ -34,7 +34,10 @@ class GroupJoinEventModel(Base):
     )
 
     __table_args__ = (
-        sa.UniqueConstraint("group_id", "user_id", name="uq_group_join_events_group_user"),
+        sa.UniqueConstraint(
+            "group_id", "user_id", "tenant_id",
+            name="uq_group_join_events_group_user_tenant",
+        ),
         sa.Index("ix_group_join_events_group_joined", "group_id", "joined_at"),
         sa.Index("ix_group_join_events_tenant_id", "tenant_id"),
     )

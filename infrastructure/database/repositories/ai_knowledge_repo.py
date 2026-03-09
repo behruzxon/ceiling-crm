@@ -7,13 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.domain.ai_knowledge import AiKnowledge
 from core.repositories.ai_knowledge_repo import AbstractAiKnowledgeRepository
 from infrastructure.database.models.ai_knowledge import TenantAiKnowledgeModel
+from infrastructure.database.repositories.tenant_scope import TenantScopedRepository
 
 
-class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
+class PostgresAiKnowledgeRepository(TenantScopedRepository, AbstractAiKnowledgeRepository):
     """Concrete SQLAlchemy/PostgreSQL AI knowledge repository."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session: AsyncSession, tenant_id: int | None = None) -> None:
+        super().__init__(session, tenant_id)
 
     # ── Mapping ───────────────────────────────────────────────────────────
 
@@ -32,9 +33,11 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
     # ── Reads ─────────────────────────────────────────────────────────────
 
     async def get_by_tenant(self, tenant_id: int) -> list[AiKnowledge]:
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for get_by_tenant"
         stmt = (
             sa.select(TenantAiKnowledgeModel)
-            .where(TenantAiKnowledgeModel.tenant_id == tenant_id)
+            .where(TenantAiKnowledgeModel.tenant_id == tid)
             .order_by(TenantAiKnowledgeModel.category, TenantAiKnowledgeModel.title)
         )
         result = await self._session.execute(stmt)
@@ -43,10 +46,12 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
     async def get_by_tenant_and_category(
         self, tenant_id: int, category: str,
     ) -> list[AiKnowledge]:
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for get_by_tenant_and_category"
         stmt = (
             sa.select(TenantAiKnowledgeModel)
             .where(
-                TenantAiKnowledgeModel.tenant_id == tenant_id,
+                TenantAiKnowledgeModel.tenant_id == tid,
                 TenantAiKnowledgeModel.category == category,
             )
             .order_by(TenantAiKnowledgeModel.title)
@@ -62,8 +67,10 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
         Uses ILIKE for each keyword (OR logic) — returns entries matching
         at least one keyword, ordered by number of matches descending.
         """
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for search_by_keywords"
         if not keywords:
-            return await self.get_by_tenant(tenant_id)
+            return await self.get_by_tenant(tid)
 
         # Build OR conditions for keyword matching
         conditions = []
@@ -75,7 +82,7 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
         stmt = (
             sa.select(TenantAiKnowledgeModel)
             .where(
-                TenantAiKnowledgeModel.tenant_id == tenant_id,
+                TenantAiKnowledgeModel.tenant_id == tid,
                 sa.or_(*conditions),
             )
             .order_by(TenantAiKnowledgeModel.updated_at.desc())
@@ -85,10 +92,12 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
         return [self._to_domain(m) for m in result.scalars().all()]
 
     async def count_by_tenant(self, tenant_id: int) -> int:
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for count_by_tenant"
         stmt = (
             sa.select(sa.func.count())
             .select_from(TenantAiKnowledgeModel)
-            .where(TenantAiKnowledgeModel.tenant_id == tenant_id)
+            .where(TenantAiKnowledgeModel.tenant_id == tid)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()
@@ -98,8 +107,10 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
     async def add_entry(
         self, tenant_id: int, category: str, title: str, content: str,
     ) -> AiKnowledge:
+        tid = self._resolve_tenant_id(tenant_id)
+        assert tid is not None, "tenant_id required for add_entry"
         model = TenantAiKnowledgeModel(
-            tenant_id=tenant_id,
+            tenant_id=tid,
             category=category,
             title=title,
             content=content,
@@ -113,6 +124,8 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
         model = await self._session.get(TenantAiKnowledgeModel, entry_id)
         if model is None:
             return None
+        if self._tenant_id is not None and model.tenant_id != self._tenant_id:
+            return None
         for attr in ("category", "title", "content"):
             if attr in fields:
                 setattr(model, attr, fields[attr])
@@ -124,5 +137,7 @@ class PostgresAiKnowledgeRepository(AbstractAiKnowledgeRepository):
         stmt = sa.delete(TenantAiKnowledgeModel).where(
             TenantAiKnowledgeModel.id == entry_id,
         )
+        if self._tenant_id is not None:
+            stmt = stmt.where(TenantAiKnowledgeModel.tenant_id == self._tenant_id)
         result = await self._session.execute(stmt)
         return result.rowcount > 0

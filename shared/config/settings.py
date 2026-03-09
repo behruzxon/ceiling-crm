@@ -277,6 +277,10 @@ class Settings(BaseSettings):
     app_env: Literal["development", "staging", "production"] = Field(default="development")
     app_debug: bool = Field(default=False)
     app_secret_key: SecretStr = Field(...)
+    bot_token_encryption_key: SecretStr = Field(
+        default=SecretStr(""),
+        description="Fernet key for encrypting tenant bot tokens at rest",
+    )
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO")
 
     # Prometheus
@@ -330,6 +334,14 @@ class Settings(BaseSettings):
             if len(secret_key) < 32:
                 raise ValueError(
                     "APP_SECRET_KEY must be at least 32 characters in production"
+                )
+            enc_key = self.bot_token_encryption_key.get_secret_value()
+            if not enc_key or len(enc_key) < 16:
+                raise ValueError(
+                    "BOT_TOKEN_ENCRYPTION_KEY is required in production "
+                    "(min 16 chars). Generate with: "
+                    "python -c \"from cryptography.fernet import Fernet; "
+                    "print(Fernet.generate_key().decode())\""
                 )
             if self.db.password.get_secret_value() in _PLACEHOLDER_SECRETS:
                 raise ValueError(

@@ -147,7 +147,7 @@ async def get_tenant_knowledge_block(
 
             session_factory = get_session_factory()
             async with session_factory() as session:
-                repo = PostgresAiKnowledgeRepository(session)
+                repo = PostgresAiKnowledgeRepository(session, tenant_id)
                 domain_entries = await repo.get_by_tenant(tenant_id)
                 entries = [
                     {

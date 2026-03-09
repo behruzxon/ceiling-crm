@@ -75,10 +75,12 @@ from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.promotions import router as promotions_router
+from apps.bot.handlers.private.auto_onboarding import router as auto_onboarding_router
 from apps.bot.handlers.private.menu_builder import router as menu_builder_router
 from apps.bot.handlers.private.onboarding import router as onboarding_router
 from apps.bot.handlers.private.owner_dashboard import router as owner_dashboard_router
 from apps.bot.handlers.private.knowledge import router as knowledge_router
+from apps.bot.handlers.private.tenant_bot import router as tenant_bot_router
 from apps.bot.handlers.private.support import router as support_router
 from apps.bot.tasks import daily_report, inactive_cta
 from apps.bot.middlewares.audit import AuditMiddleware
@@ -212,10 +214,12 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         order_router,        # must precede lead_capture_router
         operator_router,          # must precede ai_support_router
         measurement_lead_router,  # FSM for bepul o'lchov — before ai_support catch-all
+        auto_onboarding_router,   # SaaS auto-onboarding FSM — before catch-all
         onboarding_router,        # SaaS tenant onboarding wizard — before catch-all
         menu_builder_router,      # SaaS menu builder — before catch-all
         owner_dashboard_router,   # SaaS owner CRM dashboard — before catch-all
         knowledge_router,         # SaaS AI knowledge base manager — before catch-all
+        tenant_bot_router,        # SaaS tenant bot connection manager — before catch-all
         lead_capture_router,
         ai_support_router,  # free-text catch-all — commands already excluded by guard
     )
