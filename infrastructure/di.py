@@ -152,3 +152,8 @@ def get_lead_notification_service() -> "LeadNotificationService":
 def get_blocked_chat_repo(session: AsyncSession) -> PostgresBlockedChatRepository:
     """Return a BlockedChatRepository for the given session."""
     return PostgresBlockedChatRepository(session)
+
+
+def get_tactic_outcome_repo(session: AsyncSession) -> "PostgresTacticOutcomeRepository":
+    from infrastructure.database.repositories.tactic_outcome_repo import PostgresTacticOutcomeRepository
+    return PostgresTacticOutcomeRepository(session)

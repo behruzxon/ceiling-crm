@@ -94,6 +94,7 @@ from apps.bot.handlers.private.ai_scoring import (  # noqa: F401
     _add_lead_score,
     classify_score,
     detect_objection,
+    detect_objection_full,
     _handle_objection,
 )
 from apps.bot.handlers.private.ai_openai import (
@@ -124,6 +125,249 @@ from apps.bot.handlers.private.ai_pricing_helpers import (
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
+
+# ── Per-user AI rate limit ────────────────────────────────────────────────
+
+_AI_DAILY_LIMIT = 100
+
+
+async def _check_ai_rate_limit(user_id: int) -> bool:
+    """Return True if user is within daily AI limit, False if exceeded."""
+    try:
+        from infrastructure.cache.client import get_redis
+        from infrastructure.cache.keys import CacheKeys, CacheTTL
+
+        redis = get_redis()
+        key = CacheKeys.ai_rate_limit_daily(user_id)
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, CacheTTL.AI_RATE_LIMIT_DAILY)
+        return count <= _AI_DAILY_LIMIT
+    except Exception:
+        return True  # fail-open: allow on Redis error
+
+
+# ── Auto-reply decision layer ──────────────────────────────────────────────
+
+
+async def _try_auto_reply(
+    message: Message,
+    state: FSMContext,
+    user_id: int,
+    text: str,
+) -> bool:
+    """Try to auto-reply with a template instead of calling OpenAI.
+
+    Returns True if auto-reply was sent (caller should return early).
+    Returns False if OpenAI should be called as usual.
+    """
+    import json
+
+    try:
+        from infrastructure.cache.client import get_redis
+        from infrastructure.cache.keys import CacheKeys, CacheTTL
+
+        redis = get_redis()
+
+        # Load signals
+        mem = await _load_ai_memory(user_id) or {}
+        score = await _get_lead_score(user_id)
+
+        # Consecutive auto-reply counter
+        raw_consec = await redis.get(CacheKeys.auto_reply_consecutive(user_id))
+        consecutive = int(raw_consec) if raw_consec else 0
+
+        # Health score (lightweight — catch errors)
+        health_score = 50
+        try:
+            from core.services.conversation_intelligence_service import (
+                analyze_conversation,
+            )
+            ci = analyze_conversation(
+                score=score,
+                last_objection=mem.get("last_objection"),
+                phone_captured=bool(mem.get("phone_captured")),
+                area_m2=float(mem["area_m2"]) if mem.get("area_m2") else None,
+                minutes_since_last_activity=0,  # user just sent a message
+                follow_up_count=0,
+                lead_temperature=mem.get("lead_temperature"),
+                closing_confidence=mem.get("closing_confidence"),
+                buyer_type=mem.get("buyer_type"),
+                has_district=bool(mem.get("district")),
+                current_stage="NEW",
+            )
+            health_score = ci.health_score
+        except Exception:
+            pass
+
+        from core.services.auto_sales_service import (
+            build_escalation_alert,
+            decide_auto_reply,
+            generate_auto_reply,
+            should_escalate,
+        )
+
+        # 1. Check escalation first
+        esc = should_escalate(
+            last_objection=mem.get("last_objection"),
+            objection_severity=mem.get("last_objection_severity"),
+            consecutive_auto_replies=consecutive,
+            health_score=health_score,
+            negotiation_escalated=bool(mem.get("negotiation_escalated")),
+            follow_up_count=0,
+            score=score,
+            closing_confidence=mem.get("closing_confidence"),
+        )
+
+        if esc.should_escalate:
+            # Send escalation alert to admin group (non-blocking)
+            settings = get_settings()
+            admin_group_id = settings.bot.admin_group_id
+            if admin_group_id and message.bot:
+                dedup_key = CacheKeys.auto_sales_escalation(user_id)
+                was_set = await redis.set(
+                    dedup_key, "1",
+                    ttl=CacheTTL.AUTO_SALES_ESCALATION,
+                    nx=True,
+                )
+                if was_set:
+                    from shared.utils.telegram_send import safe_send_message
+                    alert = build_escalation_alert(
+                        lead_id=user_id,
+                        lead_name=mem.get("name", "?"),
+                        lead_phone=mem.get("phone", "\u2014"),
+                        reason_uz=esc.reason_uz,
+                        last_message=text[:120],
+                        suggested_action_uz=esc.suggested_action_uz,
+                        urgency=esc.urgency,
+                    )
+                    asyncio.create_task(
+                        safe_send_message(message.bot, admin_group_id, alert)
+                    )
+            # Don't block the response — fall through to OpenAI
+            return False
+
+        # 2. Check auto-reply eligibility
+        decision = decide_auto_reply(
+            score=score,
+            health_score=health_score,
+            last_objection=mem.get("last_objection"),
+            objection_severity=mem.get("last_objection_severity"),
+            consecutive_auto_replies=consecutive,
+            negotiation_escalated=bool(mem.get("negotiation_escalated")),
+            lead_temperature=mem.get("lead_temperature"),
+            closing_confidence=mem.get("closing_confidence"),
+        )
+
+        if not decision.auto_reply_allowed:
+            return False
+
+        # 3. Detect simple intent from text for template matching
+        intent = _detect_simple_intent(text)
+        if intent is None:
+            # No clear template match — let OpenAI handle it
+            return False
+
+        # 4. Generate template reply
+        reply = generate_auto_reply(
+            intent=intent,
+            buyer_type=mem.get("buyer_type"),
+            has_area=bool(mem.get("area_m2")),
+            has_phone=bool(mem.get("phone_captured")),
+            has_district=bool(mem.get("district")),
+            last_objection=mem.get("last_objection"),
+        )
+
+        # 5. Send auto-reply
+        await message.answer(reply.reply_text, reply_markup=_ai_keyboard())
+
+        # 6. Increment consecutive counter
+        key = CacheKeys.auto_reply_consecutive(user_id)
+        new_count = await redis.incr(key)
+        if new_count == 1:
+            await redis.expire(key, CacheTTL.AUTO_REPLY_CONSECUTIVE)
+
+        # 7. Log auto-reply to Redis
+        log_data = json.dumps({
+            "reply_type": reply.reply_type,
+            "confidence": decision.confidence,
+            "ts": int(__import__("time").time()),
+        })
+        await redis.set(
+            CacheKeys.auto_reply_log(user_id),
+            log_data,
+            ttl=CacheTTL.AUTO_REPLY_LOG,
+        )
+
+        # Log tactic outcome for outcome-based learning
+        import asyncio as _aio
+        from core.services.tactic_outcome_logger import log_tactic_outcome
+        _temp = "hot" if score >= 60 else ("warm" if score >= 30 else "cold")
+        _aio.create_task(log_tactic_outcome(
+            event_type="auto_reply",
+            tactic_name=reply.reply_type,
+            user_id=user_id,
+            lead_score_at_time=score,
+            lead_temperature_at_time=_temp,
+        ))
+
+        log.info(
+            "auto_reply_sent",
+            user_id=user_id,
+            reply_type=reply.reply_type,
+            confidence=decision.confidence,
+            consecutive=new_count,
+        )
+
+        return True
+
+    except Exception:
+        log.debug("auto_reply_check_failed", user_id=user_id)
+        return False
+
+
+def _detect_simple_intent(text: str) -> str | None:
+    """Detect a simple intent from user text for auto-reply templates.
+
+    Returns intent key or None if text requires OpenAI.
+    """
+    t = text.lower().strip()
+
+    _PRICE_WORDS = frozenset({
+        "narx", "qancha", "necha pul", "baho", "qimmat", "arzon",
+        "narxi qancha", "narxi", "qanchaga", "nechpul",
+    })
+    _MATERIAL_WORDS = frozenset({
+        "material", "rang", "dizayn", "qanday", "variant",
+        "tekstura", "mat", "glossy", "satin", "rangli",
+    })
+    _PACKAGE_WORDS = frozenset({
+        "paket", "tayyor", "komplekt", "to'plam", "premium", "standart",
+    })
+
+    for kw in _PRICE_WORDS:
+        if kw in t:
+            return "price"
+
+    for kw in _MATERIAL_WORDS:
+        if kw in t:
+            return "material"
+
+    for kw in _PACKAGE_WORDS:
+        if kw in t:
+            return "package"
+
+    return None
+
+
+async def _reset_auto_reply_counter(user_id: int) -> None:
+    """Reset consecutive auto-reply counter after an OpenAI response."""
+    try:
+        from infrastructure.cache.client import get_redis
+        from infrastructure.cache.keys import CacheKeys
+        await get_redis().delete(CacheKeys.auto_reply_consecutive(user_id))
+    except Exception:
+        pass
 
 
 # ── Explicit AI mode — entry ────────────────────────────────────────────────
@@ -640,9 +884,9 @@ async def handle_ai_question(
         await message.answer(_NEUTRAL_REPLY)
         return
 
-    _obj = detect_objection(text)
-    if _obj:
-        await _handle_objection(_obj, message, state, user_id)
+    _obj_det = detect_objection_full(text)
+    if _obj_det:
+        await _handle_objection(_obj_det.objection_type, message, state, user_id, severity=_obj_det.severity)
         return
 
     _combo = parse_combo(text)
@@ -676,6 +920,17 @@ async def handle_ai_question(
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
         return
 
+    # ── Auto-reply check (skip OpenAI if template matches) ─────────
+    if user_id and await _try_auto_reply(message, state, user_id, text):
+        return
+
+    if user_id and not await _check_ai_rate_limit(user_id):
+        await message.answer(
+            "Kunlik AI limit tugadi. Ertaga yana urinib ko'ring.",
+            reply_markup=_ai_keyboard(),
+        )
+        return
+
     if message.bot:
         await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
@@ -697,6 +952,9 @@ async def handle_ai_question(
         )
         await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
         return
+
+    # Reset consecutive auto-reply counter after OpenAI response
+    asyncio.create_task(_reset_auto_reply_counter(user_id))
 
     await message.answer(reply_text, reply_markup=_ai_keyboard())
 
@@ -840,9 +1098,9 @@ async def handle_ai_message(
         await message.answer(_NEUTRAL_REPLY)
         return
 
-    _obj = detect_objection(text)
-    if _obj:
-        await _handle_objection(_obj, message, state, user_id)
+    _obj_det = detect_objection_full(text)
+    if _obj_det:
+        await _handle_objection(_obj_det.objection_type, message, state, user_id, severity=_obj_det.severity)
         return
 
     _combo = parse_combo(text)
@@ -876,6 +1134,16 @@ async def handle_ai_message(
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
         return
 
+    # ── Auto-reply check (skip OpenAI if template matches) ─────────
+    if user_id and await _try_auto_reply(message, state, user_id, text):
+        return
+
+    if user_id and not await _check_ai_rate_limit(user_id):
+        await message.answer(
+            "Kunlik AI limit tugadi. Ertaga yana urinib ko'ring.",
+        )
+        return
+
     if message.bot:
         await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
@@ -899,6 +1167,9 @@ async def handle_ai_message(
         )
         await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
         return
+
+    # Reset consecutive auto-reply counter after OpenAI response
+    asyncio.create_task(_reset_auto_reply_counter(user_id))
 
     await message.answer(reply_text)
 

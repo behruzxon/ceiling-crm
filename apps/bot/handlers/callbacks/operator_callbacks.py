@@ -138,15 +138,31 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
 
     try:
         from shared.utils.deal_probability import evaluate_deal_probability
-        dp = evaluate_deal_probability(
-            score=lead.score or 0,
-            closing_confidence=lead.closing_confidence,
-            phone_captured=bool(lead.phone),
-            has_area=lead.room_area is not None,
-            area_m2=float(lead.room_area) if lead.room_area else None,
-            has_district=bool(lead.district),
-            follow_up_count=lead.follow_up_count or 0,
-        )
+        _sv = None
+        try:
+            from core.services.signal_vector_service import build_signal_vector
+            _sv = build_signal_vector(
+                lead_score=lead.score or 0,
+                closing_confidence=lead.closing_confidence,
+                phone_captured=bool(lead.phone),
+                has_area=lead.room_area is not None,
+                area_m2=float(lead.room_area) if lead.room_area else None,
+                has_district=bool(lead.district),
+                follow_up_count=lead.follow_up_count or 0,
+                lead_temperature=lead.lead_temperature,
+            )
+        except Exception:
+            pass
+        dp = evaluate_deal_probability(signal_vector=_sv) if _sv else \
+            evaluate_deal_probability(
+                score=lead.score or 0,
+                closing_confidence=lead.closing_confidence,
+                phone_captured=bool(lead.phone),
+                has_area=lead.room_area is not None,
+                area_m2=float(lead.room_area) if lead.room_area else None,
+                has_district=bool(lead.district),
+                follow_up_count=lead.follow_up_count or 0,
+            )
         dp_pct = dp.deal_probability_percent
 
         if not buyer_type:
@@ -217,6 +233,18 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
         f"<i>{assist.operator_action_reason}</i>"
     )
     await callback.message.answer(text)  # type: ignore[union-attr]
+
+    # Log tactic outcome for outcome-based learning
+    import asyncio
+    from core.services.tactic_outcome_logger import log_tactic_outcome
+    asyncio.create_task(log_tactic_outcome(
+        event_type="operator",
+        tactic_name=action,
+        user_id=lead.user_id,
+        lead_id=lead_id,
+        lead_score_at_time=lead.score or 0,
+        lead_temperature_at_time=lead.lead_temperature,
+    ))
 
 
 # ── Auto Close callback ──────────────────────────────────────────────────────

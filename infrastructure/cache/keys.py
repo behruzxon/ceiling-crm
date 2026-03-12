@@ -64,6 +64,57 @@ class CacheTTL:
     GRP_MENU_SHOWN        = 86_400   # 24 hours — send selective keyboard at most once per user/day
     GRP_INLINE_MENU_SHOWN = 86_400   # 24 hours — send URL inline menu at most once per user/day
 
+    # Catalog follow-up dedup (Madina AI)
+    CATALOG_FOLLOWUP_SENT = 86_400   # 24 hours — at most one catalog follow-up per user/day
+
+    # AI interaction follow-up nonce (Madina AI)
+    AI_FOLLOWUP_NONCE     = 7_200    # 2 hours — auto-expires if user is completely inactive
+
+    # AI lead score (Madina AI funnel)
+    AI_LEAD_SCORE         = 2_592_000  # 30 days — persists across sessions
+
+    # AI memory (Madina AI per-user context: name, district, area_m2, etc.)
+    AI_MEMORY             = 2_592_000  # 30 days
+
+    # AI follow-up reminder state + last interaction timestamp (Madina AI)
+    AI_FOLLOWUP_STATE     = 86_400    # 24 hours — {first_sent, second_sent, lead_created}
+    AI_LAST_INTERACTION   = 86_400    # 24 hours — unix timestamp of last user message
+
+    # AI daily stats counters (Madina AI analytics)
+    AI_STATS              = 172_800   # 48 hours — keeps today + yesterday for comparison
+    AI_STATS_USER_DAY     = 90_000    # 25 hours — dedup flag: count each user once per day
+
+    # Sales closer cooldown (Madina AI)
+    SALES_CLOSER_COOLDOWN = 600       # 10 minutes — max one closing CTA per user per window
+
+    # AI daily rate limit (per-user)
+    AI_RATE_LIMIT_DAILY   = 90_000    # 25 hours — expires just past midnight
+
+    # AI sales advice cache (per lead)
+    AI_LEAD_ADVICE        = 1_800     # 30 minutes — avoid excessive OpenAI calls
+
+    # Conversation intelligence dedup
+    CONV_INTEL_ALERT        = 3_600   # 1 hour — one insight alert per lead per hour
+    CONV_MGR_DELAY_ALERT    = 1_800   # 30 minutes — one manager delay alert per lead
+    CONV_COOLING_ALERT      = 7_200   # 2 hours — one cooling alert per lead
+
+    # Sales autopilot dedup
+    AUTOPILOT_OPPORTUNITY   = 7_200   # 2 hours — one opportunity alert per lead
+    AUTOPILOT_RISK          = 3_600   # 1 hour — one risk alert per lead
+    AUTOPILOT_CLOSING       = 7_200   # 2 hours — one closing suggestion per lead
+
+    # AI Closer dedup
+    CLOSING_OPPORTUNITY     = 7_200   # 2 hours — one closing readiness alert per lead
+    CLOSING_LOSS_RISK       = 3_600   # 1 hour — one close-loss risk alert per lead
+
+    # Auto-seller
+    AUTO_REPLY_CONSECUTIVE  = 3_600   # 1 hour — consecutive auto-reply counter TTL
+    AUTO_SALES_ESCALATION   = 3_600   # 1 hour — dedup escalation alerts per lead
+    AUTO_REPLY_LOG          = 86_400  # 24 hours — last auto-reply metadata
+
+    # Adaptive weights (outcome-based learning)
+    ADAPTIVE_WEIGHTS        = 7_200   # 2 hours — refreshed every 1 hour by scheduler
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -181,3 +232,184 @@ class CacheKeys:
         TTL: CacheTTL.GRP_INLINE_MENU_SHOWN (24 hours).
         """
         return f"grp:inline_menu:{chat_id}:{user_id}"
+
+    # ── Madina catalog follow-up ───────────────────────────────────────────
+    @staticmethod
+    def catalog_followup_sent(user_id: int) -> str:
+        """De-dup flag: set after sending catalog follow-up to this user.
+
+        TTL: CacheTTL.CATALOG_FOLLOWUP_SENT (24 hours).
+        """
+        return f"madina:catalog_followup:{user_id}"
+
+    @staticmethod
+    def ai_followup_nonce(user_id: int) -> str:
+        """Random nonce refreshed on every AI interaction.
+
+        A scheduled reminder task compares its captured nonce to the stored value.
+        If they differ (user interacted again) or the key expired (inactive >2 h),
+        the reminder is suppressed.  TTL: CacheTTL.AI_FOLLOWUP_NONCE (2 hours).
+        """
+        return f"madina:followup_nonce:{user_id}"
+
+    @staticmethod
+    def ai_lead_score(user_id: int) -> str:
+        """0-100 numeric lead score for Madina AI funnel.
+
+        Incremented by funnel events (area +15, district +10, order +25, phone +40, etc.).
+        TTL: CacheTTL.AI_LEAD_SCORE (30 days).
+        """
+        return f"ai:score:{user_id}"
+
+    @staticmethod
+    def ai_memory(user_id: int) -> str:
+        """Per-user AI memory blob: name, district, area_m2, design_type, lead_score,
+        last_user_message, phone_captured, updated_at.
+        TTL: CacheTTL.AI_MEMORY (30 days).
+        """
+        return f"ai:memory:{user_id}"
+
+    @staticmethod
+    def ai_followup_state(user_id: int) -> str:
+        """Follow-up reminder state: {first_sent, second_sent, lead_created}.
+        Reset on each new interaction (preserves lead_created).
+        TTL: CacheTTL.AI_FOLLOWUP_STATE (24 hours).
+        """
+        return f"ai:followup_state:{user_id}"
+
+    @staticmethod
+    def ai_last_interaction(user_id: int) -> str:
+        """Unix timestamp of the user's last AI interaction (str).
+        TTL: CacheTTL.AI_LAST_INTERACTION (24 hours).
+        """
+        return f"ai:last_interaction:{user_id}"
+
+    @staticmethod
+    def ai_stats_field(date_str: str, field: str) -> str:
+        """Daily AI stats counter for one metric.
+
+        date_str: ISO date, e.g. '2026-03-05'
+        field: one of users_started | messages_total | lead_hot | lead_warm |
+               lead_cold | phones_received | orders_started
+        TTL: CacheTTL.AI_STATS (48 hours).
+        """
+        return f"ai:stats:{date_str}:{field}"
+
+    @staticmethod
+    def ai_stats_user_day(date_str: str, user_id: int) -> str:
+        """Dedup flag: set (NX) when a user is counted in users_started for the day.
+        TTL: CacheTTL.AI_STATS_USER_DAY (25 hours).
+        """
+        return f"ai:stats:user:{date_str}:{user_id}"
+
+    # ── Sales closer ─────────────────────────────────────────────────────
+    @staticmethod
+    def sales_closer_last(user_id: int) -> str:
+        """Cooldown flag: set (NX) when a closing CTA is sent to this user.
+        TTL: CacheTTL.SALES_CLOSER_COOLDOWN (10 minutes).
+        """
+        return f"closer:last:{user_id}"
+
+    # ── AI daily rate limit ────────────────────────────────────────────────
+    @staticmethod
+    def ai_rate_limit_daily(user_id: int) -> str:
+        """Counter: incremented on each AI call. Resets daily via TTL.
+        TTL: CacheTTL.AI_RATE_LIMIT_DAILY (25 hours).
+        """
+        return f"ai:calls:{user_id}"
+
+    @staticmethod
+    def ai_lead_advice(lead_id: int) -> str:
+        """Cached AI sales advice for a lead.
+        TTL: CacheTTL.AI_LEAD_ADVICE (30 minutes).
+        """
+        return f"ai:lead_advice:{lead_id}"
+
+    # ── Conversation intelligence ────────────────────────────────────
+    @staticmethod
+    def conv_intel_alert(lead_id: int) -> str:
+        """Dedup: one conversation insight alert per lead per cycle.
+        TTL: CacheTTL.CONV_INTEL_ALERT (1 hour).
+        """
+        return f"conv:alert:{lead_id}"
+
+    @staticmethod
+    def conv_mgr_delay_alert(lead_id: int) -> str:
+        """Dedup: one manager delay alert per lead per cycle.
+        TTL: CacheTTL.CONV_MGR_DELAY_ALERT (30 minutes).
+        """
+        return f"conv:mgr_delay:{lead_id}"
+
+    @staticmethod
+    def conv_cooling_alert(lead_id: int) -> str:
+        """Dedup: one cooling alert per lead per cycle.
+        TTL: CacheTTL.CONV_COOLING_ALERT (2 hours).
+        """
+        return f"conv:cooling:{lead_id}"
+
+    # ── Sales autopilot ────────────────────────────────────────────
+    @staticmethod
+    def autopilot_opportunity(lead_id: int) -> str:
+        """Dedup: one opportunity alert per lead per cycle.
+        TTL: CacheTTL.AUTOPILOT_OPPORTUNITY (2 hours).
+        """
+        return f"autopilot:opp:{lead_id}"
+
+    @staticmethod
+    def autopilot_risk(lead_id: int) -> str:
+        """Dedup: one risk alert per lead per cycle.
+        TTL: CacheTTL.AUTOPILOT_RISK (1 hour).
+        """
+        return f"autopilot:risk:{lead_id}"
+
+    @staticmethod
+    def autopilot_closing(lead_id: int) -> str:
+        """Dedup: one closing suggestion per lead per cycle.
+        TTL: CacheTTL.AUTOPILOT_CLOSING (2 hours).
+        """
+        return f"autopilot:closing:{lead_id}"
+
+    # ── AI Closer ─────────────────────────────────────────────────────
+    @staticmethod
+    def closing_opportunity(lead_id: int) -> str:
+        """Dedup: one closing readiness alert per lead per cycle.
+        TTL: CacheTTL.CLOSING_OPPORTUNITY (2 hours).
+        """
+        return f"closer:opp:{lead_id}"
+
+    @staticmethod
+    def closing_loss_risk(lead_id: int) -> str:
+        """Dedup: one close-loss risk alert per lead per cycle.
+        TTL: CacheTTL.CLOSING_LOSS_RISK (1 hour).
+        """
+        return f"closer:risk:{lead_id}"
+
+    # ── Auto-seller ──────────────────────────────────────────────────
+    @staticmethod
+    def auto_reply_consecutive(user_id: int) -> str:
+        """Counter: consecutive auto-replies sent to this user.
+        TTL: CacheTTL.AUTO_REPLY_CONSECUTIVE (1 hour).
+        """
+        return f"autosell:consec:{user_id}"
+
+    @staticmethod
+    def auto_sales_escalation(lead_id: int) -> str:
+        """Dedup: one escalation alert per lead per cycle.
+        TTL: CacheTTL.AUTO_SALES_ESCALATION (1 hour).
+        """
+        return f"autosell:esc:{lead_id}"
+
+    @staticmethod
+    def auto_reply_log(user_id: int) -> str:
+        """Last auto-reply metadata (JSON: reply_type, timestamp).
+        TTL: CacheTTL.AUTO_REPLY_LOG (24 hours).
+        """
+        return f"autosell:log:{user_id}"
+
+    # ── Adaptive weights (outcome-based learning) ─────────────────────
+    @staticmethod
+    def adaptive_weights(event_type: str) -> str:
+        """Cached adaptive tactic weights JSON for an event type.
+        TTL: CacheTTL.ADAPTIVE_WEIGHTS (2 hours).
+        """
+        return f"adaptive_weights:{event_type}"

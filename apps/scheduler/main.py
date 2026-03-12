@@ -9,11 +9,36 @@ from apps.scheduler.jobs.followup_jobs import register_followup_jobs
 from apps.scheduler.jobs.broadcast_jobs import register_broadcast_jobs
 from apps.scheduler.jobs.analytics_jobs import register_analytics_jobs
 from apps.scheduler.jobs.cache_jobs import register_cache_jobs
+from apps.scheduler.jobs.conversation_intelligence_jobs import register_conversation_intelligence_jobs
+from apps.scheduler.jobs.sales_autopilot_jobs import register_sales_autopilot_jobs
+from apps.scheduler.jobs.closing_jobs import register_closing_jobs
+from apps.scheduler.jobs.auto_sales_jobs import register_auto_sales_jobs
+from apps.scheduler.jobs.outcome_resolver_jobs import register_outcome_resolver_jobs
 from infrastructure.database.session import connect_database, disconnect_database
 from infrastructure.cache.client import connect_redis, disconnect_redis
 from shared.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
+
+
+def _add_error_listener(scheduler: AsyncIOScheduler) -> None:
+    """Log scheduler job errors to system_errors table."""
+    from apscheduler.events import EVENT_JOB_ERROR
+
+    def _on_job_error(event: object) -> None:
+        exc = getattr(event, "exception", None)
+        job_id = getattr(event, "job_id", "unknown")
+        if exc:
+            log.exception("scheduler_job_error", job_id=job_id)
+            try:
+                from infrastructure.error_logger import log_system_error
+                asyncio.ensure_future(
+                    log_system_error("scheduler", exc, message=f"job={job_id}: {exc}")
+                )
+            except Exception:
+                pass
+
+    scheduler.add_listener(_on_job_error, EVENT_JOB_ERROR)
 
 
 async def run_scheduler() -> None:
@@ -29,10 +54,16 @@ async def run_scheduler() -> None:
             "misfire_grace_time": 60, # tolerate up to 60 s late start before skipping
         },
     )
+    _add_error_listener(scheduler)
     register_followup_jobs(scheduler)
     register_broadcast_jobs(scheduler)
     register_analytics_jobs(scheduler)
     register_cache_jobs(scheduler)
+    register_conversation_intelligence_jobs(scheduler)
+    register_sales_autopilot_jobs(scheduler)
+    register_closing_jobs(scheduler)
+    register_auto_sales_jobs(scheduler)
+    register_outcome_resolver_jobs(scheduler)
 
     scheduler.start()
     for job in scheduler.get_jobs():

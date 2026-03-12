@@ -89,15 +89,31 @@ class FollowupService:
                         try:
                             from shared.utils.deal_probability import evaluate_deal_probability
 
-                            _dp = evaluate_deal_probability(
-                                score=lead.score or 0,
-                                closing_confidence=lead.closing_confidence,
-                                phone_captured=bool(lead.phone),
-                                has_area=lead.room_area is not None,
-                                area_m2=lead.room_area,
-                                has_district=bool(lead.district),
-                                follow_up_count=lead.follow_up_count or 0,
-                            )
+                            _sv = None
+                            try:
+                                from core.services.signal_vector_service import build_signal_vector
+                                _sv = build_signal_vector(
+                                    lead_score=lead.score or 0,
+                                    closing_confidence=lead.closing_confidence,
+                                    phone_captured=bool(lead.phone),
+                                    has_area=lead.room_area is not None,
+                                    area_m2=float(lead.room_area) if lead.room_area else None,
+                                    has_district=bool(lead.district),
+                                    follow_up_count=lead.follow_up_count or 0,
+                                    lead_temperature=lead.lead_temperature,
+                                )
+                            except Exception:
+                                pass
+                            _dp = evaluate_deal_probability(signal_vector=_sv) if _sv else \
+                                evaluate_deal_probability(
+                                    score=lead.score or 0,
+                                    closing_confidence=lead.closing_confidence,
+                                    phone_captured=bool(lead.phone),
+                                    has_area=lead.room_area is not None,
+                                    area_m2=lead.room_area,
+                                    has_district=bool(lead.district),
+                                    follow_up_count=lead.follow_up_count or 0,
+                                )
                             prob_line = f"\n\U0001f4ca Ehtimol: {_dp.deal_probability_percent}%"
                             if _dp.expected_deal_value is not None:
                                 prob_line += f" | {_dp.expected_deal_value:,} UZS"
@@ -144,8 +160,10 @@ class FollowupService:
                                 ),
                             ],
                         ])
-                        await bot.send_message(
-                            self._admin_user_id, text, reply_markup=keyboard
+                        from shared.utils.telegram_send import safe_send_message
+
+                        await safe_send_message(
+                            bot, self._admin_user_id, text, reply_markup=keyboard
                         )
 
                         # ── Reschedule using brain delay ────────────────
@@ -156,6 +174,19 @@ class FollowupService:
                             next_follow_up_at=next_fu,
                             increment_followup_count=True,
                         )
+
+                        # Log tactic outcome for outcome-based learning
+                        import asyncio as _aio
+                        from core.services.tactic_outcome_logger import log_tactic_outcome
+                        _aio.create_task(log_tactic_outcome(
+                            event_type="followup",
+                            tactic_name=fu_decision.follow_up_type or "price_reminder",
+                            user_id=lead.user_id,
+                            lead_id=lead.id,
+                            lead_score_at_time=lead.score or 0,
+                            lead_temperature_at_time=lead.lead_temperature,
+                        ))
+
                         processed += 1
                     except Exception:
                         log.exception("followup_send_failed", lead_id=lead.id)
