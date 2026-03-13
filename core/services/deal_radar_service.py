@@ -30,6 +30,10 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.services.signal_vector_service import SignalVector
 
 
 # ── Result dataclass ─────────────────────────────────────────────────────────
@@ -104,19 +108,211 @@ def rank_lead_for_radar(
     lead_status: str | None = None,
     follow_up_count: int = 0,
     last_activity_ts: int | None = None,
+    signal_vector: SignalVector | None = None,
 ) -> RadarResult:
     """Compute radar priority for a single lead.
 
-    All parameters are keyword-only with safe defaults.
-    Pure function — no I/O, fully deterministic.
+    When *signal_vector* is provided, uses normalised scores with
+    rebalanced weights that eliminate double-counting.  Otherwise
+    falls back to legacy per-parameter scoring for backward compat.
     """
+    if signal_vector is not None:
+        return _rank_from_vector(signal_vector)
+
+    return _rank_legacy(
+        score=score,
+        deal_probability_percent=deal_probability_percent,
+        predicted_revenue_best=predicted_revenue_best,
+        predicted_revenue_max=predicted_revenue_max,
+        negotiation_escalated=negotiation_escalated,
+        decision_stage=decision_stage,
+        engagement_trend=engagement_trend,
+        follow_up_type=follow_up_type,
+        phone_captured=phone_captured,
+        has_area=has_area,
+        has_district=has_district,
+        closing_attempted=closing_attempted,
+        closing_confidence=closing_confidence,
+        lead_temperature=lead_temperature,
+        lead_status=lead_status,
+        last_activity_ts=last_activity_ts,
+    )
+
+
+# ── SignalVector-based scoring (no double-counting) ─────────────────────────
+#
+#   Component                   Max contribution
+#   ──────────────────────────────────────────────
+#   Deal probability             30  (dp × 0.30)
+#   Revenue potential            20  (revenue_potential × 20)
+#   Engagement (pure)            18  (engagement_score × 18)
+#   Decision stage               15  (stage mapping)
+#   Engagement trend             10  (trend mapping)
+#   Contact quality               5  (contact_quality × 5)
+#   Closing progress              3  (closing_progress × 3)
+#   Escalation bonus              5
+#   Freshness ±                   5
+#   Temperature ±                 3
+#   ──────────────────────────────────────────────
+#   Subtotal max               ~114 → clamp 100
+
+
+def _rank_from_vector(sv: SignalVector) -> RadarResult:
+    """Score using normalised SignalVector — no double-counting."""
+    signals: list[str] = []
+    pts = 0.0
+
+    dp = sv.deal_probability_percent or 0
+
+    # ── Terminal status ──────────────────────────────────────────
+    if sv.lead_status in ("deal", "lost"):
+        bucket = BUCKET_LOW_PRIORITY
+        reason = "Terminal status" if sv.lead_status == "lost" else "Won"
+        return RadarResult(
+            radar_priority_score=0,
+            radar_bucket=bucket,
+            radar_reason=reason,
+            recommended_immediate_action="Hech narsa — tugallangan",
+            radar_signals=[f"status:{sv.lead_status}"],
+        )
+
+    # ── 1. Deal probability (max 30) ────────────────────────────
+    pts += min(dp * 0.3, 30)
+    if dp >= 70:
+        signals.append("yuqori ehtimol")
+    elif dp >= 40:
+        signals.append("o'rta ehtimol")
+
+    # ── 2. Revenue potential (max 20) ────────────────────────────
+    pts += sv.revenue_potential * 20
+    rev = sv.predicted_revenue_best or 0
+    if rev >= 10_000_000:
+        signals.append("yuqori daromad")
+    elif rev >= 5_000_000:
+        signals.append("o'rta daromad")
+
+    # ── 3. Pure engagement (max 18) ──────────────────────────────
+    pts += sv.engagement_score * 18
+    if sv.engagement_score >= 0.6:
+        signals.append("hot ball")
+    elif sv.engagement_score >= 0.3:
+        signals.append("warm ball")
+
+    # ── 4. Decision stage (0-15) ─────────────────────────────────
+    _stage_pts: dict[str, float] = {
+        "close_ready": 15, "negotiating": 12, "comparing": 8,
+        "researching": 5, "new_interest": 3, "delayed": 2, "cold": 0,
+    }
+    pts += _stage_pts.get(sv.decision_stage or "", 3)
+    if sv.decision_stage:
+        signals.append(sv.decision_stage)
+
+    # ── 5. Engagement trend (0-10) ───────────────────────────────
+    _trend_pts: dict[str, float] = {
+        "warming_up": 10, "reactivated": 7, "stable": 5, "cooling_down": 2,
+    }
+    pts += _trend_pts.get(sv.engagement_trend or "", 3)
+    if sv.engagement_trend:
+        signals.append(sv.engagement_trend)
+
+    # ── 6. Contact quality (max 5) ───────────────────────────────
+    pts += sv.contact_quality * 5
+    if sv.phone_captured:
+        signals.append("telefon bor")
+    if sv.has_area:
+        signals.append("maydon bor")
+
+    # ── 7. Closing progress (max 3) ──────────────────────────────
+    pts += sv.closing_progress * 3
+    if sv.closing_attempted:
+        signals.append("closing urinilgan")
+
+    # ── 8. Escalation bonus (+5) ─────────────────────────────────
+    if sv.negotiation_escalated:
+        pts += 5
+        signals.append("ESCALATE")
+
+    # ── 9. Freshness ±5 ──────────────────────────────────────────
+    if sv.last_activity_ts:
+        import time
+        age_hours = (time.time() - sv.last_activity_ts) / 3600
+        if age_hours < 1:
+            pts += 5
+            signals.append("yangi faoliyat")
+        elif age_hours < 6:
+            pts += 2
+        elif age_hours > 48:
+            pts -= 5
+            signals.append("eski faoliyat")
+
+    # ── 10. Temperature ±3 ───────────────────────────────────────
+    pts += sv.temperature_score * 3
+    if sv.temperature_score <= 0:
+        pts -= 2
+
+    # ── Clamp ────────────────────────────────────────────────────
+    priority_score = max(0, min(100, int(pts)))
+
+    # ── Determine bucket ─────────────────────────────────────────
+    bucket = _determine_bucket(
+        priority_score=priority_score,
+        decision_stage=sv.decision_stage,
+        engagement_trend=sv.engagement_trend,
+        dp=dp,
+        rev=rev,
+        score=sv.lead_score_raw,
+        lead_temperature=sv.lead_temperature,
+        negotiation_escalated=sv.negotiation_escalated,
+    )
+
+    reason = ", ".join(signals[:5]) if signals else f"ball: {sv.lead_score_raw}"
+
+    action = _pick_action(
+        bucket=bucket,
+        phone_captured=sv.phone_captured,
+        has_area=sv.has_area,
+        closing_attempted=sv.closing_attempted,
+        negotiation_escalated=sv.negotiation_escalated,
+        follow_up_type=sv.follow_up_type,
+    )
+
+    return RadarResult(
+        radar_priority_score=priority_score,
+        radar_bucket=bucket,
+        radar_reason=reason,
+        recommended_immediate_action=action,
+        radar_signals=signals,
+    )
+
+
+# ── Legacy scoring (backward compat) ────────────────────────────────────────
+
+
+def _rank_legacy(
+    *,
+    score: int,
+    deal_probability_percent: int | None,
+    predicted_revenue_best: int | None,
+    predicted_revenue_max: int | None,
+    negotiation_escalated: bool,
+    decision_stage: str | None,
+    engagement_trend: str | None,
+    follow_up_type: str | None,
+    phone_captured: bool,
+    has_area: bool,
+    has_district: bool,
+    closing_attempted: bool,
+    closing_confidence: float | None,
+    lead_temperature: str | None,
+    lead_status: str | None,
+    last_activity_ts: int | None,
+) -> RadarResult:
     signals: list[str] = []
     pts = 0.0
 
     dp = deal_probability_percent or 0
     rev = predicted_revenue_best or 0
 
-    # ── Terminal status check ──────────────────────────────────────────
     if lead_status in ("deal", "lost"):
         bucket = BUCKET_LOW_PRIORITY
         reason = "Terminal status" if lead_status == "lost" else "Won"
@@ -128,7 +324,6 @@ def rank_lead_for_radar(
             radar_signals=[f"status:{lead_status}"],
         )
 
-    # ── 1. Deal probability component (0-30 pts) ──────────────────────
     prob_pts = min(dp * 0.3, 30)
     pts += prob_pts
     if dp >= 70:
@@ -136,9 +331,7 @@ def rank_lead_for_radar(
     elif dp >= 40:
         signals.append("o'rta ehtimol")
 
-    # ── 2. Revenue component (0-20 pts) ───────────────────────────────
     if rev > 0:
-        # Scale: 5M → 5pts, 10M → 10pts, 20M+ → 20pts
         rev_pts = min(rev / 1_000_000, 20)
         pts += rev_pts
         if rev >= 10_000_000:
@@ -146,7 +339,6 @@ def rank_lead_for_radar(
         elif rev >= 5_000_000:
             signals.append("o'rta daromad")
 
-    # ── 3. Lead score component (0-15 pts) ────────────────────────────
     score_pts = min(score * 0.15, 15)
     pts += score_pts
     if score >= 60:
@@ -154,34 +346,23 @@ def rank_lead_for_radar(
     elif score >= 30:
         signals.append("warm ball")
 
-    # ── 4. Decision stage component (0-15 pts) ────────────────────────
     _stage_pts: dict[str, float] = {
-        "close_ready": 15,
-        "negotiating": 12,
-        "comparing": 8,
-        "researching": 5,
-        "new_interest": 3,
-        "delayed": 2,
-        "cold": 0,
+        "close_ready": 15, "negotiating": 12, "comparing": 8,
+        "researching": 5, "new_interest": 3, "delayed": 2, "cold": 0,
     }
     stage_pts = _stage_pts.get(decision_stage or "", 3)
     pts += stage_pts
     if decision_stage:
         signals.append(decision_stage)
 
-    # ── 5. Engagement trend component (0-10 pts) ──────────────────────
     _trend_pts: dict[str, float] = {
-        "warming_up": 10,
-        "reactivated": 7,
-        "stable": 5,
-        "cooling_down": 2,
+        "warming_up": 10, "reactivated": 7, "stable": 5, "cooling_down": 2,
     }
     trend_pts = _trend_pts.get(engagement_trend or "", 3)
     pts += trend_pts
     if engagement_trend:
         signals.append(engagement_trend)
 
-    # ── 6. Signal bonuses (0-10 pts) ──────────────────────────────────
     if phone_captured:
         pts += 3
         signals.append("telefon bor")
@@ -197,12 +378,10 @@ def rank_lead_for_radar(
         pts += 2
         signals.append("yuqori ishonch")
 
-    # ── 7. Escalation bonus ───────────────────────────────────────────
     if negotiation_escalated:
         pts += 5
         signals.append("ESCALATE")
 
-    # ── 8. Freshness penalty/bonus ────────────────────────────────────
     if last_activity_ts:
         import time
         age_hours = (time.time() - last_activity_ts) / 3600
@@ -215,7 +394,6 @@ def rank_lead_for_radar(
             pts -= 5
             signals.append("eski faoliyat")
 
-    # ── 9. Temperature bonus ──────────────────────────────────────────
     if lead_temperature == "hot":
         pts += 3
     elif lead_temperature == "warm":
@@ -223,10 +401,8 @@ def rank_lead_for_radar(
     elif lead_temperature == "cold":
         pts -= 2
 
-    # ── Clamp to 0-100 ───────────────────────────────────────────────
     priority_score = max(0, min(100, int(pts)))
 
-    # ── Determine bucket ──────────────────────────────────────────────
     bucket = _determine_bucket(
         priority_score=priority_score,
         decision_stage=decision_stage,
@@ -238,10 +414,8 @@ def rank_lead_for_radar(
         negotiation_escalated=negotiation_escalated,
     )
 
-    # ── Build reason ──────────────────────────────────────────────────
     reason = ", ".join(signals[:5]) if signals else f"ball: {score}"
 
-    # ── Recommended action ────────────────────────────────────────────
     action = _pick_action(
         bucket=bucket,
         phone_captured=phone_captured,

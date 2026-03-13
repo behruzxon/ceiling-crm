@@ -204,6 +204,11 @@ class BusinessSettings(BaseSettings):
     new_lead_alert_minutes: int = Field(default=30, alias="NEW_LEAD_ALERT_MINUTES")
     broadcast_rate_limit: int = Field(default=30, alias="BROADCAST_RATE_LIMIT")
 
+    # Business hours (Time-Aware Intelligence Layer)
+    timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
+    business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
+    business_hours_end: int = Field(default=20, alias="BUSINESS_HOURS_END", ge=1, le=24)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Root Settings (aggregates sub-settings)
@@ -256,6 +261,8 @@ class Settings(BaseSettings):
                 raise ValueError("DEBUG must be False in production")
             if not self.bot.webhook_url:
                 raise ValueError("BOT_WEBHOOK_URL is required in production")
+            if self.bot.webhook_url and not self.bot.webhook_secret:
+                raise ValueError("BOT_WEBHOOK_SECRET is required when webhook is enabled in production")
             if not self.sentry.dsn:
                 raise ValueError("SENTRY_DSN is required in production")
         return self

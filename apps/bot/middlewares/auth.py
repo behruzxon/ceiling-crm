@@ -16,7 +16,7 @@ from infrastructure.cache.client import get_redis
 from infrastructure.cache.keys import CacheKeys
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_user_repo
-from shared.logging import get_logger
+from shared.logging import bind_request_context, clear_request_context, get_logger
 
 log = get_logger(__name__)
 
@@ -39,6 +39,10 @@ class AuthMiddleware(BaseMiddleware):
         data: dict[str, Any],
     ) -> Any:
         tg_user = data.get("event_from_user")
+
+        # Bind per-request tracing context (request_id + user_id)
+        uid = tg_user.id if tg_user and not tg_user.is_bot else None
+        bind_request_context(user_id=uid)
 
         # Skip upsert for missing users, bots, or any non-positive ID.
         # Negative IDs belong to Telegram groups/channels/service entities

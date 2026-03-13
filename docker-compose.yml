@@ -8,10 +8,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    # No host port binding — avoids conflicts with other projects.
-    # All app services connect via Docker network (service name "postgres").
-    # To access from host (e.g. pgAdmin), uncomment:
-    #   ports: ["15432:5432"]
+    # Host port 15432 → container 5432 (for local dev tools: pgAdmin, alembic).
+    # All app services still connect via Docker network (service name "postgres").
+    ports:
+      - "15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -35,21 +35,30 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
+from apps.bot.handlers.admin.analytics import router as analytics_router
 from apps.bot.handlers.admin.dashboard import router as dashboard_router
 from apps.bot.handlers.admin.lead_status import router as lead_status_router
 from apps.bot.handlers.admin.leads import router as admin_leads_router
 from apps.bot.handlers.admin.media import router as media_router
 from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
+from apps.bot.handlers.admin.radar import router as radar_router
+from apps.bot.handlers.admin.lead_advice import router as lead_advice_router
 from apps.bot.handlers.admin.reports import router as reports_router
+from apps.bot.handlers.admin.sales_report import router as sales_report_router
 from apps.bot.handlers.admin.stats import router as stats_router
+from apps.bot.handlers.admin.system_status import router as system_status_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
+from apps.bot.handlers.admin.autopilot import router as autopilot_router
+from apps.bot.handlers.admin.close_advice import router as close_advice_router
 from apps.bot.handlers.callbacks.cta_callbacks import router as cta_callbacks_router
 from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
 from apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
+from apps.bot.handlers.callbacks.operator_callbacks import router as operator_callbacks_router
+from apps.bot.handlers.callbacks.sales_closer_callbacks import router as sales_closer_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
@@ -71,12 +80,14 @@ from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.promotions import router as promotions_router
 from apps.bot.handlers.private.support import router as support_router
 from apps.bot.tasks import daily_report, inactive_cta
+from apps.bot.handlers.error_handler import register_error_handler
 from apps.bot.middlewares.audit import AuditMiddleware
 from apps.bot.middlewares.auth import AuthMiddleware
 from apps.bot.middlewares.group_context import GroupContextMiddleware
 from apps.bot.middlewares.group_menu_injector import GroupMenuInjectorMiddleware
 from apps.bot.middlewares.locale import LocaleMiddleware
 from apps.bot.middlewares.rate_limit import RateLimitMiddleware
+from apps.bot.middlewares.security import SecurityMiddleware
 from infrastructure.cache.client import connect_redis, disconnect_redis, get_sessions_redis
 from infrastructure.database.session import connect_database, disconnect_database
 from infrastructure.monitoring.prometheus import setup_prometheus
@@ -130,10 +141,14 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Outer middlewares (run for every update) ──────────────────────────
     # Order matters: each wraps the next.
     dp.update.outer_middleware(AuthMiddleware())
+    dp.update.outer_middleware(SecurityMiddleware())
     dp.update.outer_middleware(LocaleMiddleware())
     dp.update.outer_middleware(GroupContextMiddleware())
     dp.update.outer_middleware(RateLimitMiddleware())
     dp.update.outer_middleware(AuditMiddleware())
+
+    # ── Global error handler (logs unhandled exceptions to system_errors) ──
+    register_error_handler(dp)
     dp.message.outer_middleware(GroupMenuInjectorMiddleware())  # inject selective ReplyKeyboard in groups
 
     # ── Admin router (restricted access) ──────────────────────────────────
@@ -142,12 +157,19 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         dashboard_router,
         admin_leads_router,
         pipeline_router,
+        radar_router,
+        analytics_router,
+        sales_report_router,
+        lead_advice_router,
         broadcasts_router,
         scheduler_router,
         operator_stats_router,
         reports_router,
         media_router,
+        autopilot_router,      # /autopilot — AI sales autopilot suggestions
+        close_advice_router,   # /close_advice — AI closer readiness + tactic
         stats_router,          # /stats + stats:period:* callbacks
+        system_status_router,  # /system_status diagnostics
     )
 
     # ── Callbacks router ───────────────────────────────────────────────────
@@ -157,6 +179,8 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         kanban_callbacks_router,    # kanban:* — visual pipeline management
         lead_status_router,         # lead:{id}:status:{status} — quick admin status updates
         cta_callbacks_router,       # cta:* — discount / order / pricing / operator / catalog
+        sales_closer_callbacks_router,  # closer:* — AI sales closer CTA buttons
+        operator_callbacks_router,     # op:* — on-demand operator assist suggestions
         pipeline_callbacks_router,
         payment_callbacks_router,
         package_callbacks_router,   # pkg:admin:* inline buttons from notifications
@@ -227,12 +251,60 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _preflight_checks() -> None:
+    """Fail-fast validation of critical config before connecting to services."""
+    settings = get_settings()
+    errors: list[str] = []
+
+    # Bot token basic format check (should contain a colon)
+    token = settings.bot.token.get_secret_value()
+    if ":" not in token or len(token) < 20:
+        errors.append("BOT_TOKEN looks invalid (missing ':' or too short)")
+
+    # OpenAI key must be set
+    api_key = settings.openai.api_key.get_secret_value()
+    if not api_key or api_key in ("sk-...", "your-key-here", "CHANGE_ME"):
+        errors.append("OPENAI_API_KEY is missing or placeholder")
+
+    # admin_group_id must be negative (Telegram group IDs are negative)
+    if settings.bot.admin_group_id >= 0:
+        errors.append(
+            f"BOT_ADMIN_GROUP_ID={settings.bot.admin_group_id} should be negative "
+            "(Telegram group/supergroup IDs are negative)"
+        )
+
+    # Database URL must resolve (host present)
+    if not settings.db.host or not settings.db.password.get_secret_value():
+        errors.append("POSTGRES_HOST or POSTGRES_PASSWORD is missing")
+
+    # Redis URL must resolve
+    if not settings.redis.host:
+        errors.append("REDIS_HOST is missing")
+
+    # Webhook secret required when webhook mode is enabled
+    if settings.bot.webhook_url:
+        ws = settings.bot.webhook_secret
+        if not ws or not ws.get_secret_value():
+            errors.append(
+                "BOT_WEBHOOK_SECRET is required when BOT_WEBHOOK_URL is set"
+            )
+
+    if errors:
+        for err in errors:
+            log.error("preflight_check_failed", detail=err)
+        raise SystemExit(f"Preflight checks failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    log.info("preflight_checks_passed")
+
+
 async def on_startup(bot: Bot) -> None:
     """
     Called once when the bot application starts.
     Initialises all external connections and registers bot commands.
     """
     log.info("bot_startup_begin")
+
+    _preflight_checks()
 
     # Connect to databases
     await connect_database()
@@ -372,8 +444,7 @@ async def build_web_app() -> web.Application:
 
     setup_application(app, dp, bot=bot)
 
-    if settings.prometheus_enabled:
-        setup_prometheus(app)
+    setup_prometheus(app)  # registers /health always + /metrics when enabled
 
     return app
 

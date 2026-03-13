@@ -10,7 +10,7 @@ class AuditLogModel(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(sa.BigInteger, sa.Identity(), primary_key=True)
-    actor_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=True)
+    actor_id: Mapped[int | None] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action: Mapped[str] = mapped_column(sa.String(128), nullable=False)
     entity_type: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     entity_id: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)

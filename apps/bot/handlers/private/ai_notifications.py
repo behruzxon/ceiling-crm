@@ -163,6 +163,36 @@ async def _notify_ai_lead_collected(
         )
         brain = orch.sales_brain
 
+        # Compute conversation health (best-effort)
+        conv_health = None
+        try:
+            from core.services.conversation_intelligence_service import (
+                analyze_conversation,
+            )
+            _mins = 0
+            if last_activity_ts:
+                import time as _time
+                _mins = max(0, (int(_time.time()) - int(last_activity_ts)) // 60)
+            conv_health = analyze_conversation(
+                score=score,
+                last_objection=last_objection,
+                phone_captured=bool(phone),
+                area_m2=area,
+                minutes_since_last_activity=_mins,
+                follow_up_count=follow_up_count,
+                closing_confidence=closing_confidence,
+                buyer_type=(
+                    brain.buyer_profile.buyer_type  # type: ignore[union-attr]
+                    if brain.buyer_profile else None
+                ),
+                last_negotiation_tactic=negotiation_tactic,
+                negotiation_escalated=negotiation_escalated,
+                has_district=bool(district),
+                last_closing_attempt=closing_action if closing_attempted else None,
+            )
+        except Exception:
+            pass
+
         svc = get_lead_notification_service()
         await svc.notify_ai_lead_collected(
             phone=phone,
@@ -192,6 +222,7 @@ async def _notify_ai_lead_collected(
             conversation_graph=brain.conversation_graph,
             followup_decision=brain.followup_decision,
             sales_brain=brain,
+            conversation_health=conv_health,
         )
     except Exception:
         log.warning("notify_ai_lead_collected_failed", phone=phone)

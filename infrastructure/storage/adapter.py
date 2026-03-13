@@ -52,10 +52,19 @@ class LocalStorageAdapter(StorageAdapter):
         self._base_path = base_path or settings.storage.local_path
         self._base_path.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _sanitize_filename(filename: str) -> str:
+        """Strip directory components and reject hidden/empty filenames."""
+        safe = Path(filename).name
+        if not safe or safe.startswith("."):
+            safe = "upload"
+        return safe
+
     def _generate_path(self, filename: str) -> Path:
         """Generate unique path: uploads/YYYY/MM/uuid_filename."""
         from datetime import datetime, timezone
 
+        filename = self._sanitize_filename(filename)
         now = datetime.now(timezone.utc)
         subdir = self._base_path / str(now.year) / f"{now.month:02d}"
         subdir.mkdir(parents=True, exist_ok=True)
@@ -111,7 +120,8 @@ class S3StorageAdapter(StorageAdapter):
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> str:
         import asyncio
 
-        key = f"uploads/{uuid.uuid4().hex[:8]}_{filename}"
+        safe_name = LocalStorageAdapter._sanitize_filename(filename)
+        key = f"uploads/{uuid.uuid4().hex[:8]}_{safe_name}"
         client = self._get_client()
 
         await asyncio.get_event_loop().run_in_executor(

@@ -33,7 +33,6 @@ from aiogram.types import (
     Message,
 )
 
-from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
 from infrastructure.queue.tasks.package_tasks import check_package_followup
@@ -222,23 +221,15 @@ async def _send_admin_notifications(
         default=DefaultBotProperties(parse_mode="HTML"),
     )
     try:
-        # Admin DM
-        try:
-            await bot.send_message(settings.bot.admin_user_id, text, reply_markup=kb)
-        except Exception as exc:
-            log.warning("pkg_admin_dm_failed", error=str(exc))
-
-        # Admin groups
-        factory = get_session_factory()
-        async with factory() as session:
-            ag_repo = PostgresAdminGroupRepository(session)
-            group_ids = await ag_repo.list_all_chat_ids()
-
-        for gid in group_ids:
+        # Admin group only (no DM)
+        admin_group_id = settings.bot.admin_group_id
+        if admin_group_id:
             try:
-                await bot.send_message(gid, text, reply_markup=kb)
+                await bot.send_message(admin_group_id, text, reply_markup=kb)
             except Exception as exc:
-                log.warning("pkg_admin_group_failed", chat_id=gid, error=str(exc))
+                log.warning("pkg_admin_group_failed", chat_id=admin_group_id, error=str(exc))
+        else:
+            log.warning("pkg_admin_group_id_not_configured")
 
     finally:
         await bot.session.close()

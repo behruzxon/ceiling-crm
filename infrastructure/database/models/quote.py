@@ -14,7 +14,7 @@ class QuoteModel(Base):
     __tablename__ = "quotes"
 
     id: Mapped[int] = mapped_column(sa.BigInteger, sa.Identity(), primary_key=True)
-    lead_id: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("leads.id"), nullable=False)
+    lead_id: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("leads.id", ondelete="CASCADE"), nullable=False)
     category: Mapped[str] = mapped_column(
         sa.Enum(
             CeilingCategory,
@@ -31,7 +31,7 @@ class QuoteModel(Base):
     discount_pct: Mapped[float] = mapped_column(sa.Numeric(5, 2), server_default="0")
     currency: Mapped[str] = mapped_column(sa.String(8), server_default="UZS")
     is_accepted: Mapped[bool | None] = mapped_column(sa.Boolean, nullable=True)
-    created_by: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[int] = mapped_column(sa.BigInteger, sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
     )

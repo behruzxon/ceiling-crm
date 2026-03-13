@@ -11,7 +11,10 @@ class GroupModel(Base):
     __tablename__ = "groups"
 
     id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True)
-    category: Mapped[str] = mapped_column(sa.Enum(CeilingCategory, name="ceiling_category_groups"), nullable=False)
+    category: Mapped[str] = mapped_column(
+        sa.Enum(CeilingCategory, name="ceiling_category_groups", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
     title: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     invite_link: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, server_default="true")

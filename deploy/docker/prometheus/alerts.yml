@@ -1,0 +1,90 @@
+# =============================================================================
+# CeilingCRM — Prometheus alerting rules
+# =============================================================================
+# Load in prometheus.yml via:
+#   rule_files:
+#     - /etc/prometheus/alerts.yml
+# =============================================================================
+
+groups:
+  - name: ceiling_crm_alerts
+    rules:
+
+      # ── Error rate > 5% over 5 minutes ──────────────────────────────────
+      - alert: HighErrorRate
+        expr: >
+          (
+            sum(rate(bot_updates_total{status="error"}[5m]))
+            /
+            sum(rate(bot_updates_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bot error rate above 5%"
+          description: >
+            {{ $value | humanizePercentage }} of updates are failing
+            over the last 5 minutes.
+
+      # ── Response time > 5s (p95) ────────────────────────────────────────
+      - alert: HighResponseTime
+        expr: >
+          histogram_quantile(0.95, sum(rate(bot_handler_duration_seconds_bucket[5m])) by (le))
+          > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 handler latency above 5 seconds"
+          description: >
+            95th percentile handler duration is {{ $value | humanizeDuration }}.
+
+      # ── DB connection pool exhausted ────────────────────────────────────
+      - alert: DBConnectionPoolExhausted
+        expr: >
+          pg_stat_activity_count >= pg_settings_max_connections * 0.9
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: >
+            Active connections ({{ $value }}) are at 90%+ of max_connections.
+
+      # ── Redis memory usage > 80% ────────────────────────────────────────
+      - alert: RedisHighMemoryUsage
+        expr: >
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 80%"
+          description: >
+            Redis is using {{ $value | humanizePercentage }} of maxmemory.
+
+      # ── OpenAI API error spike ──────────────────────────────────────────
+      - alert: OpenAIErrorSpike
+        expr: >
+          sum(rate(openai_requests_total{status="error"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI API errors elevated"
+          description: >
+            OpenAI error rate is {{ $value }} req/s over the last 5 minutes.
+
+      # ── OpenAI high latency ─────────────────────────────────────────────
+      - alert: OpenAIHighLatency
+        expr: >
+          histogram_quantile(0.95, sum(rate(openai_request_duration_seconds_bucket[5m])) by (le))
+          > 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI P95 latency above 15 seconds"
+          description: >
+            95th percentile OpenAI response time is {{ $value | humanizeDuration }}.

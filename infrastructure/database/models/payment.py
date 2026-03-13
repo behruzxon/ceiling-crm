@@ -63,4 +63,5 @@ class PaymentModel(Base):
         sa.Index("ix_payments_lead",    "lead_id"),
         sa.Index("ix_payments_status",  "status"),
         sa.Index("ix_payments_paid_at", "paid_at"),
+        sa.CheckConstraint("amount > 0", name="ck_payments_amount_positive"),
     )

@@ -8,6 +8,25 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 
+# ── Payment state machine ────────────────────────────────────────────────────
+# Keys = current status, values = set of statuses reachable from that state.
+ALLOWED_TRANSITIONS: dict[PaymentStatus, frozenset[PaymentStatus]] = {
+    PaymentStatus.PENDING:  frozenset({PaymentStatus.PAID, PaymentStatus.REJECTED, PaymentStatus.CANCELED}),
+    PaymentStatus.PAID:     frozenset({PaymentStatus.REFUNDED}),
+    PaymentStatus.CANCELED: frozenset(),
+    PaymentStatus.REFUNDED: frozenset(),
+    PaymentStatus.REJECTED: frozenset(),
+}
+
+
+def _validate_transition(current: PaymentStatus, target: PaymentStatus) -> None:
+    """Raise ValueError if the transition is not allowed."""
+    allowed = ALLOWED_TRANSITIONS.get(current, frozenset())
+    if target not in allowed:
+        raise ValueError(
+            f"Invalid payment transition: {current.value} → {target.value}"
+        )
+
 
 class PaymentService:
 
@@ -53,10 +72,11 @@ class PaymentService:
         *,
         receipt_url: str | None = None,
     ) -> Payment:
-        """Transition payment to PAID and optionally attach a receipt URL."""
-        payment = await self._repo.update_status(payment_id, PaymentStatus.PAID)
+        """Transition payment PENDING → PAID and optionally attach a receipt URL."""
+        payment = await self._repo.update_status(
+            payment_id, PaymentStatus.PAID, expected_status=PaymentStatus.PENDING,
+        )
         if receipt_url is not None:
-            # Re-apply receipt_url via full update
             payment = await self._repo.update(
                 Payment(**{**payment.model_dump(), "receipt_url": receipt_url})
             )
@@ -64,20 +84,26 @@ class PaymentService:
         return payment
 
     async def cancel_payment(self, payment_id: int) -> Payment:
-        """Transition payment to CANCELED."""
-        payment = await self._repo.update_status(payment_id, PaymentStatus.CANCELED)
+        """Transition payment PENDING → CANCELED."""
+        payment = await self._repo.update_status(
+            payment_id, PaymentStatus.CANCELED, expected_status=PaymentStatus.PENDING,
+        )
         log.info("payment_canceled", payment_id=payment_id)
         return payment
 
     async def refund_payment(self, payment_id: int) -> Payment:
-        """Transition a PAID payment to REFUNDED."""
-        payment = await self._repo.update_status(payment_id, PaymentStatus.REFUNDED)
+        """Transition payment PAID → REFUNDED."""
+        payment = await self._repo.update_status(
+            payment_id, PaymentStatus.REFUNDED, expected_status=PaymentStatus.PAID,
+        )
         log.info("payment_refunded", payment_id=payment_id)
         return payment
 
     async def reject_payment(self, payment_id: int) -> Payment:
-        """Transition payment to REJECTED."""
-        payment = await self._repo.update_status(payment_id, PaymentStatus.REJECTED)
+        """Transition payment PENDING → REJECTED."""
+        payment = await self._repo.update_status(
+            payment_id, PaymentStatus.REJECTED, expected_status=PaymentStatus.PENDING,
+        )
         log.info("payment_rejected", payment_id=payment_id)
         return payment
 

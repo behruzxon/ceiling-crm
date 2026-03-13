@@ -189,7 +189,11 @@ async def cb_kanban_back(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("kanban:back:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_back_stage(callback: CallbackQuery, **data: object) -> None:
     """Return to a specific stage's lead list (page 0)."""
-    kanban_stage = callback.data.split(":")[2]  # type: ignore[union-attr]
+    try:
+        kanban_stage = callback.data.split(":")[2]  # type: ignore[union-attr]
+    except IndexError:
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
     if kanban_stage not in KANBAN_STAGES:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return
@@ -227,7 +231,11 @@ async def cb_kanban_back_stage(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("kanban:stage:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_stage(callback: CallbackQuery, **data: object) -> None:
     """Show last 10 leads in a kanban stage as clickable buttons."""
-    kanban_stage = callback.data.split(":")[2]  # type: ignore[union-attr]
+    try:
+        kanban_stage = callback.data.split(":")[2]  # type: ignore[union-attr]
+    except IndexError:
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
     if kanban_stage not in KANBAN_STAGES:
         await callback.answer("Noto'g'ri bosqich", show_alert=True)
         return

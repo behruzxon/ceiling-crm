@@ -54,7 +54,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
             updated_at=model.updated_at,
         )
 
-    def _latest_stage_subquery(self) -> select:
+    def _latest_stage_subquery(self, alias: str = "latest_stage") -> sa.Subquery:
         """Subquery: latest pipeline stage per lead."""
         return (
             select(
@@ -63,7 +63,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
             )
             .distinct(PipelineStageModel.lead_id)
             .order_by(PipelineStageModel.lead_id, PipelineStageModel.created_at.desc())
-            .subquery("latest_stage")
+            .subquery(alias)
         )
 
     async def _get_current_stage(self, lead_id: int) -> PipelineStage | None:
@@ -80,6 +80,14 @@ class PostgresLeadRepository(AbstractLeadRepository):
             return None
         return PipelineStage(row) if isinstance(row, str) else row
 
+    def _rows_to_leads(self, rows: list[Any]) -> list[Lead]:
+        """Convert (LeadModel, stage_value) rows to domain objects."""
+        leads: list[Lead] = []
+        for model, stage_val in rows:
+            stage = PipelineStage(stage_val) if stage_val else PipelineStage.NEW
+            leads.append(self._to_domain(model, stage))
+        return leads
+
     async def get_by_id(self, id: int) -> Lead | None:
         model = await self._session.get(LeadModel, id)
         if model is None:
@@ -88,13 +96,15 @@ class PostgresLeadRepository(AbstractLeadRepository):
         return self._to_domain(model, stage or PipelineStage.NEW)
 
     async def get_by_user_id(self, user_id: int) -> list[Lead]:
-        stmt = select(LeadModel).where(LeadModel.user_id == user_id).order_by(LeadModel.created_at.desc())
+        latest = self._latest_stage_subquery("ls_by_uid")
+        stmt = (
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .where(LeadModel.user_id == user_id)
+            .order_by(LeadModel.created_at.desc())
+        )
         result = await self._session.execute(stmt)
-        leads = []
-        for model in result.scalars().all():
-            stage = await self._get_current_stage(model.id)
-            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
-        return leads
+        return self._rows_to_leads(result.all())
 
     async def list_by_user(self, user_id: int, limit: int = 5) -> list[Lead]:
         latest = self._latest_stage_subquery()
@@ -106,11 +116,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        leads = []
-        for model, stage_val in result.all():
-            stage = PipelineStage(stage_val) if stage_val else PipelineStage.NEW
-            leads.append(self._to_domain(model, stage))
-        return leads
+        return self._rows_to_leads(result.all())
 
     async def get_by_stage(self, stage: PipelineStage) -> list[Lead]:
         latest = self._latest_stage_subquery()
@@ -124,17 +130,15 @@ class PostgresLeadRepository(AbstractLeadRepository):
         return [self._to_domain(m, stage) for m in result.scalars().all()]
 
     async def get_by_category(self, category: CeilingCategory) -> list[Lead]:
+        latest = self._latest_stage_subquery("ls_by_cat")
         stmt = (
-            select(LeadModel)
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
             .where(LeadModel.category == category)
             .order_by(LeadModel.created_at.desc())
         )
         result = await self._session.execute(stmt)
-        leads = []
-        for model in result.scalars().all():
-            stage = await self._get_current_stage(model.id)
-            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
-        return leads
+        return self._rows_to_leads(result.all())
 
     async def get_stale_new_leads(self, older_than_minutes: int) -> list[Lead]:
         """Return NEW leads with no stage change in the given minutes."""
@@ -190,30 +194,40 @@ class PostgresLeadRepository(AbstractLeadRepository):
         limit: int = 50,
         offset: int = 0,
     ) -> list[Lead]:
-        stmt = select(LeadModel)
-
+        conditions: list[sa.ColumnElement[bool]] = []
         if category is not None:
-            stmt = stmt.where(LeadModel.category == category)
+            conditions.append(LeadModel.category == category)
         if district is not None:
-            stmt = stmt.where(LeadModel.district.ilike(f"%{district}%"))
+            conditions.append(LeadModel.district.ilike(f"%{district}%"))
         if created_after is not None:
-            stmt = stmt.where(LeadModel.created_at >= created_after)
+            conditions.append(LeadModel.created_at >= created_after)
         if created_before is not None:
-            stmt = stmt.where(LeadModel.created_at <= created_before)
+            conditions.append(LeadModel.created_at <= created_before)
+
+        latest = self._latest_stage_subquery("ls_search")
 
         if stage is not None:
-            latest = self._latest_stage_subquery()
-            stmt = stmt.join(latest, LeadModel.id == latest.c.lead_id).where(
-                latest.c.stage == stage.value
+            stmt = (
+                select(LeadModel)
+                .join(latest, LeadModel.id == latest.c.lead_id)
+                .where(latest.c.stage == stage.value, *conditions)
+                .order_by(LeadModel.created_at.desc())
+                .limit(limit)
+                .offset(offset)
             )
+            result = await self._session.execute(stmt)
+            return [self._to_domain(m, stage) for m in result.scalars().all()]
 
-        stmt = stmt.order_by(LeadModel.created_at.desc()).limit(limit).offset(offset)
+        stmt = (
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .where(*conditions)
+            .order_by(LeadModel.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self._session.execute(stmt)
-        leads = []
-        for model in result.scalars().all():
-            s = await self._get_current_stage(model.id) if stage is None else stage
-            leads.append(self._to_domain(model, s or PipelineStage.NEW))
-        return leads
+        return self._rows_to_leads(result.all())
 
     async def create(self, entity: Lead) -> Lead:
         model = LeadModel(
@@ -368,6 +382,30 @@ class PostgresLeadRepository(AbstractLeadRepository):
         stmt = update(LeadModel).where(LeadModel.id == lead_id).values(**values)
         await self._session.execute(stmt)
 
+    async def get_inactive_leads(
+        self,
+        inactive_since: datetime,
+        exclude_statuses: frozenset[str] | None = None,
+    ) -> list[Lead]:
+        """Return leads with updated_at <= inactive_since, excluding given statuses."""
+        _skip = exclude_statuses or frozenset({"deal", "lost"})
+        latest = self._latest_stage_subquery("ls_inactive")
+        stmt = (
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .where(
+                LeadModel.updated_at <= inactive_since,
+                sa.or_(
+                    LeadModel.lead_status.is_(None),
+                    LeadModel.lead_status.notin_(_skip),
+                ),
+            )
+            .order_by(LeadModel.updated_at.asc())
+            .limit(100)
+        )
+        result = await self._session.execute(stmt)
+        return self._rows_to_leads(result.all())
+
     async def get_due_followups(
         self,
         now: datetime,
@@ -375,8 +413,10 @@ class PostgresLeadRepository(AbstractLeadRepository):
     ) -> list[Lead]:
         """Return leads with next_follow_up_at <= now, skipping terminal statuses."""
         _SKIP = frozenset({"deal", "lost"})
+        latest = self._latest_stage_subquery("ls_due_fu")
         stmt = (
-            select(LeadModel)
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
             .where(
                 LeadModel.next_follow_up_at.isnot(None),
                 LeadModel.next_follow_up_at <= now,
@@ -389,11 +429,123 @@ class PostgresLeadRepository(AbstractLeadRepository):
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        leads: list[Lead] = []
-        for model in result.scalars().all():
-            stage = await self._get_current_stage(model.id)
-            leads.append(self._to_domain(model, stage or PipelineStage.NEW))
-        return leads
+        return self._rows_to_leads(result.all())
+
+    async def get_leads_for_analytics(
+        self,
+        days: int = 30,
+        limit: int = 500,
+    ) -> list[Lead]:
+        """Return ALL leads created within *days*, newest first."""
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        latest = self._latest_stage_subquery("ls_analytics")
+        stmt = (
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .where(LeadModel.created_at >= cutoff)
+            .order_by(LeadModel.created_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return self._rows_to_leads(result.all())
+
+    async def get_active_leads(self, limit: int = 50) -> list[Lead]:
+        """Return non-terminal leads ordered by updated_at desc."""
+        _TERMINAL = frozenset({"deal", "lost"})
+        latest = self._latest_stage_subquery("ls_active")
+        stmt = (
+            select(LeadModel, latest.c.stage)
+            .outerjoin(latest, LeadModel.id == latest.c.lead_id)
+            .where(
+                sa.or_(
+                    LeadModel.lead_status.is_(None),
+                    LeadModel.lead_status.notin_(_TERMINAL),
+                ),
+            )
+            .order_by(LeadModel.updated_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return self._rows_to_leads(result.all())
+
+    async def get_daily_stats(self, since: datetime) -> dict:
+        """Return aggregate stats since *since*."""
+        # New leads
+        new_stmt = select(func.count()).select_from(LeadModel).where(
+            LeadModel.created_at >= since,
+        )
+        new_leads = (await self._session.execute(new_stmt)).scalar() or 0
+
+        # Converted (lead_status = 'deal')
+        converted_stmt = select(func.count()).select_from(LeadModel).where(
+            LeadModel.created_at >= since,
+            LeadModel.lead_status == "deal",
+        )
+        converted = (await self._session.execute(converted_stmt)).scalar() or 0
+
+        # Lost (lead_status = 'lost')
+        lost_stmt = select(func.count()).select_from(LeadModel).where(
+            LeadModel.created_at >= since,
+            LeadModel.lead_status == "lost",
+        )
+        lost = (await self._session.execute(lost_stmt)).scalar() or 0
+
+        # Active deals (not terminal)
+        _TERMINAL = frozenset({"deal", "lost"})
+        active_stmt = select(func.count()).select_from(LeadModel).where(
+            LeadModel.created_at >= since,
+            sa.or_(
+                LeadModel.lead_status.is_(None),
+                LeadModel.lead_status.notin_(_TERMINAL),
+            ),
+        )
+        active_deals = (await self._session.execute(active_stmt)).scalar() or 0
+
+        # Top source
+        top_src_stmt = (
+            select(LeadModel.source, func.count().label("cnt"))
+            .where(LeadModel.created_at >= since)
+            .group_by(LeadModel.source)
+            .order_by(sa.desc("cnt"))
+            .limit(1)
+        )
+        top_src_row = (await self._session.execute(top_src_stmt)).first()
+        top_source = top_src_row[0] if top_src_row else None
+
+        # Lost reasons
+        lost_reasons = await self.get_lost_reason_counts(since)
+
+        return {
+            "new_leads": new_leads,
+            "converted": converted,
+            "lost": lost,
+            "active_deals": active_deals,
+            "top_source": top_source,
+            "lost_reasons": lost_reasons,
+        }
+
+    async def set_lost_reason(self, lead_id: int, reason: str) -> None:
+        """Set lost_reason on the lead row."""
+        await self._session.execute(
+            update(LeadModel)
+            .where(LeadModel.id == lead_id)
+            .values(lost_reason=reason[:128])
+        )
+
+    async def get_lost_reason_counts(
+        self,
+        since: datetime | None = None,
+    ) -> dict[str, int]:
+        """Return counts of lost leads grouped by lost_reason."""
+        stmt = (
+            select(LeadModel.lost_reason, func.count().label("cnt"))
+            .where(LeadModel.lost_reason.isnot(None))
+        )
+        if since is not None:
+            stmt = stmt.where(LeadModel.created_at >= since)
+        stmt = stmt.group_by(LeadModel.lost_reason).order_by(sa.desc("cnt"))
+        result = await self._session.execute(stmt)
+        return {row[0]: row[1] for row in result.all()}
 
     # ── Kanban helpers ─────────────────────────────────────────────────────────
 

@@ -123,6 +123,59 @@ class AbstractLeadRepository(BaseRepository[Lead, int]):
         ...
 
     @abstractmethod
+    async def set_lost_reason(self, lead_id: int, reason: str) -> None:
+        """Set the lost_reason column when a lead is marked LOST."""
+        ...
+
+    @abstractmethod
+    async def get_lost_reason_counts(
+        self,
+        since: datetime | None = None,
+    ) -> dict[str, int]:
+        """Return counts of lost leads grouped by lost_reason."""
+        ...
+
+    @abstractmethod
+    async def get_leads_for_analytics(
+        self,
+        days: int = 30,
+        limit: int = 500,
+    ) -> list[Lead]:
+        """Return ALL leads (including terminal) created within *days*, newest first.
+
+        Used by the Sales Analytics engine to compute aggregate metrics.
+        Includes won/lost leads for conversion rate calculations.
+        """
+        ...
+
+    @abstractmethod
+    async def get_active_leads(self, limit: int = 50) -> list[Lead]:
+        """Return non-terminal leads ordered by updated_at desc.
+
+        Terminal statuses (deal, lost) are excluded.
+        Used by the Deal Radar to rank active pipeline leads.
+        """
+        ...
+
+    @abstractmethod
+    async def get_daily_stats(self, since: datetime) -> dict:
+        """Return aggregate stats since *since*.
+
+        Returns dict with keys: new_leads, converted, lost,
+        active_deals, top_source, lost_reasons.
+        """
+        ...
+
+    @abstractmethod
+    async def get_inactive_leads(
+        self,
+        inactive_since: datetime,
+        exclude_statuses: frozenset[str] | None = None,
+    ) -> list[Lead]:
+        """Return leads with updated_at <= inactive_since, excluding given statuses."""
+        ...
+
+    @abstractmethod
     async def get_due_followups(
         self,
         now: datetime,

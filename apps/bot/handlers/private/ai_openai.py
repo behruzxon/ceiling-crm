@@ -9,9 +9,11 @@ No dependencies on other ``ai_*`` sibling modules.
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import sqlalchemy as sa
+import httpx
 from openai import AsyncOpenAI
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -19,10 +21,29 @@ from apps.bot.ai.system_prompt import _SUMMARY_SYSTEM, _SYSTEM_PROMPT
 from infrastructure.database.models.ai_conversation import AiConversationModel
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
+from infrastructure.monitoring.prometheus import (
+    openai_tokens_prompt_total,
+    openai_tokens_completion_total,
+    openai_requests_total,
+    openai_request_duration,
+)
 from shared.config import get_settings
 from shared.logging import get_logger
 
 log = get_logger(__name__)
+
+
+def _record_usage(resp: Any, model: str, duration: float) -> None:
+    """Record OpenAI response usage in Prometheus counters. Never raises."""
+    try:
+        openai_requests_total.labels(model=model, status="ok").inc()
+        openai_request_duration.labels(model=model).observe(duration)
+        usage = getattr(resp, "usage", None)
+        if usage:
+            openai_tokens_prompt_total.labels(model=model).inc(usage.prompt_tokens or 0)
+            openai_tokens_completion_total.labels(model=model).inc(usage.completion_tokens or 0)
+    except Exception:
+        pass
 
 # ── Tuneable constants ───────────────────────────────────────────────────────
 
@@ -45,7 +66,10 @@ def _get_client() -> AsyncOpenAI:
             if settings.ai.api_key
             else settings.openai.api_key.get_secret_value()
         )
-        _openai_client = AsyncOpenAI(api_key=api_key)
+        _openai_client = AsyncOpenAI(
+            api_key=api_key,
+            timeout=httpx.Timeout(30.0, connect=10.0),
+        )
     return _openai_client
 
 
@@ -108,19 +132,30 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
     """Summarise the conversation in 2-4 lines. Raises on failure."""
     client = _get_client()
     settings = get_settings()
+    model = settings.ai.model
     history_text = "\n".join(
         f"{'Foydalanuvchi' if m['role'] == 'user' else 'Madina'}: {m['text']}"
         for m in messages
     )
-    resp = await client.chat.completions.create(
-        model=settings.ai.model,
+    from openai import APIConnectionError, APITimeoutError, RateLimitError
+    from shared.utils.retry import with_retry
+
+    t0 = time.monotonic()
+    resp = await with_retry(
+        client.chat.completions.create,
+        model=model,
         temperature=0.1,
         max_tokens=150,
         messages=[
             {"role": "system", "content": _SUMMARY_SYSTEM},
             {"role": "user",   "content": history_text},
         ],
+        max_retries=2,
+        base_delay=1.0,
+        retryable=(APIConnectionError, APITimeoutError, RateLimitError),
+        operation="openai_summary",
     )
+    _record_usage(resp, model, time.monotonic() - t0)
     return (resp.choices[0].message.content or "").strip()
 
 
@@ -278,6 +313,7 @@ async def _call_ai(
     """Build messages, call OpenAI, return parsed JSON dict."""
     settings = get_settings()
     client = _get_client()
+    model = settings.ai.model
 
     messages: list[dict[str, str]] = [
         {"role": "system", "content": _SYSTEM_PROMPT},
@@ -290,12 +326,26 @@ async def _call_ai(
 
     messages.append({"role": "user", "content": user_text})
 
-    resp = await client.chat.completions.create(
-        model=settings.ai.model,
-        temperature=0.3,
-        max_tokens=512,
-        response_format={"type": "json_object"},
-        messages=messages,
-    )
+    from openai import APIConnectionError, APITimeoutError, RateLimitError
+    from shared.utils.retry import with_retry
+
+    t0 = time.monotonic()
+    try:
+        resp = await with_retry(
+            client.chat.completions.create,
+            model=model,
+            temperature=0.3,
+            max_tokens=512,
+            response_format={"type": "json_object"},
+            messages=messages,
+            max_retries=3,
+            base_delay=1.0,
+            retryable=(APIConnectionError, APITimeoutError, RateLimitError),
+            operation="openai_chat",
+        )
+    except Exception:
+        openai_requests_total.labels(model=model, status="error").inc()
+        raise
+    _record_usage(resp, model, time.monotonic() - t0)
     raw = resp.choices[0].message.content or "{}"
     return json.loads(raw)

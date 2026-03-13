@@ -24,6 +24,7 @@ from core.services.lead_intelligence_service import analyze_buyer_type
 from core.services.negotiation_engine_service import analyze_negotiation
 from core.services.operator_assistant_service import build_operator_assist
 from core.services.revenue_predictor_service import predict_lead_revenue
+from core.services.signal_vector_service import build_signal_vector, with_deal_probability
 from shared.utils.deal_probability import evaluate_deal_probability
 
 
@@ -230,9 +231,9 @@ def build_sales_brain(
     All parameters are keyword-only with safe defaults.
     Pure function — no I/O, fully deterministic.
     """
-    # ── Step 1: Deal Probability ──────────────────────────────────────────
-    dp = evaluate_deal_probability(
-        score=score,
+    # ── Step 0: Build SignalVector (normalised, no double-counting) ──────
+    sv = build_signal_vector(
+        lead_score=score,
         closing_confidence=closing_confidence,
         phone_captured=phone_captured,
         has_area=has_area,
@@ -244,7 +245,17 @@ def build_sales_brain(
         intent=intent,
         follow_up_count=follow_up_count,
         design_type=design_type,
+        lead_temperature=lead_temperature,
+        lead_status=lead_status,
+        negotiation_escalated=negotiation_escalated,
+        last_activity_ts=last_activity_ts,
     )
+
+    # ── Step 1: Deal Probability ──────────────────────────────────────────
+    dp = evaluate_deal_probability(signal_vector=sv)
+
+    # Update SV with dp result for downstream engines
+    sv = with_deal_probability(sv, dp.deal_probability_percent)
 
     # ── Step 2: Buyer Intelligence ────────────────────────────────────────
     bp = analyze_buyer_type(
@@ -332,28 +343,20 @@ def build_sales_brain(
         previous_fu_type=previous_fu_type,
     )
 
-    # ── Step 7: Deal Radar ────────────────────────────────────────────────
-    rr = rank_lead_for_radar(
-        score=score,
-        deal_probability_percent=dp.deal_probability_percent,
+    # ── Step 7: Deal Radar (uses SignalVector) ─────────────────────────────
+    # Enrich SV with upstream results for radar
+    from dataclasses import replace as _dc_replace
+    sv_radar = _dc_replace(
+        sv,
         predicted_revenue_best=re.predicted_revenue_best,
         predicted_revenue_max=re.predicted_revenue_max,
-        buyer_type=bp.buyer_type,
-        negotiation_escalated=effective_escalated,
         decision_stage=cg.current_decision_stage,
         engagement_trend=cg.engagement_trend,
         follow_up_should=fd.should_follow_up,
         follow_up_type=fd.follow_up_type if fd.should_follow_up else None,
-        phone_captured=phone_captured,
-        has_area=has_area,
-        has_district=has_district,
-        closing_attempted=closing_attempted,
-        closing_confidence=closing_confidence,
-        lead_temperature=lead_temperature,
-        lead_status=lead_status,
-        follow_up_count=follow_up_count,
-        last_activity_ts=last_activity_ts,
+        negotiation_escalated=effective_escalated,
     )
+    rr = rank_lead_for_radar(signal_vector=sv_radar)
 
     # ── Step 8: Operator Assistant ────────────────────────────────────────
     oa = build_operator_assist(

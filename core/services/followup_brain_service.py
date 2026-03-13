@@ -471,4 +471,19 @@ def _compute_delay(
     # Hard caps
     delay = max(10, min(delay, 2880))  # between 10 min and 48 hours
 
+    # ── Off-hours deferral ──────────────────────────────────────────
+    # If the computed fire time falls outside business hours, extend the
+    # delay so the follow-up lands at the next business-hours start + 5 min.
+    try:
+        from datetime import datetime, timedelta, timezone as _tz
+        from shared.utils.business_hours import defer_to_business_hours, is_off_hours
+
+        fire_at = datetime.now(_tz.utc) + timedelta(minutes=delay)
+        if is_off_hours(fire_at):
+            deferred = defer_to_business_hours(fire_at)
+            new_delay = int((deferred - datetime.now(_tz.utc)).total_seconds() / 60)
+            delay = max(delay, new_delay)
+    except Exception:
+        pass  # safety: keep original delay
+
     return delay

@@ -15,7 +15,6 @@ Public API
 from __future__ import annotations
 
 from core.domain.lead import Lead
-from infrastructure.database.repositories.admin_group_repo import PostgresAdminGroupRepository
 from infrastructure.database.repositories.audit_log_repo import PostgresAuditLogRepository
 from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
@@ -106,7 +105,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_new_lead_error", lead_id=lead.id)
@@ -138,7 +137,7 @@ class LeadNotificationService:
                     default=DefaultBotProperties(parse_mode="HTML"),
                 )
                 try:
-                    await self._send_to_groups_and_dm(bot, text, keyboard)
+                    await self._send_to_admin_group(bot, text, keyboard)
 
                     # Dedupe marker + audit trail (same session — atomic)
                     await lead_repo.update_last_action(lead_id, "hot_alert_sent")
@@ -199,35 +198,19 @@ class LeadNotificationService:
             f"/lead_{lead.id}"
         )
 
-    async def _send_to_groups_and_dm(self, bot: object, text: str, keyboard: object) -> None:
-        """Deliver *text*+*keyboard* to admin DM and all tracked admin groups."""
-        # Admin DM
-        try:
-            await bot.send_message(self._admin_user_id, text, reply_markup=keyboard)  # type: ignore[union-attr]
-        except Exception as exc:
-            log.warning("notify_admin_dm_failed", error=str(exc))
-
-        # Admin groups
-        try:
-            factory = get_session_factory()
-            async with factory() as session:
-                group_ids = await PostgresAdminGroupRepository(session).list_all_chat_ids()
-        except Exception:
-            log.exception("notify_get_groups_error")
-            return
+    async def _send_to_admin_group(self, bot: object, text: str, keyboard: object) -> None:
+        """Deliver *text*+*keyboard* to the configured admin group only."""
+        from shared.utils.telegram_send import safe_send_message
 
         admin_group_id = get_settings().bot.admin_group_id
-        for gid in group_ids:
-            # Hard whitelist: only send to the designated admin group.
-            # Prevents the main customer group (BOT_MAIN_GROUP_ID) from
-            # receiving lead cards even if it was previously recorded.
-            if gid != admin_group_id:
-                log.warning("notify_skip_non_admin_group", chat_id=gid)
-                continue
-            try:
-                await bot.send_message(gid, text, reply_markup=keyboard)  # type: ignore[union-attr]
-            except Exception as exc:
-                log.warning("notify_group_failed", chat_id=gid, error=str(exc))
+        if not admin_group_id:
+            log.warning("admin_group_id_not_configured")
+            return
+        ok = await safe_send_message(
+            bot, admin_group_id, text, reply_markup=keyboard
+        )
+        if not ok:
+            log.warning("notify_group_failed", chat_id=admin_group_id)
 
     async def notify_measurement_lead(
         self,
@@ -269,7 +252,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
             await self._log_new_lead_action(lead.id)
         except Exception:
             log.exception("notify_measurement_lead_error", lead_id=lead.id)
@@ -286,7 +269,7 @@ class LeadNotificationService:
         chat_type: str,
         chat_id: int,
     ) -> None:
-        """Send a draft phone-capture alert to admin DM only. Never raises."""
+        """Send a draft phone-capture alert to admin group. Never raises."""
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
 
@@ -306,7 +289,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await bot.send_message(self._admin_user_id, text)
+            await self._send_to_admin_group(bot, text, None)
         except Exception as exc:
             log.warning("notify_draft_lead_failed", error=str(exc))
         finally:
@@ -344,6 +327,7 @@ class LeadNotificationService:
         conversation_graph: object | None = None,
         followup_decision: object | None = None,
         sales_brain: object | None = None,
+        conversation_health: object | None = None,
     ) -> None:
         """Send AI-collected lead card to admin DM + all admin groups. Never raises."""
         from aiogram import Bot
@@ -494,6 +478,29 @@ class LeadNotificationService:
                 delay_str = "\u2014"
             lines.append(f"\u23f0 FU: {fd_label} | {delay_str}")
 
+        # ── Conversation health section (concise) ─────────────────
+        if conversation_health is not None:
+            from core.services.conversation_intelligence_service import RISK_LABELS
+            ch = conversation_health
+            _risk_badges = {
+                "low": "\U0001f7e2", "medium": "\U0001f7e1",
+                "high": "\U0001f534", "critical": "\u26d4",
+            }
+            risk_badge = _risk_badges.get(
+                ch.risk_level, "\u26aa"  # type: ignore[union-attr]
+            )
+            risk_label = RISK_LABELS.get(
+                ch.risk_level, ch.risk_level  # type: ignore[union-attr]
+            )
+            lines.append(
+                f"\U0001f3e5 Suhbat: {ch.health_score}/100"  # type: ignore[union-attr]
+                f" | {risk_badge} {risk_label}"
+            )
+            if ch.recommended_action_uz:  # type: ignore[union-attr]
+                lines.append(
+                    f"\U0001f4ac {ch.recommended_action_uz[:80]}"  # type: ignore[union-attr]
+                )
+
         # ── Sales Brain unified section (replaces standalone radar) ──
         if sales_brain is not None:
             from core.services.deal_radar_service import BUCKET_LABELS
@@ -518,36 +525,80 @@ class LeadNotificationService:
                     BUCKET_LABELS as _BL,
                     rank_lead_for_radar,
                 )
-                _radar = rank_lead_for_radar(
-                    score=score,
-                    deal_probability_percent=(
-                        deal_probability.deal_probability_percent  # type: ignore[union-attr]
-                        if deal_probability else None
-                    ),
-                    predicted_revenue_best=(
-                        revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
-                        if revenue_estimate else None
-                    ),
-                    buyer_type=(
-                        buyer_profile.buyer_type  # type: ignore[union-attr]
-                        if buyer_profile else None
-                    ),
-                    negotiation_escalated=negotiation_escalated,
-                    decision_stage=(
-                        conversation_graph.current_decision_stage  # type: ignore[union-attr]
-                        if conversation_graph else None
-                    ),
-                    engagement_trend=(
-                        conversation_graph.engagement_trend  # type: ignore[union-attr]
-                        if conversation_graph else None
-                    ),
-                    phone_captured=bool(phone),
-                    has_area=area is not None,
-                    has_district=bool(district),
-                    closing_attempted=closing_attempted,
-                    closing_confidence=None,
-                    lead_status=None,
-                )
+                # Try SV path for radar
+                _radar_sv = None
+                try:
+                    from core.services.signal_vector_service import build_signal_vector
+                    _radar_sv = build_signal_vector(
+                        lead_score=score,
+                        phone_captured=bool(phone),
+                        has_area=area is not None,
+                        area_m2=float(area) if area else None,
+                        has_district=bool(district),
+                        closing_attempted=closing_attempted,
+                    )
+                    # Enrich with upstream results
+                    from dataclasses import replace as _dc_replace
+                    _radar_sv = _dc_replace(
+                        _radar_sv,
+                        predicted_revenue_best=(
+                            revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
+                            if revenue_estimate else None
+                        ),
+                        predicted_revenue_max=(
+                            revenue_estimate.predicted_revenue_max  # type: ignore[union-attr]
+                            if revenue_estimate else None
+                        ),
+                        decision_stage=(
+                            conversation_graph.current_decision_stage  # type: ignore[union-attr]
+                            if conversation_graph else None
+                        ),
+                        engagement_trend=(
+                            conversation_graph.engagement_trend  # type: ignore[union-attr]
+                            if conversation_graph else None
+                        ),
+                        negotiation_escalated=negotiation_escalated,
+                    )
+                    if deal_probability:
+                        from core.services.signal_vector_service import with_deal_probability
+                        _radar_sv = with_deal_probability(
+                            _radar_sv,
+                            deal_probability.deal_probability_percent,  # type: ignore[union-attr]
+                        )
+                except Exception:
+                    _radar_sv = None
+
+                _radar = rank_lead_for_radar(signal_vector=_radar_sv) if _radar_sv else \
+                    rank_lead_for_radar(
+                        score=score,
+                        deal_probability_percent=(
+                            deal_probability.deal_probability_percent  # type: ignore[union-attr]
+                            if deal_probability else None
+                        ),
+                        predicted_revenue_best=(
+                            revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
+                            if revenue_estimate else None
+                        ),
+                        buyer_type=(
+                            buyer_profile.buyer_type  # type: ignore[union-attr]
+                            if buyer_profile else None
+                        ),
+                        negotiation_escalated=negotiation_escalated,
+                        decision_stage=(
+                            conversation_graph.current_decision_stage  # type: ignore[union-attr]
+                            if conversation_graph else None
+                        ),
+                        engagement_trend=(
+                            conversation_graph.engagement_trend  # type: ignore[union-attr]
+                            if conversation_graph else None
+                        ),
+                        phone_captured=bool(phone),
+                        has_area=area is not None,
+                        has_district=bool(district),
+                        closing_attempted=closing_attempted,
+                        closing_confidence=None,
+                        lead_status=None,
+                    )
                 _bl2 = _BL.get(_radar.radar_bucket, _radar.radar_bucket)
                 lines.append(
                     f"\U0001f4e1 Radar: {_bl2} | {_radar.radar_priority_score}%"
@@ -566,7 +617,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, keyboard)
+            await self._send_to_admin_group(bot, text, keyboard)
         except Exception as exc:
             log.warning("notify_ai_lead_failed", error=str(exc))
         finally:
@@ -601,7 +652,7 @@ class LeadNotificationService:
             default=DefaultBotProperties(parse_mode="HTML"),
         )
         try:
-            await self._send_to_groups_and_dm(bot, text, None)
+            await self._send_to_admin_group(bot, text, None)
         except Exception as exc:
             log.warning("notify_lead_interest_failed", error=str(exc))
         finally:

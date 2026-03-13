@@ -169,6 +169,17 @@ class FollowupService:
                         # ── Reschedule using brain delay ────────────────
                         delay_minutes = fu_decision.follow_up_delay_minutes or 360
                         next_fu = now + timedelta(minutes=delay_minutes)
+
+                        # Defer to business hours if next_fu falls off-hours
+                        try:
+                            from shared.utils.business_hours import (
+                                defer_to_business_hours,
+                                is_off_hours,
+                            )
+                            if is_off_hours(next_fu):
+                                next_fu = defer_to_business_hours(next_fu)
+                        except Exception:
+                            pass  # safety: keep original schedule
                         await repo.update_ai_scoring(
                             lead.id,
                             next_follow_up_at=next_fu,

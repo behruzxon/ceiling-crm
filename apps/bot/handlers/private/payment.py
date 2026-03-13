@@ -204,8 +204,6 @@ async def _save_and_confirm(
     amount: int = fsm["amount"]
     user_id: int = message.from_user.id if message.from_user else 0
 
-    await state.clear()
-
     payment_id: int | None = None
     try:
         factory = get_session_factory()
@@ -224,13 +222,22 @@ async def _save_and_confirm(
         log.info("payment_submitted", payment_id=payment_id, user_id=user_id, lead_id=lead_id)
     except Exception:
         log.exception("payment_submit_failed", user_id=user_id, lead_id=lead_id)
+    finally:
+        await state.clear()
+
+    if payment_id is None:
+        await message.answer(
+            "❌ Texnik xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
 
     await message.answer(
         "✅ Qabul qilindi. Tasdiqlangach xabar beramiz.",
         reply_markup=my_orders_keyboard(),
     )
 
-    if payment_id and message.bot:
+    if message.bot:
         await _notify_admin(
             message.bot,
             payment_id=payment_id,

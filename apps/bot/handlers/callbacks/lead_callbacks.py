@@ -19,7 +19,11 @@ router = Router(name="callbacks:leads")
 @router.callback_query(F.data.startswith("lead:view:"))
 async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
     """Show full lead details."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:
@@ -55,7 +59,11 @@ async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("lead:assign:"))
 async def cb_assign_lead(callback: CallbackQuery, **data: object) -> None:
     """Show manager selection keyboard for lead assignment."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:

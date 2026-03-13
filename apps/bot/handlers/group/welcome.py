@@ -108,7 +108,7 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
         ))
 
     delete_after = settings.welcome_autodelete_seconds
-    if delete_after > 0:
+    if delete_after > 0 and chat_id != _main_gid:
         async def _auto_delete() -> None:
             await asyncio.sleep(delete_after)
             await try_delete(msg)

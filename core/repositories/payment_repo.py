@@ -22,8 +22,19 @@ class AbstractPaymentRepository(BaseRepository[Payment, int]):
     async def create(self, entity: Payment) -> Payment: ...
 
     @abstractmethod
-    async def update_status(self, id: int, status: PaymentStatus) -> Payment:
-        """Update status (and set paid_at when transitioning to PAID). Raises ValueError if not found."""
+    async def update_status(
+        self,
+        id: int,
+        status: PaymentStatus,
+        *,
+        expected_status: PaymentStatus | None = None,
+    ) -> Payment:
+        """Update status (and set paid_at when transitioning to PAID).
+
+        When *expected_status* is given the row is locked with SELECT FOR UPDATE
+        and the transition is rejected if the current status does not match.
+        Raises ValueError if not found or if the expected status does not match.
+        """
         ...
 
     @abstractmethod

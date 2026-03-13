@@ -39,6 +39,10 @@ from infrastructure.database.models.group_settings import GroupSettingsModel  # 
 from infrastructure.database.models.payment import PaymentModel  # noqa: F401
 from infrastructure.database.models.warranty import WarrantyModel  # noqa: F401
 from infrastructure.database.models.admin_group import AdminGroupModel  # noqa: F401
+from infrastructure.database.models.blocked_chat import BlockedChatModel  # noqa: F401
+from infrastructure.database.models.lead_action import LeadActionModel  # noqa: F401
+from infrastructure.database.models.group_join_event import GroupJoinEventModel  # noqa: F401
+from infrastructure.database.models.system_error import SystemErrorModel  # noqa: F401
 
 from shared.config import get_settings
 

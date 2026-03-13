@@ -95,6 +95,14 @@ class LeadSource(str, Enum):
     REFERRAL = "referral"
 
 
+class LostReason(str, Enum):
+    PRICE          = "price"
+    COMPETITOR     = "competitor"
+    NO_RESPONSE    = "no_response"
+    NOT_INTERESTED = "not_interested"
+    OTHER          = "other"
+
+
 class PaymentStatus(str, Enum):
     PENDING  = "pending"
     PAID     = "paid"

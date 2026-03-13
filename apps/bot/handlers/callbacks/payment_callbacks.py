@@ -15,7 +15,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_payment_service
+from infrastructure.di import get_audit_log_repo, get_payment_service
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -24,10 +24,13 @@ router = Router(name="callbacks:payment")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _parse_callback(data: str) -> tuple[int, int]:
-    """Return (payment_id, user_id) from 'pay:a:123:456'."""
-    parts = data.split(":")
-    return int(parts[2]), int(parts[3])
+def _parse_callback(data: str) -> tuple[int, int] | None:
+    """Return (payment_id, user_id) from 'pay:a:123:456', or None if malformed."""
+    try:
+        parts = data.split(":")
+        return int(parts[2]), int(parts[3])
+    except (IndexError, ValueError):
+        return None
 
 
 async def _edit_admin_caption(callback: CallbackQuery, suffix: str) -> None:
@@ -51,13 +54,27 @@ async def _edit_admin_caption(callback: CallbackQuery, suffix: str) -> None:
 
 @router.callback_query(F.data.startswith("pay:a:"))
 async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
-    payment_id, user_id = _parse_callback(callback.data or "")
+    parsed = _parse_callback(callback.data or "")
+    if parsed is None:
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
+    payment_id, user_id = parsed
+
+    actor_id = callback.from_user.id if callback.from_user else None
 
     factory = get_session_factory()
     async with factory() as session:
         svc = get_payment_service(session)
         try:
             await svc.mark_paid(payment_id)
+            await get_audit_log_repo(session).insert(
+                actor_id=actor_id,
+                action="payment.approved",
+                entity_type="payment",
+                entity_id=payment_id,
+                old_value={"status": "pending"},
+                new_value={"status": "paid", "user_id": user_id},
+            )
             await session.commit()
         except Exception:
             await session.rollback()
@@ -65,7 +82,7 @@ async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
             await callback.answer("Xatolik yuz berdi", show_alert=True)
             return
 
-    log.info("payment_approved", payment_id=payment_id, by=callback.from_user and callback.from_user.id)
+    log.info("payment_approved", payment_id=payment_id, by=actor_id)
 
     # Notify client
     try:
@@ -84,13 +101,27 @@ async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
 
 @router.callback_query(F.data.startswith("pay:r:"))
 async def cb_reject_payment(callback: CallbackQuery, **data: object) -> None:
-    payment_id, user_id = _parse_callback(callback.data or "")
+    parsed = _parse_callback(callback.data or "")
+    if parsed is None:
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
+    payment_id, user_id = parsed
+
+    actor_id = callback.from_user.id if callback.from_user else None
 
     factory = get_session_factory()
     async with factory() as session:
         svc = get_payment_service(session)
         try:
             await svc.reject_payment(payment_id)
+            await get_audit_log_repo(session).insert(
+                actor_id=actor_id,
+                action="payment.rejected",
+                entity_type="payment",
+                entity_id=payment_id,
+                old_value={"status": "pending"},
+                new_value={"status": "rejected", "user_id": user_id},
+            )
             await session.commit()
         except Exception:
             await session.rollback()
@@ -98,7 +129,7 @@ async def cb_reject_payment(callback: CallbackQuery, **data: object) -> None:
             await callback.answer("Xatolik yuz berdi", show_alert=True)
             return
 
-    log.info("payment_rejected", payment_id=payment_id, by=callback.from_user and callback.from_user.id)
+    log.info("payment_rejected", payment_id=payment_id, by=actor_id)
 
     # Notify client
     try:

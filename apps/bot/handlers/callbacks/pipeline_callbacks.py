@@ -111,7 +111,11 @@ async def _log_stage_action(
 @router.callback_query(F.data.startswith("pipeline:advance:"))
 async def cb_advance_stage(callback: CallbackQuery, **data: object) -> None:
     """Show valid next stages for the lead (legacy menu approach)."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:
@@ -186,7 +190,11 @@ async def cb_do_advance(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("pipeline:next:"))
 async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
     """Directly advance to the next stage in the natural pipeline order."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
     actor_id = callback.from_user.id  # type: ignore[union-attr]
 
     factory = get_session_factory()
@@ -231,7 +239,11 @@ async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("pipeline:prev:"))
 async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
     """Go back one step in the natural pipeline order (undo / correction)."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
     actor_id = callback.from_user.id  # type: ignore[union-attr]
 
     factory = get_session_factory()
@@ -332,6 +344,9 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
                 lead_id, actor_id, "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
+            # Persist lost_reason on the lead row for analytics
+            lead_repo = get_lead_repo(session)
+            await lead_repo.set_lost_reason(lead_id, reason_text)
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
@@ -354,7 +369,11 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("pipeline:lost_other:"))
 async def cb_lost_other(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Set FSM state to collect a custom LOST reason text."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     await state.set_state(PipelineStates.waiting_lost_reason)
     await state.update_data(lost_lead_id=lead_id)
@@ -397,6 +416,9 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
                 lead_id, actor_id, "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
+            # Persist lost_reason on the lead row for analytics
+            lead_repo = get_lead_repo(session)
+            await lead_repo.set_lost_reason(lead_id, reason_text)
             await session.commit()
             await state.clear()
 
@@ -422,7 +444,11 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
 @router.callback_query(F.data.startswith("timeline:"))
 async def cb_timeline(callback: CallbackQuery, **data: object) -> None:
     """Show last 20 actions for a lead as a chronological timeline."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:
@@ -463,13 +489,12 @@ async def cb_stage_page(callback: CallbackQuery, **data: object) -> None:
     """Paginate through leads in a pipeline stage."""
     parts = callback.data.split(":")  # type: ignore[union-attr]
     # callback_data format: stage_page:{STAGE_VALUE}:{page_index}
-    stage_str = parts[1]
-    page = int(parts[2])
-
     try:
+        stage_str = parts[1]
+        page = int(parts[2])
         stage = PipelineStage(stage_str)
-    except ValueError:
-        await callback.answer("Noto'g'ri bosqich", show_alert=True)
+    except (IndexError, ValueError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
         return
 
     page_size = 10

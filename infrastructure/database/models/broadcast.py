@@ -60,7 +60,7 @@ class BroadcastModel(Base):
 
     # ── Meta ──────────────────────────────────────────────────────────────────
     created_by: Mapped[int] = mapped_column(
-        sa.BigInteger, sa.ForeignKey("users.id"), nullable=False
+        sa.BigInteger, sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
