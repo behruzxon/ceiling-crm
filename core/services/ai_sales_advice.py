@@ -177,9 +177,22 @@ def _build_context(
         lines.append("- Oxirgi faollik: noma'lum")
 
     if last_messages:
+        from apps.bot.ai.system_prompt import sanitize_user_text_for_prompt
+
+        _BLOCKED = "[blocked]"
         lines.append("\nOXIRGI XABARLAR:")
         for msg in last_messages[:5]:
-            lines.append(f'  - "{msg[:200]}"')
+            safe_msg = sanitize_user_text_for_prompt(
+                msg, max_length=200, placeholder=_BLOCKED,
+            )
+            if safe_msg == _BLOCKED:
+                log.warning(
+                    "prompt_injection_blocked",
+                    path="ai_sales_advice._build_context",
+                    field="last_messages",
+                    snippet=msg[:80],
+                )
+            lines.append(f'  - "{safe_msg}"')
 
     lines.append("\nShu lid uchun eng yaxshi keyingi qadamni tavsiya qil.")
     return "\n".join(lines)
@@ -222,8 +235,21 @@ async def _call_openai(context: str) -> dict[str, Any]:
         raise
 
     _record_usage(resp, model, time.monotonic() - t0)
+    if not resp.choices:
+        log.warning("openai_empty_choices", operation="ai_sales_advice")
+        return {}
     raw = resp.choices[0].message.content or "{}"
-    return json.loads(raw)
+
+    # Post-flight leak guard — matches the pattern in ai_openai._call_ai()
+    from apps.bot.ai.system_prompt import sanitize_ai_reply
+
+    parsed = json.loads(raw)
+    for field in ("suggested_message", "reasoning"):
+        val = parsed.get(field, "")
+        if isinstance(val, str) and sanitize_ai_reply(val) is None:
+            log.warning("sales_advice_leak_blocked", field=field, snippet=val[:120])
+            return {}
+    return parsed
 
 
 # ── Redis caching ─────────────────────────────────────────────────────────────

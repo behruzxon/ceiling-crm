@@ -17,7 +17,13 @@ import httpx
 from openai import AsyncOpenAI
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from apps.bot.ai.system_prompt import _SUMMARY_SYSTEM, _SYSTEM_PROMPT
+from apps.bot.ai.system_prompt import (
+    INJECTION_REFUSAL,
+    _SUMMARY_SYSTEM,
+    _SYSTEM_PROMPT,
+    detect_prompt_injection,
+    sanitize_ai_reply,
+)
 from infrastructure.database.models.ai_conversation import AiConversationModel
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
@@ -43,13 +49,15 @@ def _record_usage(resp: Any, model: str, duration: float) -> None:
             openai_tokens_prompt_total.labels(model=model).inc(usage.prompt_tokens or 0)
             openai_tokens_completion_total.labels(model=model).inc(usage.completion_tokens or 0)
     except Exception:
-        pass
+        log.warning("_record_usage_error", exc_info=True)
 
 # ── Tuneable constants ───────────────────────────────────────────────────────
 
 _MAX_MESSAGES = 12           # rolling window size stored in ai_conversations
 _HISTORY_TO_SEND = 8         # how many messages to pass to OpenAI per call
 _SUMMARY_EVERY_N_TURNS = 10  # regenerate summary every N user turns
+_MAX_REQUEST_TOKENS = 8000   # hard cap on total prompt tokens per OpenAI call
+_CHARS_PER_TOKEN = 3         # conservative estimate (real ≈ 3.5-4 for Uzbek)
 
 
 # ── OpenAI client (lazy singleton) ──────────────────────────────────────────
@@ -133,10 +141,30 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
     client = _get_client()
     settings = get_settings()
     model = settings.ai.model
-    history_text = "\n".join(
-        f"{'Foydalanuvchi' if m['role'] == 'user' else 'Madina'}: {m['text']}"
-        for m in messages
-    )
+
+    # Pre-flight: sanitize user-authored messages before entering summary prompt
+    from apps.bot.ai.system_prompt import sanitize_user_text_for_prompt
+
+    _BLOCKED = "[blocked]"
+    lines: list[str] = []
+    for m in messages:
+        label = "Foydalanuvchi" if m["role"] == "user" else "Madina"
+        raw = m.get("text", "")
+        if m["role"] == "user":
+            text = sanitize_user_text_for_prompt(
+                raw, max_length=300, placeholder=_BLOCKED,
+            )
+            if text == _BLOCKED:
+                log.warning(
+                    "prompt_injection_blocked",
+                    path="ai_openai._regenerate_summary",
+                    field="conversation_message",
+                    snippet=raw[:80],
+                )
+        else:
+            text = raw[:300]
+        lines.append(f"{label}: {text}")
+    history_text = "\n".join(lines)
     from openai import APIConnectionError, APITimeoutError, RateLimitError
     from shared.utils.retry import with_retry
 
@@ -156,6 +184,9 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
         operation="openai_summary",
     )
     _record_usage(resp, model, time.monotonic() - t0)
+    if not resp.choices:
+        log.warning("openai_empty_choices", operation="openai_summary")
+        return ""
     return (resp.choices[0].message.content or "").strip()
 
 
@@ -311,6 +342,12 @@ async def _call_ai(
     context_block: str | None,
 ) -> dict[str, Any]:
     """Build messages, call OpenAI, return parsed JSON dict."""
+
+    # ── Prompt-injection firewall (pre-flight) ────────────────────────
+    if detect_prompt_injection(user_text):
+        log.warning("prompt_injection_blocked", text=user_text[:120])
+        return INJECTION_REFUSAL
+
     settings = get_settings()
     client = _get_client()
     model = settings.ai.model
@@ -321,10 +358,24 @@ async def _call_ai(
     if context_block:
         messages.append({"role": "system", "content": context_block})
 
+    # Number of system messages that must never be trimmed.
+    n_system = len(messages)
+
     for msg in history[-_HISTORY_TO_SEND:]:
         messages.append({"role": msg["role"], "content": msg["text"]})
 
     messages.append({"role": "user", "content": user_text})
+
+    # ── Token budget enforcement ───────────────────────────────────────
+    # Trim oldest conversation messages (between system prefix and final
+    # user message) until the estimated token count fits the budget.
+    # System messages and the current user message are never removed.
+    def _est_tokens(msgs: list[dict[str, str]]) -> int:
+        return sum(len(m["content"]) for m in msgs) // _CHARS_PER_TOKEN
+
+    while _est_tokens(messages) > _MAX_REQUEST_TOKENS and len(messages) > n_system + 1:
+        # Remove the oldest conversation message (right after system block)
+        messages.pop(n_system)
 
     from openai import APIConnectionError, APITimeoutError, RateLimitError
     from shared.utils.retry import with_retry
@@ -347,5 +398,16 @@ async def _call_ai(
         openai_requests_total.labels(model=model, status="error").inc()
         raise
     _record_usage(resp, model, time.monotonic() - t0)
+    if not resp.choices:
+        log.warning("openai_empty_choices", operation="openai_chat")
+        return INJECTION_REFUSAL
     raw = resp.choices[0].message.content or "{}"
-    return json.loads(raw)
+    result = json.loads(raw)
+
+    # ── Output leak guard (post-flight) ───────────────────────────────
+    reply = result.get("reply", "")
+    if isinstance(reply, str) and sanitize_ai_reply(reply) is None:
+        log.warning("prompt_leak_blocked", reply_snippet=reply[:120])
+        return INJECTION_REFUSAL
+
+    return result
