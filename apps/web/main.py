@@ -179,3 +179,19 @@ async def crm_contact_detail(request: Request, contact_id: int):
         "crm_contact_detail.html",
         {"request": request, "contact": contact, "messages": messages},
     )
+
+
+@app.get("/admin/security", response_class=HTMLResponse)
+async def admin_security(
+    request: Request,
+    hours: int = Query(24, ge=1, le=720),
+):
+    """Admin Security Audit Dashboard — read-only."""
+    data = await api_get(
+        "/api/v1/admin/security/dashboard",
+        params={"hours": hours},
+    )
+    return templates.TemplateResponse(
+        "security.html",
+        {"request": request, "data": data, "hours": hours},
+    )

@@ -79,8 +79,11 @@ def create_app() -> FastAPI:
     app.include_router(agent_settings_router)
     app.include_router(agent_observation_router)
     app.include_router(crm_router)
+    from apps.api.routes.admin_security import router as admin_security_router
+
     app.include_router(admin_users_router)
     app.include_router(admin_audit_router)
+    app.include_router(admin_security_router)
 
     return app
 

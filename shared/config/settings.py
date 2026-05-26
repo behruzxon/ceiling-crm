@@ -267,6 +267,16 @@ class BusinessSettings(BaseSettings):
     admin_login_block_minutes: int = Field(default=15, alias="ADMIN_LOGIN_BLOCK_MINUTES", ge=1, le=1440)
     admin_session_audit_enabled: bool = Field(default=True, alias="ADMIN_SESSION_AUDIT_ENABLED")
 
+    # Admin Security Dashboard
+    admin_security_dashboard_enabled: bool = Field(default=True, alias="ADMIN_SECURITY_DASHBOARD_ENABLED")
+    admin_security_default_hours: int = Field(default=24, alias="ADMIN_SECURITY_DEFAULT_HOURS", ge=1, le=720)
+    admin_security_max_hours: int = Field(default=720, alias="ADMIN_SECURITY_MAX_HOURS", ge=24, le=8760)
+    admin_security_mask_ip: bool = Field(default=True, alias="ADMIN_SECURITY_MASK_IP")
+    admin_security_max_user_agent_length: int = Field(default=120, alias="ADMIN_SECURITY_MAX_USER_AGENT_LENGTH", ge=20, le=512)
+    admin_security_failed_login_alert_threshold: int = Field(default=5, alias="ADMIN_SECURITY_FAILED_LOGIN_ALERT_THRESHOLD", ge=1, le=100)
+    admin_security_permission_denied_alert_threshold: int = Field(default=10, alias="ADMIN_SECURITY_PERMISSION_DENIED_ALERT_THRESHOLD", ge=1, le=100)
+    admin_security_sensitive_export_threshold: int = Field(default=3, alias="ADMIN_SECURITY_SENSITIVE_EXPORT_THRESHOLD", ge=1, le=50)
+
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
