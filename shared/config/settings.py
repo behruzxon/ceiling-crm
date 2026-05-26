@@ -268,6 +268,13 @@ class BusinessSettings(BaseSettings):
     crm_campaign_exclude_stopped: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_STOPPED")
     crm_campaign_exclude_marketing_disabled: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_MARKETING_DISABLED")
     crm_campaign_audit_enabled: bool = Field(default=True, alias="CRM_CAMPAIGN_AUDIT_ENABLED")
+    crm_campaign_canary_send_enabled: bool = Field(default=False, alias="CRM_CAMPAIGN_CANARY_SEND_ENABLED")
+    crm_campaign_send_require_confirmation: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_REQUIRE_CONFIRMATION")
+    crm_campaign_send_max_recipients: int = Field(default=10, alias="CRM_CAMPAIGN_SEND_MAX_RECIPIENTS", ge=1, le=500)
+    crm_campaign_send_batch_limit: int = Field(default=5, alias="CRM_CAMPAIGN_SEND_BATCH_LIMIT", ge=1, le=50)
+    crm_campaign_send_dry_run_only: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_DRY_RUN_ONLY")
+    crm_campaign_canary_contact_ids: str = Field(default="", alias="CRM_CAMPAIGN_CANARY_CONTACT_IDS")
+    crm_campaign_send_audit_enabled: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_AUDIT_ENABLED")
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",

@@ -110,3 +110,58 @@ async def archive_draft(campaign_id: int) -> dict:
 @router.get("/drafts/{campaign_id}/audit")
 async def draft_audit(campaign_id: int) -> dict:
     return {"entries": [], "total": 0, "note": "Empty DB"}
+
+
+class SendPreviewBody(BaseModel):
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+class DryRunBody(BaseModel):
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+class SendLimitedBody(BaseModel):
+    confirm: bool = False
+    max_recipients: int = Field(default=5, ge=1, le=50)
+
+
+@router.post("/drafts/{campaign_id}/send-preview")
+async def send_preview(campaign_id: int, body: SendPreviewBody) -> dict:
+    from core.services.crm_campaign_send_service import CRMCampaignSendService
+    svc = CRMCampaignSendService
+    campaign = {"id": campaign_id, "status": "draft", "message_text": ""}
+    validation = svc.validate_campaign_for_send(campaign, send_enabled=False, dry_run_only=True)
+    return {
+        "campaign_id": campaign_id,
+        "allowed": validation.allowed,
+        "blockers": validation.blockers,
+        "warnings": validation.warnings,
+        "note": "Send disabled — preview only",
+    }
+
+
+@router.post("/drafts/{campaign_id}/dry-run")
+async def dry_run(campaign_id: int, body: DryRunBody) -> dict:
+    from dataclasses import asdict
+    from core.services.crm_campaign_send_service import CRMCampaignSendService
+    campaign = {"id": campaign_id, "status": "draft", "message_text": "Salom {first_name}!"}
+    result = CRMCampaignSendService.dry_run(campaign, [], max_recipients=body.limit)
+    return asdict(result)
+
+
+@router.post("/drafts/{campaign_id}/send-limited")
+async def send_limited(campaign_id: int, body: SendLimitedBody) -> dict:
+    from core.services.crm_campaign_send_service import CRMCampaignSendService
+    svc = CRMCampaignSendService
+    campaign = {"id": campaign_id, "status": "draft", "message_text": ""}
+    validation = svc.validate_campaign_for_send(
+        campaign, send_enabled=False, dry_run_only=True, confirm=body.confirm,
+    )
+    if not validation.allowed:
+        return {"ok": False, "blockers": validation.blockers, "note": "Send disabled"}
+    return {"ok": False, "error": "send_disabled"}
+
+
+@router.get("/drafts/{campaign_id}/send-attempts")
+async def list_send_attempts(campaign_id: int, limit: int = Query(50, ge=1, le=200)) -> dict:
+    return {"attempts": [], "total": 0, "campaign_id": campaign_id, "note": "Empty DB"}
