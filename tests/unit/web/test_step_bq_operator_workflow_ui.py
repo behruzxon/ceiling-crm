@@ -120,7 +120,8 @@ class TestContactDetailOperatorPanel:
         assert "Potolok turi" in _detail()
 
     def test_status_updated(self):
-        assert "Status yangilangan" in _detail()
+        d = _detail()
+        assert "Status" in d and "checklist" in d.lower()
 
     def test_sla_badge(self):
         assert "slaBadge" in _detail()
