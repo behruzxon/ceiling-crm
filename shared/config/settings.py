@@ -230,6 +230,18 @@ class BusinessSettings(BaseSettings):
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",
     )
+    crm_daily_report_delivery_enabled: bool = Field(
+        default=False, alias="CRM_DAILY_REPORT_DELIVERY_ENABLED",
+    )
+    crm_daily_report_delivery_require_approval: bool = Field(
+        default=True, alias="CRM_DAILY_REPORT_DELIVERY_REQUIRE_APPROVAL",
+    )
+    crm_daily_report_telegram_enabled: bool = Field(
+        default=False, alias="CRM_DAILY_REPORT_TELEGRAM_ENABLED",
+    )
+    crm_daily_report_email_enabled: bool = Field(
+        default=False, alias="CRM_DAILY_REPORT_EMAIL_ENABLED",
+    )
 
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
