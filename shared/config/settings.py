@@ -234,6 +234,15 @@ class BusinessSettings(BaseSettings):
     crm_realtime_inbox_max_alerts: int = Field(default=5, alias="CRM_REALTIME_INBOX_MAX_ALERTS", ge=1, le=20)
     crm_realtime_inbox_critical_pulse: bool = Field(default=True, alias="CRM_REALTIME_INBOX_CRITICAL_PULSE")
     crm_realtime_inbox_sse_enabled: bool = Field(default=False, alias="CRM_REALTIME_INBOX_SSE_ENABLED")
+
+    # CRM Browser/Sound Alerts
+    crm_browser_notifications_enabled: bool = Field(default=True, alias="CRM_BROWSER_NOTIFICATIONS_ENABLED")
+    crm_browser_notifications_default: bool = Field(default=False, alias="CRM_BROWSER_NOTIFICATIONS_DEFAULT")
+    crm_sound_alerts_enabled: bool = Field(default=True, alias="CRM_SOUND_ALERTS_ENABLED")
+    crm_sound_alerts_default: bool = Field(default=False, alias="CRM_SOUND_ALERTS_DEFAULT")
+    crm_alert_notification_cooldown_seconds: int = Field(default=60, alias="CRM_ALERT_NOTIFICATION_COOLDOWN_SECONDS", ge=10, le=600)
+    crm_alert_sound_cooldown_seconds: int = Field(default=30, alias="CRM_ALERT_SOUND_COOLDOWN_SECONDS", ge=5, le=300)
+    crm_alert_notify_severities: str = Field(default="critical,danger", alias="CRM_ALERT_NOTIFY_SEVERITIES")
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",
