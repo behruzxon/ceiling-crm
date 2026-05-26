@@ -18,7 +18,7 @@
 {% set pf = cc.get("preflight", {}) %}
 {% set cn = cc.get("canary", {}) %}
 
-<div id="agentStatusHeader" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+<div id="agentStatusHeader" class="vp-card" style="margin-bottom:16px;">
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
         {% set stage_color = "#10b981" if rs.get("stage") == "off" else "#3b82f6" if rs.get("stage") == "log_only" else "#eab308" if rs.get("stage") in ("dry_run", "canary") else "#ef4444" %}
         {% set health_color = "#10b981" if h.get("status") == "green" else "#eab308" if h.get("status") == "yellow" else "#ef4444" %}
@@ -32,35 +32,35 @@
 </div>
 
 <!-- Operator Status Cards -->
-<div id="operatorStatusCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px;">
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+<div id="operatorStatusCards" class="vp-kpi-grid">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">🧠 Agent Brain</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px;">{{ rs.get("description", "O'chiq") }}</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">📩 Follow-ups</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px;">Pending: {{ f.get("pending", 0) }}, Due: {{ f.get("due_count", 0) }}</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">🛡 Safety</div>
         <div style="font-size:11px;color:{{ '#10b981' if not pf.get('blockers') else '#ef4444' }};margin-top:4px;">{{ "All safe" if not pf.get("blockers") else (pf.get("blockers")|length|string + " blocker") }}</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">✅ Approval Queue</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px;">Pending: {{ e.get("pending_approval", 0) }}</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">📊 Metrics</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px;">Events: {{ j.get("total_events", 0) }}, Users: {{ j.get("active_users", 0) }}</div>
     </div>
-    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+    <div class="vp-kpi-card">
         <div style="font-size:14px;">⚙️ Settings</div>
         <div style="font-size:11px;color:#64748b;margin-top:4px;">{{ cc.get("flags", [])|length }} flag, {{ "mutation ON" if cc.get("mutation_enabled") else "read-only" }}</div>
     </div>
 </div>
 
 <!-- Rollout Stage Timeline -->
-<div id="stageTimeline" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+<div id="stageTimeline" class="vp-card" style="margin-bottom:16px;">
     <h4 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#475569;">Rollout Bosqichlari</h4>
     <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
         {% for st_name, st_label, st_risk in [("off","OFF","low"),("log_only","LOG ONLY","medium"),("dry_run","DRY RUN","medium"),("canary","CANARY","high"),("approval_required","APPROVAL","high"),("approved_live_send","LIVE SEND","critical"),("limited_live","LIMITED LIVE","critical")] %}
@@ -224,46 +224,46 @@
 </div>
 
 <!-- Overview cards -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:32px;">
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+<div class="vp-kpi-grid" style="margin-bottom:32px;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Journey eventlar</div>
         <div style="font-size:28px;font-weight:700;color:#1e293b;">{{ j.get("total_events", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Issiq leadlar</div>
         <div style="font-size:28px;font-weight:700;color:#ef4444;">{{ l.get("hot_count", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Iliq leadlar</div>
         <div style="font-size:28px;font-weight:700;color:#eab308;">{{ l.get("warm_count", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Sovuq leadlar</div>
         <div style="font-size:28px;font-weight:700;color:#3b82f6;">{{ l.get("cold_count", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Kutilayotgan follow-up</div>
         <div style="font-size:28px;font-weight:700;color:#8b5cf6;">{{ f.get("pending", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Tasdiq kutayotgan</div>
         <div style="font-size:28px;font-weight:700;color:#f59e0b;">{{ e.get("pending_approval", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Bajarilgan</div>
         <div style="font-size:28px;font-weight:700;color:#10b981;">{{ e.get("by_status", {}).get("executed", 0) | fmt_number }}</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <div style="font-size:12px;color:#64748b;font-weight:500;">Bloklangan</div>
         <div style="font-size:28px;font-weight:700;color:#ef4444;">{{ e.get("blocked", 0) | fmt_number }}</div>
     </div>
 </div>
 
 <!-- Follow-up & Safety panels -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+<div class="vp-responsive-grid" style="margin-bottom:32px;">
 
     <!-- Follow-up -->
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Follow-up holati</h3>
         <table style="width:100%;font-size:14px;">
             <tr><td style="color:#64748b;">Pending</td><td style="text-align:right;font-weight:600;">{{ f.get("pending", 0) }}</td></tr>
@@ -276,7 +276,7 @@
     </div>
 
     <!-- Safety -->
-    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+    <div class="vp-card">
         <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Xavfsizlik</h3>
         <table style="width:100%;font-size:14px;">
             <tr><td style="color:#64748b;">Stop signallar</td><td style="text-align:right;font-weight:600;">{{ s.get("stop_signals", 0) }}</td></tr>
@@ -291,10 +291,10 @@
 <!-- Pending executions table -->
 {% set items = (pending or {}).get("items", []) %}
 {% if items %}
-<div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:32px;">
+<div class="vp-card" style="margin-bottom:32px;">
     <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Tasdiq kutayotgan actionlar</h3>
     <div style="overflow-x:auto;">
-        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <table class="vp-table">
             <thead>
                 <tr style="border-bottom:2px solid #e2e8f0;">
                     <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">ID</th>
@@ -333,7 +333,7 @@
     </div>
 </div>
 {% else %}
-<div id="emptyApprovalQueue" style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:32px;text-align:center;">
+<div id="emptyApprovalQueue" class="vp-card vp-empty-state" style="margin-bottom:32px;">
     <p style="font-size:14px;color:#94a3b8;">✅ Tasdiq kutayotgan actionlar yo'q</p>
 </div>
 {% endif %}
@@ -348,13 +348,13 @@
 </div>
 
 <!-- Stage 1 Observation Report -->
-<div id="observationPanel" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+<div id="observationPanel" class="vp-card" style="margin-bottom:16px;">
     <h3 style="font-size:15px;font-weight:600;margin-bottom:10px;color:#1e293b;">Stage 1 Observation Report</h3>
     <div id="observationResult" style="font-size:12px;color:#64748b;"><em>Yuklanmoqda...</em></div>
 </div>
 
 <!-- DRY_RUN Readiness Gate -->
-<div id="dryrunGatePanel" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+<div id="dryrunGatePanel" class="vp-card" style="margin-bottom:16px;">
     <h3 style="font-size:15px;font-weight:600;margin-bottom:10px;color:#1e293b;">DRY_RUN Readiness Gate</h3>
     <div id="gateResult" style="font-size:12px;color:#64748b;"><em>Yuklanmoqda...</em></div>
     <div style="margin-top:6px;font-size:10px;color:#94a3b8;">DRY_RUN preview uchun avval Stage 1 PASS bo'lishi kerak.</div>
