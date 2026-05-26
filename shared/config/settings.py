@@ -226,6 +226,14 @@ class BusinessSettings(BaseSettings):
     crm_sla_critical_minutes: int = Field(default=30, alias="CRM_SLA_CRITICAL_MINUTES")
     crm_segments_enabled: bool = Field(default=True, alias="CRM_SEGMENTS_ENABLED")
     crm_enrichment_enabled: bool = Field(default=True, alias="CRM_ENRICHMENT_ENABLED")
+
+    # CRM Realtime Inbox
+    crm_realtime_inbox_enabled: bool = Field(default=True, alias="CRM_REALTIME_INBOX_ENABLED")
+    crm_realtime_inbox_mode: str = Field(default="polling", alias="CRM_REALTIME_INBOX_MODE")
+    crm_realtime_inbox_poll_seconds: int = Field(default=15, alias="CRM_REALTIME_INBOX_POLL_SECONDS", ge=5, le=120)
+    crm_realtime_inbox_max_alerts: int = Field(default=5, alias="CRM_REALTIME_INBOX_MAX_ALERTS", ge=1, le=20)
+    crm_realtime_inbox_critical_pulse: bool = Field(default=True, alias="CRM_REALTIME_INBOX_CRITICAL_PULSE")
+    crm_realtime_inbox_sse_enabled: bool = Field(default=False, alias="CRM_REALTIME_INBOX_SSE_ENABLED")
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",

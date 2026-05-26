@@ -206,3 +206,39 @@ async def send_reply(
     if not preview.allowed:
         return {"status": "blocked", "blockers": preview.blockers}
     return {"status": "sender_not_configured"}
+
+
+# ── Live Inbox Summary ──────────────────────────────────────────────────────
+
+
+@router.get("/inbox/live-summary")
+async def live_summary(
+    max_alerts: int = Query(default=5, ge=1, le=20),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Live inbox summary for polling-based realtime updates."""
+    from dataclasses import asdict
+    from datetime import datetime, timezone
+    import sqlalchemy as sa
+    from infrastructure.database.models.crm_contact import CRMContactModel as C
+    from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService
+
+    now = datetime.now(timezone.utc)
+    stmt = sa.select(C).where(
+        C.lead_status.notin_(["stopped", "lost", "won"]),
+    ).order_by(C.last_message_at.desc().nullslast()).limit(200)
+    rows = (await db.execute(stmt)).scalars().all()
+    contacts = []
+    for r in rows:
+        contacts.append({
+            "id": r.id,
+            "contact_name": r.first_name or r.username or str(r.telegram_user_id),
+            "lead_status": r.lead_status,
+            "temperature": r.temperature,
+            "last_message_direction": getattr(r, "last_message_direction", None),
+            "last_message_at": r.last_message_at.isoformat() if r.last_message_at else None,
+            "last_intent": getattr(r, "last_intent", None),
+            "metadata_json": r.metadata_json if hasattr(r, "metadata_json") else None,
+        })
+    summary = CRMRealtimeInboxService.build_live_summary(contacts, now, max_alerts)
+    return asdict(summary)
