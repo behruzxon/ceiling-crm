@@ -243,6 +243,15 @@ class BusinessSettings(BaseSettings):
         default=False, alias="CRM_DAILY_REPORT_EMAIL_ENABLED",
     )
 
+    # Admin RBAC
+    admin_rbac_enabled: bool = Field(default=False, alias="ADMIN_RBAC_ENABLED")
+    admin_owner_ids: str = Field(default="", alias="ADMIN_OWNER_IDS")
+    admin_admin_ids: str = Field(default="", alias="ADMIN_ADMIN_IDS")
+    admin_operator_ids: str = Field(default="", alias="ADMIN_OPERATOR_IDS")
+    admin_analyst_ids: str = Field(default="", alias="ADMIN_ANALYST_IDS")
+    admin_viewer_ids: str = Field(default="", alias="ADMIN_VIEWER_IDS")
+    admin_default_role: str = Field(default="admin", alias="ADMIN_DEFAULT_ROLE")
+
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
