@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% set active_page = "campaigns" %}
+{% block title %}Campaigns — CeilingCRM{% endblock %}
+{% block page_title %}Campaigns{% endblock %}
+{% block content %}
+<div class="vp-page">
+    <div class="vp-page-header">
+        <div class="vp-page-subtitle">Segment asosida campaign draftlar. Send hozircha o'chirilgan.</div>
+    </div>
+
+    <div class="vp-alert vp-alert-warning">Campaign send hozir o'chirilgan. Faqat draft va preview rejimi.</div>
+
+    <div class="vp-section">
+        <div class="vp-card">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Segmentlar</div>
+            </div>
+            {% set segs = (segments or {}).get("segments", []) %}
+            {% if segs %}
+            <div class="vp-kpi-grid">
+                {% for s in segs %}
+                <div class="vp-kpi-card">
+                    <div class="vp-kpi-label">{{ s.name }}</div>
+                    <div style="font-size:11px;color:#94a3b8;">{{ s.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="vp-empty-state">Segmentlar yuklanmadi</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="vp-section">
+        <div class="vp-card">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Draftlar</div>
+            </div>
+            {% set draft_list = (drafts or {}).get("drafts", []) %}
+            {% if draft_list %}
+            <table class="vp-table">
+                <thead><tr>
+                    <th>Nomi</th><th>Segment</th><th>Status</th><th>Recipients</th><th>Safety</th>
+                </tr></thead>
+                <tbody>
+                {% for d in draft_list %}
+                <tr>
+                    <td>{{ d.name }}</td>
+                    <td>{{ d.segment_key }}</td>
+                    <td><span class="vp-badge vp-badge-neutral">{{ d.status }}</span></td>
+                    <td>{{ d.recipient_count }}</td>
+                    <td><span class="vp-badge {% if d.safety_status == 'safe' %}vp-badge-success{% elif d.safety_status == 'blocked' %}vp-badge-danger{% else %}vp-badge-warning{% endif %}">{{ d.safety_status }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="vp-empty-state">Draftlar hali yo'q</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -195,3 +195,14 @@ async def admin_security(
         "security.html",
         {"request": request, "data": data, "hours": hours},
     )
+
+
+@app.get("/crm/campaigns", response_class=HTMLResponse)
+async def crm_campaigns(request: Request):
+    """CRM Campaigns page — draft list and segment overview."""
+    data = await api_get("/api/v1/admin/crm/campaigns/segments")
+    drafts = await api_get("/api/v1/admin/crm/campaigns/drafts")
+    return templates.TemplateResponse(
+        "crm_campaigns.html",
+        {"request": request, "segments": data, "drafts": drafts},
+    )
