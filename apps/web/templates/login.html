@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Login — CeilingCRM{% endblock %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50">
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        CeilingCRM Admin
+      </h2>
+      <p class="mt-2 text-center text-sm text-gray-600">
+        Admin dashboard kirish
+      </p>
+    </div>
+    {% if not session_auth_enabled %}
+    <div class="rounded-md bg-yellow-50 p-4">
+      <div class="text-sm text-yellow-700">
+        Session auth hozircha yoqilmagan. Mavjud HTTP Basic Auth orqali kirishingiz mumkin.
+      </div>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="rounded-md bg-red-50 p-4">
+      <div class="text-sm text-red-700">{{ error }}</div>
+    </div>
+    {% endif %}
+    {% if session_auth_enabled %}
+    <form class="mt-8 space-y-6" action="/login" method="POST">
+      <div class="rounded-md shadow-sm -space-y-px">
+        <div>
+          <label for="admin_id" class="sr-only">Admin ID</label>
+          <input id="admin_id" name="admin_id" type="text" required
+                 class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                 placeholder="Admin ID" autocomplete="username">
+        </div>
+        <div>
+          <label for="secret" class="sr-only">Token</label>
+          <input id="secret" name="secret" type="password" required
+                 class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                 placeholder="Token / Secret" autocomplete="current-password">
+        </div>
+      </div>
+      <div>
+        <button type="submit"
+                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Kirish
+        </button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

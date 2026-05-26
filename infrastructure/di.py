@@ -249,3 +249,13 @@ def get_admin_user_service(session: AsyncSession) -> "AdminUserService":
 def get_admin_audit_log_service(session: AsyncSession) -> "AdminAuditLogService":
     from core.services.admin_audit_log_service import AdminAuditLogService
     return AdminAuditLogService(session)
+
+
+def get_admin_auth_service(session: AsyncSession) -> "AdminAuthService":
+    from core.services.admin_auth_service import AdminAuthService
+    return AdminAuthService(session)
+
+
+def get_admin_csrf_service() -> "AdminCSRFService":
+    from core.services.admin_csrf_service import AdminCSRFService
+    return AdminCSRFService()

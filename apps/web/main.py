@@ -36,6 +36,10 @@ app = FastAPI(
 
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
+# ── Auth routes (no dashboard auth required) ───────────────────────────
+from apps.web.admin_auth_routes import router as _auth_router  # noqa: E402
+app.include_router(_auth_router)
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 

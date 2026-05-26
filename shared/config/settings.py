@@ -254,6 +254,19 @@ class BusinessSettings(BaseSettings):
     admin_db_rbac_enabled: bool = Field(default=False, alias="ADMIN_DB_RBAC_ENABLED")
     admin_db_rbac_fallback_to_env: bool = Field(default=True, alias="ADMIN_DB_RBAC_FALLBACK_TO_ENV")
 
+    # Admin Session Auth
+    admin_session_auth_enabled: bool = Field(default=False, alias="ADMIN_SESSION_AUTH_ENABLED")
+    admin_session_cookie_name: str = Field(default="vp_admin_session", alias="ADMIN_SESSION_COOKIE_NAME")
+    admin_session_ttl_hours: int = Field(default=12, alias="ADMIN_SESSION_TTL_HOURS", ge=1, le=168)
+    admin_session_secure_cookie: bool = Field(default=True, alias="ADMIN_SESSION_SECURE_COOKIE")
+    admin_session_httponly: bool = Field(default=True, alias="ADMIN_SESSION_HTTPONLY")
+    admin_session_samesite: str = Field(default="lax", alias="ADMIN_SESSION_SAMESITE")
+    admin_csrf_enabled: bool = Field(default=False, alias="ADMIN_CSRF_ENABLED")
+    admin_login_max_attempts: int = Field(default=5, alias="ADMIN_LOGIN_MAX_ATTEMPTS", ge=1, le=50)
+    admin_login_window_minutes: int = Field(default=15, alias="ADMIN_LOGIN_WINDOW_MINUTES", ge=1, le=1440)
+    admin_login_block_minutes: int = Field(default=15, alias="ADMIN_LOGIN_BLOCK_MINUTES", ge=1, le=1440)
+    admin_session_audit_enabled: bool = Field(default=True, alias="ADMIN_SESSION_AUDIT_ENABLED")
+
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
