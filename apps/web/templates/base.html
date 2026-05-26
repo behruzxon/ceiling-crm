@@ -8,179 +8,97 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* ── Typography ──────────────────────────────────────────── */
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; }
 
         /* ── Sidebar ─────────────────────────────────────────────── */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 240px;
-            background: #1e1b4b; /* indigo-950 */
-            z-index: 40;
-            display: flex;
-            flex-direction: column;
+        .vp-sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0; width: 260px;
+            background: linear-gradient(180deg, #1e1b4b 0%, #1a1744 100%);
+            z-index: 40; display: flex; flex-direction: column;
             transition: transform 0.25s ease;
+            border-right: 1px solid rgba(99, 102, 241, 0.1);
         }
-        .sidebar-nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 20px;
-            color: #c7d2fe; /* indigo-200 */
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 8px;
-            margin: 2px 12px;
-            transition: background-color 0.15s, color 0.15s;
-            text-decoration: none;
+        .vp-sidebar-brand {
+            padding: 20px 20px 4px; display: flex; align-items: center; gap: 12px;
         }
-        .sidebar-nav-item:hover {
-            background: rgba(79, 70, 229, 0.3); /* indigo-600/30 */
-            color: #e0e7ff; /* indigo-100 */
+        .vp-sidebar-brand-icon {
+            width: 36px; height: 36px; background: #4f46e5; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
         }
-        .sidebar-nav-item.active {
-            background: #4f46e5; /* indigo-600 */
-            color: #ffffff;
-            font-weight: 600;
+        .vp-sidebar-brand-icon span { color: #fff; font-weight: 700; font-size: 18px; }
+        .vp-sidebar-brand-title { color: #e0e7ff; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+        .vp-sidebar-brand-subtitle { color: #818cf8; font-size: 10px; font-weight: 500; margin-top: 1px; }
+
+        .vp-nav-section {
+            font-size: 10px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.08em; color: #818cf8; padding: 18px 20px 6px;
         }
-        .sidebar-nav-icon {
-            width: 20px;
-            text-align: center;
-            font-size: 16px;
-            flex-shrink: 0;
+        .vp-nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 9px 16px; margin: 1px 12px;
+            color: #a5b4fc; font-size: 13px; font-weight: 500;
+            border-radius: 8px; text-decoration: none;
+            transition: all 0.15s ease; border-left: 3px solid transparent;
         }
+        .vp-nav-link:hover {
+            background: rgba(79, 70, 229, 0.15); color: #e0e7ff;
+        }
+        .vp-nav-link.active {
+            background: rgba(79, 70, 229, 0.25); color: #ffffff;
+            font-weight: 600; border-left-color: #818cf8;
+        }
+        .vp-nav-link svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.8; }
+        .vp-nav-link.active svg { opacity: 1; }
 
         /* ── Content area ────────────────────────────────────────── */
-        .main-wrapper {
-            margin-left: 240px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+        .vp-shell { margin-left: 260px; min-height: 100vh; display: flex; flex-direction: column; background: #f8fafc; }
+        .vp-topbar {
+            position: sticky; top: 0; z-index: 30; background: #ffffff;
+            border-bottom: 1px solid #e2e8f0; height: 56px;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
         }
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0; /* slate-200 */
-            height: 56px;
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
+        .vp-topbar-left { display: flex; align-items: center; gap: 8px; }
+        .vp-topbar-title { font-size: 17px; font-weight: 600; color: #0f172a; }
+        .vp-topbar-subtitle { font-size: 12px; color: #94a3b8; margin-left: 8px; }
+        .vp-topbar-right { display: flex; align-items: center; gap: 10px; }
+        .vp-role-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600;
+            background: #eef2ff; color: #4338ca;
         }
+        .vp-status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+        .vp-status-dot-green { background: #10b981; }
+        .vp-status-dot-yellow { background: #f59e0b; }
+        .vp-status-dot-red { background: #ef4444; }
+        .vp-content { flex: 1; padding: 24px; }
 
-        /* ── Mobile overlay ──────────────────────────────────────── */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 35;
-        }
-        .hamburger {
-            display: none;
-            background: none;
-            border: none;
-            padding: 4px;
-            cursor: pointer;
-            color: #1e293b;
-        }
-        .hamburger svg {
-            width: 24px;
-            height: 24px;
-        }
-        .sidebar-close {
-            display: none;
-            background: none;
-            border: none;
-            padding: 4px;
-            cursor: pointer;
-            color: #a5b4fc; /* indigo-300 */
-            position: absolute;
-            top: 16px;
-            right: 12px;
-        }
-        .sidebar-close:hover { color: #ffffff; }
-        .sidebar-close svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* ── Mobile breakpoint ───────────────────────────────────── */
+        /* ── Mobile ──────────────────────────────────────────────── */
+        .vp-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
+        .vp-mobile-menu-btn { display: none; background: none; border: none; padding: 4px; cursor: pointer; color: #1e293b; }
+        .vp-mobile-menu-btn svg { width: 24px; height: 24px; }
+        .vp-sidebar-close { display: none; background: none; border: none; padding: 4px; cursor: pointer; color: #a5b4fc; position: absolute; top: 16px; right: 12px; }
+        .vp-sidebar-close:hover { color: #fff; }
+        .vp-sidebar-close svg { width: 20px; height: 20px; }
         @media (max-width: 1023px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            .sidebar-overlay.open {
-                display: block;
-            }
-            .sidebar-close {
-                display: block;
-            }
-            .main-wrapper {
-                margin-left: 0;
-            }
-            .hamburger {
-                display: block;
-                margin-right: 12px;
-            }
+            .vp-sidebar { transform: translateX(-100%); }
+            .vp-sidebar.open { transform: translateX(0); }
+            .vp-sidebar-overlay.open { display: block; }
+            .vp-sidebar-close { display: block; }
+            .vp-shell { margin-left: 0; }
+            .vp-mobile-menu-btn { display: block; margin-right: 12px; }
+            .vp-content { padding: 16px; }
         }
 
         /* ── Error banner ────────────────────────────────────────── */
-        .error-banner {
-            background: #fef2f2; /* red-50 */
-            border: 1px solid #fecaca; /* red-200 */
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 24px;
-        }
-        .error-banner strong {
-            color: #991b1b; /* red-800 */
-            font-weight: 600;
-        }
-        .error-banner p {
-            color: #b91c1c; /* red-700 */
-            font-size: 14px;
-            margin-top: 2px;
-        }
-        .error-banner pre {
-            color: #ef4444; /* red-500 */
-            font-size: 12px;
-            margin-top: 8px;
-            overflow-x: auto;
-            background: #fff1f2; /* red-50 darker */
-            padding: 8px;
-            border-radius: 4px;
-        }
+        .error-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; }
+        .error-banner strong { color: #991b1b; font-weight: 600; }
+        .error-banner p { color: #b91c1c; font-size: 14px; margin-top: 2px; }
+        .error-banner pre { color: #ef4444; font-size: 12px; margin-top: 8px; overflow-x: auto; background: #fff1f2; padding: 8px; border-radius: 4px; }
 
-        /* ── Section divider in sidebar ──────────────────────────── */
-        .sidebar-section-label {
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #818cf8; /* indigo-400 */
-            padding: 16px 20px 6px;
-        }
-        .sidebar-info-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 20px;
-            font-size: 12px;
-            color: #a5b4fc; /* indigo-300 */
-        }
-        .sidebar-info-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
+        /* ── Sidebar footer ──────────────────────────────────────── */
+        .vp-sidebar-footer { padding: 12px 20px 16px; border-top: 1px solid rgba(99,102,241,0.15); }
+        .vp-sidebar-info { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #a5b4fc; padding: 2px 0; }
 
         /* ── Design System Foundation ───────────────────────────── */
         .vp-page { padding: 0; }
@@ -189,12 +107,12 @@
         .vp-page-subtitle { font-size: 13px; color: #64748b; margin-top: 2px; }
 
         .vp-section { margin-bottom: 24px; }
-        .vp-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+        .vp-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .vp-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .vp-card-title { font-size: 14px; font-weight: 600; color: #1e293b; }
 
         .vp-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .vp-kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+        .vp-kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
         .vp-kpi-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
         .vp-kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
         .vp-kpi-delta { font-size: 11px; margin-top: 2px; }
@@ -243,167 +161,123 @@
         @media (min-width: 1024px) { .vp-responsive-grid { grid-template-columns: repeat(3, 1fr); } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body style="background:#f8fafc;min-height:100vh;margin:0;">
 
     <!-- Sidebar overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <div class="vp-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <!-- Brand -->
-        <div style="padding: 20px 20px 4px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:32px;height:32px;background:#4f46e5;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-                    <span style="color:#fff;font-weight:700;font-size:16px;">S</span>
-                </div>
-                <div>
-                    <div style="color:#e0e7ff;font-size:15px;font-weight:700;letter-spacing:-0.01em;">Systemax CRM</div>
-                    <div style="color:#818cf8;font-size:10px;font-weight:500;">Powered by Vashpotolok</div>
-                </div>
+    <aside class="vp-sidebar" id="sidebar">
+        <div class="vp-sidebar-brand">
+            <div class="vp-sidebar-brand-icon"><span>V</span></div>
+            <div>
+                <div class="vp-sidebar-brand-title">Vashpotolok</div>
+                <div class="vp-sidebar-brand-subtitle">AI CRM Platform</div>
             </div>
         </div>
 
-        <!-- Close button (mobile) -->
-        <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+        <button class="vp-sidebar-close" onclick="closeSidebar()" aria-label="Close menu">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
-        <!-- Divider -->
-        <div style="height:1px;background:#312e81;margin:16px 20px 8px;"></div>
+        <div style="height:1px;background:rgba(99,102,241,0.15);margin:16px 20px 8px;"></div>
 
-        <!-- Navigation -->
         <nav style="flex:1;padding-top:4px;overflow-y:auto;">
-            <div class="sidebar-section-label">Asosiy</div>
-            <a href="/dashboard"
-               class="sidebar-nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                </span>
+            <div class="vp-nav-section">Asosiy</div>
+            <a href="/dashboard" class="vp-nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 Dashboard
             </a>
-            <a href="/pipeline"
-               class="sidebar-nav-item {% if active_page == 'pipeline' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                </span>
+            <a href="/pipeline" class="vp-nav-link {% if active_page == 'pipeline' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 Pipeline
             </a>
-            <a href="/leads"
-               class="sidebar-nav-item {% if active_page == 'leads' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                </span>
+            <a href="/leads" class="vp-nav-link {% if active_page == 'leads' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 Leads
             </a>
 
-            <div class="sidebar-section-label">CRM</div>
-            <a href="/crm"
-               class="sidebar-nav-item {% if active_page == 'crm' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                </span>
+            <div class="vp-nav-section">CRM</div>
+            <a href="/crm" class="vp-nav-link {% if active_page == 'crm' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                 Inbox
             </a>
-            <a href="/crm/campaigns"
-               class="sidebar-nav-item {% if active_page == 'campaigns' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                </span>
+            <a href="/crm/campaigns" class="vp-nav-link {% if active_page == 'campaigns' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
                 Campaigns
             </a>
-            <a href="/analytics"
-               class="sidebar-nav-item {% if active_page == 'analytics' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                </span>
+            <a href="/analytics" class="vp-nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                 Analytics
             </a>
 
-            <div class="sidebar-section-label">Admin</div>
-            <a href="/agent"
-               class="sidebar-nav-item {% if active_page == 'agent' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-                </span>
-                Agent
+            <div class="vp-nav-section">AI</div>
+            <a href="/agent" class="vp-nav-link {% if active_page == 'agent' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Agent Control
             </a>
-            <a href="/admin/security"
-               class="sidebar-nav-item {% if active_page == 'security' %}active{% endif %}">
-                <span class="sidebar-nav-icon">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                </span>
+
+            <div class="vp-nav-section">Admin</div>
+            <a href="/admin/security" class="vp-nav-link {% if active_page == 'security' %}active{% endif %}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 Security
             </a>
         </nav>
 
-        <!-- System info -->
-        <div style="padding-bottom:16px;">
-            <div class="sidebar-section-label">System</div>
-            <div class="sidebar-info-row">
-                <span class="sidebar-info-dot" style="background:#10b981;"></span>
-                API: protected
-            </div>
-            <div class="sidebar-info-row">
-                <span class="sidebar-info-dot" style="background:#10b981;"></span>
-                Web: secured
-            </div>
-            <div style="height:1px;background:#312e81;margin:12px 20px;"></div>
-            <div style="padding:0 20px;display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:11px;color:#818cf8;font-weight:500;">Read-only</span>
-                <span style="font-size:10px;color:#6366f1;background:#312e81;padding:2px 8px;border-radius:4px;font-weight:600;">v1.0</span>
+        <div class="vp-sidebar-footer">
+            <div class="vp-sidebar-info"><span class="vp-status-dot vp-status-dot-green"></span> Safe mode</div>
+            <div class="vp-sidebar-info"><span class="vp-status-dot vp-status-dot-green"></span> Flags OFF</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+                <span style="font-size:10px;color:#818cf8;">Vashpotolok CRM</span>
+                <span style="font-size:10px;color:#6366f1;background:rgba(99,102,241,0.15);padding:2px 8px;border-radius:4px;font-weight:600;">v1.0</span>
             </div>
         </div>
     </aside>
 
     <!-- Main content wrapper -->
-    <div class="main-wrapper">
-        <!-- Topbar -->
-        <header class="topbar">
-            <button class="hamburger" onclick="openSidebar()" aria-label="Open menu">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
-            <h1 style="font-size:18px;font-weight:600;color:#1e293b;">
-                {% block page_title %}
-                {% if active_page == 'dashboard' %}Dashboard
-                {% elif active_page == 'leads' %}Leads
-                {% elif active_page == 'pipeline' %}Pipeline
-                {% elif active_page == 'analytics' %}Analytics
-                {% elif active_page == 'agent' %}AI Agent
-                {% elif active_page == 'crm' %}CRM Inbox
-                {% elif active_page == 'campaigns' %}Campaigns
-                {% elif active_page == 'security' %}Security
-                {% else %}Systemax CRM
-                {% endif %}
-                {% endblock %}
-            </h1>
+    <div class="vp-shell">
+        <header class="vp-topbar">
+            <div class="vp-topbar-left">
+                <button class="vp-mobile-menu-btn" onclick="openSidebar()" aria-label="Open menu">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <span class="vp-topbar-title">
+                    {% block page_title %}
+                    {% if active_page == 'dashboard' %}Dashboard
+                    {% elif active_page == 'leads' %}Leads
+                    {% elif active_page == 'pipeline' %}Pipeline
+                    {% elif active_page == 'analytics' %}Analytics
+                    {% elif active_page == 'agent' %}AI Agent
+                    {% elif active_page == 'crm' %}CRM Inbox
+                    {% elif active_page == 'campaigns' %}Campaigns
+                    {% elif active_page == 'security' %}Security
+                    {% else %}Systemax CRM
+                    {% endif %}
+                    {% endblock %}
+                </span>
+                <span class="vp-topbar-subtitle">{% block page_subtitle %}{% endblock %}</span>
+            </div>
+            <div class="vp-topbar-right">
+                <span class="vp-role-badge"><span class="vp-status-dot vp-status-dot-green" style="margin-right:2px;"></span> Admin</span>
+            </div>
         </header>
 
-        <!-- Content -->
-        <main style="flex:1;padding:24px;">
+        <main class="vp-content">
             {% if data and data._error is defined %}
             <div class="error-banner">
                 <strong>API Error</strong>
                 <p>{{ data._error }}</p>
-                {% if data._detail is defined %}
-                <pre>{{ data._detail }}</pre>
-                {% endif %}
+                {% if data._detail is defined %}<pre>{{ data._detail }}</pre>{% endif %}
             </div>
             {% endif %}
-
             {% block content %}{% endblock %}
         </main>
 
-        <!-- Footer -->
-        <footer style="text-align:center;padding:16px 24px;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;">
-            Systemax CRM v1.0 &middot; Read-only
+        <footer style="text-align:center;padding:16px 24px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;">
+            Vashpotolok AI CRM Platform v1.0
         </footer>
     </div>
 
-    <!-- Minimal sidebar toggle JS (no external libraries) -->
     <script>
         function openSidebar() {
             document.getElementById('sidebar').classList.add('open');
