@@ -86,7 +86,10 @@ def create_app() -> FastAPI:
     from apps.api.routes.admin_security_actions import router as admin_security_actions_router
 
     app.include_router(admin_security_router)
+    from apps.api.routes.admin_crm_merge import router as admin_crm_merge_router
+
     app.include_router(admin_security_actions_router)
+    app.include_router(admin_crm_merge_router)
 
     return app
 

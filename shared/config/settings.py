@@ -250,6 +250,14 @@ class BusinessSettings(BaseSettings):
     crm_quick_actions_enabled: bool = Field(default=True, alias="CRM_QUICK_ACTIONS_ENABLED")
     crm_default_hide_stopped: bool = Field(default=True, alias="CRM_DEFAULT_HIDE_STOPPED")
     crm_operator_next_contact_enabled: bool = Field(default=True, alias="CRM_OPERATOR_NEXT_CONTACT_ENABLED")
+
+    # CRM Data Quality & Merge
+    crm_duplicate_detection_enabled: bool = Field(default=True, alias="CRM_DUPLICATE_DETECTION_ENABLED")
+    crm_contact_merge_enabled: bool = Field(default=False, alias="CRM_CONTACT_MERGE_ENABLED")
+    crm_contact_merge_require_confirmation: bool = Field(default=True, alias="CRM_CONTACT_MERGE_REQUIRE_CONFIRMATION")
+    crm_contact_merge_min_confidence: int = Field(default=80, alias="CRM_CONTACT_MERGE_MIN_CONFIDENCE", ge=0, le=100)
+    crm_contact_merge_audit_enabled: bool = Field(default=True, alias="CRM_CONTACT_MERGE_AUDIT_ENABLED")
+    crm_contact_merge_max_batch: int = Field(default=50, alias="CRM_CONTACT_MERGE_MAX_BATCH", ge=1, le=200)
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",

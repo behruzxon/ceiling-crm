@@ -22,6 +22,7 @@ _ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
         "admin.users", "admin.permissions", "system.health", "system.audit",
         "security.view", "security.manage", "security.sessions.revoke",
         "security.admin.disable", "security.ip_rules.manage",
+        "crm.merge",
     }),
     "admin": frozenset({
         "crm.view", "crm.view_sensitive", "crm.edit", "crm.notes", "crm.tags",
@@ -33,6 +34,7 @@ _ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
         "agent.execution.view", "agent.execution.approve", "agent.execution.reject",
         "system.health", "system.audit",
         "security.view", "security.sessions.revoke", "security.ip_rules.manage",
+        "crm.merge",
     }),
     "operator": frozenset({
         "crm.view", "crm.notes", "crm.tags", "crm.tasks", "crm.reply",
