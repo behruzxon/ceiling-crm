@@ -243,6 +243,13 @@ class BusinessSettings(BaseSettings):
     crm_alert_notification_cooldown_seconds: int = Field(default=60, alias="CRM_ALERT_NOTIFICATION_COOLDOWN_SECONDS", ge=10, le=600)
     crm_alert_sound_cooldown_seconds: int = Field(default=30, alias="CRM_ALERT_SOUND_COOLDOWN_SECONDS", ge=5, le=300)
     crm_alert_notify_severities: str = Field(default="critical,danger", alias="CRM_ALERT_NOTIFY_SEVERITIES")
+
+    # CRM Operator Workflow Polish
+    crm_operator_workflow_polish_enabled: bool = Field(default=True, alias="CRM_OPERATOR_WORKFLOW_POLISH_ENABLED")
+    crm_keyboard_shortcuts_enabled: bool = Field(default=True, alias="CRM_KEYBOARD_SHORTCUTS_ENABLED")
+    crm_quick_actions_enabled: bool = Field(default=True, alias="CRM_QUICK_ACTIONS_ENABLED")
+    crm_default_hide_stopped: bool = Field(default=True, alias="CRM_DEFAULT_HIDE_STOPPED")
+    crm_operator_next_contact_enabled: bool = Field(default=True, alias="CRM_OPERATOR_NEXT_CONTACT_ENABLED")
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",

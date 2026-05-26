@@ -26,6 +26,25 @@
             </div>
         </div>
 
+        <!-- Operator Checklist -->
+        <div id="operatorChecklist" style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:16px;">
+            <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">Operator checklist</h4>
+            <div style="font-size:12px;color:#475569;display:flex;flex-direction:column;gap:4px;">
+                <div>{{ "✅" if c.get("phone") else "⬜" }} Telefon ma'lum</div>
+                <div>{{ "✅" if c.get("metadata", {}).get("area_m2") or (c.get("metadata") and c.metadata.get("area_m2") if c.get("metadata") is mapping else False) else "⬜" }} Maydon (m2) ma'lum</div>
+                <div>{{ "✅" if c.get("metadata", {}).get("district") or False else "⬜" }} Tuman/joylashuv ma'lum</div>
+                <div>{{ "✅" if c.get("metadata", {}).get("ceiling_type") or False else "⬜" }} Potolok turi ma'lum</div>
+                <div>{{ "✅" if c.get("lead_status") not in (None, "new", "") else "⬜" }} Status yangilangan</div>
+            </div>
+        </div>
+
+        <!-- SLA Badge -->
+        <div id="slaBadge" style="background:#fff;border-radius:12px;padding:12px 16px;border:1px solid #e2e8f0;margin-bottom:16px;text-align:center;">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">SLA holati</div>
+            <div id="slaStatusText" style="font-size:16px;font-weight:700;color:#475569;">—</div>
+            <div id="nextActionText" style="font-size:11px;color:#64748b;margin-top:4px;">Keyingi qadam: —</div>
+        </div>
+
         <!-- Tags -->
         <div id="tagsSection" style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:16px;">
             <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">Teglar</h4>
