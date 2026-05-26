@@ -258,6 +258,16 @@ class BusinessSettings(BaseSettings):
     crm_contact_merge_min_confidence: int = Field(default=80, alias="CRM_CONTACT_MERGE_MIN_CONFIDENCE", ge=0, le=100)
     crm_contact_merge_audit_enabled: bool = Field(default=True, alias="CRM_CONTACT_MERGE_AUDIT_ENABLED")
     crm_contact_merge_max_batch: int = Field(default=50, alias="CRM_CONTACT_MERGE_MAX_BATCH", ge=1, le=200)
+
+    # CRM Campaigns
+    crm_campaigns_enabled: bool = Field(default=True, alias="CRM_CAMPAIGNS_ENABLED")
+    crm_campaign_send_enabled: bool = Field(default=False, alias="CRM_CAMPAIGN_SEND_ENABLED")
+    crm_campaign_require_approval: bool = Field(default=True, alias="CRM_CAMPAIGN_REQUIRE_APPROVAL")
+    crm_campaign_max_recipient_preview: int = Field(default=50, alias="CRM_CAMPAIGN_MAX_RECIPIENT_PREVIEW", ge=1, le=200)
+    crm_campaign_max_message_length: int = Field(default=1000, alias="CRM_CAMPAIGN_MAX_MESSAGE_LENGTH", ge=50, le=4000)
+    crm_campaign_exclude_stopped: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_STOPPED")
+    crm_campaign_exclude_marketing_disabled: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_MARKETING_DISABLED")
+    crm_campaign_audit_enabled: bool = Field(default=True, alias="CRM_CAMPAIGN_AUDIT_ENABLED")
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
         default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",
