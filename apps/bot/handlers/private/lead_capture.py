@@ -4,6 +4,8 @@ Collects name, phone, district from interested client.
 """
 from __future__ import annotations
 
+import asyncio
+
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -11,9 +13,10 @@ from aiogram.types import Message
 
 from apps.bot.keyboards.main_menu import main_menu_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
+from core.services.journey_event_service import emit_journey_event
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_action_repo, get_lead_service
-from shared.constants.enums import CeilingCategory, LeadSource
+from shared.constants.enums import CeilingCategory, JourneyEventType, LeadSource
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
 
@@ -65,6 +68,12 @@ async def handle_phone(message: Message, state: FSMContext, **data: object) -> N
         f"Telefon: <b>{phone}</b> ✅\n\n"
         "📍 Tumaningizni kiriting (masalan: Yunusobod, Chilonzor):"
     )
+    asyncio.create_task(emit_journey_event(
+        user_id=message.from_user.id if message.from_user else 0,
+        event_type=JourneyEventType.PHONE_SHARED,
+        event_data={"phone": phone, "method": "text_input"},
+        source_handler="lead_capture:handle_phone",
+    ))
 
 
 @router.message(StateFilter(LeadCaptureStates.waiting_for_district))

@@ -162,8 +162,8 @@ class TestSalesAdvicePostFlight:
         })()
 
         with (
-            patch("apps.bot.handlers.private.ai_openai._get_client"),
-            patch("apps.bot.handlers.private.ai_openai._record_usage"),
+            patch("infrastructure.ai.openai_client._get_client"),
+            patch("infrastructure.ai.openai_client._record_usage"),
             patch("shared.config.get_settings") as mock_settings,
             patch("shared.utils.retry.with_retry", return_value=mock_resp),
             patch("infrastructure.monitoring.prometheus.openai_requests_total"),
@@ -198,8 +198,8 @@ class TestSalesAdvicePostFlight:
         })()
 
         with (
-            patch("apps.bot.handlers.private.ai_openai._get_client"),
-            patch("apps.bot.handlers.private.ai_openai._record_usage"),
+            patch("infrastructure.ai.openai_client._get_client"),
+            patch("infrastructure.ai.openai_client._record_usage"),
             patch("shared.config.get_settings") as mock_settings,
             patch("shared.utils.retry.with_retry", return_value=mock_resp),
             patch("infrastructure.monitoring.prometheus.openai_requests_total"),

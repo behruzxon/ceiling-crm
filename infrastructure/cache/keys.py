@@ -115,6 +115,13 @@ class CacheTTL:
     # Adaptive weights (outcome-based learning)
     ADAPTIVE_WEIGHTS        = 7_200   # 2 hours — refreshed every 1 hour by scheduler
 
+    # Agent follow-up engine
+    AGENT_FU_CATALOG        = 86_400  # 24h — catalog follow-up dedup
+    AGENT_FU_PRICE          = 7_200   # 2h — price follow-up dedup
+    AGENT_FU_ORDER          = 21_600  # 6h — abandoned order follow-up dedup
+    AGENT_FU_DAILY_COUNT    = 90_000  # 25h — daily follow-up counter
+    AGENT_FU_LAST_SENT      = 600     # 10 min — min gap between follow-ups
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
@@ -413,3 +420,25 @@ class CacheKeys:
         TTL: CacheTTL.ADAPTIVE_WEIGHTS (2 hours).
         """
         return f"adaptive_weights:{event_type}"
+
+    # ── Agent follow-up engine ────────────────────────────────────────
+    @staticmethod
+    def agent_fu_dedup(user_id: int, fu_type: str) -> str:
+        """Per-type dedup: set NX when follow-up is sent.
+        TTL: AGENT_FU_CATALOG / AGENT_FU_PRICE / AGENT_FU_ORDER.
+        """
+        return f"agent:fu:{fu_type}:{user_id}"
+
+    @staticmethod
+    def agent_fu_daily(user_id: int) -> str:
+        """Daily counter: INCR on each follow-up sent.
+        TTL: CacheTTL.AGENT_FU_DAILY_COUNT (25h).
+        """
+        return f"agent:fu:daily:{user_id}"
+
+    @staticmethod
+    def agent_fu_last(user_id: int) -> str:
+        """Min-gap enforcer: set NX after sending.
+        TTL: CacheTTL.AGENT_FU_LAST_SENT (10 min).
+        """
+        return f"agent:fu:last:{user_id}"

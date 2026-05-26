@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% set active_page = "agent" %}
+{% block title %}Agent Dashboard — Systemax CRM{% endblock %}
+{% block page_title %}Agent Dashboard{% endblock %}
+
+{% block content %}
+{% set o = overview or {} %}
+{% set j = o.get("journey", {}) %}
+{% set l = o.get("leads", {}) %}
+{% set f = o.get("followups", {}) %}
+{% set e = o.get("executions", {}) %}
+{% set s = o.get("safety", {}) %}
+{% set h = o.get("health", {}) %}
+
+<!-- Agent Status Header -->
+{% set cc = control or {} %}
+{% set rs = cc.get("rollout_stage", {}) %}
+{% set pf = cc.get("preflight", {}) %}
+{% set cn = cc.get("canary", {}) %}
+
+<div id="agentStatusHeader" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+        {% set stage_color = "#10b981" if rs.get("stage") == "off" else "#3b82f6" if rs.get("stage") == "log_only" else "#eab308" if rs.get("stage") in ("dry_run", "canary") else "#ef4444" %}
+        {% set health_color = "#10b981" if h.get("status") == "green" else "#eab308" if h.get("status") == "yellow" else "#ef4444" %}
+        <div><span style="font-size:11px;color:#64748b;">Stage:</span> <strong style="color:{{ stage_color }};">{{ rs.get("label", "?") }}</strong></div>
+        <div><span style="font-size:11px;color:#64748b;">Health:</span> <span style="width:8px;height:8px;border-radius:50%;background:{{ health_color }};display:inline-block;"></span> <strong style="color:{{ health_color }};">{{ h.get("status", "?") | upper }}</strong></div>
+        <div><span style="font-size:11px;color:#64748b;">Mutation:</span> <span style="font-size:12px;font-weight:600;">{{ "ON" if cc.get("mutation_enabled") else "OFF" }}</span></div>
+        <div><span style="font-size:11px;color:#64748b;">Runtime:</span> <span style="font-size:12px;font-weight:600;">{{ "ON" if cc.get("runtime_enabled") else "OFF" }}</span></div>
+        <div><span style="font-size:11px;color:#64748b;">Live Sender:</span> <span style="font-size:12px;font-weight:600;color:{{ '#ef4444' if cn.get('auto_execute') else '#10b981' }};">{{ "ON" if cn.get("auto_execute") else "OFF" }}</span></div>
+        <div><span style="font-size:11px;color:#64748b;">Pending:</span> <strong>{{ e.get("pending_approval", 0) }}</strong></div>
+    </div>
+</div>
+
+<!-- Operator Status Cards -->
+<div id="operatorStatusCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">🧠 Agent Brain</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">{{ rs.get("description", "O'chiq") }}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">📩 Follow-ups</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">Pending: {{ f.get("pending", 0) }}, Due: {{ f.get("due_count", 0) }}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">🛡 Safety</div>
+        <div style="font-size:11px;color:{{ '#10b981' if not pf.get('blockers') else '#ef4444' }};margin-top:4px;">{{ "All safe" if not pf.get("blockers") else (pf.get("blockers")|length|string + " blocker") }}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">✅ Approval Queue</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">Pending: {{ e.get("pending_approval", 0) }}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">📊 Metrics</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">Events: {{ j.get("total_events", 0) }}, Users: {{ j.get("active_users", 0) }}</div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+        <div style="font-size:14px;">⚙️ Settings</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">{{ cc.get("flags", [])|length }} flag, {{ "mutation ON" if cc.get("mutation_enabled") else "read-only" }}</div>
+    </div>
+</div>
+
+<!-- Rollout Stage Timeline -->
+<div id="stageTimeline" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <h4 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#475569;">Rollout Bosqichlari</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+        {% for st_name, st_label, st_risk in [("off","OFF","low"),("log_only","LOG ONLY","medium"),("dry_run","DRY RUN","medium"),("canary","CANARY","high"),("approval_required","APPROVAL","high"),("approved_live_send","LIVE SEND","critical"),("limited_live","LIMITED LIVE","critical")] %}
+        {% set is_current = rs.get("stage") == st_name %}
+        {% set stc = "#4f46e5" if is_current else "#10b981" if st_risk == "low" else "#eab308" if st_risk == "medium" else "#f59e0b" if st_risk == "high" else "#ef4444" %}
+        <div style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:{{ '700' if is_current else '500' }};background:{{ stc if is_current else stc + '15' }};color:{{ '#fff' if is_current else stc }};border:1px solid {{ stc }}40;">
+            {{ st_label }}{% if is_current %} ◀{% endif %}
+        </div>
+        {% if not loop.last %}<span style="color:#cbd5e1;">→</span>{% endif %}
+        {% endfor %}
+    </div>
+    <div id="stageWarning" style="margin-top:6px;font-size:10px;color:#94a3b8;">
+        {% if rs.get("stage") in ("off", "log_only", "dry_run") %}
+        Keyingi bosqich uchun yuqoridagi Rollout Presets'dan foydalaning.
+        {% elif rs.get("stage") in ("canary", "approval_required") %}
+        ⚠️ Keyingi bosqichlar xavfli. Ehtiyot bilan davom eting.
+        {% endif %}
+    </div>
+</div>
+
+<!-- Control Center -->
+{% set pf = cc.get("preflight", {}) %}
+{% set cn = cc.get("canary", {}) %}
+{% set sf = cc.get("safety", {}) %}
+{% set flags = cc.get("flags", []) %}
+
+<div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:24px;">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Control Center</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        {% set stage_color = "#10b981" if rs.get("stage") == "off" else "#3b82f6" if rs.get("stage") == "log_only" else "#eab308" if rs.get("stage") in ("dry_run", "canary") else "#ef4444" %}
+        <div style="padding:6px 14px;background:{{ stage_color }}15;border:1px solid {{ stage_color }}40;border-radius:6px;">
+            <span style="font-size:11px;color:#64748b;">Rollout Stage</span><br>
+            <span style="font-size:14px;font-weight:700;color:{{ stage_color }};">{{ rs.get("label", "?") }}</span>
+        </div>
+        {% set pf_color = "#10b981" if pf.get("status") == "green" else "#eab308" if pf.get("status") == "yellow" else "#ef4444" %}
+        <div style="padding:6px 14px;background:{{ pf_color }}15;border:1px solid {{ pf_color }}40;border-radius:6px;">
+            <span style="font-size:11px;color:#64748b;">Preflight</span><br>
+            <span style="font-size:14px;font-weight:700;color:{{ pf_color }};">{{ pf.get("status", "?") | upper }}</span>
+        </div>
+        <div style="padding:6px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+            <span style="font-size:11px;color:#64748b;">Mode</span><br>
+            <span style="font-size:14px;font-weight:600;">{{ cn.get("mode", "?") }}</span>
+        </div>
+        <div style="padding:6px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+            <span style="font-size:11px;color:#64748b;">Canary</span><br>
+            <span style="font-size:14px;font-weight:600;">{{ cn.get("canary_user_count", 0) }} user</span>
+        </div>
+    </div>
+    {% for b in pf.get("blockers", []) %}
+    <div style="padding:4px 10px;background:#fef2f2;border-radius:4px;font-size:12px;color:#dc2626;margin-bottom:4px;">BLOCKER: {{ b }}</div>
+    {% endfor %}
+    {% for w in pf.get("warnings", []) %}
+    <div style="padding:4px 10px;background:#fefce8;border-radius:4px;font-size:12px;color:#a16207;margin-bottom:4px;">WARNING: {{ w }}</div>
+    {% endfor %}
+    {% if flags %}
+    <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#475569;">Feature Flags ({{ flags | length }})</summary>
+        <table style="width:100%;font-size:12px;margin-top:8px;">
+            {% for fl in flags %}
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:4px 8px;font-family:monospace;">{{ fl.name }}</td>
+                <td style="padding:4px 8px;text-align:right;">
+                    {% if fl.enabled %}
+                    <span style="color:#10b981;font-weight:600;">ON</span>
+                    {% else %}
+                    <span style="color:#94a3b8;">off</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </details>
+    {% endif %}
+    <!-- Settings Control -->
+    <div style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;">
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:#1e293b;">Settings Control</h4>
+        <div id="settingsMutationBanner" style="padding:6px 12px;background:#fefce8;border-radius:4px;font-size:11px;color:#a16207;margin-bottom:8px;">
+            Settings mutation API orqali boshqariladi. Mutation disabled bo'lsa apply/rollback ishlamaydi.
+        </div>
+        <div id="settingsMessage" style="display:none;padding:6px 12px;border-radius:4px;font-size:12px;margin-bottom:8px;"></div>
+        {% if flags %}
+        <table style="width:100%;font-size:12px;border-collapse:collapse;" id="settingsTable">
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="text-align:left;padding:6px 8px;color:#64748b;">Setting</th>
+                    <th style="text-align:left;padding:6px 8px;color:#64748b;">Value</th>
+                    <th style="text-align:left;padding:6px 8px;color:#64748b;">Source</th>
+                    <th style="text-align:left;padding:6px 8px;color:#64748b;">Risk</th>
+                    <th style="text-align:left;padding:6px 8px;color:#64748b;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fl in flags %}
+                <tr style="border-bottom:1px solid #f1f5f9;" id="srow-{{ fl.name }}">
+                    <td style="padding:4px 8px;font-family:monospace;font-size:10px;">{{ fl.name }}</td>
+                    <td style="padding:4px 8px;">
+                        {% if fl.enabled %}<span style="color:#10b981;font-weight:600;">true</span>
+                        {% else %}<span style="color:#94a3b8;">false</span>{% endif %}
+                    </td>
+                    <td style="padding:4px 8px;"><span style="font-size:10px;padding:1px 6px;background:#f1f5f9;border-radius:3px;">env</span></td>
+                    <td style="padding:4px 8px;">
+                        {% set rk = fl.risk %}
+                        {% set rkc = "#10b981" if rk in ("none","low") else "#eab308" if rk == "medium" else "#f59e0b" if rk == "high" else "#ef4444" %}
+                        <span style="font-size:10px;padding:1px 6px;background:{{ rkc }}15;color:{{ rkc }};border-radius:3px;font-weight:600;">{{ rk }}</span>
+                    </td>
+                    <td style="padding:4px 8px;">
+                        <button onclick="previewSetting('{{ fl.name }}',{{ 'false' if fl.enabled else 'true' }})" style="padding:2px 8px;font-size:10px;background:#3b82f6;color:#fff;border:none;border-radius:3px;cursor:pointer;">Toggle</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+    <!-- Audit Log -->
+    <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#475569;">Audit Log</summary>
+        <div id="auditLog" style="margin-top:8px;font-size:11px;color:#64748b;">
+            <em>Loading...</em>
+        </div>
+    </details>
+
+    <!-- Rollout Presets -->
+    <div style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;">
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:#1e293b;">Rollout Presets</h4>
+        <div id="presetMessage" style="display:none;padding:6px 12px;border-radius:4px;font-size:12px;margin-bottom:8px;"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            {% for p_name, p_label, p_risk, p_desc in [
+                ("off", "OFF", "low", "Barcha agent flaglar o'chiq"),
+                ("log_only", "LOG ONLY", "medium", "Trace yozadi, user o'zgarmaydi"),
+                ("dry_run", "DRY RUN", "medium", "Payload validate, send yo'q"),
+                ("canary", "CANARY", "high", "Faqat canary userlar"),
+                ("approval_required", "APPROVAL", "high", "Admin approve/reject"),
+                ("approved_live_send", "LIVE SEND", "critical", "Approved payloadlar yuboriladi"),
+            ] %}
+            {% set pc = "#10b981" if p_risk == "low" else "#eab308" if p_risk == "medium" else "#f59e0b" if p_risk == "high" else "#ef4444" %}
+            <div style="padding:8px 12px;background:#fff;border:1px solid {{ pc }}40;border-radius:8px;min-width:130px;">
+                <div style="font-size:12px;font-weight:700;color:{{ pc }};">{{ p_label }}</div>
+                <div style="font-size:10px;color:#64748b;margin:4px 0;">{{ p_desc }}</div>
+                <button onclick="previewPreset('{{ p_name }}')" style="padding:2px 8px;font-size:10px;background:{{ pc }};color:#fff;border:none;border-radius:3px;cursor:pointer;">Preview</button>
+            </div>
+            {% endfor %}
+        </div>
+        <div id="presetDiff" style="display:none;margin-top:8px;padding:8px;background:#f8fafc;border-radius:6px;font-size:11px;"></div>
+    </div>
+</div>
+
+<!-- Health status -->
+<div style="margin-bottom:24px;">
+    {% set health_color = "#10b981" if h.get("status") == "green" else "#eab308" if h.get("status") == "yellow" else "#ef4444" %}
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+        <span style="width:10px;height:10px;border-radius:50%;background:{{ health_color }};"></span>
+        <span style="font-size:14px;font-weight:600;color:#1e293b;">
+            Sog'liq holati: {{ h.get("status", "unknown") | upper }}
+        </span>
+    </div>
+    {% for w in h.get("warnings", []) %}
+    <span style="margin-left:8px;font-size:12px;padding:2px 8px;background:#fef9c3;border-radius:4px;color:#854d0e;">{{ w }}</span>
+    {% endfor %}
+</div>
+
+<!-- Overview cards -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:32px;">
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Journey eventlar</div>
+        <div style="font-size:28px;font-weight:700;color:#1e293b;">{{ j.get("total_events", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Issiq leadlar</div>
+        <div style="font-size:28px;font-weight:700;color:#ef4444;">{{ l.get("hot_count", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Iliq leadlar</div>
+        <div style="font-size:28px;font-weight:700;color:#eab308;">{{ l.get("warm_count", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Sovuq leadlar</div>
+        <div style="font-size:28px;font-weight:700;color:#3b82f6;">{{ l.get("cold_count", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Kutilayotgan follow-up</div>
+        <div style="font-size:28px;font-weight:700;color:#8b5cf6;">{{ f.get("pending", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Tasdiq kutayotgan</div>
+        <div style="font-size:28px;font-weight:700;color:#f59e0b;">{{ e.get("pending_approval", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Bajarilgan</div>
+        <div style="font-size:28px;font-weight:700;color:#10b981;">{{ e.get("by_status", {}).get("executed", 0) | fmt_number }}</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <div style="font-size:12px;color:#64748b;font-weight:500;">Bloklangan</div>
+        <div style="font-size:28px;font-weight:700;color:#ef4444;">{{ e.get("blocked", 0) | fmt_number }}</div>
+    </div>
+</div>
+
+<!-- Follow-up & Safety panels -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+
+    <!-- Follow-up -->
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Follow-up holati</h3>
+        <table style="width:100%;font-size:14px;">
+            <tr><td style="color:#64748b;">Pending</td><td style="text-align:right;font-weight:600;">{{ f.get("pending", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Yuborilgan</td><td style="text-align:right;font-weight:600;">{{ f.get("sent", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Bekor qilingan</td><td style="text-align:right;font-weight:600;">{{ f.get("cancelled", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Xatolik</td><td style="text-align:right;font-weight:600;color:#ef4444;">{{ f.get("failed", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">O'tkazilgan</td><td style="text-align:right;font-weight:600;">{{ f.get("skipped", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Muddati kelgan</td><td style="text-align:right;font-weight:600;color:#f59e0b;">{{ f.get("due_count", 0) }}</td></tr>
+        </table>
+    </div>
+
+    <!-- Safety -->
+    <div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Xavfsizlik</h3>
+        <table style="width:100%;font-size:14px;">
+            <tr><td style="color:#64748b;">Stop signallar</td><td style="text-align:right;font-weight:600;">{{ s.get("stop_signals", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Sandbox bloklangan</td><td style="text-align:right;font-weight:600;">{{ s.get("sandbox_blocked", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Policy bloklangan</td><td style="text-align:right;font-weight:600;">{{ s.get("policy_blocked", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Kunlik limit</td><td style="text-align:right;font-weight:600;">{{ s.get("daily_cap_blocks", 0) }}</td></tr>
+            <tr><td style="color:#64748b;">Umumiy limit</td><td style="text-align:right;font-weight:600;">{{ s.get("lifetime_cap_blocks", 0) }}</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- Pending executions table -->
+{% set items = (pending or {}).get("items", []) %}
+{% if items %}
+<div style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:32px;">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#1e293b;">Tasdiq kutayotgan actionlar</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">ID</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">User</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Action</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Risk</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Status</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Muddati</th>
+                    <th style="text-align:left;padding:8px 12px;color:#64748b;font-weight:600;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr style="border-bottom:1px solid #f1f5f9;" id="row-{{ item.execution_id[:8] }}">
+                    <td style="padding:8px 12px;font-family:monospace;font-size:11px;">{{ item.execution_id[:8] }}...</td>
+                    <td style="padding:8px 12px;">{{ item.telegram_user_id }}</td>
+                    <td style="padding:8px 12px;">{{ item.action }}</td>
+                    <td style="padding:8px 12px;">
+                        {% set rc = "#10b981" if item.risk_level in ("none", "low") else "#eab308" if item.risk_level == "medium" else "#ef4444" %}
+                        <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:{{ rc }}20;color:{{ rc }};">{{ item.risk_level }}</span>
+                    </td>
+                    <td style="padding:8px 12px;"><span class="exec-status">{{ item.status }}</span></td>
+                    <td style="padding:8px 12px;font-size:12px;color:#94a3b8;">{{ item.expires_at[:16] if item.expires_at else "—" }}</td>
+                    <td style="padding:8px 12px;">
+                        {% if item.status == "proposed" %}
+                        <button onclick="approveExec('{{ item.execution_id }}')" style="padding:3px 10px;font-size:11px;background:#10b981;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px;">Tasdiqlash</button>
+                        <button onclick="rejectExec('{{ item.execution_id }}')" style="padding:3px 10px;font-size:11px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;">Rad etish</button>
+                        {% else %}
+                        <span style="font-size:11px;color:#94a3b8;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div id="emptyApprovalQueue" style="background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:32px;text-align:center;">
+    <p style="font-size:14px;color:#94a3b8;">✅ Tasdiq kutayotgan actionlar yo'q</p>
+</div>
+{% endif %}
+
+<div id="apiErrorContainer" style="display:none;padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:16px;">
+    <strong style="color:#991b1b;">API xato</strong>
+    <p id="apiErrorText" style="color:#b91c1c;font-size:13px;margin-top:2px;"></p>
+</div>
+
+<div id="loadingContainer" style="display:none;text-align:center;padding:20px;">
+    <span style="color:#94a3b8;">Yuklanmoqda...</span>
+</div>
+
+<!-- Stage 1 Observation Report -->
+<div id="observationPanel" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:10px;color:#1e293b;">Stage 1 Observation Report</h3>
+    <div id="observationResult" style="font-size:12px;color:#64748b;"><em>Yuklanmoqda...</em></div>
+</div>
+
+<!-- DRY_RUN Readiness Gate -->
+<div id="dryrunGatePanel" style="background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:10px;color:#1e293b;">DRY_RUN Readiness Gate</h3>
+    <div id="gateResult" style="font-size:12px;color:#64748b;"><em>Yuklanmoqda...</em></div>
+    <div style="margin-top:6px;font-size:10px;color:#94a3b8;">DRY_RUN preview uchun avval Stage 1 PASS bo'lishi kerak.</div>
+</div>
+
+<script>
+async function loadDryrunGate() {
+    try {
+        const r = await fetch('/api/v1/admin/agent/observation/stage1-dryrun-gate?hours={{ hours }}');
+        if (!r.ok) { document.getElementById('gateResult').innerHTML='<em>Yuklab bo\'lmadi</em>'; return; }
+        const d = await r.json();
+        const vc = d.verdict==='ready'?'#10b981':d.verdict==='conditional'?'#eab308':'#ef4444';
+        let html='<div style="margin-bottom:6px;">Verdict: <span style="color:'+vc+';font-weight:700;">'+d.verdict.toUpperCase()+'</span> (score: '+d.readiness_score+'/100)</div>';
+        (d.blockers||[]).forEach(b=>{html+='<div style="color:#ef4444;font-size:11px;">BLOCKER: '+b+'</div>';});
+        (d.warnings||[]).forEach(w=>{html+='<div style="color:#a16207;font-size:11px;">WARNING: '+w+'</div>';});
+        (d.recommendations||[]).forEach(r=>{html+='<div style="color:#6366f1;font-size:11px;">&rarr; '+r+'</div>';});
+        document.getElementById('gateResult').innerHTML=html;
+    } catch(e) { document.getElementById('gateResult').innerHTML='<em>Xato</em>'; }
+}
+document.addEventListener('DOMContentLoaded', loadDryrunGate);
+
+async function loadObservationReport() {
+    try {
+        const r = await fetch('/api/v1/admin/agent/observation/stage1-report?hours={{ hours }}');
+        if (!r.ok) { document.getElementById('observationResult').innerHTML='<em>Report yuklab bo\'lmadi</em>'; return; }
+        const d = await r.json();
+        const pf = d.pass_fail || {};
+        const ns = d.no_send || {};
+        const badge = pf.passed ? '<span style="color:#10b981;font-weight:700;">PASS</span>' : '<span style="color:#ef4444;font-weight:700;">FAIL</span>';
+        let html = '<div style="margin-bottom:8px;">Natija: ' + badge + '</div>';
+        html += '<div>Users: ' + d.total_users_observed + ' | Events: ' + d.total_journey_events + ' | Traces: ' + d.total_orchestrator_traces + '</div>';
+        html += '<div style="margin-top:6px;">No-send: followups=' + ns.followups_sent + ' escalations=' + ns.admin_escalations_sent + ' executed=' + ns.execution_records_executed + '</div>';
+        const recs = d.recommendations || [];
+        if (recs.length) { html += '<div style="margin-top:6px;color:#6366f1;">' + recs.join('<br>') + '</div>'; }
+        if ((pf.failures||[]).length) { html += '<div style="margin-top:6px;color:#ef4444;">Failures: ' + pf.failures.join(', ') + '</div>'; }
+        document.getElementById('observationResult').innerHTML = html;
+    } catch(e) { document.getElementById('observationResult').innerHTML='<em>Xato: '+e.message+'</em>'; }
+}
+document.addEventListener('DOMContentLoaded', loadObservationReport);
+</script>
+
+<p style="font-size:12px;color:#94a3b8;text-align:center;">
+    Oxirgi {{ hours }} soatlik ma'lumotlar. <a href="/agent?hours={{ hours }}" style="color:#6366f1;">Yangilash</a>
+    <span id="operatorHelpLink" style="margin-left:12px;">
+        Operator yordam: <a href="#" onclick="alert('docs/AI_AGENT_SYSTEM/ papkasidagi qo\\'llanmalarni ko\\'ring:\\n- 26_OPERATOR_TRAINING_PACK\\n- 27_OPERATOR_DAILY_CHECKLIST\\n- 29_EMERGENCY_ROLLBACK_CARD');return false;" style="color:#6366f1;">Qo'llanma</a>
+        | <a href="#" onclick="alert('OFF preset apply qiling → stage OFF tekshiring → live sender OFF tekshiring');return false;" style="color:#ef4444;">Rollback</a>
+    </span>
+</p>
+
+<script>
+let _previewToken = null;
+let _previewKey = null;
+let _previewValue = null;
+
+function showMsg(text, color) {
+    const el = document.getElementById('settingsMessage');
+    el.style.display = 'block';
+    el.style.background = color === 'red' ? '#fef2f2' : color === 'green' ? '#f0fdf4' : '#fefce8';
+    el.style.color = color === 'red' ? '#dc2626' : color === 'green' ? '#16a34a' : '#a16207';
+    el.textContent = text;
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function previewSetting(key, newValue) {
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/preview', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key: key, value: newValue, reason: 'UI preview'})
+        });
+        const d = await r.json();
+        if (!r.ok) { showMsg('Preview xato: ' + (d.detail || r.status), 'red'); return; }
+        if (!d.allowed) { showMsg('Bloklangan: ' + (d.blockers || []).join(', '), 'red'); return; }
+        _previewToken = d.confirmation_token || '';
+        _previewKey = key;
+        _previewValue = newValue;
+        const msg = 'Risk: ' + d.risk_level + (d.requires_confirmation ? ' (confirmation kerak)' : '');
+        if (confirm(msg + '\n\nApply qilasizmi: ' + key + ' = ' + newValue + '?')) {
+            await applySetting();
+        }
+    } catch(e) { showMsg('Xato: ' + e.message, 'red'); }
+}
+
+async function applySetting() {
+    if (!_previewKey) return;
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/apply', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key: _previewKey, value: _previewValue, confirmation_token: _previewToken || '', reason: 'UI apply'})
+        });
+        const d = await r.json();
+        if (r.ok) { showMsg('Applied: ' + _previewKey, 'green'); location.reload(); }
+        else { showMsg('Apply xato: ' + (d.detail || r.status), 'red'); }
+    } catch(e) { showMsg('Xato: ' + e.message, 'red'); }
+    _previewToken = null; _previewKey = null; _previewValue = null;
+}
+
+async function rollbackSetting(key) {
+    if (!confirm('Rollback qilasizmi: ' + key + '?')) return;
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/rollback', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({setting_key: key, reason: 'UI rollback'})
+        });
+        const d = await r.json();
+        if (r.ok) { showMsg('Rollback: ' + key, 'green'); location.reload(); }
+        else { showMsg('Rollback xato: ' + (d.detail || r.status), 'red'); }
+    } catch(e) { showMsg('Xato: ' + e.message, 'red'); }
+}
+
+async function loadAuditLog() {
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/audit?limit=20');
+        if (!r.ok) { document.getElementById('auditLog').innerHTML = '<em>Yuklash xatosi</em>'; return; }
+        const d = await r.json();
+        const items = d.items || [];
+        if (!items.length) { document.getElementById('auditLog').innerHTML = '<em>Hech narsa yo\'q</em>'; return; }
+        let html = '<table style="width:100%;font-size:11px;"><tr><th>Key</th><th>Action</th><th>Risk</th><th>Vaqt</th><th></th></tr>';
+        items.forEach(i => {
+            html += '<tr><td>' + i.setting_key + '</td><td>' + i.action + '</td><td>' + i.risk_level + '</td><td>' + (i.created_at||'').slice(0,16) + '</td>';
+            html += '<td><button onclick="rollbackSetting(\'' + i.setting_key + '\')" style="font-size:10px;padding:1px 6px;background:#f59e0b;color:#fff;border:none;border-radius:3px;cursor:pointer;">Rollback</button></td></tr>';
+        });
+        html += '</table>';
+        document.getElementById('auditLog').innerHTML = html;
+    } catch(e) { document.getElementById('auditLog').innerHTML = '<em>Xato</em>'; }
+}
+document.addEventListener('DOMContentLoaded', loadAuditLog);
+
+let _presetToken = null;
+let _presetName = null;
+
+async function previewPreset(name) {
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/presets/' + name + '/preview', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        const d = await r.json();
+        if (!r.ok) { showPresetMsg('Xato: '+(d.detail||r.status),'red'); return; }
+        if (!d.allowed) { showPresetMsg('Bloklangan: '+(d.blockers||[]).join(', '),'red'); return; }
+        _presetToken = d.confirmation_token || '';
+        _presetName = name;
+        let diffHtml = '<strong>Diff ('+d.diff.length+' o\'zgarish):</strong><br>';
+        (d.diff||[]).forEach(dd => { diffHtml += dd.key+': '+dd.current+' → '+dd.target+' ('+dd.risk+')<br>'; });
+        diffHtml += '<br><button onclick="applyPreset()" style="padding:3px 10px;font-size:11px;background:#10b981;color:#fff;border:none;border-radius:4px;cursor:pointer;">Apply '+name.toUpperCase()+'</button>';
+        diffHtml += ' <button onclick="cancelPreset()" style="padding:3px 10px;font-size:11px;background:#94a3b8;color:#fff;border:none;border-radius:4px;cursor:pointer;">Bekor</button>';
+        document.getElementById('presetDiff').innerHTML = diffHtml;
+        document.getElementById('presetDiff').style.display = 'block';
+    } catch(e) { showPresetMsg('Xato: '+e.message,'red'); }
+}
+
+async function applyPreset() {
+    if (!_presetName) return;
+    if (!confirm('Apply qilasizmi: '+_presetName.toUpperCase()+'?')) return;
+    try {
+        const r = await fetch('/api/v1/admin/agent/settings/presets/'+_presetName+'/apply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation_token:_presetToken||'',reason:'UI preset apply'})});
+        const d = await r.json();
+        if (r.ok) { showPresetMsg('Applied: '+_presetName.toUpperCase(),'green'); setTimeout(()=>location.reload(),1000); }
+        else { showPresetMsg('Xato: '+(d.detail||r.status),'red'); }
+    } catch(e) { showPresetMsg('Xato: '+e.message,'red'); }
+    _presetToken=null; _presetName=null;
+}
+
+function cancelPreset() { _presetToken=null; _presetName=null; document.getElementById('presetDiff').style.display='none'; }
+function showPresetMsg(t,c) { const el=document.getElementById('presetMessage'); el.style.display='block'; el.style.background=c==='red'?'#fef2f2':c==='green'?'#f0fdf4':'#fefce8'; el.style.color=c==='red'?'#dc2626':c==='green'?'#16a34a':'#a16207'; el.textContent=t; setTimeout(()=>{el.style.display='none';},5000); }
+
+async function approveExec(execId) {
+    if (!confirm("Haqiqatan tasdiqlaysizmi?")) return;
+    try {
+        const r = await fetch("/api/v1/admin/agent/executions/" + execId + "/approve", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+        const d = await r.json();
+        alert(r.ok ? "Tasdiqlandi: " + execId : "Xato: " + (d.detail || "unknown"));
+        if (r.ok) location.reload();
+    } catch(e) { alert("Xato: " + e.message); }
+}
+async function rejectExec(execId) {
+    const reason = prompt("Rad etish sababi (ixtiyoriy, max 300):", "");
+    if (reason === null) return;
+    try {
+        const r = await fetch("/api/v1/admin/agent/executions/" + execId + "/reject", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({reason: reason.slice(0, 300)})});
+        const d = await r.json();
+        alert(r.ok ? "Rad etildi: " + execId : "Xato: " + (d.detail || "unknown"));
+        if (r.ok) location.reload();
+    } catch(e) { alert("Xato: " + e.message); }
+}
+</script>
+{% endblock %}

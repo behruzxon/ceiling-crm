@@ -27,6 +27,8 @@ Shared helper
 """
 from __future__ import annotations
 
+import asyncio
+
 from aiogram import Bot, F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -41,7 +43,9 @@ from aiogram.types import (
 )
 
 from apps.bot.keyboards.main_menu import BTN_OPERATOR, MAIN_MENU_BUTTONS, main_menu_keyboard
+from core.services.journey_event_service import emit_journey_event
 from shared.config import get_settings
+from shared.constants.enums import JourneyEventType
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -113,6 +117,11 @@ async def handle_operator_entry(
 ) -> None:
     """Catch the main-menu «📞 Operator» button tap from any FSM state."""
     await start_operator_flow(message, state)
+    asyncio.create_task(emit_journey_event(
+        user_id=message.from_user.id if message.from_user else 0,
+        event_type=JourneyEventType.OPERATOR_REQUESTED,
+        source_handler="operator:handle_operator_entry",
+    ))
 
 
 # ─── Step 1 : confirmation ────────────────────────────────────────────────────

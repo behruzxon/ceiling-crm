@@ -177,7 +177,7 @@ def _build_context(
         lines.append("- Oxirgi faollik: noma'lum")
 
     if last_messages:
-        from apps.bot.ai.system_prompt import sanitize_user_text_for_prompt
+        from shared.utils.sanitize import sanitize_user_text_for_prompt
 
         _BLOCKED = "[blocked]"
         lines.append("\nOXIRGI XABARLAR:")
@@ -202,7 +202,7 @@ async def _call_openai(context: str) -> dict[str, Any]:
     """Call OpenAI with sales advice system prompt + lead context."""
     from openai import APIConnectionError, APITimeoutError, RateLimitError
 
-    from apps.bot.handlers.private.ai_openai import _get_client, _record_usage
+    from infrastructure.ai.openai_client import _get_client, _record_usage
     from infrastructure.monitoring.prometheus import openai_requests_total
     from shared.config import get_settings
     from shared.utils.retry import with_retry
@@ -241,7 +241,7 @@ async def _call_openai(context: str) -> dict[str, Any]:
     raw = resp.choices[0].message.content or "{}"
 
     # Post-flight leak guard — matches the pattern in ai_openai._call_ai()
-    from apps.bot.ai.system_prompt import sanitize_ai_reply
+    from shared.utils.sanitize import sanitize_ai_reply
 
     parsed = json.loads(raw)
     for field in ("suggested_message", "reasoning"):

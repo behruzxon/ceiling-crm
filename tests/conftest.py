@@ -1,5 +1,11 @@
 """Shared pytest fixtures for all test layers."""
 from __future__ import annotations
+import os
+
+# Ensure tests run in development mode regardless of .env file values.
+# Must be set before any import triggers get_settings().
+os.environ.setdefault("APP_ENV", "development")
+
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
@@ -51,3 +57,14 @@ def mock_broadcast_repo() -> AsyncMock:
     """Mock AbstractBroadcastRepository for broadcast service tests."""
     from core.repositories.broadcast_repo import AbstractBroadcastRepository
     return AsyncMock(spec=AbstractBroadcastRepository)
+
+
+@pytest.fixture
+def mock_journey_session() -> AsyncMock:
+    """Mock AsyncSession for JourneyEventService tests."""
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+    return session

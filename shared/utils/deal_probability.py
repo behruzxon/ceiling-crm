@@ -37,23 +37,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.services.signal_vector_service import SignalVector
 
-
-# ── Pricing constants (UZS per m^2) ─────────────────────────────────────────
-
-_DESIGN_PRICES: dict[str, int] = {
-    "adnatonniy": 80_000,
-    "matt": 80_000,
-    "hi-tech": 120_000,
-    "hitech": 120_000,
-    "mramor": 120_000,
-    "naqsh": 120_000,
-    "kosmos": 120_000,
-    "osmon": 120_000,
-    "gulli": 130_000,
-    "qora uf": 140_000,
-    "qora": 140_000,
-}
-_DEFAULT_PRICE_PER_M2 = 100_000  # average when design unknown
+from shared.constants.pricing import DEFAULT_PRICE_PER_M2 as _DEFAULT_PRICE_PER_M2
+from shared.constants.pricing import DESIGN_PRICES_CUSTOMER as _DESIGN_PRICES
 
 
 # ── Result dataclass ─────────────────────────────────────────────────────────

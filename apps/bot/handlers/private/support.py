@@ -3,6 +3,9 @@ AI support handler.
 Routes ceiling-related questions to OpenAI with guardrails.
 """
 from __future__ import annotations
+
+import asyncio
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
@@ -10,7 +13,9 @@ from aiogram.types import Message
 
 from apps.bot.handlers.private.ai_support import clear_ai_conversation
 from apps.bot.keyboards.main_menu import main_menu_keyboard
+from core.services.journey_event_service import emit_journey_event
 from shared.config import get_settings
+from shared.constants.enums import JourneyEventType
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -122,6 +127,14 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
     await state.clear()
     await clear_ai_conversation(user_id)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
+
+    asyncio.create_task(emit_journey_event(
+        user_id=user_id,
+        event_type=JourneyEventType.STARTED_BOT,
+        event_data={"source": command.args or "direct"},
+        source_handler="support:cmd_start",
+    ))
+
     await message.answer(
         "🤖 VashPotolok AI Bot\n\n"
         f"Assalomu alaykum, {message.from_user.first_name}! 👋\n"

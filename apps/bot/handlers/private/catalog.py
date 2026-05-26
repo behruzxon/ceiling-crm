@@ -13,6 +13,8 @@ never fires while waiting_for_design is active.
 """
 from __future__ import annotations
 
+import asyncio
+
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -21,7 +23,9 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from apps.bot.keyboards.catalog import BTN_CATALOG_BACK, catalog_design_keyboard
 from apps.bot.keyboards.main_menu import BTN_CATALOG, MAIN_MENU_BUTTONS, main_menu_keyboard
 from apps.bot.states.catalog import CatalogStates
+from core.services.journey_event_service import emit_journey_event
 from shared.constants.catalog import CATALOG
+from shared.constants.enums import JourneyEventType
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -44,6 +48,11 @@ async def cmd_catalog(message: Message, state: FSMContext, **data: object) -> No
         "📂 <b>Katalog</b>\n\nDizaynni tanlang:",
         reply_markup=catalog_design_keyboard(),
     )
+    asyncio.create_task(emit_journey_event(
+        user_id=getattr(message.from_user, "id", 0),
+        event_type=JourneyEventType.OPENED_CATALOG,
+        source_handler="catalog:cmd_catalog",
+    ))
 
 
 # ── Back button ───────────────────────────────────────────────────────────────
@@ -86,4 +95,11 @@ async def handle_design_choice(
         InlineKeyboardButton(text="📎 Katalogda ko'rish", url=section.group_url),
     ]])
     await message.answer(f"<b>{section.title}</b>", reply_markup=link_kb)
-    log.info("catalog_design_viewed", key=section.key, user_id=getattr(message.from_user, "id", 0))
+    uid = getattr(message.from_user, "id", 0)
+    log.info("catalog_design_viewed", key=section.key, user_id=uid)
+    asyncio.create_task(emit_journey_event(
+        user_id=uid,
+        event_type=JourneyEventType.VIEWED_CATALOG_ITEM,
+        event_data={"design": section.key},
+        source_handler="catalog:handle_design_choice",
+    ))

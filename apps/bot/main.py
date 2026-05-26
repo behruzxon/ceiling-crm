@@ -51,6 +51,8 @@ from apps.bot.handlers.admin.system_status import router as system_status_router
 from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.admin.autopilot import router as autopilot_router
 from apps.bot.handlers.admin.close_advice import router as close_advice_router
+from apps.bot.handlers.callbacks.admin_escalation_callbacks import router as admin_escalation_callbacks_router
+from apps.bot.handlers.callbacks.agent_followup_callbacks import router as agent_followup_callbacks_router
 from apps.bot.handlers.callbacks.cta_callbacks import router as cta_callbacks_router
 from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
@@ -59,6 +61,7 @@ from apps.bot.handlers.callbacks.payment_callbacks import router as payment_call
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
 from apps.bot.handlers.callbacks.operator_callbacks import router as operator_callbacks_router
 from apps.bot.handlers.callbacks.sales_closer_callbacks import router as sales_closer_callbacks_router
+from apps.bot.handlers.callbacks.agent_execution_callbacks import router as agent_execution_callbacks_router
 from apps.bot.handlers.group.admin import router as group_admin_router
 from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
@@ -175,6 +178,9 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
     # ── Callbacks router ───────────────────────────────────────────────────
     callbacks_router = Router(name="callbacks")
     callbacks_router.include_routers(
+        agent_execution_callbacks_router,   # agentexec:* — execution approve/reject/view
+        admin_escalation_callbacks_router,  # agentesc:* — admin escalation alert buttons
+        agent_followup_callbacks_router,  # agentfu:* — 10-min follow-up CTA buttons
         lead_callbacks_router,
         kanban_callbacks_router,    # kanban:* — visual pipeline management
         lead_status_router,         # lead:{id}:status:{status} — quick admin status updates

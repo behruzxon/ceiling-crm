@@ -157,3 +157,75 @@ def get_blocked_chat_repo(session: AsyncSession) -> PostgresBlockedChatRepositor
 def get_tactic_outcome_repo(session: AsyncSession) -> "PostgresTacticOutcomeRepository":
     from infrastructure.database.repositories.tactic_outcome_repo import PostgresTacticOutcomeRepository
     return PostgresTacticOutcomeRepository(session)
+
+
+def get_journey_event_service(session: AsyncSession) -> "JourneyEventService":
+    from core.services.journey_event_service import JourneyEventService
+    return JourneyEventService(session)
+
+
+def get_agent_memory_service(session: AsyncSession) -> "AgentMemoryService":
+    from core.services.agent_memory_service import AgentMemoryService
+    return AgentMemoryService(session)
+
+
+def get_followup_scheduler_service(session: AsyncSession) -> "FollowupSchedulerService":
+    from core.services.followup_scheduler_service import FollowupSchedulerService
+    return FollowupSchedulerService(session)
+
+
+def get_admin_escalation_service(session: AsyncSession) -> "AdminEscalationService":
+    from core.services.admin_escalation_service import AdminEscalationService
+    return AdminEscalationService(session)
+
+
+def get_agent_decision_engine() -> "AgentDecisionEngine":
+    from core.services import agent_decision_engine
+    return agent_decision_engine
+
+
+def get_lead_signal_service() -> "LeadSignalService":
+    from core.services.lead_signal_service import LeadSignalService
+    return LeadSignalService()
+
+
+def get_dynamic_offer_service() -> "DynamicOfferService":
+    from core.services.dynamic_offer_service import DynamicOfferService
+    return DynamicOfferService()
+
+
+def get_conversation_policy_service() -> "ConversationPolicyService":
+    from core.services.conversation_policy_service import ConversationPolicyService
+    return ConversationPolicyService()
+
+
+def get_text_normalization_service() -> "TextNormalizationService":
+    from core.services.text_normalization_service import TextNormalizationService
+    return TextNormalizationService()
+
+
+def get_agent_execution_sandbox_service() -> "AgentExecutionSandboxService":
+    from core.services.agent_execution_sandbox_service import AgentExecutionSandboxService
+    return AgentExecutionSandboxService()
+
+
+def get_agent_execution_queue_service(session: AsyncSession) -> "AgentExecutionQueueService":
+    from core.services.agent_execution_queue_service import AgentExecutionQueueService
+    return AgentExecutionQueueService(session)
+
+
+def get_agent_effective_settings_service(
+    runtime_overrides: dict | None = None,
+) -> "AgentEffectiveSettingsService":
+    from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
+    return AgentEffectiveSettingsService(runtime_overrides)
+
+
+def get_agent_metrics_service(session: AsyncSession) -> "AgentMetricsService":
+    from core.services.agent_metrics_service import AgentMetricsService
+    return AgentMetricsService(session)
+
+
+def get_agent_response_orchestrator() -> "AgentResponseOrchestrator":
+    from core.services.agent_response_orchestrator import AgentResponseOrchestrator
+    return AgentResponseOrchestrator()

@@ -174,6 +174,18 @@ class PaymentSettings(BaseSettings):
     bank_name: str | None = Field(default=None, description="Bank name shown in requisites")
 
 
+class ApiSettings(BaseSettings):
+    """REST API configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="API_", env_file=".env", extra="ignore")
+
+    internal_token: SecretStr | None = Field(
+        default=None,
+        description="Bearer token for internal API access. "
+        "Required in production; optional in development (open access with warning).",
+    )
+
+
 class CTASettings(BaseSettings):
     """CTA (call-to-action) marketing prompts configuration."""
 
@@ -208,6 +220,165 @@ class BusinessSettings(BaseSettings):
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
     business_hours_end: int = Field(default=20, alias="BUSINESS_HOURS_END", ge=1, le=24)
+
+    # Agent follow-up engine
+    agent_followups_enabled: bool = Field(default=False, alias="AGENT_FOLLOWUPS_ENABLED")
+    agent_catalog_followup_enabled: bool = Field(default=False, alias="AGENT_CATALOG_FOLLOWUP_ENABLED")
+    agent_price_followup_enabled: bool = Field(default=False, alias="AGENT_PRICE_FOLLOWUP_ENABLED")
+    agent_order_followup_enabled: bool = Field(default=False, alias="AGENT_ORDER_FOLLOWUP_ENABLED")
+    agent_catalog_followup_delay_minutes: int = Field(
+        default=10, alias="AGENT_CATALOG_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+    )
+    agent_price_followup_delay_minutes: int = Field(
+        default=10, alias="AGENT_PRICE_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+    )
+    agent_order_followup_delay_minutes: int = Field(
+        default=10, alias="AGENT_ORDER_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+    )
+    agent_admin_escalation_enabled: bool = Field(
+        default=False, alias="AGENT_ADMIN_ESCALATION_ENABLED",
+    )
+    agent_admin_escalation_after_followups: int = Field(
+        default=2, alias="AGENT_ADMIN_ESCALATION_AFTER_FOLLOWUPS", ge=1, le=10,
+    )
+    agent_admin_escalation_cooldown_minutes: int = Field(
+        default=60, alias="AGENT_ADMIN_ESCALATION_COOLDOWN_MINUTES", ge=5, le=1440,
+    )
+    agent_ai_composer_enabled: bool = Field(
+        default=False, alias="AGENT_AI_COMPOSER_ENABLED",
+    )
+    agent_ai_composer_model: str = Field(
+        default="gpt-4o-mini", alias="AGENT_AI_COMPOSER_MODEL",
+    )
+    agent_ai_composer_timeout_seconds: int = Field(
+        default=8, alias="AGENT_AI_COMPOSER_TIMEOUT_SECONDS", ge=3, le=30,
+    )
+    agent_ai_composer_max_tokens: int = Field(
+        default=180, alias="AGENT_AI_COMPOSER_MAX_TOKENS", ge=50, le=500,
+    )
+    agent_decision_engine_enabled: bool = Field(
+        default=False, alias="AGENT_DECISION_ENGINE_ENABLED",
+    )
+    agent_decision_log_only: bool = Field(
+        default=True, alias="AGENT_DECISION_LOG_ONLY",
+    )
+    agent_decision_min_confidence: int = Field(
+        default=60, alias="AGENT_DECISION_MIN_CONFIDENCE", ge=0, le=100,
+    )
+    agent_lead_signal_enabled: bool = Field(
+        default=False, alias="AGENT_LEAD_SIGNAL_ENABLED",
+    )
+    agent_lead_signal_min_confidence: int = Field(
+        default=50, alias="AGENT_LEAD_SIGNAL_MIN_CONFIDENCE", ge=0, le=100,
+    )
+    agent_lead_scoring_enabled: bool = Field(
+        default=False, alias="AGENT_LEAD_SCORING_ENABLED",
+    )
+    agent_dynamic_offer_enabled: bool = Field(
+        default=False, alias="AGENT_DYNAMIC_OFFER_ENABLED",
+    )
+    agent_dynamic_offer_min_confidence: int = Field(
+        default=60, alias="AGENT_DYNAMIC_OFFER_MIN_CONFIDENCE", ge=0, le=100,
+    )
+    agent_dynamic_offer_log_only: bool = Field(
+        default=True, alias="AGENT_DYNAMIC_OFFER_LOG_ONLY",
+    )
+    agent_conversation_policy_enabled: bool = Field(
+        default=False, alias="AGENT_CONVERSATION_POLICY_ENABLED",
+    )
+    agent_conversation_policy_log_only: bool = Field(
+        default=True, alias="AGENT_CONVERSATION_POLICY_LOG_ONLY",
+    )
+    agent_conversation_policy_min_confidence: int = Field(
+        default=60, alias="AGENT_CONVERSATION_POLICY_MIN_CONFIDENCE", ge=0, le=100,
+    )
+    agent_runtime_settings_enabled: bool = Field(
+        default=False, alias="AGENT_RUNTIME_SETTINGS_ENABLED",
+    )
+    agent_runtime_settings_cache_ttl_seconds: int = Field(
+        default=30, alias="AGENT_RUNTIME_SETTINGS_CACHE_TTL_SECONDS", ge=5, le=300,
+    )
+    agent_runtime_settings_fail_open_to_env: bool = Field(
+        default=True, alias="AGENT_RUNTIME_SETTINGS_FAIL_OPEN_TO_ENV",
+    )
+    agent_settings_mutation_enabled: bool = Field(
+        default=False, alias="AGENT_SETTINGS_MUTATION_ENABLED",
+    )
+    agent_settings_require_confirmation: bool = Field(
+        default=True, alias="AGENT_SETTINGS_REQUIRE_CONFIRMATION",
+    )
+    agent_settings_allow_live_flags: bool = Field(
+        default=False, alias="AGENT_SETTINGS_ALLOW_LIVE_FLAGS",
+    )
+    agent_execution_api_approval_enabled: bool = Field(
+        default=False, alias="AGENT_EXECUTION_API_APPROVAL_ENABLED",
+    )
+    agent_execution_live_sender_enabled: bool = Field(
+        default=False, alias="AGENT_EXECUTION_LIVE_SENDER_ENABLED",
+    )
+    agent_execution_live_sender_batch_limit: int = Field(
+        default=10, alias="AGENT_EXECUTION_LIVE_SENDER_BATCH_LIMIT", ge=1, le=50,
+    )
+    agent_execution_live_sender_revalidate: bool = Field(
+        default=True, alias="AGENT_EXECUTION_LIVE_SENDER_REVALIDATE",
+    )
+    agent_execution_live_sender_mark_failed_on_error: bool = Field(
+        default=True, alias="AGENT_EXECUTION_LIVE_SENDER_MARK_FAILED_ON_ERROR",
+    )
+    agent_execution_queue_enabled: bool = Field(
+        default=False, alias="AGENT_EXECUTION_QUEUE_ENABLED",
+    )
+    agent_execution_approval_ttl_minutes: int = Field(
+        default=30, alias="AGENT_EXECUTION_APPROVAL_TTL_MINUTES", ge=5, le=1440,
+    )
+    agent_execution_approval_admin_notify: bool = Field(
+        default=False, alias="AGENT_EXECUTION_APPROVAL_ADMIN_NOTIFY",
+    )
+    agent_execution_auto_execute_approved: bool = Field(
+        default=False, alias="AGENT_EXECUTION_AUTO_EXECUTE_APPROVED",
+    )
+    agent_execution_sandbox_enabled: bool = Field(
+        default=False, alias="AGENT_EXECUTION_SANDBOX_ENABLED",
+    )
+    agent_execution_mode: str = Field(
+        default="log_only", alias="AGENT_EXECUTION_MODE",
+    )
+    agent_execution_canary_user_ids: str = Field(
+        default="", alias="AGENT_EXECUTION_CANARY_USER_IDS",
+    )
+    agent_execution_require_approval_user_dm: bool = Field(
+        default=True, alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_USER_DM",
+    )
+    agent_execution_require_approval_admin_alert: bool = Field(
+        default=False, alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_ADMIN_ALERT",
+    )
+    agent_execution_max_daily_per_user: int = Field(
+        default=3, alias="AGENT_EXECUTION_MAX_DAILY_ACTIONS_PER_USER", ge=1, le=50,
+    )
+    agent_execution_trace_enabled: bool = Field(
+        default=True, alias="AGENT_EXECUTION_TRACE_ENABLED",
+    )
+    agent_text_normalization_enabled: bool = Field(
+        default=True, alias="AGENT_TEXT_NORMALIZATION_ENABLED",
+    )
+    agent_fuzzy_intent_enabled: bool = Field(
+        default=True, alias="AGENT_FUZZY_INTENT_ENABLED",
+    )
+    agent_fuzzy_max_distance: int = Field(
+        default=1, alias="AGENT_FUZZY_MAX_DISTANCE", ge=1, le=3,
+    )
+    agent_response_orchestrator_enabled: bool = Field(
+        default=False, alias="AGENT_RESPONSE_ORCHESTRATOR_ENABLED",
+    )
+    agent_response_orchestrator_log_only: bool = Field(
+        default=True, alias="AGENT_RESPONSE_ORCHESTRATOR_LOG_ONLY",
+    )
+    agent_response_orchestrator_min_confidence: int = Field(
+        default=60, alias="AGENT_RESPONSE_ORCHESTRATOR_MIN_CONFIDENCE", ge=0, le=100,
+    )
+    agent_response_orchestrator_trace_enabled: bool = Field(
+        default=True, alias="AGENT_RESPONSE_ORCHESTRATOR_TRACE_ENABLED",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -252,6 +423,7 @@ class Settings(BaseSettings):
     business: BusinessSettings = Field(default_factory=BusinessSettings)
     payment: PaymentSettings = Field(default_factory=PaymentSettings)
     cta: CTASettings = Field(default_factory=CTASettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

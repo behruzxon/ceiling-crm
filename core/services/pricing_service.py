@@ -9,34 +9,10 @@ from core.domain.lead import LeadAddons
 from core.domain.quote import Quote, QuoteAddonDetail
 from infrastructure.cache.client import get_redis
 from shared.constants.enums import CeilingCategory
+from shared.constants.pricing import ADDON_PRICES, DEFAULT_BASE_PRICES
 from shared.logging import get_logger
 
 log = get_logger(__name__)
-
-# Default base prices per sqm (UZS) — seeded to Redis cache
-DEFAULT_BASE_PRICES: dict[CeilingCategory, Decimal] = {
-    CeilingCategory.ODNOTONNY:     Decimal("120000"),
-    CeilingCategory.NAQSH_OQ:      Decimal("130000"),
-    CeilingCategory.QORA_NAQSH_UF: Decimal("180000"),
-    CeilingCategory.GULLI:         Decimal("250000"),
-    CeilingCategory.MRAMOR:        Decimal("220000"),
-    CeilingCategory.HI_TECH:       Decimal("200000"),
-    CeilingCategory.KOSMOS:        Decimal("300000"),
-    CeilingCategory.NAQSH_RAMKA:   Decimal("280000"),
-    CeilingCategory.OSMON:         Decimal("100000"),
-    CeilingCategory.OSHXONA:       Decimal("140000"),
-}
-
-# Add-on unit prices (UZS)
-ADDON_PRICES = {
-    "led_strip":        Decimal("25000"),   # per linear meter
-    "led_rgb":          Decimal("40000"),   # per linear meter
-    "chandelier_holes": Decimal("50000"),   # per hole
-    "spot_holes":       Decimal("30000"),   # per hole
-    "cornice":          Decimal("15000"),   # per linear meter
-    "profile_rounding": Decimal("80000"),   # flat fee
-    "two_level_step":   Decimal("200000"),  # flat fee
-}
 
 
 class PricingService:

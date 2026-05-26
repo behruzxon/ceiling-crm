@@ -25,6 +25,7 @@ Business rules (isolated in _calculate, not in handlers)
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
 
@@ -38,9 +39,10 @@ from apps.bot.keyboards.main_menu import BTN_OPERATOR, BTN_PRICE, MAIN_MENU_BUTT
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from apps.bot.states.pricing import PricingStates
+from core.services.journey_event_service import emit_journey_event
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
-from shared.constants.enums import CeilingCategory, LeadSource
+from shared.constants.enums import CeilingCategory, JourneyEventType, LeadSource
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -201,8 +203,14 @@ async def cmd_pricing_start(
     message: Message, state: FSMContext, **data: object
 ) -> None:
     """Clear any running FSM and begin the pricing flow."""
-    log.debug("pricing_start_triggered", user_id=message.from_user and message.from_user.id)
+    uid = message.from_user.id if message.from_user else 0
+    log.debug("pricing_start_triggered", user_id=uid)
     await start_pricing_flow(message, state)
+    asyncio.create_task(emit_journey_event(
+        user_id=uid,
+        event_type=JourneyEventType.USED_PRICE_CALCULATOR,
+        source_handler="pricing:cmd_pricing_start",
+    ))
 
 
 # ─── Menu-button escape (waiting_for_length / waiting_for_width) ─────────────
@@ -405,6 +413,18 @@ async def handle_design_callback(
         lead_id=lead_id,
     )
     await state.set_state(PricingStates.confirming_action)
+
+    asyncio.create_task(emit_journey_event(
+        user_id=user.id,
+        event_type=JourneyEventType.PRICE_CALCULATED,
+        event_data={
+            "area_m2": area,
+            "design": key,
+            "price": quote.final_total,
+            "currency": "UZS",
+        },
+        source_handler="pricing:handle_design_callback",
+    ))
 
     if callback.message is None:
         return  # edge case: inline message already deleted

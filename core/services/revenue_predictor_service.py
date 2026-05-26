@@ -6,10 +6,7 @@ Deterministic revenue prediction for leads.
 Estimates min / max / best revenue range and upsell potential based on
 room dimensions, design interest, buyer type, and addon likelihood.
 
-Reuses existing pricing constants:
-  - ``ADDON_PRICES`` from ``core.services.pricing_service``
-  - ``_DESIGN_PRICES`` / ``_DEFAULT_PRICE_PER_M2`` from
-    ``shared.utils.deal_probability``
+Reuses canonical pricing constants from ``shared.constants.pricing``.
 
 This is a **complementary layer** — it does NOT replace the deal
 probability engine's ``expected_deal_value``.  Instead it provides a
@@ -33,32 +30,11 @@ from dataclasses import dataclass, field
 
 
 # ── Reuse canonical pricing constants ────────────────────────────────────────
-# Import customer-facing design prices (80k–140k per m²).
-from shared.utils.deal_probability import (
-    _DEFAULT_PRICE_PER_M2,
-    _DESIGN_PRICES,
-)
-
-# Addon unit prices (UZS) — aligned with core.services.pricing_service.ADDON_PRICES.
-# Defined here to avoid importing pricing_service at module level, which
-# pulls in infrastructure.cache.client and requires a running Redis.
-from decimal import Decimal as _D
-
-ADDON_PRICES = {
-    "led_strip":        _D("25000"),    # per linear meter
-    "led_rgb":          _D("40000"),    # per linear meter
-    "chandelier_holes": _D("50000"),    # per hole
-    "spot_holes":       _D("30000"),    # per hole
-    "cornice":          _D("15000"),    # per linear meter
-    "profile_rounding": _D("80000"),    # flat fee
-    "two_level_step":   _D("200000"),   # flat fee
-}
-
-# ── Discount tiers (mirroring apps/bot/handlers/private/pricing.py) ──────────
-
-_DISCOUNT_TIERS: tuple[tuple[float, float], ...] = (
-    (40.0, 0.10),   # area > 40 m² → 10%
-    (20.0, 0.05),   # area > 20 m² → 5%
+from shared.constants.pricing import (
+    ADDON_PRICES,
+    DEFAULT_PRICE_PER_M2 as _DEFAULT_PRICE_PER_M2,
+    DESIGN_PRICES_CUSTOMER as _DESIGN_PRICES,
+    DISCOUNT_TIERS as _DISCOUNT_TIERS,
 )
 
 # ── Cheapest / most expensive base prices for range bounds ───────────────────

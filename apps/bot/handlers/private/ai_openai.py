@@ -13,8 +13,6 @@ import time
 from typing import Any
 
 import sqlalchemy as sa
-import httpx
-from openai import AsyncOpenAI
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from apps.bot.ai.system_prompt import (
@@ -24,32 +22,20 @@ from apps.bot.ai.system_prompt import (
     detect_prompt_injection,
     sanitize_ai_reply,
 )
+from infrastructure.ai.openai_client import (  # noqa: F401 — re-exported
+    _get_client,
+    _record_usage,
+)
 from infrastructure.database.models.ai_conversation import AiConversationModel
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from infrastructure.monitoring.prometheus import (
-    openai_tokens_prompt_total,
-    openai_tokens_completion_total,
     openai_requests_total,
-    openai_request_duration,
 )
 from shared.config import get_settings
 from shared.logging import get_logger
 
 log = get_logger(__name__)
-
-
-def _record_usage(resp: Any, model: str, duration: float) -> None:
-    """Record OpenAI response usage in Prometheus counters. Never raises."""
-    try:
-        openai_requests_total.labels(model=model, status="ok").inc()
-        openai_request_duration.labels(model=model).observe(duration)
-        usage = getattr(resp, "usage", None)
-        if usage:
-            openai_tokens_prompt_total.labels(model=model).inc(usage.prompt_tokens or 0)
-            openai_tokens_completion_total.labels(model=model).inc(usage.completion_tokens or 0)
-    except Exception:
-        log.warning("_record_usage_error", exc_info=True)
 
 # ── Tuneable constants ───────────────────────────────────────────────────────
 
@@ -58,27 +44,6 @@ _HISTORY_TO_SEND = 8         # how many messages to pass to OpenAI per call
 _SUMMARY_EVERY_N_TURNS = 10  # regenerate summary every N user turns
 _MAX_REQUEST_TOKENS = 8000   # hard cap on total prompt tokens per OpenAI call
 _CHARS_PER_TOKEN = 3         # conservative estimate (real ≈ 3.5-4 for Uzbek)
-
-
-# ── OpenAI client (lazy singleton) ──────────────────────────────────────────
-
-_openai_client: AsyncOpenAI | None = None
-
-
-def _get_client() -> AsyncOpenAI:
-    global _openai_client
-    if _openai_client is None:
-        settings = get_settings()
-        api_key = (
-            settings.ai.api_key.get_secret_value()
-            if settings.ai.api_key
-            else settings.openai.api_key.get_secret_value()
-        )
-        _openai_client = AsyncOpenAI(
-            api_key=api_key,
-            timeout=httpx.Timeout(30.0, connect=10.0),
-        )
-    return _openai_client
 
 
 # ── Context builder ─────────────────────────────────────────────────────────

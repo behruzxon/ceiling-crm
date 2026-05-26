@@ -149,7 +149,7 @@ def build_deal_closer_prompt(
 
     # Build conversation block (truncate to last 10 messages)
     # Pre-flight: sanitize user-authored message text before prompt injection
-    from apps.bot.ai.system_prompt import sanitize_user_text_for_prompt
+    from shared.utils.sanitize import sanitize_user_text_for_prompt
 
     _BLOCKED = "[blocked]"
     conv_lines: list[str] = []

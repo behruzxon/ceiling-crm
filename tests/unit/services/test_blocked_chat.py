@@ -7,7 +7,7 @@ Covers:
 """
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -130,7 +130,8 @@ class TestUpsertBlockedChatHelper:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        mock_factory = AsyncMock(return_value=mock_session)
+        # async_sessionmaker.__call__ is synchronous, returns an async ctx mgr
+        mock_factory = MagicMock(return_value=mock_session)
 
         with patch(
             "infrastructure.queue.tasks.broadcast_tasks.PostgresBlockedChatRepository",
@@ -148,7 +149,7 @@ class TestUpsertBlockedChatHelper:
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_factory = AsyncMock(return_value=mock_session)
+        mock_factory = MagicMock(return_value=mock_session)
 
         with patch(
             "infrastructure.queue.tasks.broadcast_tasks.PostgresBlockedChatRepository",
@@ -165,7 +166,7 @@ class TestUpsertBlockedChatHelper:
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_factory = AsyncMock(return_value=mock_session)
+        mock_factory = MagicMock(return_value=mock_session)
 
         with patch(
             "infrastructure.queue.tasks.broadcast_tasks.PostgresBlockedChatRepository",

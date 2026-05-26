@@ -41,6 +41,7 @@ Admin notifications
 """
 from __future__ import annotations
 
+import asyncio as _asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -61,12 +62,13 @@ from aiogram.types import (
 )
 
 from apps.bot.keyboards.main_menu import BTN_ORDER, MAIN_MENU_BUTTONS, main_menu_keyboard
+from core.services.journey_event_service import emit_journey_event
+from core.services.lead_notification_service import is_hot_lead
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
-from core.services.lead_notification_service import is_hot_lead
 from infrastructure.di import get_lead_notification_service, get_lead_repo, get_lead_service, get_pipeline_repo
 from shared.config import get_settings
-from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
+from shared.constants.enums import CeilingCategory, JourneyEventType, LeadSource, PipelineStage
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
 
@@ -380,6 +382,11 @@ async def cmd_order_start(message: Message, state: FSMContext, **data: object) -
         user_id=user.id if user else 0,
         first_name=(user.first_name or "—") if user else "—",
     )
+    _asyncio.create_task(emit_journey_event(
+        user_id=user.id if user else 0,
+        event_type=JourneyEventType.CLICKED_ORDER,
+        source_handler="order:cmd_order_start",
+    ))
 
 
 # ─── Step 1: Name ────────────────────────────────────────────────────────────────
@@ -393,6 +400,12 @@ async def handle_name(message: Message, state: FSMContext, **data: object) -> No
 
     await state.update_data(name=name)
     await state.set_state(OrderFlow.waiting_for_phone)
+    _asyncio.create_task(emit_journey_event(
+        user_id=message.from_user.id if message.from_user else 0,
+        event_type=JourneyEventType.ORDER_FORM_STARTED,
+        event_data={"form_step": "name_entered"},
+        source_handler="order:handle_name",
+    ))
     await message.answer(
         f"✅ Ism: <b>{name}</b>\n\n"
         "📱 Telefon raqamingizni kiriting yoki tugmani bosing:\n"

@@ -27,7 +27,7 @@ _MIN_AREA: float = 0.0
 _MAX_AREA: float = 10_000.0
 
 # Narrower bounds for ambiguous patterns (space-pair and bare number)
-_MIN_AREA_STRICT: float = 1.99   # effectively >= 2
+_MIN_AREA_STRICT: float = 4.0    # effectively > 4 (rejects ambiguous small products like 2×2)
 _MAX_AREA_STRICT: float = 500.0
 
 # ── Number token ───────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ _DIM_WORD_RE: re.Pattern[str] = re.compile(
 # Ordered longest-first to prevent partial matches
 # (e.g. "кв.м" must come before "кв", "kvadrat metr" before "kvadrat").
 _UNIT_RE: re.Pattern[str] = re.compile(
-    rf"{_N}\s*"
+    rf"(?<!-){_N}\s*"
     r"(?:"
     r"metr\s+kvadrat"    # "30 metr kvadrat"
     r"|kvadrat\s+metr"   # "30 kvadrat metr"
