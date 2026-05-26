@@ -277,6 +277,15 @@ class BusinessSettings(BaseSettings):
     admin_security_permission_denied_alert_threshold: int = Field(default=10, alias="ADMIN_SECURITY_PERMISSION_DENIED_ALERT_THRESHOLD", ge=1, le=100)
     admin_security_sensitive_export_threshold: int = Field(default=3, alias="ADMIN_SECURITY_SENSITIVE_EXPORT_THRESHOLD", ge=1, le=50)
 
+    # Admin Security Actions
+    admin_security_actions_enabled: bool = Field(default=False, alias="ADMIN_SECURITY_ACTIONS_ENABLED")
+    admin_session_revoke_enabled: bool = Field(default=True, alias="ADMIN_SESSION_REVOKE_ENABLED")
+    admin_admin_disable_enabled: bool = Field(default=True, alias="ADMIN_ADMIN_DISABLE_ENABLED")
+    admin_ip_rules_enabled: bool = Field(default=False, alias="ADMIN_IP_RULES_ENABLED")
+    admin_ip_block_enforcement_enabled: bool = Field(default=False, alias="ADMIN_IP_BLOCK_ENFORCEMENT_ENABLED")
+    admin_security_action_require_confirmation: bool = Field(default=True, alias="ADMIN_SECURITY_ACTION_REQUIRE_CONFIRMATION")
+    admin_security_action_audit_enabled: bool = Field(default=True, alias="ADMIN_SECURITY_ACTION_AUDIT_ENABLED")
+
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)

@@ -264,3 +264,8 @@ def get_admin_csrf_service() -> "AdminCSRFService":
 def get_admin_security_audit_service() -> "AdminSecurityAuditService":
     from core.services.admin_security_audit_service import AdminSecurityAuditService
     return AdminSecurityAuditService()
+
+
+def get_admin_security_action_service() -> "AdminSecurityActionService":
+    from core.services.admin_security_action_service import AdminSecurityActionService
+    return AdminSecurityActionService()
