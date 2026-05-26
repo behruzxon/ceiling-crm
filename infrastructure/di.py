@@ -239,3 +239,13 @@ def get_crm_contact_service(session: AsyncSession) -> "CRMContactService":
 def get_crm_message_service(session: AsyncSession) -> "CRMMessageService":
     from core.services.crm_message_service import CRMMessageService
     return CRMMessageService(session)
+
+
+def get_admin_user_service(session: AsyncSession) -> "AdminUserService":
+    from core.services.admin_user_service import AdminUserService
+    return AdminUserService(session)
+
+
+def get_admin_audit_log_service(session: AsyncSession) -> "AdminAuditLogService":
+    from core.services.admin_audit_log_service import AdminAuditLogService
+    return AdminAuditLogService(session)

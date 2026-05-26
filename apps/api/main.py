@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
     from apps.api.routes.admin_agent_settings import router as agent_settings_router
     from apps.api.routes.admin_agent_observation import router as agent_observation_router
     from apps.api.routes.admin_crm import router as crm_router
+    from apps.api.routers.admin_users import router as admin_users_router
+    from apps.api.routers.admin_users import audit_router as admin_audit_router
 
     app.include_router(health_router)
     app.include_router(leads_router)
@@ -77,6 +79,8 @@ def create_app() -> FastAPI:
     app.include_router(agent_settings_router)
     app.include_router(agent_observation_router)
     app.include_router(crm_router)
+    app.include_router(admin_users_router)
+    app.include_router(admin_audit_router)
 
     return app
 

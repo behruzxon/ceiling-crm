@@ -122,5 +122,67 @@ class AdminRBACService:
         }
 
     @staticmethod
+    def resolve_role_with_db(
+        admin_id: str,
+        db_user: dict | None,
+        db_rbac_enabled: bool = False,
+        fallback_to_env: bool = True,
+        owner_ids: str = "",
+        admin_ids: str = "",
+        operator_ids: str = "",
+        analyst_ids: str = "",
+        viewer_ids: str = "",
+        default_role: str = "admin",
+    ) -> tuple[str, str]:
+        """Resolve role from DB first, then env fallback.
+
+        Returns (role, source) where source is "db" or "env".
+        """
+        if db_rbac_enabled and db_user is not None:
+            if db_user.get("is_active", False):
+                return db_user.get("role", "viewer"), "db"
+        if fallback_to_env or not db_rbac_enabled:
+            env_role = AdminRBACService.get_role_for_admin(
+                admin_id,
+                owner_ids=owner_ids,
+                admin_ids=admin_ids,
+                operator_ids=operator_ids,
+                analyst_ids=analyst_ids,
+                viewer_ids=viewer_ids,
+                default_role=default_role,
+            )
+            return env_role, "env"
+        return default_role, "env"
+
+    @staticmethod
+    def get_effective_permissions(
+        role: str,
+        permissions_override: dict | None = None,
+    ) -> frozenset[str]:
+        base = _ROLE_PERMISSIONS.get(role, frozenset())
+        if not permissions_override:
+            return base
+        result = set(base)
+        for perm, allowed in permissions_override.items():
+            if allowed:
+                result.add(perm)
+            else:
+                result.discard(perm)
+        return frozenset(result)
+
+    @staticmethod
+    def check_permission_with_override(
+        role: str,
+        permission: str,
+        permissions_override: dict | None = None,
+    ) -> PermissionCheckResult:
+        effective = AdminRBACService.get_effective_permissions(role, permissions_override)
+        allowed = permission in effective
+        reason = "" if allowed else f"{role} does not have {permission}"
+        return PermissionCheckResult(
+            allowed=allowed, role=role, permission=permission, reason=reason,
+        )
+
+    @staticmethod
     def explain_denial(permission: str, role: str) -> str:
         return f"Ruxsat yo'q: {permission} — sizning rolingiz: {role}"

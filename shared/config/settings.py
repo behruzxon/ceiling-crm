@@ -251,6 +251,8 @@ class BusinessSettings(BaseSettings):
     admin_analyst_ids: str = Field(default="", alias="ADMIN_ANALYST_IDS")
     admin_viewer_ids: str = Field(default="", alias="ADMIN_VIEWER_IDS")
     admin_default_role: str = Field(default="admin", alias="ADMIN_DEFAULT_ROLE")
+    admin_db_rbac_enabled: bool = Field(default=False, alias="ADMIN_DB_RBAC_ENABLED")
+    admin_db_rbac_fallback_to_env: bool = Field(default=True, alias="ADMIN_DB_RBAC_FALLBACK_TO_ENV")
 
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
