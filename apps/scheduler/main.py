@@ -18,6 +18,7 @@ from apps.scheduler.jobs.auto_sales_jobs import register_auto_sales_jobs
 from apps.scheduler.jobs.outcome_resolver_jobs import register_outcome_resolver_jobs
 from apps.scheduler.jobs.agent_execution_jobs import register_agent_execution_jobs
 from apps.scheduler.jobs.approved_execution_sender_jobs import register_approved_execution_sender_jobs
+from apps.scheduler.jobs.crm_daily_report_jobs import register_crm_daily_report_jobs
 from infrastructure.database.session import connect_database, disconnect_database
 from infrastructure.cache.client import connect_redis, disconnect_redis
 from shared.logging import configure_logging, get_logger
@@ -72,6 +73,7 @@ async def run_scheduler() -> None:
     register_outcome_resolver_jobs(scheduler)
     register_agent_execution_jobs(scheduler)
     register_approved_execution_sender_jobs(scheduler)
+    register_crm_daily_report_jobs(scheduler)
 
     scheduler.start()
     for job in scheduler.get_jobs():

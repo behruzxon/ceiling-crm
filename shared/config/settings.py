@@ -226,6 +226,10 @@ class BusinessSettings(BaseSettings):
     crm_sla_critical_minutes: int = Field(default=30, alias="CRM_SLA_CRITICAL_MINUTES")
     crm_segments_enabled: bool = Field(default=True, alias="CRM_SEGMENTS_ENABLED")
     crm_enrichment_enabled: bool = Field(default=True, alias="CRM_ENRICHMENT_ENABLED")
+    crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
+    crm_daily_report_delivery_mode: str = Field(
+        default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",
+    )
 
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
