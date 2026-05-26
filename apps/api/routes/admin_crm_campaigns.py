@@ -165,3 +165,24 @@ async def send_limited(campaign_id: int, body: SendLimitedBody) -> dict:
 @router.get("/drafts/{campaign_id}/send-attempts")
 async def list_send_attempts(campaign_id: int, limit: int = Query(50, ge=1, le=200)) -> dict:
     return {"attempts": [], "total": 0, "campaign_id": campaign_id, "note": "Empty DB"}
+
+
+@router.get("/drafts/{campaign_id}/analytics")
+async def campaign_analytics(
+    campaign_id: int,
+    reply_window_hours: int = Query(72, ge=1, le=720),
+) -> dict:
+    from dataclasses import asdict
+    from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
+    analytics = CRMCampaignAnalyticsService.build_campaign_analytics(campaign_id, [])
+    return asdict(analytics)
+
+
+@router.get("/analytics/dashboard")
+async def campaign_dashboard(
+    hours: int = Query(720, ge=1, le=2160),
+) -> dict:
+    from dataclasses import asdict
+    from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
+    summary = CRMCampaignAnalyticsService.build_dashboard_summary([], [])
+    return asdict(summary)
