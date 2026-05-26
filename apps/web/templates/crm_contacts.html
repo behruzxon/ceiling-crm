@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% set active_page = "crm" %}
+{% block title %}CRM Contacts — Systemax CRM{% endblock %}
+{% block page_title %}CRM — Kontaktlar{% endblock %}
+{% block content %}
+<div style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;">
+    <input id="crmSearch" type="text" placeholder="Qidirish..." style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:200px;" value="{{ q }}">
+    <select id="crmStatusFilter" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        <option value="">Barcha status</option>
+        {% for s in ["new","active","browsing","price_interested","hot","operator_needed","order_started","won","lost","stopped"] %}
+        <option value="{{ s }}" {{ 'selected' if status == s else '' }}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <select id="crmTempFilter" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        <option value="">Barcha temp</option>
+        <option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option>
+    </select>
+</div>
+
+{% set items = (data or {}).get("items", []) %}
+{% if items %}
+<div style="overflow-x:auto;">
+<table id="crmContactsTable" style="width:100%;font-size:13px;border-collapse:collapse;">
+    <thead><tr style="border-bottom:2px solid #e2e8f0;">
+        <th style="text-align:left;padding:8px;">Name</th>
+        <th style="text-align:left;padding:8px;">Username</th>
+        <th style="text-align:left;padding:8px;">Status</th>
+        <th style="text-align:left;padding:8px;">Temp</th>
+        <th style="text-align:left;padding:8px;">Score</th>
+        <th style="text-align:left;padding:8px;">Oxirgi</th>
+        <th style="text-align:left;padding:8px;"></th>
+    </tr></thead>
+    <tbody>
+    {% for c in items %}
+    <tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:8px;">{{ c.first_name or "—" }}</td>
+        <td style="padding:8px;">{{ c.username or "—" }}</td>
+        <td style="padding:8px;"><span style="padding:2px 6px;border-radius:4px;font-size:11px;background:#f1f5f9;">{{ c.lead_status }}</span></td>
+        <td style="padding:8px;">{{ c.temperature or "—" }}</td>
+        <td style="padding:8px;">{{ c.lead_score }}</td>
+        <td style="padding:8px;font-size:11px;color:#94a3b8;">{{ (c.last_seen_at or "")[:16] }}</td>
+        <td style="padding:8px;"><a href="/crm/{{ c.id }}" style="color:#6366f1;font-size:12px;">Ochish</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div id="crmEmptyState" style="text-align:center;padding:40px;color:#94a3b8;">
+    Kontaktlar hali yo'q yoki filter bo'yicha topilmadi.
+</div>
+{% endif %}
+{% endblock %}

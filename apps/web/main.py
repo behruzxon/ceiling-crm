@@ -145,3 +145,33 @@ async def agent_dashboard(
             "hours": hours,
         },
     )
+
+
+@app.get("/crm", response_class=HTMLResponse)
+async def crm_contacts(
+    request: Request,
+    q: str = Query(""),
+    status: str = Query(""),
+    temperature: str = Query(""),
+):
+    data = await api_get(
+        "/api/v1/admin/crm/contacts",
+        params={"q": q, "status": status, "temperature": temperature, "limit": 50},
+    )
+    return templates.TemplateResponse(
+        "crm_contacts.html",
+        {"request": request, "data": data, "q": q, "status": status},
+    )
+
+
+@app.get("/crm/{contact_id}", response_class=HTMLResponse)
+async def crm_contact_detail(request: Request, contact_id: int):
+    contact = await api_get(f"/api/v1/admin/crm/contacts/{contact_id}")
+    messages = await api_get(
+        f"/api/v1/admin/crm/contacts/{contact_id}/messages",
+        params={"limit": 100},
+    )
+    return templates.TemplateResponse(
+        "crm_contact_detail.html",
+        {"request": request, "contact": contact, "messages": messages},
+    )

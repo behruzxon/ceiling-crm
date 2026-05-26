@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% set active_page = "crm" %}
+{% block title %}Contact Detail — Systemax CRM{% endblock %}
+{% block page_title %}Kontakt — {{ (contact or {}).get("first_name", "?") }}{% endblock %}
+{% block content %}
+{% set c = contact or {} %}
+{% set msgs = (messages or {}).get("items", []) %}
+
+<div style="display:grid;grid-template-columns:300px 1fr;gap:24px;">
+    <!-- Left: Profile -->
+    <div>
+        <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:16px;">
+            <h3 style="font-size:15px;font-weight:600;">{{ c.get("first_name", "") }} {{ c.get("last_name", "") }}</h3>
+            <div style="font-size:12px;color:#64748b;margin-top:8px;">
+                <div>Username: {{ c.get("username") or "—" }}</div>
+                <div>Telefon: {{ c.get("phone") or "—" }}</div>
+                <div>Til: {{ c.get("language_code") or "—" }}</div>
+                <div>Manba: {{ c.get("source") or "—" }}</div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+                <span style="padding:2px 8px;background:#f1f5f9;border-radius:4px;font-size:11px;">{{ c.get("lead_status", "new") }}</span>
+                {% if c.get("temperature") %}
+                <span style="padding:2px 8px;background:#fefce8;border-radius:4px;font-size:11px;">{{ c.temperature }}</span>
+                {% endif %}
+                <span style="padding:2px 8px;background:#f0fdf4;border-radius:4px;font-size:11px;">Score: {{ c.get("lead_score", 0) }}</span>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div id="tagsSection" style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:16px;">
+            <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">Teglar</h4>
+            <div style="font-size:12px;color:#94a3b8;">Teglar API orqali boshqariladi.</div>
+        </div>
+
+        <!-- Notes -->
+        <div id="notesSection" style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
+            <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">Eslatmalar</h4>
+            <textarea id="noteInput" placeholder="Eslatma yozing..." style="width:100%;height:60px;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea>
+            <button onclick="addNote()" style="margin-top:6px;padding:4px 12px;font-size:11px;background:#6366f1;color:#fff;border:none;border-radius:4px;cursor:pointer;">Saqlash</button>
+        </div>
+    </div>
+
+    <!-- Right: Timeline -->
+    <div>
+        <div id="chatTimeline" style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;min-height:400px;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Suhbat tarixi</h3>
+            {% if msgs %}
+            {% for m in msgs|reverse %}
+            <div style="margin-bottom:8px;padding:8px;border-radius:8px;background:{{ '#f0f9ff' if m.direction == 'inbound' else '#f0fdf4' if m.direction == 'outbound' else '#f8fafc' }};max-width:80%;">
+                <div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">{{ m.sender_type }} • {{ m.direction }} • {{ (m.created_at or "")[:16] }}</div>
+                <div style="font-size:13px;">{{ m.text or "[media]" }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align:center;color:#94a3b8;padding:40px;">Xabarlar hali yo'q</div>
+            {% endif %}
+        </div>
+
+        <!-- Operator Reply Section -->
+        <div id="operatorReplySection" style="margin-top:16px;padding:12px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+            <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">Javob yozish</h4>
+            <div id="replyDisabledNotice" style="padding:8px;background:#fefce8;border-radius:4px;font-size:12px;color:#a16207;margin-bottom:8px;">
+                Operator reply hozir o'chirilgan. Settings orqali yoqiladi.
+            </div>
+            <textarea id="replyTextarea" placeholder="Xabar yozing..." style="width:100%;height:80px;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea>
+            <div id="replyBlockers" style="display:none;color:#ef4444;font-size:11px;margin:4px 0;"></div>
+            <div id="replyWarnings" style="display:none;color:#a16207;font-size:11px;margin:4px 0;"></div>
+            <div style="margin-top:6px;display:flex;gap:8px;">
+                <button id="previewBtn" onclick="previewReply()" style="padding:4px 12px;font-size:11px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;">Preview</button>
+                <button id="sendBtn" onclick="sendReply()" style="padding:4px 12px;font-size:11px;background:#10b981;color:#fff;border:none;border-radius:4px;cursor:pointer;" disabled>Yuborish</button>
+            </div>
+            <div id="replyConfirmWarn" style="display:none;margin-top:6px;padding:6px;background:#fef2f2;border-radius:4px;font-size:11px;color:#dc2626;">
+                Bu xabar Telegram orqali real mijozga yuboriladi!
+            </div>
+            <div id="replyResult" style="display:none;margin-top:6px;font-size:12px;"></div>
+        </div>
+
+        <!-- Reply Audit -->
+        <div id="replyAuditSection" style="margin-top:8px;">
+            <details>
+                <summary style="cursor:pointer;font-size:12px;color:#475569;">Yuborish tarixi</summary>
+                <div id="replyAuditLog" style="font-size:11px;color:#94a3b8;margin-top:4px;"><em>API orqali ko'riladi</em></div>
+            </details>
+        </div>
+    </div>
+</div>
+
+<script>
+let _replyAllowed = false;
+async function previewReply() {
+    const text = document.getElementById('replyTextarea').value.trim();
+    if (!text) return;
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/reply/preview', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        const d = await r.json();
+        _replyAllowed = d.allowed;
+        document.getElementById('sendBtn').disabled = !d.allowed;
+        if (d.blockers && d.blockers.length) {
+            document.getElementById('replyBlockers').style.display = 'block';
+            document.getElementById('replyBlockers').textContent = 'Bloklangan: ' + d.blockers.join(', ');
+        } else { document.getElementById('replyBlockers').style.display = 'none'; }
+        if (d.warnings && d.warnings.length) {
+            document.getElementById('replyWarnings').style.display = 'block';
+            document.getElementById('replyWarnings').textContent = 'Ogohlantirish: ' + d.warnings.join(', ');
+        } else { document.getElementById('replyWarnings').style.display = 'none'; }
+        if (d.allowed) { document.getElementById('replyConfirmWarn').style.display = 'block'; }
+    } catch(e) { alert('Xato: ' + e.message); }
+}
+async function sendReply() {
+    if (!_replyAllowed) return;
+    if (!confirm('Bu xabar real mijozga yuboriladi. Davom etasizmi?')) return;
+    const text = document.getElementById('replyTextarea').value.trim();
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/reply/send', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text, confirm: true})
+        });
+        const d = await r.json();
+        const el = document.getElementById('replyResult');
+        el.style.display = 'block';
+        el.style.color = d.status === 'sent' ? '#10b981' : '#ef4444';
+        el.textContent = d.status === 'sent' ? 'Yuborildi!' : 'Status: ' + d.status;
+        if (d.status === 'sent') { document.getElementById('replyTextarea').value = ''; _replyAllowed = false; document.getElementById('sendBtn').disabled = true; }
+    } catch(e) { alert('Xato: ' + e.message); }
+}
+async function addNote() {
+    const text = document.getElementById('noteInput').value.trim();
+    if (!text) return;
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/notes', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        if (r.ok) { document.getElementById('noteInput').value = ''; alert('Saqlandi'); }
+        else { alert('Xato'); }
+    } catch(e) { alert('Xato: ' + e.message); }
+}
+</script>
+{% endblock %}

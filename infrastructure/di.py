@@ -229,3 +229,13 @@ def get_agent_metrics_service(session: AsyncSession) -> "AgentMetricsService":
 def get_agent_response_orchestrator() -> "AgentResponseOrchestrator":
     from core.services.agent_response_orchestrator import AgentResponseOrchestrator
     return AgentResponseOrchestrator()
+
+
+def get_crm_contact_service(session: AsyncSession) -> "CRMContactService":
+    from core.services.crm_contact_service import CRMContactService
+    return CRMContactService(session)
+
+
+def get_crm_message_service(session: AsyncSession) -> "CRMMessageService":
+    from core.services.crm_message_service import CRMMessageService
+    return CRMMessageService(session)

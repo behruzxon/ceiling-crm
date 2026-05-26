@@ -216,6 +216,17 @@ class BusinessSettings(BaseSettings):
     new_lead_alert_minutes: int = Field(default=30, alias="NEW_LEAD_ALERT_MINUTES")
     broadcast_rate_limit: int = Field(default=30, alias="BROADCAST_RATE_LIMIT")
 
+    # CRM Operator Reply
+    crm_operator_reply_enabled: bool = Field(default=False, alias="CRM_OPERATOR_REPLY_ENABLED")
+    crm_operator_reply_max_length: int = Field(default=1000, alias="CRM_OPERATOR_REPLY_MAX_LENGTH")
+    crm_operator_reply_block_stopped: bool = Field(default=True, alias="CRM_OPERATOR_REPLY_BLOCK_STOPPED")
+    crm_inbox_auto_refresh_seconds: int = Field(default=15, alias="CRM_INBOX_AUTO_REFRESH_SECONDS")
+    crm_sla_due_soon_minutes: int = Field(default=5, alias="CRM_SLA_DUE_SOON_MINUTES")
+    crm_sla_overdue_minutes: int = Field(default=15, alias="CRM_SLA_OVERDUE_MINUTES")
+    crm_sla_critical_minutes: int = Field(default=30, alias="CRM_SLA_CRITICAL_MINUTES")
+    crm_segments_enabled: bool = Field(default=True, alias="CRM_SEGMENTS_ENABLED")
+    crm_enrichment_enabled: bool = Field(default=True, alias="CRM_ENRICHMENT_ENABLED")
+
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
     business_hours_start: int = Field(default=9, alias="BUSINESS_HOURS_START", ge=0, le=23)
