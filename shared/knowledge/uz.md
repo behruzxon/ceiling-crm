@@ -146,11 +146,14 @@ AI rejimida quyidagi tezkor tugmalar mavjud:
 
 ## Operatorga ulash qoidasi
 
+- Operator so'rovi queuega tushadi va operator ko'rib chiqadi
 - Telefon bo'lmasa telefon so'rash kerak
 - Aniq vaqt va'da qilmaslik: "Operator ko'rib chiqadi" deyish mumkin
 - "Operator hozir qo'ng'iroq qiladi" DEMASLIK
 - "Bugun bog'lanadi" DEMASLIK
 - Navbat yoki aniq daqiqa aytmaslik
+- User qo'shimcha savol yozishi mumkin
+- Takroriy so'rov bo'lsa yangi yaratmasdan mavjudini yangilash
 
 ## To'lov qoidasi
 

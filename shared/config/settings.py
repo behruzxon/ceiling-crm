@@ -221,6 +221,15 @@ class BusinessSettings(BaseSettings):
     crm_operator_reply_max_length: int = Field(default=1000, alias="CRM_OPERATOR_REPLY_MAX_LENGTH")
     crm_operator_reply_block_stopped: bool = Field(default=True, alias="CRM_OPERATOR_REPLY_BLOCK_STOPPED")
     crm_inbox_auto_refresh_seconds: int = Field(default=15, alias="CRM_INBOX_AUTO_REFRESH_SECONDS")
+
+    # CRM Operator Handoff Queue
+    crm_operator_handoff_queue_enabled: bool = Field(default=True, alias="CRM_OPERATOR_HANDOFF_QUEUE_ENABLED")
+    crm_operator_handoff_require_phone: bool = Field(default=True, alias="CRM_OPERATOR_HANDOFF_REQUIRE_PHONE")
+    crm_operator_handoff_dedup_minutes: int = Field(default=30, alias="CRM_OPERATOR_HANDOFF_DEDUP_MINUTES")
+    crm_operator_handoff_expire_hours: int = Field(default=24, alias="CRM_OPERATOR_HANDOFF_EXPIRE_HOURS")
+    crm_operator_handoff_admin_notify_enabled: bool = Field(default=False, alias="CRM_OPERATOR_HANDOFF_ADMIN_NOTIFY_ENABLED")
+    crm_operator_handoff_default_priority: str = Field(default="normal", alias="CRM_OPERATOR_HANDOFF_DEFAULT_PRIORITY")
+    crm_operator_handoff_urgent_score_threshold: int = Field(default=80, alias="CRM_OPERATOR_HANDOFF_URGENT_SCORE_THRESHOLD")
     crm_sla_due_soon_minutes: int = Field(default=5, alias="CRM_SLA_DUE_SOON_MINUTES")
     crm_sla_overdue_minutes: int = Field(default=15, alias="CRM_SLA_OVERDUE_MINUTES")
     crm_sla_critical_minutes: int = Field(default=30, alias="CRM_SLA_CRITICAL_MINUTES")
