@@ -5,9 +5,10 @@ Read-only security audit analytics. Pure functions — no DB I/O.
 Accepts pre-queried data dicts and produces dashboard metrics.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -133,7 +134,7 @@ class AdminSecurityAuditService:
     ) -> SessionMetrics:
         if not sessions:
             return SessionMetrics()
-        check_time = now or datetime.now(timezone.utc)
+        check_time = now or datetime.now(UTC)
         today_start = check_time.replace(hour=0, minute=0, second=0, microsecond=0)
         soon_threshold = check_time + timedelta(hours=2)
         stale_threshold = check_time - timedelta(hours=24)
@@ -354,7 +355,7 @@ class AdminSecurityAuditService:
         period_hours: int = 24,
         now: datetime | None = None,
     ) -> SecurityDashboard:
-        check_time = now or datetime.now(timezone.utc)
+        check_time = now or datetime.now(UTC)
         login_m = AdminSecurityAuditService.get_login_attempt_metrics(login_attempts)
         session_m = AdminSecurityAuditService.get_session_metrics(sessions, now=check_time)
         denied_m = AdminSecurityAuditService.get_permission_denied_metrics(audit_entries)
@@ -440,12 +441,12 @@ class AdminSecurityAuditService:
 def _parse_dt(val: Any) -> datetime | None:
     if isinstance(val, datetime):
         if val.tzinfo is None:
-            return val.replace(tzinfo=timezone.utc)
+            return val.replace(tzinfo=UTC)
         return val
     if isinstance(val, str) and val:
         dt = datetime.fromisoformat(val)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
     return None
 

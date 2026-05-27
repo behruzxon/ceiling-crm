@@ -1,7 +1,7 @@
 """Unit tests for FollowupSchedulerService."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -34,9 +34,9 @@ def _make_followup(**overrides: object) -> ScheduledFollowupModel:
         telegram_user_id=12345,
         followup_type="catalog",
         trigger_event_type="opened_catalog",
-        scheduled_at=datetime.now(timezone.utc),
+        scheduled_at=datetime.now(UTC),
         status="pending",
-        created_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+        created_at=datetime.now(UTC) - timedelta(minutes=10),
     )
     defaults.update(overrides)
     return ScheduledFollowupModel(**defaults)
@@ -132,7 +132,7 @@ class TestShouldSend:
 
     @pytest.mark.asyncio
     async def test_min_gap(self, mock_session: AsyncMock) -> None:
-        recent = datetime.now(timezone.utc) - timedelta(seconds=30)
+        recent = datetime.now(UTC) - timedelta(seconds=30)
         mem = _make_memory(last_followup_at=recent)
         fu = _make_followup()
 

@@ -1,12 +1,13 @@
 """Tests for Step BT — Campaign Send API."""
 from __future__ import annotations
+
 import pytest
 
 
 class TestSendPreviewAPI:
     @pytest.mark.asyncio
     async def test_preview_blocked(self):
-        from apps.api.routes.admin_crm_campaigns import send_preview, SendPreviewBody
+        from apps.api.routes.admin_crm_campaigns import SendPreviewBody, send_preview
         r = await send_preview(1, SendPreviewBody())
         assert not r["allowed"]
         assert "send_disabled" in r["blockers"]
@@ -15,7 +16,7 @@ class TestSendPreviewAPI:
 class TestDryRunAPI:
     @pytest.mark.asyncio
     async def test_dry_run(self):
-        from apps.api.routes.admin_crm_campaigns import dry_run, DryRunBody
+        from apps.api.routes.admin_crm_campaigns import DryRunBody, dry_run
         r = await dry_run(1, DryRunBody())
         assert r["dry_run"] is True
         assert r["would_send"] == 0
@@ -24,14 +25,14 @@ class TestDryRunAPI:
 class TestSendLimitedAPI:
     @pytest.mark.asyncio
     async def test_disabled(self):
-        from apps.api.routes.admin_crm_campaigns import send_limited, SendLimitedBody
+        from apps.api.routes.admin_crm_campaigns import SendLimitedBody, send_limited
         r = await send_limited(1, SendLimitedBody(confirm=True))
         assert not r["ok"]
         assert "send_disabled" in str(r.get("blockers") or r.get("error", ""))
 
     @pytest.mark.asyncio
     async def test_no_confirm(self):
-        from apps.api.routes.admin_crm_campaigns import send_limited, SendLimitedBody
+        from apps.api.routes.admin_crm_campaigns import SendLimitedBody, send_limited
         r = await send_limited(1, SendLimitedBody(confirm=False))
         assert not r["ok"]
 

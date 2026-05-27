@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-
 MIN_SAMPLES = 20
 MAX_BOOST = 0.15  # ±15%
 

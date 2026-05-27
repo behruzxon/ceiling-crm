@@ -4,6 +4,7 @@ core.services.crm_conversation_sync_service
 Full conversation timeline sync + answered/unanswered logic. Pure functions.
 """
 from __future__ import annotations
+
 import re
 from datetime import datetime
 from typing import Any
@@ -115,7 +116,8 @@ class CRMConversationSyncService:
         )
         unanswered_min = None
         if answered["is_unanswered"] and last_inbound_at:
-            from datetime import UTC, datetime as dt
+            from datetime import UTC
+            from datetime import datetime as dt
             now = dt.now(UTC)
             unanswered_min = max(0, int((now - last_inbound_at).total_seconds() / 60))
 

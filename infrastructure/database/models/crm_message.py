@@ -1,8 +1,11 @@
 """SQLAlchemy ORM models for crm_messages, crm_contact_notes, crm_contact_tags."""
 from __future__ import annotations
+
 from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.session import Base
 
 

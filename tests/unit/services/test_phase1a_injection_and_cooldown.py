@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. sanitize_user_text_for_prompt
 # ══════════════════════════════════════════════════════════════════════════════
@@ -317,13 +316,13 @@ class TestDealCloserPreFlight:
 class TestOrchestratorCooldown:
     """AgentOrchestrator.process must respect per-trigger cooldowns."""
 
-    def _make_context(self, user_id: int = 42) -> "AgentContext":
+    def _make_context(self, user_id: int = 42) -> AgentContext:
         from core.services.agent.base import AgentContext
         return AgentContext(user_id=user_id)
 
     async def test_first_trigger_passes(self):
         """First trigger within cooldown window should execute rules."""
-        from core.services.agent.base import AgentOrchestrator, AgentTrigger, AgentAction
+        from core.services.agent.base import AgentAction, AgentOrchestrator, AgentTrigger
 
         orch = AgentOrchestrator()
         ctx = self._make_context()
@@ -389,7 +388,7 @@ class TestOrchestratorCooldown:
 
     async def test_cooldown_error_fails_open(self):
         """If cooldown check raises, processing should continue (fail-open)."""
-        from core.services.agent.base import AgentOrchestrator, AgentTrigger, AgentAction
+        from core.services.agent.base import AgentAction, AgentOrchestrator, AgentTrigger
 
         orch = AgentOrchestrator()
         ctx = self._make_context()
@@ -410,7 +409,7 @@ class TestOrchestratorCooldown:
 
     async def test_all_triggers_have_cooldown_mapping(self):
         """Every AgentTrigger value must have an entry in _TRIGGER_COOLDOWNS."""
-        from core.services.agent.base import AgentTrigger, _TRIGGER_COOLDOWNS
+        from core.services.agent.base import _TRIGGER_COOLDOWNS, AgentTrigger
 
         for trigger in AgentTrigger:
             assert trigger.value in _TRIGGER_COOLDOWNS, (
@@ -420,7 +419,7 @@ class TestOrchestratorCooldown:
 
     async def test_cooldown_uses_correct_action_type_for_trigger(self):
         """Verify the trigger→ActionType mapping is sensible."""
-        from core.services.agent.base import AgentTrigger, _TRIGGER_COOLDOWNS
+        from core.services.agent.base import _TRIGGER_COOLDOWNS
         from core.services.agent.cooldown import ActionType
 
         for trigger_val, (action_val, seconds) in _TRIGGER_COOLDOWNS.items():
@@ -435,7 +434,7 @@ class TestOrchestratorCooldown:
 
     async def test_different_users_independent_cooldowns(self):
         """Cooldown for user A should not block user B."""
-        from core.services.agent.base import AgentOrchestrator, AgentTrigger, AgentAction
+        from core.services.agent.base import AgentAction, AgentOrchestrator, AgentTrigger
 
         orch = AgentOrchestrator()
 

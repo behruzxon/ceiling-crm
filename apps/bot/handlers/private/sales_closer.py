@@ -270,6 +270,7 @@ async def attempt_close(
 
         # Log tactic outcome for outcome-based learning
         import asyncio
+
         from core.services.tactic_outcome_logger import log_tactic_outcome
         _temp = "hot" if score >= 60 else ("warm" if score >= 30 else "cold")
         asyncio.create_task(log_tactic_outcome(

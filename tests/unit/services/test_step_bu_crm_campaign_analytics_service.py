@@ -1,5 +1,6 @@
 """Tests for Step BU — CRMCampaignAnalyticsService."""
 from __future__ import annotations
+
 from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
 
 svc = CRMCampaignAnalyticsService
@@ -193,26 +194,42 @@ class TestStatusChanges:
 
 class TestRecommendations:
     def test_no_telegram_id(self):
-        from core.services.crm_campaign_analytics_service import DeliveryMetrics, CanaryMetrics, ReplyMetrics
+        from core.services.crm_campaign_analytics_service import (
+            CanaryMetrics,
+            DeliveryMetrics,
+            ReplyMetrics,
+        )
         blocked = [("no_telegram_id", 5)]
         recs = svc.build_recommendations(DeliveryMetrics(), blocked, CanaryMetrics(), ReplyMetrics())
         assert any("telegram" in r.description.lower() for r in recs)
 
     def test_canary_failure(self):
-        from core.services.crm_campaign_analytics_service import DeliveryMetrics, CanaryMetrics, ReplyMetrics
+        from core.services.crm_campaign_analytics_service import (
+            CanaryMetrics,
+            DeliveryMetrics,
+            ReplyMetrics,
+        )
         canary = CanaryMetrics(canary_failed=2)
         recs = svc.build_recommendations(DeliveryMetrics(), [], canary, ReplyMetrics())
         assert any("canary" in r.description.lower() for r in recs)
 
     def test_low_reply_rate(self):
-        from core.services.crm_campaign_analytics_service import DeliveryMetrics, CanaryMetrics, ReplyMetrics
+        from core.services.crm_campaign_analytics_service import (
+            CanaryMetrics,
+            DeliveryMetrics,
+            ReplyMetrics,
+        )
         delivery = DeliveryMetrics(sent=10)
         replies = ReplyMetrics(reply_rate=0.02)
         recs = svc.build_recommendations(delivery, [], CanaryMetrics(), replies)
         assert any("reply" in r.title.lower() for r in recs)
 
     def test_ok_when_clean(self):
-        from core.services.crm_campaign_analytics_service import DeliveryMetrics, CanaryMetrics, ReplyMetrics
+        from core.services.crm_campaign_analytics_service import (
+            CanaryMetrics,
+            DeliveryMetrics,
+            ReplyMetrics,
+        )
         recs = svc.build_recommendations(DeliveryMetrics(), [], CanaryMetrics(), ReplyMetrics())
         assert any("yaxshi" in r.title.lower() for r in recs)
 
@@ -245,6 +262,7 @@ class TestDashboard:
 class TestImmutability:
     def test_delivery_frozen(self):
         import pytest
+
         from core.services.crm_campaign_analytics_service import DeliveryMetrics
         m = DeliveryMetrics()
         with pytest.raises(AttributeError):
@@ -252,6 +270,7 @@ class TestImmutability:
 
     def test_analytics_frozen(self):
         import pytest
+
         from core.services.crm_campaign_analytics_service import CampaignAnalytics
         a = CampaignAnalytics()
         with pytest.raises(AttributeError):
@@ -259,6 +278,7 @@ class TestImmutability:
 
     def test_recommendation_frozen(self):
         import pytest
+
         from core.services.crm_campaign_analytics_service import CampaignRecommendation
         r = CampaignRecommendation()
         with pytest.raises(AttributeError):

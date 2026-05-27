@@ -1,7 +1,10 @@
 """Tests for Step AV — Stage5LiveSendReadinessService (strictest gate)."""
 from __future__ import annotations
+
 from core.schemas.stage4_approval_report import (
-    Stage4ApprovalReport, Stage4NoSendSafetyMetrics, Stage4PassFailResult,
+    Stage4ApprovalReport,
+    Stage4NoSendSafetyMetrics,
+    Stage4PassFailResult,
 )
 from core.services.stage5_live_send_readiness_service import Stage5LiveSendReadinessService
 

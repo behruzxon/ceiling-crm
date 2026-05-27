@@ -1,5 +1,6 @@
 """Tests for Step BT — CRMCampaignSendService."""
 from __future__ import annotations
+
 from core.services.crm_campaign_send_service import CRMCampaignSendService
 
 svc = CRMCampaignSendService
@@ -240,6 +241,7 @@ class TestRedactError:
 class TestImmutability:
     def test_validation_frozen(self):
         import pytest
+
         from core.services.crm_campaign_send_service import SendValidation
         r = SendValidation()
         with pytest.raises(AttributeError):
@@ -247,6 +249,7 @@ class TestImmutability:
 
     def test_dry_run_frozen(self):
         import pytest
+
         from core.services.crm_campaign_send_service import DryRunResult
         r = DryRunResult()
         with pytest.raises(AttributeError):
@@ -254,6 +257,7 @@ class TestImmutability:
 
     def test_send_result_frozen(self):
         import pytest
+
         from core.services.crm_campaign_send_service import SendResult
         r = SendResult()
         with pytest.raises(AttributeError):

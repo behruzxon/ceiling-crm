@@ -1,7 +1,7 @@
 """APScheduler job: process due agent follow-ups every 60 seconds."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -106,7 +106,7 @@ async def process_agent_followups() -> None:
         async with factory() as session:
             fu_svc = FollowupSchedulerService(session)
             mem_svc = AgentMemoryService(session)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             due_list = await fu_svc.get_due(now, limit=20)
             if not due_list:

@@ -1,6 +1,7 @@
 """Tests for Step AY — Operator Reply API."""
 from __future__ import annotations
 
+
 class TestEndpoints:
     def test_preview_exists(self):
         from apps.api.main import create_app

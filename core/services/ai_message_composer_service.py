@@ -173,7 +173,7 @@ async def compose_followup(
 
         return ai_text
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning("ai_composer_timeout", followup_type=followup_type)
         return fallback_text
     except Exception:

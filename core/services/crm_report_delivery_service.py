@@ -4,6 +4,7 @@ core.services.crm_report_delivery_service
 Daily report delivery validation + approval. Pure functions.
 """
 from __future__ import annotations
+
 import hashlib
 import re
 from dataclasses import dataclass, field

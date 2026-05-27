@@ -1,5 +1,6 @@
 """Tests for Step BI — AdminRBACService DB-backed resolution."""
 from __future__ import annotations
+
 from core.services.admin_rbac_service import AdminRBACService
 
 svc = AdminRBACService

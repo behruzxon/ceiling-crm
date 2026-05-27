@@ -4,8 +4,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from core.services.approved_execution_sender_service import (
     ApprovedExecutionSenderService,
 )

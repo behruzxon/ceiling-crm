@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+
 from core.schemas.stage3_canary_readiness import Stage3CanaryReadinessResult
 
 

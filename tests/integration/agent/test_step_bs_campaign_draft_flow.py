@@ -62,6 +62,7 @@ class TestAudit:
 class TestNoSend:
     def test_no_telegram(self):
         import inspect
+
         import core.services.crm_campaign_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src
@@ -69,6 +70,7 @@ class TestNoSend:
 
     def test_no_email(self):
         import inspect
+
         import core.services.crm_campaign_service as mod
         src = inspect.getsource(mod)
         assert "smtp" not in src.lower()

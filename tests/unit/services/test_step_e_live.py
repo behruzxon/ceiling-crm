@@ -1,7 +1,7 @@
 """Step E tests: business hours, feature flags, Redis fallback, stop words, buttons."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,9 +30,9 @@ def _make_followup(**kw: object) -> ScheduledFollowupModel:
         "telegram_user_id": 12345,
         "followup_type": "catalog",
         "trigger_event_type": "opened_catalog",
-        "scheduled_at": datetime.now(timezone.utc),
+        "scheduled_at": datetime.now(UTC),
         "status": "pending",
-        "created_at": datetime.now(timezone.utc) - timedelta(minutes=10),
+        "created_at": datetime.now(UTC) - timedelta(minutes=10),
     }
     defaults.update(kw)
     return ScheduledFollowupModel(**defaults)
@@ -153,7 +153,7 @@ class TestReschedule:
         session.flush = AsyncMock()
 
         svc = FollowupSchedulerService(session)
-        new_time = datetime(2026, 5, 26, 9, 5, tzinfo=timezone.utc)
+        new_time = datetime(2026, 5, 26, 9, 5, tzinfo=UTC)
         await svc.reschedule(42, new_time)
         session.execute.assert_awaited_once()
         session.flush.assert_awaited_once()

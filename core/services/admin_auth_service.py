@@ -5,11 +5,12 @@ Admin authentication, session management, login attempt tracking.
 Pure validation + deterministic helpers. No I/O in static methods.
 """
 from __future__ import annotations
+
 import hashlib
 import re
 import secrets
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -89,7 +90,7 @@ class AdminAuthService:
             return SessionCreateResult(ok=False, error="admin_id required")
         session_id = AdminAuthService.generate_session_id()
         session_hash = AdminAuthService.hash_session_id(session_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = now + timedelta(hours=ttl_hours)
         return SessionCreateResult(
             ok=True,
@@ -114,7 +115,7 @@ class AdminAuthService:
             "ip_address": ip_address[:45] if ip_address else "",
             "user_agent": user_agent[:512] if user_agent else "",
             "expires_at": result.expires_at,
-            "last_seen_at": datetime.now(timezone.utc).isoformat(),
+            "last_seen_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -139,8 +140,8 @@ class AdminAuthService:
                 else:
                     expires_at = datetime.fromisoformat(expires_at_str)
                 if expires_at.tzinfo is None:
-                    expires_at = expires_at.replace(tzinfo=timezone.utc)
-                check_time = now or datetime.now(timezone.utc)
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                check_time = now or datetime.now(UTC)
                 if check_time > expires_at:
                     return SessionValidateResult(
                         ok=False, error="session_expired",
@@ -161,7 +162,7 @@ class AdminAuthService:
     def build_revoke_dict(
         actor_admin_id: str = "",
     ) -> dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         return {
             "status": "revoked",
             "revoked_at": now,
@@ -169,7 +170,7 @@ class AdminAuthService:
 
     @staticmethod
     def build_replace_dict() -> dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         return {
             "status": "replaced",
             "revoked_at": now,
@@ -177,7 +178,7 @@ class AdminAuthService:
 
     @staticmethod
     def build_touch_dict() -> dict[str, Any]:
-        return {"last_seen_at": datetime.now(timezone.utc).isoformat()}
+        return {"last_seen_at": datetime.now(UTC).isoformat()}
 
     @staticmethod
     def record_login_attempt(
@@ -195,7 +196,7 @@ class AdminAuthService:
             "status": status,
             "reason": AdminAuthService.sanitize_auth_error(reason) if reason else "",
             "metadata_json": AdminAuthService._sanitize_metadata(metadata),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod

@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import random
 import statistics
 import time
@@ -164,10 +163,10 @@ def _random_update(user_id: int) -> dict:
         return _make_message_update(user_id, random.choice(_TEXTS))
     else:
         cb_options = [
-            f"cta:catalog",
-            f"cta:pricing",
-            f"cta:order",
-            f"cta:operator",
+            "cta:catalog",
+            "cta:pricing",
+            "cta:order",
+            "cta:operator",
         ]
         return _make_callback_update(user_id, random.choice(cb_options))
 
@@ -175,7 +174,7 @@ def _random_update(user_id: int) -> dict:
 # ── HTTP load test (webhook mode) ─────────────────────────────────────────────
 
 async def _send_request(
-    session: "aiohttp.ClientSession",
+    session: aiohttp.ClientSession,
     url: str,
     payload: dict,
     stats: Stats,
@@ -245,8 +244,8 @@ async def run_direct_load_test(num_users: int, rounds: int) -> Stats:
     stats = Stats()
 
     # Import heavy dependencies only when needed
-    from infrastructure.database.session import connect_database, get_session_factory
     from infrastructure.cache.client import connect_redis
+    from infrastructure.database.session import connect_database, get_session_factory
     from infrastructure.di import get_lead_repo, get_pipeline_service
 
     await connect_database()
@@ -320,7 +319,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"CeilingCRM Load Test")
+    print("CeilingCRM Load Test")
     print(f"Mode: {args.mode}")
     print(f"Users: {args.users}, Rounds: {args.rounds}, Concurrency: {args.concurrency}")
     print()

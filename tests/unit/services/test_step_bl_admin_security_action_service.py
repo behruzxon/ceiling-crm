@@ -1,5 +1,6 @@
 """Tests for Step BL — AdminSecurityActionService."""
 from __future__ import annotations
+
 from core.services.admin_security_action_service import AdminSecurityActionService
 
 svc = AdminSecurityActionService
@@ -343,6 +344,7 @@ class TestSanitizeResult:
 class TestImmutability:
     def test_result_frozen(self):
         import pytest
+
         from core.services.admin_security_action_service import SecurityActionResult
         r = SecurityActionResult(ok=True)
         with pytest.raises(AttributeError):
@@ -350,6 +352,7 @@ class TestImmutability:
 
     def test_ip_eval_frozen(self):
         import pytest
+
         from core.services.admin_security_action_service import IPEvaluationResult
         r = IPEvaluationResult()
         with pytest.raises(AttributeError):

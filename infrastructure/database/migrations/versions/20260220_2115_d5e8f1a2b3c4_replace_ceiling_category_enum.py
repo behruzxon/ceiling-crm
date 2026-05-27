@@ -35,16 +35,15 @@ Create Date: 2026-02-20 21:15:00.000000+00:00
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = 'd5e8f1a2b3c4'
-down_revision: Union[str, None] = 'c4f8a1e2d3b5'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'c4f8a1e2d3b5'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # New enum values (upgrade target)
 _NEW_VALUES = (

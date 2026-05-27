@@ -1,9 +1,13 @@
 """SQLAlchemy ORM model for crm_operator_outbound_audit."""
 from __future__ import annotations
+
 from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.session import Base
+
 
 class CRMOperatorOutboundAuditModel(Base):
     __tablename__ = "crm_operator_outbound_audit"

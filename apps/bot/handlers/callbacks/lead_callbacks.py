@@ -9,7 +9,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_action_repo, get_lead_service, get_user_service
-from shared.constants.enums import UserRole
 from shared.exceptions.base import NotFoundError
 from shared.utils.formatting import bold
 

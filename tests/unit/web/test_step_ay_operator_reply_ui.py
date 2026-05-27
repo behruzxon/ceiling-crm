@@ -1,5 +1,6 @@
 """Tests for Step AY — Operator Reply UI."""
 from __future__ import annotations
+
 from pathlib import Path
 
 _DETAIL = Path("apps/web/templates/crm_contact_detail.html").read_text(encoding="utf-8")

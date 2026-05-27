@@ -7,8 +7,6 @@ interaction, OpenAI calls, or database access.
 """
 from __future__ import annotations
 
-import pytest
-
 from tests.simulation.agent.simulation_runner import build_memory, run_scenario
 
 # ═══════════════════════════════════════════════════════════════════════════════

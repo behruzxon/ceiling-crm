@@ -13,7 +13,7 @@ Batch size: 200 per cycle, run every 5 minutes by scheduler.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from shared.logging import get_logger
 
@@ -42,7 +42,7 @@ class OutcomeResolverService:
         from infrastructure.database.session import get_session_factory
         from infrastructure.di import get_tactic_outcome_repo
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         older_than = now - _MIN_AGE  # only outcomes >= 1h old
 
         factory = get_session_factory()
@@ -124,6 +124,7 @@ class OutcomeResolverService:
     async def _get_latest_stage(lead_id: int, session: object) -> str | None:
         """Get the latest pipeline stage for a lead."""
         import sqlalchemy as sa
+
         from infrastructure.database.models.pipeline_stage import PipelineStageModel
 
         stmt = (
@@ -140,6 +141,7 @@ class OutcomeResolverService:
     async def _get_lead_status(lead_id: int, session: object) -> str | None:
         """Get lead_status from leads table."""
         import sqlalchemy as sa
+
         from infrastructure.database.models.lead import LeadModel
 
         stmt = (
@@ -153,9 +155,10 @@ class OutcomeResolverService:
     async def _check_user_engaged(user_id: int, after: datetime) -> bool:
         """Check if user interacted after the tactic was applied (via AI memory)."""
         try:
+            import json
+
             from infrastructure.cache.client import get_redis
             from infrastructure.cache.keys import CacheKeys
-            import json
 
             redis = get_redis()
             raw = await redis.get(CacheKeys.ai_memory(user_id))
@@ -172,7 +175,7 @@ class OutcomeResolverService:
                 from datetime import datetime as dt
                 mem_ts = dt.fromisoformat(updated_at)
             elif isinstance(updated_at, (int, float)):
-                mem_ts = datetime.fromtimestamp(updated_at, tz=timezone.utc)
+                mem_ts = datetime.fromtimestamp(updated_at, tz=UTC)
             else:
                 return False
 

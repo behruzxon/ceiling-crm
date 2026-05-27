@@ -12,7 +12,7 @@ For each lead whose ``next_follow_up_at`` is in the past the service:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
 from infrastructure.database.session import get_session_factory
@@ -38,7 +38,7 @@ class FollowupService:
         if not self._admin_user_id:
             return 0
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         factory = get_session_factory()
         async with factory() as session:
             repo = PostgresLeadRepository(session)
@@ -188,6 +188,7 @@ class FollowupService:
 
                         # Log tactic outcome for outcome-based learning
                         import asyncio as _aio
+
                         from core.services.tactic_outcome_logger import log_tactic_outcome
                         _aio.create_task(log_tactic_outcome(
                             event_type="followup",
@@ -210,7 +211,7 @@ class FollowupService:
         return processed
 
     @staticmethod
-    def _compute_brain_decision(lead: object) -> "FollowUpDecision":  # noqa: F821
+    def _compute_brain_decision(lead: object) -> FollowUpDecision:  # noqa: F821
         """Run the follow-up brain on a lead domain object. Never raises."""
         from core.services.followup_brain_service import decide_follow_up
 

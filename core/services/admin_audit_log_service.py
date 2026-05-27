@@ -4,9 +4,10 @@ core.services.admin_audit_log_service
 Admin audit log recording — actions, denials, failures. Pure functions.
 """
 from __future__ import annotations
+
 import re
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -97,7 +98,7 @@ class AdminAuditLogService:
             "status": status if status in _VALID_STATUSES else "success",
             "reason": AdminAuditLogService.sanitize_reason(reason),
             "metadata_json": AdminAuditLogService.sanitize_metadata(metadata),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod

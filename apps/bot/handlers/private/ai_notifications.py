@@ -9,6 +9,7 @@ and follow-up brain for the admin lead card.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 from typing import Any
 
 from infrastructure.database.session import get_session_factory
@@ -41,11 +42,11 @@ async def _update_lead_ai_scoring(
             # Try brain-driven scheduling, fallback to simple delay
             next_fu = None
             try:
-                from core.services.followup_brain_service import decide_follow_up
                 from apps.bot.handlers.private.ai_memory import (
                     _load_ai_memory,
                     _save_ai_memory,
                 )
+                from core.services.followup_brain_service import decide_follow_up
                 _mem = await _load_ai_memory(user_id)
                 _brain = decide_follow_up(
                     score=lead.score or 0,
@@ -60,8 +61,9 @@ async def _update_lead_ai_scoring(
                     last_activity_ts=_mem.get("updated_at"),
                 )
                 if _brain.should_follow_up and _brain.follow_up_delay_minutes:
-                    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
-                    next_fu = _dt.now(_tz.utc) + _td(
+                    from datetime import datetime as _dt
+                    from datetime import timedelta as _td
+                    next_fu = _dt.now(UTC) + _td(
                         minutes=_brain.follow_up_delay_minutes
                     )
                     _mem["last_fu_type"] = _brain.follow_up_type

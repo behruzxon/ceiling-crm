@@ -10,7 +10,7 @@ get_lead_timeline()       — last N actions for a specific lead
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -31,7 +31,7 @@ _TZ = ZoneInfo("Asia/Tashkent")
 def _since_utc(days: int) -> datetime:
     """Start of window in UTC: now(Tashkent) minus *days* days."""
     now_tz = datetime.now(_TZ)
-    return (now_tz - timedelta(days=days)).astimezone(timezone.utc)
+    return (now_tz - timedelta(days=days)).astimezone(UTC)
 
 
 class PostgresLeadActionRepository:

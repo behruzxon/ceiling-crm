@@ -1,5 +1,6 @@
 """Tests for Step BR — CRMContactMergeService."""
 from __future__ import annotations
+
 from core.services.crm_contact_merge_service import CRMContactMergeService
 
 svc = CRMContactMergeService
@@ -251,6 +252,7 @@ class TestSanitizeSnapshot:
 class TestImmutability:
     def test_candidate_frozen(self):
         import pytest
+
         from core.services.crm_contact_merge_service import DuplicateCandidate
         c = DuplicateCandidate()
         with pytest.raises(AttributeError):
@@ -258,6 +260,7 @@ class TestImmutability:
 
     def test_preview_frozen(self):
         import pytest
+
         from core.services.crm_contact_merge_service import MergePreview
         p = MergePreview()
         with pytest.raises(AttributeError):
@@ -265,6 +268,7 @@ class TestImmutability:
 
     def test_result_frozen(self):
         import pytest
+
         from core.services.crm_contact_merge_service import MergeResult
         r = MergeResult()
         with pytest.raises(AttributeError):
@@ -272,6 +276,7 @@ class TestImmutability:
 
     def test_summary_frozen(self):
         import pytest
+
         from core.services.crm_contact_merge_service import DataQualitySummary
         s = DataQualitySummary()
         with pytest.raises(AttributeError):

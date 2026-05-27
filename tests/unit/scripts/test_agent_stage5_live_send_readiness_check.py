@@ -1,8 +1,11 @@
 """Tests for Stage 5 APPROVED_LIVE_SEND readiness check."""
 from __future__ import annotations
+
 import os
 from unittest.mock import patch
+
 from scripts.agent_stage5_live_send_readiness_check import run_live_send_readiness
+
 
 def _env(**flags):
     clean = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_")}

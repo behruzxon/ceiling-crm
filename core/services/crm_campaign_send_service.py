@@ -5,11 +5,12 @@ Campaign send validation, dry-run, limited send with canary. Pure functions.
 No real Telegram calls — uses mockable sender protocol.
 """
 from __future__ import annotations
+
 import hashlib
 import re
 import secrets
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -219,7 +220,7 @@ class CRMCampaignSendService:
             "blocked_reason": blocked_reason[:200] if blocked_reason else "",
             "message_hash": hashlib.sha256(message_preview.encode()).hexdigest()[:16] if message_preview else "",
             "batch_id": batch_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -227,7 +228,7 @@ class CRMCampaignSendService:
         return {
             "status": "sent",
             "telegram_message_id": telegram_message_id,
-            "sent_at": datetime.now(timezone.utc).isoformat(),
+            "sent_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -235,7 +236,7 @@ class CRMCampaignSendService:
         return {
             "status": "failed",
             "error_message": CRMCampaignSendService.redact_error(error),
-            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "failed_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod

@@ -13,6 +13,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
+from datetime import UTC
 from typing import Any
 
 from aiogram.fsm.context import FSMContext
@@ -352,6 +353,7 @@ async def _handle_objection(
             _neg_weights: dict[str, float] | None = None
             try:
                 import json as _json
+
                 from infrastructure.cache.client import get_redis as _get_redis
                 from infrastructure.cache.keys import CacheKeys as _CK
                 _raw_w = await _get_redis().get(_CK.adaptive_weights("negotiation"))
@@ -461,7 +463,7 @@ async def _extend_followup_on_delay(
     WARM lead                → +24h (standard)
     COLD lead                → +48h (lower pressure)
     """
-    from datetime import timedelta, timezone
+    from datetime import timedelta
     try:
         classification = classify_score(score)
 
@@ -482,7 +484,7 @@ async def _extend_followup_on_delay(
             lead = leads[0]
             if lead.next_follow_up_at is not None:
                 from datetime import datetime as _dt
-                new_fu = _dt.now(timezone.utc) + timedelta(hours=hours)
+                new_fu = _dt.now(UTC) + timedelta(hours=hours)
                 await repo.update_ai_scoring(lead.id, next_follow_up_at=new_fu)
                 await session.commit()
                 log.debug(

@@ -1,6 +1,8 @@
 """Closing readiness jobs — opportunity alerts and close-loss risk detection."""
 from __future__ import annotations
 
+from datetime import UTC
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from shared.logging import get_logger
@@ -28,7 +30,7 @@ async def run_closing_scanner() -> None:
 
     Normal alerts are suppressed during off-hours.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -49,7 +51,7 @@ async def run_closing_scanner() -> None:
         return
 
     off_hours = is_off_hours()
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
 
     factory = get_session_factory()
     bot: Bot | None = None
@@ -73,7 +75,6 @@ async def run_closing_scanner() -> None:
             evaluate_closing_readiness,
             select_closing_tactic,
         )
-
         from core.services.signal_vector_service import build_signal_vector
 
         for lead in leads:
@@ -226,9 +227,9 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
     if last_ts:
         mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
     else:
-        from datetime import datetime, timezone
+        from datetime import datetime
         mins_inactive = int(
-            (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+            (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
         )
 
     # Health score

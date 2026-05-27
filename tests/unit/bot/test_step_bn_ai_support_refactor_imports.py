@@ -39,7 +39,7 @@ class TestAgentModuleImports:
         assert callable(_process_lead_signal)
 
     def test_re_exported_from_ai_support(self):
-        from apps.bot.handlers.private.ai_support import _run_orchestrator, _process_lead_signal
+        from apps.bot.handlers.private.ai_support import _process_lead_signal, _run_orchestrator
         assert callable(_run_orchestrator)
         assert callable(_process_lead_signal)
 
@@ -67,7 +67,8 @@ class TestAutoReplyModuleImports:
 
     def test_re_exported_from_ai_support(self):
         from apps.bot.handlers.private.ai_support import (
-            _check_ai_rate_limit, _try_auto_reply, _detect_simple_intent, _reset_auto_reply_counter,
+            _check_ai_rate_limit,
+            _try_auto_reply,
         )
         assert callable(_check_ai_rate_limit)
         assert callable(_try_auto_reply)

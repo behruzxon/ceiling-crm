@@ -4,11 +4,16 @@ core.services.stage4_approval_report_service
 Read-only APPROVAL_REQUIRED observation report. No mutations, no sends.
 """
 from __future__ import annotations
+
 from datetime import UTC, datetime
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.schemas.stage4_approval_report import (
-    Stage4ApprovalReport, Stage4NoSendSafetyMetrics, Stage4PassFailResult,
+    Stage4ApprovalReport,
+    Stage4NoSendSafetyMetrics,
+    Stage4PassFailResult,
 )
 from shared.logging import get_logger
 

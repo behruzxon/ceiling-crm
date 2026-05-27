@@ -1,5 +1,6 @@
 """Tests for Step BI — AdminAuditLogService."""
 from __future__ import annotations
+
 from core.services.admin_audit_log_service import AdminAuditLogService
 
 svc = AdminAuditLogService
@@ -199,6 +200,7 @@ class TestFormatForDisplay:
 class TestImmutability:
     def test_entry_result_frozen(self):
         import pytest
+
         from core.services.admin_audit_log_service import AuditEntryResult
         r = AuditEntryResult(ok=True)
         with pytest.raises(AttributeError):

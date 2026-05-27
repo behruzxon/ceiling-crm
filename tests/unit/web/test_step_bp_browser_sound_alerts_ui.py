@@ -1,5 +1,6 @@
 """Tests for Step BP — Browser Notification + Sound Alerts UI."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

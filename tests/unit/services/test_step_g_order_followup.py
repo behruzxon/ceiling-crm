@@ -1,7 +1,7 @@
 """Step G tests: abandoned order follow-up flag, delay, buttons, stale checks."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,9 +30,9 @@ def _make_followup(**kw: object) -> ScheduledFollowupModel:
         "telegram_user_id": 12345,
         "followup_type": "abandoned_order",
         "trigger_event_type": "order_form_started",
-        "scheduled_at": datetime.now(timezone.utc),
+        "scheduled_at": datetime.now(UTC),
         "status": "pending",
-        "created_at": datetime.now(timezone.utc) - timedelta(minutes=10),
+        "created_at": datetime.now(UTC) - timedelta(minutes=10),
     }
     defaults.update(kw)
     return ScheduledFollowupModel(**defaults)

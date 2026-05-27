@@ -35,7 +35,7 @@ import asyncio
 import dataclasses
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from aiogram import Bot
@@ -224,7 +224,7 @@ async def _auto_block_chat(
             await session.execute(
                 sa.update(UserModel)
                 .where(UserModel.id == chat_id)
-                .values(is_blocked=True, updated_at=datetime.now(timezone.utc))
+                .values(is_blocked=True, updated_at=datetime.now(UTC))
             )
         log.info("broadcast_user_auto_blocked", chat_id=chat_id)
     except Exception as block_exc:
@@ -398,7 +398,7 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
         # ── Per-broadcast stats ───────────────────────────────────────────────
         stats = _Stats(
             broadcast_id=broadcast_id,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             users_total=sum(1 for cid in all_chat_ids if cid > 0),
             groups_total=sum(1 for cid in all_chat_ids if cid <= 0),
             skipped_by_blocklist=skipped_by_blocklist,
@@ -455,7 +455,7 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
             await bot.session.close()
 
         # 5. Final counter flush + finalize
-        now_done = datetime.now(timezone.utc)
+        now_done = datetime.now(UTC)
         stats.finished_at = now_done
 
         async with _rw_session(Session) as session:

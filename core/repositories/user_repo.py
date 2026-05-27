@@ -1,6 +1,8 @@
 """User repository interface."""
 from __future__ import annotations
+
 from abc import abstractmethod
+
 from core.domain.user import User
 from core.repositories.base import BaseRepository
 from shared.constants.enums import UserRole

@@ -38,21 +38,20 @@ import asyncio
 import datetime
 import time
 from asyncio import Task
-from typing import Optional
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 
 from apps.bot.ui.cta import send_cta
 from infrastructure.cache.client import get_redis
-from infrastructure.cache.keys import CacheTTL, CacheKeys
+from infrastructure.cache.keys import CacheKeys, CacheTTL
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_user_repo
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 
-_task: Optional[Task] = None  # type: ignore[type-arg]
+_task: Task | None = None  # type: ignore[type-arg]
 
 _CHECK_INTERVAL_SEC = 60       # how often the task wakes up
 _INACTIVE_MIN_SEC   = 300      # 5 min — minimum inactivity before CTA

@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 
 from core.services.ai_sales_brain_service import SalesBrainDecision, build_sales_brain
 
-
 # ── Strategies ───────────────────────────────────────────────────────────────
 
 STRATEGY_LABELS: dict[str, str] = {

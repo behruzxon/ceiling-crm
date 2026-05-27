@@ -1,5 +1,6 @@
 """Tests for Step BI — AdminUserService."""
 from __future__ import annotations
+
 from core.services.admin_user_service import AdminUserService
 
 svc = AdminUserService
@@ -238,6 +239,7 @@ class TestGetValidRoles:
 class TestImmutability:
     def test_result_frozen(self):
         import pytest
+
         from core.services.admin_user_service import AdminUserResult
         r = AdminUserResult(ok=True)
         with pytest.raises(AttributeError):

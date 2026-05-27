@@ -1,9 +1,13 @@
 """SQLAlchemy ORM models for admin_users and admin_audit_logs."""
 from __future__ import annotations
+
 from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.session import Base
+
 
 class AdminUserModel(Base):
     __tablename__ = "admin_users"

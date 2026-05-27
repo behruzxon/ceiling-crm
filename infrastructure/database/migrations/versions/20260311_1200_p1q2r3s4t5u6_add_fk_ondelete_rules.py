@@ -19,7 +19,6 @@ depends_on = None
 
 from alembic import op
 
-
 # (table, constraint_name, column, referred_table, referred_column, ondelete)
 _FK_RULES: list[tuple[str, str, str, str, str, str]] = [
     # ── leads ────────────────────────────────────────────────────

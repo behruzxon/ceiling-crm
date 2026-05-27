@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 from shared.constants.pricing import DEFAULT_PRICE_PER_M2 as _DEFAULT_PRICE_PER_M2
 from shared.constants.pricing import DESIGN_PRICES_CUSTOMER as _DESIGN_PRICES
 
-
 # ── Result dataclass ─────────────────────────────────────────────────────────
 
 

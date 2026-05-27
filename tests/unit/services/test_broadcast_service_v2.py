@@ -5,9 +5,7 @@ Counter delegation, status changes, and reach estimation are covered.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 from core.repositories.broadcast_repo import AbstractBroadcastRepository
@@ -84,7 +82,7 @@ class TestBroadcastServiceV2:
     # ── finalize ──────────────────────────────────────────────────────────
 
     async def test_finalize_delegates_timestamp(self) -> None:
-        ts = datetime(2026, 2, 27, 12, 0, 0, tzinfo=timezone.utc)
+        ts = datetime(2026, 2, 27, 12, 0, 0, tzinfo=UTC)
         await self.svc.finalize(broadcast_id=3, finished_at=ts)
         self.repo.finalize.assert_called_once_with(3, ts)
 

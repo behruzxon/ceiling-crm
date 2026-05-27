@@ -65,6 +65,7 @@ class TestActionsDisabledBlocksMutations:
 class TestNoSendOccurs:
     def test_no_telegram_in_enablement_service(self):
         import inspect
+
         import core.services.security_enablement_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src

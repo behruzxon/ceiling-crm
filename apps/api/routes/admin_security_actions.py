@@ -3,6 +3,7 @@ Admin Security Actions API endpoints.
 Feature-gated by ADMIN_SECURITY_ACTIONS_ENABLED.
 """
 from __future__ import annotations
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 

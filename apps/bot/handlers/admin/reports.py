@@ -3,9 +3,11 @@ Admin analytics and reports handler.
 Generate and export business reports.
 """
 from __future__ import annotations
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+
 from apps.bot.filters.role import RoleFilter
 from shared.constants.enums import UserRole
 

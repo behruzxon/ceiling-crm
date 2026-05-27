@@ -28,12 +28,17 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-
 # ── Reuse canonical pricing constants ────────────────────────────────────────
 from shared.constants.pricing import (
     ADDON_PRICES,
+)
+from shared.constants.pricing import (
     DEFAULT_PRICE_PER_M2 as _DEFAULT_PRICE_PER_M2,
+)
+from shared.constants.pricing import (
     DESIGN_PRICES_CUSTOMER as _DESIGN_PRICES,
+)
+from shared.constants.pricing import (
     DISCOUNT_TIERS as _DISCOUNT_TIERS,
 )
 

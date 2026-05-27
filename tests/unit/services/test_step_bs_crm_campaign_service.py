@@ -1,5 +1,6 @@
 """Tests for Step BS — CRMCampaignService."""
 from __future__ import annotations
+
 from core.services.crm_campaign_service import CRMCampaignService
 
 svc = CRMCampaignService
@@ -208,6 +209,7 @@ class TestStatuses:
 class TestImmutability:
     def test_segment_frozen(self):
         import pytest
+
         from core.services.crm_campaign_service import SegmentInfo
         s = SegmentInfo()
         with pytest.raises(AttributeError):
@@ -215,6 +217,7 @@ class TestImmutability:
 
     def test_safety_frozen(self):
         import pytest
+
         from core.services.crm_campaign_service import SafetyCheckResult
         r = SafetyCheckResult()
         with pytest.raises(AttributeError):
@@ -222,6 +225,7 @@ class TestImmutability:
 
     def test_validation_frozen(self):
         import pytest
+
         from core.services.crm_campaign_service import DraftValidation
         r = DraftValidation()
         with pytest.raises(AttributeError):

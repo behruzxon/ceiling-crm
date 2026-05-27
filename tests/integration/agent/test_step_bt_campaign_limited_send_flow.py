@@ -82,12 +82,14 @@ class TestAttemptAudit:
 class TestNoRealTelegram:
     def test_no_telegram_in_service(self):
         import inspect
+
         import core.services.crm_campaign_send_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src
 
     def test_no_send_message_call(self):
         import inspect
+
         import core.services.crm_campaign_send_service as mod
         src = inspect.getsource(mod)
         assert "bot.send_message" not in src

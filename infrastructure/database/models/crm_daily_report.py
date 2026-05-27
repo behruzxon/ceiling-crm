@@ -1,9 +1,13 @@
 """SQLAlchemy ORM model for crm_daily_reports."""
 from __future__ import annotations
+
 from datetime import date, datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.session import Base
+
 
 class CRMDailyReportModel(Base):
     __tablename__ = "crm_daily_reports"

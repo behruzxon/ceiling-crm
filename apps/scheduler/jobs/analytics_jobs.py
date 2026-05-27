@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -62,9 +63,10 @@ async def send_ai_daily_report() -> None:
     Timezone:       Asia/Tashkent (inherited from scheduler)
     """
     import datetime
-    from shared.config import get_settings
+
     from infrastructure.cache.client import get_redis
     from infrastructure.cache.keys import CacheKeys
+    from shared.config import get_settings
 
     settings = get_settings()
     admin_group_id = settings.bot.admin_group_id
@@ -152,16 +154,17 @@ async def send_daily_admin_summary() -> None:
     Runs at 20:00 Tashkent time via scheduler.
     """
     import datetime as dt
-    from shared.config import get_settings
-    from infrastructure.database.session import get_session_factory
+
     from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+    from infrastructure.database.session import get_session_factory
+    from shared.config import get_settings
 
     settings = get_settings()
     admin_group_id = settings.bot.admin_group_id
     bot_token = settings.bot.token.get_secret_value()
 
     # Today 00:00 UTC
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     date_str = dt.date.today().isoformat()
 

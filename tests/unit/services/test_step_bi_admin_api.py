@@ -1,7 +1,7 @@
 """Tests for Step BI — Admin Users & Audit API endpoints."""
 from __future__ import annotations
+
 import pytest
-from unittest.mock import patch
 
 
 class TestAdminUsersAPI:
@@ -28,7 +28,7 @@ class TestAdminUsersAPI:
 
     @pytest.mark.asyncio
     async def test_create_user_valid(self):
-        from apps.api.routers.admin_users import create_admin_user, AdminUserCreateBody
+        from apps.api.routers.admin_users import AdminUserCreateBody, create_admin_user
         body = AdminUserCreateBody(admin_id="user1", role="admin")
         result = await create_admin_user(body)
         assert result["ok"] is True
@@ -36,21 +36,21 @@ class TestAdminUsersAPI:
 
     @pytest.mark.asyncio
     async def test_create_user_invalid_id(self):
-        from apps.api.routers.admin_users import create_admin_user, AdminUserCreateBody
+        from apps.api.routers.admin_users import AdminUserCreateBody, create_admin_user
         body = AdminUserCreateBody(admin_id="user@bad", role="admin")
         result = await create_admin_user(body)
         assert result["ok"] is False
 
     @pytest.mark.asyncio
     async def test_create_user_invalid_role(self):
-        from apps.api.routers.admin_users import create_admin_user, AdminUserCreateBody
+        from apps.api.routers.admin_users import AdminUserCreateBody, create_admin_user
         body = AdminUserCreateBody(admin_id="user1", role="hacker")
         result = await create_admin_user(body)
         assert result["ok"] is False
 
     @pytest.mark.asyncio
     async def test_update_user_valid(self):
-        from apps.api.routers.admin_users import update_admin_user, AdminUserUpdateBody
+        from apps.api.routers.admin_users import AdminUserUpdateBody, update_admin_user
         body = AdminUserUpdateBody(role="operator")
         result = await update_admin_user("user1", body)
         assert result["ok"] is True
@@ -58,7 +58,7 @@ class TestAdminUsersAPI:
 
     @pytest.mark.asyncio
     async def test_update_user_invalid_role(self):
-        from apps.api.routers.admin_users import update_admin_user, AdminUserUpdateBody
+        from apps.api.routers.admin_users import AdminUserUpdateBody, update_admin_user
         body = AdminUserUpdateBody(role="hacker")
         result = await update_admin_user("user1", body)
         assert result["ok"] is False

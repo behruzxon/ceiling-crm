@@ -8,7 +8,7 @@ Access: ADMIN / SUPERADMIN roles.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -156,13 +156,13 @@ async def _build_closing_signals(lead: object) -> dict:
         pass
 
     # Minutes since last activity
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
     last_ts = mem.get("last_activity_ts") or mem.get("updated_at")
     if last_ts:
         mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
     else:
         mins_inactive = int(
-            (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+            (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
         )
 
     # Health score via conversation intelligence

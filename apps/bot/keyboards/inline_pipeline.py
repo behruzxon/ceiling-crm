@@ -1,6 +1,8 @@
 """Inline keyboard builder for pipeline stage transitions."""
 from __future__ import annotations
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from shared.constants.enums import PipelineStage
 
 

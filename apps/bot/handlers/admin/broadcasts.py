@@ -31,7 +31,7 @@ from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_broadcast_service
 from infrastructure.queue.tasks.broadcast_tasks import process_broadcast_batch
 from shared.config import get_settings
-from shared.constants.enums import BroadcastStatus, PayloadType, SegmentType
+from shared.constants.enums import PayloadType, SegmentType
 from shared.logging import get_logger
 
 log = get_logger(__name__)

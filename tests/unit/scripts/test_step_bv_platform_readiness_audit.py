@@ -1,7 +1,11 @@
 """Tests for Step BV — Platform Readiness Audit Script."""
 from __future__ import annotations
+
 from scripts.platform_readiness_audit import (
-    check_imports, check_docs, check_dangerous_flags, check_migrations,
+    check_dangerous_flags,
+    check_docs,
+    check_imports,
+    check_migrations,
 )
 
 

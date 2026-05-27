@@ -1,9 +1,8 @@
 """Tests for Step R — AgentExecutionSandboxService."""
 from __future__ import annotations
 
-from core.schemas.agent_execution import AgentExecutionPayload, AgentExecutionResult
+from core.schemas.agent_execution import AgentExecutionPayload
 from core.services.agent_execution_sandbox_service import AgentExecutionSandboxService
-from shared.constants.enums import AgentExecutionMode, AgentExecutionStatus
 
 svc = AgentExecutionSandboxService
 

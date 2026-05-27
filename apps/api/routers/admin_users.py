@@ -3,6 +3,7 @@ Admin Users & Audit Log API endpoints.
 Feature-gated by ADMIN_DB_RBAC_ENABLED.
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 

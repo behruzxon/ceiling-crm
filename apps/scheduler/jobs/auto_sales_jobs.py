@@ -1,6 +1,8 @@
 """Auto-sales monitoring jobs — stalled conversations, pending escalations."""
 from __future__ import annotations
 
+from datetime import UTC
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from shared.logging import get_logger
@@ -34,7 +36,7 @@ async def run_auto_sales_monitor() -> None:
     Normal alerts suppressed during off-hours; critical escalations anytime.
     """
     import json
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -57,7 +59,7 @@ async def run_auto_sales_monitor() -> None:
     off_hours = is_off_hours()
     # Time-aware stall threshold: 3h off-hours vs 60min business hours
     stall_threshold_minutes = 180 if off_hours else 60
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
 
     factory = get_session_factory()
     bot: Bot | None = None
@@ -95,7 +97,7 @@ async def run_auto_sales_monitor() -> None:
                 mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
             else:
                 mins_inactive = int(
-                    (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
                 )
 
             stage_str = (

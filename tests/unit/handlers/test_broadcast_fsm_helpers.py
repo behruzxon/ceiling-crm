@@ -9,7 +9,6 @@ import pytest
 
 from shared.constants.enums import PayloadType, SegmentType
 
-
 # These mirror the private dicts in broadcasts.py; we import them here to
 # avoid importing the full handler module (which has heavy aiogram deps).
 

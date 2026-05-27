@@ -5,12 +5,12 @@ CSRF token generation and validation. Pure functions.
 Default disabled by config — foundation only.
 """
 from __future__ import annotations
+
 import hashlib
 import hmac
 import re
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -31,7 +31,7 @@ class AdminCSRFService:
         if session_id_hash and secret_key:
             sig = hmac.new(
                 secret_key.encode("utf-8"),
-                f"{session_id_hash}:{raw}".encode("utf-8"),
+                f"{session_id_hash}:{raw}".encode(),
                 hashlib.sha256,
             ).hexdigest()[:16]
             return f"{raw}.{sig}"
@@ -58,7 +58,7 @@ class AdminCSRFService:
             return CSRFValidateResult(ok=False, error="csrf_secret_missing")
         expected_sig = hmac.new(
             secret_key.encode("utf-8"),
-            f"{session_id_hash}:{raw}".encode("utf-8"),
+            f"{session_id_hash}:{raw}".encode(),
             hashlib.sha256,
         ).hexdigest()[:16]
         if not hmac.compare_digest(provided_sig, expected_sig):

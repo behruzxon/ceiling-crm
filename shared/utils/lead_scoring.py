@@ -1,9 +1,8 @@
 """Lead scoring & follow-up scheduling helpers."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
-
+from datetime import UTC, datetime, timedelta
 
 # ── Lead Scoring ──────────────────────────────────────────────────────────────
 
@@ -130,7 +129,7 @@ def compute_next_followup(
         else:
             temp = "cold"
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if temp == "hot":
         return now + timedelta(minutes=20)
     if temp == "warm":

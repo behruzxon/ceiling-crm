@@ -1,7 +1,7 @@
 """Conversation intelligence jobs — health analysis, cooling, manager delay alerts."""
 from __future__ import annotations
 
-import time
+from datetime import UTC
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -39,7 +39,7 @@ async def check_conversation_health() -> None:
     Normal alerts are suppressed during off-hours to avoid midnight noise.
     Critical alerts (health <= 30) are sent anytime.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -57,7 +57,7 @@ async def check_conversation_health() -> None:
     bot_token = settings.bot.token.get_secret_value()
 
     off_hours = is_off_hours()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     now_ts = int(now.timestamp())
 
     factory = get_session_factory()
@@ -185,7 +185,7 @@ async def check_manager_response_delay() -> None:
 
     Normal alert — suppressed during off-hours (managers aren't working).
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -206,7 +206,7 @@ async def check_manager_response_delay() -> None:
     if is_off_hours():
         return
 
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
 
     factory = get_session_factory()
     bot: Bot | None = None

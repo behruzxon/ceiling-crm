@@ -1,5 +1,6 @@
 """Tests for Step BY — Base Layout + Sidebar/Header Premium Redesign."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

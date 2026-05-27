@@ -5,6 +5,7 @@ Security staged enablement preflight checks. Pure functions.
 No DB I/O, no mutations, no secrets printed.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 

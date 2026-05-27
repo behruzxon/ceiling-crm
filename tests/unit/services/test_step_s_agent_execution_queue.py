@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -11,7 +11,6 @@ from infrastructure.database.models.agent_execution_record import (
     AgentExecutionRecordModel,
 )
 from shared.constants.enums import AgentExecutionStatus
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -671,14 +670,13 @@ class TestNonRegression:
         assert p.action == "send_user_reply"
 
     def test_simulation_import(self):
-        from tests.simulation.agent.simulation_runner import run_scenario, build_memory
+        from tests.simulation.agent.simulation_runner import build_memory, run_scenario
         r = run_scenario("salom", build_memory())
         assert r.signal_intent == "unclear"
 
     def test_enums_importable(self):
         from shared.constants.enums import (
             AgentExecutionMode,
-            AgentExecutionStatus,
             AgentExecutionRisk,
         )
         assert AgentExecutionMode.LIVE.value == "live"

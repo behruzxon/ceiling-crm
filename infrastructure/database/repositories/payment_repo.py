@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractPaymentRepository."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,7 +97,7 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
 
         model.status = status
         if status == PaymentStatus.PAID and model.paid_at is None:
-            model.paid_at = datetime.now(tz=timezone.utc)
+            model.paid_at = datetime.now(tz=UTC)
         await self._session.flush()
         # onupdate=func.now() expires `updated_at` server-side after flush;
         # refresh fetches the new value via an awaited SELECT, avoiding

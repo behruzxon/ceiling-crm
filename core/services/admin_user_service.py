@@ -4,9 +4,10 @@ core.services.admin_user_service
 Admin user CRUD with owner lockout protection. Pure validation + session ops.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _VALID_ROLES = ("owner", "admin", "operator", "analyst", "viewer")
@@ -119,7 +120,7 @@ class AdminUserService:
             "is_super_owner": is_super_owner,
             "permissions_override_json": permissions_override,
             "created_by": created_by,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -130,7 +131,7 @@ class AdminUserService:
         permissions_override: dict | None = None,
         updated_by: str = "",
     ) -> dict[str, Any]:
-        updates: dict[str, Any] = {"updated_by": updated_by, "updated_at": datetime.now(timezone.utc).isoformat()}
+        updates: dict[str, Any] = {"updated_by": updated_by, "updated_at": datetime.now(UTC).isoformat()}
         if display_name is not None:
             updates["display_name"] = display_name[:128]
         if role is not None:
@@ -138,7 +139,7 @@ class AdminUserService:
         if is_active is not None:
             updates["is_active"] = is_active
             if not is_active:
-                updates["disabled_at"] = datetime.now(timezone.utc).isoformat()
+                updates["disabled_at"] = datetime.now(UTC).isoformat()
             else:
                 updates["disabled_at"] = None
         if permissions_override is not None:

@@ -1,5 +1,6 @@
 """Integration tests for Step BP — Browser Alert flow."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

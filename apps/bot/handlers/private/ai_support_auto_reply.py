@@ -46,11 +46,11 @@ async def _try_auto_reply(
     Returns False if OpenAI should be called as usual.
     """
     try:
-        from infrastructure.cache.client import get_redis
-        from infrastructure.cache.keys import CacheKeys, CacheTTL
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
         from apps.bot.handlers.private.ai_scoring import _get_lead_score
         from apps.bot.handlers.private.ai_states import _ai_keyboard
+        from infrastructure.cache.client import get_redis
+        from infrastructure.cache.keys import CacheKeys, CacheTTL
 
         redis = get_redis()
 
@@ -172,6 +172,7 @@ async def _try_auto_reply(
         )
 
         import asyncio as _aio
+
         from core.services.tactic_outcome_logger import log_tactic_outcome
         _temp = "hot" if score >= 60 else ("warm" if score >= 30 else "cold")
         _aio.create_task(log_tactic_outcome(

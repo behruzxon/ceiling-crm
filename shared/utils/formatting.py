@@ -1,5 +1,6 @@
 """Text formatting utilities for Telegram HTML messages."""
 from __future__ import annotations
+
 from decimal import Decimal
 
 

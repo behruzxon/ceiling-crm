@@ -93,6 +93,7 @@ class TestStoppedCandidate:
 class TestNoSendOccurs:
     def test_no_telegram(self):
         import inspect
+
         import core.services.crm_contact_merge_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src

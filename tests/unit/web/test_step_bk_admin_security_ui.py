@@ -1,5 +1,6 @@
 """Tests for Step BK — Admin Security Dashboard UI."""
 from __future__ import annotations
+
 from pathlib import Path
 
 
@@ -57,6 +58,7 @@ class TestSchemas:
 
     def test_dashboard_schema_frozen(self):
         import pytest
+
         from core.schemas.admin_security_audit import AdminSecurityDashboardSchema
         d = AdminSecurityDashboardSchema()
         with pytest.raises(AttributeError):
@@ -69,6 +71,7 @@ class TestSchemas:
 
     def test_recent_event_frozen(self):
         import pytest
+
         from core.schemas.admin_security_audit import RecentSecurityEvent
         e = RecentSecurityEvent()
         with pytest.raises(AttributeError):

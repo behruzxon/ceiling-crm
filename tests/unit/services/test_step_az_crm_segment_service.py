@@ -1,5 +1,6 @@
 """Tests for Step AZ — CRMSegmentService."""
 from __future__ import annotations
+
 from core.services.crm_segment_service import CRMSegmentService
 
 svc = CRMSegmentService

@@ -4,10 +4,13 @@ core.services.crm_message_service
 CRM message recording and timeline.
 """
 from __future__ import annotations
+
 import re
 from typing import Any
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from infrastructure.database.models.crm_message import CRMMessageModel
 from shared.logging import get_logger
 

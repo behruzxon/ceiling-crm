@@ -48,7 +48,7 @@ class LeadNotificationService:
     # ── Public API ─────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _lead_status_keyboard(lead_id: int) -> "InlineKeyboardMarkup":
+    def _lead_status_keyboard(lead_id: int) -> InlineKeyboardMarkup:
         """Build the quick-action inline keyboard appended to every lead card."""
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
         return InlineKeyboardMarkup(inline_keyboard=[
@@ -214,7 +214,7 @@ class LeadNotificationService:
 
     async def notify_measurement_lead(
         self,
-        lead: "Lead",
+        lead: Lead,
         *,
         time_pref: str | None,
         dimensions: str | None,
@@ -523,6 +523,8 @@ class LeadNotificationService:
             try:
                 from core.services.deal_radar_service import (
                     BUCKET_LABELS as _BL,
+                )
+                from core.services.deal_radar_service import (
                     rank_lead_for_radar,
                 )
                 # Try SV path for radar

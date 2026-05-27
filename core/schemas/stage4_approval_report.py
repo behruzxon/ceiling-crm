@@ -1,6 +1,8 @@
 """Frozen dataclasses for Stage 4 APPROVAL_REQUIRED observation report."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 
 @dataclass(frozen=True)
 class Stage4NoSendSafetyMetrics:

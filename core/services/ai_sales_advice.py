@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 
 from shared.logging import get_logger
@@ -158,7 +157,7 @@ def _build_context(
 ) -> str:
     """Build the user prompt with lead context."""
     lines = [
-        f"LID MA'LUMOTLARI:",
+        "LID MA'LUMOTLARI:",
         f"- Ism: {lead_name}",
         f"- Telefon: {lead_phone}",
         f"- Tuman: {lead_district}",

@@ -1,6 +1,7 @@
 """Tests for Step AX — CRM API endpoints."""
 from __future__ import annotations
 
+
 class TestEndpoints:
     def test_contacts_exists(self):
         from apps.api.main import create_app

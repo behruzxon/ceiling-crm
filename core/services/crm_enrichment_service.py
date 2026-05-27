@@ -4,8 +4,10 @@ core.services.crm_enrichment_service
 Deterministic customer data extraction from text. Pure functions.
 """
 from __future__ import annotations
+
 import re
 from typing import Any
+
 from shared.utils.area_parser import parse_area
 
 _PHONE_RE = re.compile(r"(?:\+?998|0)?(\d{9})")

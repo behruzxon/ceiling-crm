@@ -1,10 +1,13 @@
 """Unit tests for PricingService quote calculation."""
 from __future__ import annotations
-import pytest
-from unittest.mock import AsyncMock, patch
+
 from decimal import Decimal
-from core.services.pricing_service import PricingService
+from unittest.mock import AsyncMock
+
+import pytest
+
 from core.domain.lead import LeadAddons
+from core.services.pricing_service import PricingService
 from shared.constants.enums import CeilingCategory
 
 

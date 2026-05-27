@@ -1,5 +1,6 @@
 """Tests for Step BX — Design System Foundation."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

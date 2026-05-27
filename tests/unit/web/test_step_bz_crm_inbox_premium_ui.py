@@ -1,6 +1,8 @@
 """Tests for Step BZ — CRM Inbox Premium Redesign."""
 from __future__ import annotations
+
 from pathlib import Path
+
 
 def _c():
     return Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")

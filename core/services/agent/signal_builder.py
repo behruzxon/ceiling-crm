@@ -23,12 +23,15 @@ Import constraints
 from __future__ import annotations
 
 import time
-from dataclasses import asdict, fields as dc_fields
+from dataclasses import asdict
+from dataclasses import fields as dc_fields
 
 from core.services.signal_vector_service import (
     SignalVector,
-    build_signal_vector as _build_pure_sv,
     with_deal_probability,
+)
+from core.services.signal_vector_service import (
+    build_signal_vector as _build_pure_sv,
 )
 from infrastructure.cache.client import get_redis
 from infrastructure.cache.keys import CacheKeys, CacheTTL

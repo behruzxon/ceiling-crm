@@ -1,8 +1,11 @@
 """Tests for Stage 4 APPROVAL_REQUIRED readiness check."""
 from __future__ import annotations
+
 import os
 from unittest.mock import patch
+
 from scripts.agent_stage4_approval_readiness_check import run_approval_readiness
+
 
 def _env(**flags):
     clean = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_")}

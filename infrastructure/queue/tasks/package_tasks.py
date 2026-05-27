@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from aiogram import Bot
@@ -136,7 +136,7 @@ async def _async_check_followup(lead_id: int) -> None:
             f"👤 Mijoz: <b>{name}</b>\n"
             f"📱 Telefon: <code>{phone}</code>\n"
             f"📦 Paket: <b>{pkg.upper()}</b>\n"
-            f"📅 {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC\n\n"
+            f"📅 {datetime.now(UTC).strftime('%d.%m.%Y %H:%M')} UTC\n\n"
             f"/lead_{lead_id}"
         )
 

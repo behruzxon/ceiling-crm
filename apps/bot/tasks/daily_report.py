@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 from asyncio import Task
-from typing import Optional
 
 from aiogram import Bot
 
@@ -30,7 +29,7 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 
-_task: Optional[Task] = None  # type: ignore[type-arg]
+_task: Task | None = None  # type: ignore[type-arg]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

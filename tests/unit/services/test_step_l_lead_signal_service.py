@@ -3,10 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from core.schemas.lead_signal import LeadSignalResult
 from core.services.lead_signal_service import LeadSignalService
 from shared.constants.enums import CustomerIntent, ObjectionType, UrgencyLevel
-
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 

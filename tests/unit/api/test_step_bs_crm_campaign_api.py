@@ -1,5 +1,6 @@
 """Tests for Step BS — CRM Campaign API."""
 from __future__ import annotations
+
 import pytest
 
 
@@ -15,14 +16,14 @@ class TestSegmentsAPI:
 class TestPreviewAPI:
     @pytest.mark.asyncio
     async def test_valid_segment(self):
-        from apps.api.routes.admin_crm_campaigns import preview_recipients, PreviewRecipientsBody
+        from apps.api.routes.admin_crm_campaigns import PreviewRecipientsBody, preview_recipients
         r = await preview_recipients(PreviewRecipientsBody(segment_key="hot_leads"))
         assert r["ok"]
         assert r["total_eligible"] == 0
 
     @pytest.mark.asyncio
     async def test_invalid_segment(self):
-        from apps.api.routes.admin_crm_campaigns import preview_recipients, PreviewRecipientsBody
+        from apps.api.routes.admin_crm_campaigns import PreviewRecipientsBody, preview_recipients
         r = await preview_recipients(PreviewRecipientsBody(segment_key="bad"))
         assert not r["ok"]
 
@@ -30,20 +31,20 @@ class TestPreviewAPI:
 class TestSafetyCheckAPI:
     @pytest.mark.asyncio
     async def test_safe(self):
-        from apps.api.routes.admin_crm_campaigns import safety_check, SafetyCheckBody
+        from apps.api.routes.admin_crm_campaigns import SafetyCheckBody, safety_check
         r = await safety_check(SafetyCheckBody(segment_key="hot_leads", message_text="Salom!"))
         assert r["ok"]
         assert "send_disabled" in r["safety"]["reasons"]
 
     @pytest.mark.asyncio
     async def test_token_blocked(self):
-        from apps.api.routes.admin_crm_campaigns import safety_check, SafetyCheckBody
+        from apps.api.routes.admin_crm_campaigns import SafetyCheckBody, safety_check
         r = await safety_check(SafetyCheckBody(segment_key="hot_leads", message_text="sk-secret123"))
         assert not r["ok"]
 
     @pytest.mark.asyncio
     async def test_invalid_segment(self):
-        from apps.api.routes.admin_crm_campaigns import safety_check, SafetyCheckBody
+        from apps.api.routes.admin_crm_campaigns import SafetyCheckBody, safety_check
         r = await safety_check(SafetyCheckBody(segment_key="bad", message_text="Salom"))
         assert not r["ok"]
 
@@ -57,20 +58,20 @@ class TestDraftsAPI:
 
     @pytest.mark.asyncio
     async def test_create_valid(self):
-        from apps.api.routes.admin_crm_campaigns import create_draft, DraftCreateBody
+        from apps.api.routes.admin_crm_campaigns import DraftCreateBody, create_draft
         r = await create_draft(DraftCreateBody(name="Test", segment_key="hot_leads", message_text="Salom!"))
         assert r["ok"]
         assert r["preview"]["name"] == "Test"
 
     @pytest.mark.asyncio
     async def test_create_invalid_segment(self):
-        from apps.api.routes.admin_crm_campaigns import create_draft, DraftCreateBody
+        from apps.api.routes.admin_crm_campaigns import DraftCreateBody, create_draft
         r = await create_draft(DraftCreateBody(name="Test", segment_key="bad", message_text="Salom"))
         assert not r["ok"]
 
     @pytest.mark.asyncio
     async def test_create_token_blocked(self):
-        from apps.api.routes.admin_crm_campaigns import create_draft, DraftCreateBody
+        from apps.api.routes.admin_crm_campaigns import DraftCreateBody, create_draft
         r = await create_draft(DraftCreateBody(name="Test", segment_key="hot_leads", message_text="sk-secret123"))
         assert not r["ok"]
 

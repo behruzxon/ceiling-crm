@@ -1,6 +1,8 @@
 """Tests for Step BO — CRMRealtimeInboxService."""
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
+
 from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService, LiveInboxSummary
 
 svc = CRMRealtimeInboxService
@@ -25,7 +27,7 @@ class TestSummaryCounts:
         base = {
             "id": 1, "contact_name": "Test", "lead_status": "active",
             "temperature": "warm", "last_message_direction": "inbound",
-            "last_message_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+            "last_message_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
             "last_intent": None, "metadata_json": None,
         }
         base.update(kw)

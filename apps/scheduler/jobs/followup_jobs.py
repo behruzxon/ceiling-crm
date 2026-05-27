@@ -1,6 +1,8 @@
 """Follow-up funnel jobs — brain-driven + inactivity-based reminders."""
 from __future__ import annotations
 
+from datetime import UTC
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from shared.logging import get_logger
@@ -43,8 +45,8 @@ async def check_due_followups() -> None:
     fall outside business hours.  This job still runs (to detect overdue
     leads) but the service handles the actual deferral.
     """
-    from shared.config import get_settings
     from core.services.followup_service import FollowupService
+    from shared.config import get_settings
 
     settings = get_settings()
     svc = FollowupService(
@@ -67,7 +69,7 @@ async def check_inactive_leads() -> None:
     Normal alerts are suppressed during off-hours.
     LOST marking (internal) still runs anytime.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -84,7 +86,7 @@ async def check_inactive_leads() -> None:
         return
 
     off_hours = is_off_hours()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     h24 = settings.business.follow_up_day1_hours   # 24
     h72 = settings.business.follow_up_day3_hours   # 72
     h168 = settings.business.follow_up_day7_hours  # 168
@@ -193,13 +195,12 @@ async def check_hot_lead_inactivity() -> None:
 
     Deduped via Redis key: one alert per lead per 6 hours.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
 
     from infrastructure.cache.client import get_redis
-    from infrastructure.cache.keys import CacheKeys
     from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
     from infrastructure.database.session import get_session_factory
     from shared.config import get_settings
@@ -210,7 +211,7 @@ async def check_hot_lead_inactivity() -> None:
     admin_group_id = settings.bot.admin_group_id
     bot_token = settings.bot.token.get_secret_value()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Smart inactivity: 6h during off-hours, 2h during business hours
     inactivity_hours = 6 if is_off_hours() else 2
     cutoff_2h = now - timedelta(hours=inactivity_hours)

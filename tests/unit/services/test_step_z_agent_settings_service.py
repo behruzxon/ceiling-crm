@@ -1,7 +1,6 @@
 """Tests for Step Z — AgentSettingsService (pure validation logic)."""
 from __future__ import annotations
 
-from core.schemas.agent_settings import AgentSettingsValidationResult
 from core.services.agent_settings_service import AgentSettingsService
 
 svc = AgentSettingsService

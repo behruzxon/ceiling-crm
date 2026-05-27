@@ -1,5 +1,6 @@
 """Tests for Step BI — DB models, migration, and schema imports."""
 from __future__ import annotations
+
 import importlib
 
 
@@ -67,6 +68,7 @@ class TestSchemas:
 
     def test_admin_user_record_frozen(self):
         import pytest
+
         from core.schemas.admin_user import AdminUserRecord
         r = AdminUserRecord()
         with pytest.raises(AttributeError):
@@ -89,6 +91,7 @@ class TestSchemas:
 
     def test_admin_audit_entry_frozen(self):
         import pytest
+
         from core.schemas.admin_user import AdminAuditEntry
         e = AdminAuditEntry()
         with pytest.raises(AttributeError):
@@ -101,6 +104,7 @@ class TestSchemas:
 
     def test_service_result_frozen(self):
         import pytest
+
         from core.schemas.admin_user import AdminUserServiceResult
         r = AdminUserServiceResult()
         with pytest.raises(AttributeError):

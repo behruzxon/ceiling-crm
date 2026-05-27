@@ -4,9 +4,11 @@ core.services.crm_inbox_alert_service
 Computed inbox alerts from contact SLA/status. Pure functions — no I/O.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+
 from core.services.crm_sla_service import CRMSLAService
 
 _NO_ALERT_STATUSES = frozenset({"stopped", "lost", "won"})

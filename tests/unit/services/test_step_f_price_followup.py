@@ -1,7 +1,7 @@
 """Step F tests: price follow-up feature flag, delay, buttons, stale checks."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,9 +30,9 @@ def _make_followup(**kw: object) -> ScheduledFollowupModel:
         "telegram_user_id": 12345,
         "followup_type": "price",
         "trigger_event_type": "price_calculated",
-        "scheduled_at": datetime.now(timezone.utc),
+        "scheduled_at": datetime.now(UTC),
         "status": "pending",
-        "created_at": datetime.now(timezone.utc) - timedelta(minutes=10),
+        "created_at": datetime.now(UTC) - timedelta(minutes=10),
     }
     defaults.update(kw)
     return ScheduledFollowupModel(**defaults)

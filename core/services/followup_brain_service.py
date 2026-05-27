@@ -33,8 +33,8 @@ Usage::
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
+from datetime import UTC
 
 # ── Result dataclass ─────────────────────────────────────────────────────────
 
@@ -475,13 +475,14 @@ def _compute_delay(
     # If the computed fire time falls outside business hours, extend the
     # delay so the follow-up lands at the next business-hours start + 5 min.
     try:
-        from datetime import datetime, timedelta, timezone as _tz
+        from datetime import datetime, timedelta
+
         from shared.utils.business_hours import defer_to_business_hours, is_off_hours
 
-        fire_at = datetime.now(_tz.utc) + timedelta(minutes=delay)
+        fire_at = datetime.now(UTC) + timedelta(minutes=delay)
         if is_off_hours(fire_at):
             deferred = defer_to_business_hours(fire_at)
-            new_delay = int((deferred - datetime.now(_tz.utc)).total_seconds() / 60)
+            new_delay = int((deferred - datetime.now(UTC)).total_seconds() / 60)
             delay = max(delay, new_delay)
     except Exception:
         pass  # safety: keep original delay

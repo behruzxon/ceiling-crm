@@ -4,9 +4,10 @@ core.services.crm_realtime_inbox_service
 Live inbox summary builder. Pure functions — wraps CRMInboxAlertService.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -36,7 +37,7 @@ class CRMRealtimeInboxService:
         now: datetime | None = None,
         max_alerts: int = 5,
     ) -> LiveInboxSummary:
-        check_time = now or datetime.now(timezone.utc)
+        check_time = now or datetime.now(UTC)
         from core.services.crm_inbox_alert_service import CRMInboxAlertService
         overview = CRMInboxAlertService.get_alert_overview(contacts, check_time)
         alerts = CRMInboxAlertService.build_alerts(contacts, check_time, limit=max_alerts)

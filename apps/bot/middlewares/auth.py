@@ -6,7 +6,8 @@ Creates user record if first interaction.
 from __future__ import annotations
 
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
@@ -16,7 +17,7 @@ from infrastructure.cache.client import get_redis
 from infrastructure.cache.keys import CacheKeys
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_user_repo
-from shared.logging import bind_request_context, clear_request_context, get_logger
+from shared.logging import bind_request_context, get_logger
 
 log = get_logger(__name__)
 

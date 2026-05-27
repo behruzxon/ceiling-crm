@@ -5,7 +5,9 @@ Login/logout/session web routes for admin session auth.
 Backward compatible — when session auth disabled, shows info notice.
 """
 from __future__ import annotations
+
 from pathlib import Path
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates

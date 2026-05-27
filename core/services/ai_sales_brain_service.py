@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 
 from core.services.conversation_memory_graph_service import (
     STAGE_LABELS,
-    TREND_LABELS,
     analyze_conversation_graph,
 )
 from core.services.deal_radar_service import (
@@ -26,7 +25,6 @@ from core.services.operator_assistant_service import build_operator_assist
 from core.services.revenue_predictor_service import predict_lead_revenue
 from core.services.signal_vector_service import build_signal_vector, with_deal_probability
 from shared.utils.deal_probability import evaluate_deal_probability
-
 
 # ── Result dataclass ─────────────────────────────────────────────────────────
 

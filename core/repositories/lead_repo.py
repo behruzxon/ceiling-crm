@@ -1,7 +1,9 @@
 """Lead repository interface."""
 from __future__ import annotations
+
 from abc import abstractmethod
 from datetime import datetime
+
 from core.domain.lead import Lead
 from core.repositories.base import BaseRepository
 from shared.constants.enums import CeilingCategory, PipelineStage

@@ -1,6 +1,8 @@
 """Cache warm-up and maintenance jobs."""
 from __future__ import annotations
 
+from datetime import UTC
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from shared.logging import get_logger
@@ -35,14 +37,14 @@ async def warmup_price_cache() -> None:
 
 async def cleanup_old_conversations() -> None:
     """Delete ai_conversations rows older than 90 days in batches."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     import sqlalchemy as sa
 
     from infrastructure.database.models.ai_conversation import AiConversationModel
     from infrastructure.database.session import get_session_factory
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=_CONVERSATION_RETENTION_DAYS)
+    cutoff = datetime.now(UTC) - timedelta(days=_CONVERSATION_RETENTION_DAYS)
     batch_size = 1000
     total_deleted = 0
 

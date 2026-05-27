@@ -1,10 +1,13 @@
 """Step AW — APPROVED_LIVE_SEND safety integration tests."""
 from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
+
 from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
 from core.services.agent_rollout_preset_service import AgentRolloutPresetService
 from core.services.approved_execution_sender_service import ApprovedExecutionSenderService
+
 
 def _live_send_overrides():
     return AgentRolloutPresetService.build_preset_settings("approved_live_send")

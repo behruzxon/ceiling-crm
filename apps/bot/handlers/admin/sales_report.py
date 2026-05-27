@@ -7,7 +7,7 @@ Access: ADMIN / SUPERADMIN roles.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -45,7 +45,7 @@ _REASON_LABELS: dict[str, str] = {
 async def cmd_sales_report(message: Message, **data: object) -> None:
     """Show today's sales report."""
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         factory = get_session_factory()

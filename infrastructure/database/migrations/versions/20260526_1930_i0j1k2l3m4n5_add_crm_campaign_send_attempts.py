@@ -2,8 +2,9 @@
 Revision ID: i0j1k2l3m4n5
 Revises: h9i0j1k2l3m4
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+
 revision = "i0j1k2l3m4n5"
 down_revision = "h9i0j1k2l3m4"
 branch_labels = None

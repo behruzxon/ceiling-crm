@@ -1,7 +1,10 @@
 """Tests for Step AR — CANARY Report API."""
 from __future__ import annotations
+
 from dataclasses import asdict
+
 from core.schemas.stage3_canary_report import Stage3CanaryReport
+
 
 class TestEndpoint:
     def test_exists(self):

@@ -3,6 +3,7 @@ CRM Data Quality & Duplicate Contact Merge API endpoints.
 Detection enabled by default, merge gated by CRM_CONTACT_MERGE_ENABLED.
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
@@ -23,6 +24,7 @@ class MergeBody(BaseModel):
 @router.get("/data-quality/summary")
 async def data_quality_summary() -> dict:
     from dataclasses import asdict
+
     from core.services.crm_contact_merge_service import CRMContactMergeService
     summary = CRMContactMergeService.build_data_quality_summary([])
     return asdict(summary)

@@ -1,6 +1,8 @@
 """Tests for Step AZ — CRMSLAService."""
 from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+
 from core.services.crm_sla_service import CRMSLAService
 
 svc = CRMSLAService

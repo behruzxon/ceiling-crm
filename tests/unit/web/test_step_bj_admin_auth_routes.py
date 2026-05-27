@@ -1,7 +1,9 @@
 """Tests for Step BJ — Admin Auth Web Routes."""
 from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 
 
 class TestLoginPage:
@@ -50,7 +52,6 @@ class TestLoginSubmit:
     @pytest.mark.asyncio
     async def test_generic_error_on_bad_creds(self):
         from apps.web.admin_auth_routes import login_submit
-        from core.services.admin_auth_service import AdminAuthService
         request = MagicMock()
         request.form = AsyncMock(return_value={"admin_id": "user1", "secret": "wrong"})
         with patch("apps.web.admin_auth_routes._get_session_auth_enabled", return_value=True):

@@ -12,8 +12,8 @@ from aiogram.types import Message
 
 from apps.bot.handlers.private.ai_detection import _build_price_calc, _catalog_link_kb
 from apps.bot.handlers.private.ai_states import (
-    AiSupportStates,
     _UPSELL_SOFT_CTA,
+    AiSupportStates,
     _ai_keyboard,
     _phone_request_keyboard,
 )

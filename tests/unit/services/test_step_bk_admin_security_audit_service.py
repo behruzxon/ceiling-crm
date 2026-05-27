@@ -1,13 +1,15 @@
 """Tests for Step BK — AdminSecurityAuditService."""
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
+
 from core.services.admin_security_audit_service import AdminSecurityAuditService
 
 svc = AdminSecurityAuditService
 
 
 def _now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _login(status="success", admin_id="u1", ip="1.2.3.4"):
@@ -64,7 +66,10 @@ class TestEmptyDB:
 
     def test_empty_suspicious(self):
         from core.services.admin_security_audit_service import (
-            LoginAttemptMetrics, SessionMetrics, PermissionDeniedMetrics, SensitiveActionMetrics,
+            LoginAttemptMetrics,
+            PermissionDeniedMetrics,
+            SensitiveActionMetrics,
+            SessionMetrics,
         )
         s = svc.detect_suspicious_activity(
             LoginAttemptMetrics(), SessionMetrics(),
@@ -452,6 +457,7 @@ class TestBuildDashboard:
 class TestImmutability:
     def test_login_metrics_frozen(self):
         import pytest
+
         from core.services.admin_security_audit_service import LoginAttemptMetrics
         m = LoginAttemptMetrics()
         with pytest.raises(AttributeError):
@@ -459,6 +465,7 @@ class TestImmutability:
 
     def test_session_metrics_frozen(self):
         import pytest
+
         from core.services.admin_security_audit_service import SessionMetrics
         m = SessionMetrics()
         with pytest.raises(AttributeError):
@@ -466,6 +473,7 @@ class TestImmutability:
 
     def test_dashboard_frozen(self):
         import pytest
+
         from core.services.admin_security_audit_service import SecurityDashboard
         d = SecurityDashboard()
         with pytest.raises(AttributeError):
@@ -473,6 +481,7 @@ class TestImmutability:
 
     def test_indicator_frozen(self):
         import pytest
+
         from core.services.admin_security_audit_service import SuspiciousIndicator
         i = SuspiciousIndicator()
         with pytest.raises(AttributeError):
@@ -480,6 +489,7 @@ class TestImmutability:
 
     def test_recommendation_frozen(self):
         import pytest
+
         from core.services.admin_security_audit_service import SecurityRecommendation
         r = SecurityRecommendation()
         with pytest.raises(AttributeError):

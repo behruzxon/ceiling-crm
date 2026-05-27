@@ -5,9 +5,10 @@ Marketing segment selection, campaign draft validation, recipient preview,
 safety checks. Pure functions — no DB I/O. Send always disabled.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -211,7 +212,7 @@ class CRMCampaignService:
             "filters_json": filters,
             "preview_recipients_json": preview_recipients,
             "created_by": created_by[:100] if created_by else "",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -230,7 +231,7 @@ class CRMCampaignService:
             "status": status,
             "reason": CRMCampaignService._sanitize_text(reason)[:500] if reason else "",
             "metadata_json": CRMCampaignService._sanitize_metadata(metadata),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod

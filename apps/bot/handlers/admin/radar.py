@@ -87,7 +87,6 @@ async def cmd_radar(message: Message, **data: object) -> None:
 
 async def _build_signals_batch(leads: list) -> list[dict]:
     """Build signal dicts for a batch of leads by running the intelligence stack."""
-    from apps.bot.handlers.private.ai_memory import _load_ai_memory
 
     results: list[dict] = []
     for lead in leads:

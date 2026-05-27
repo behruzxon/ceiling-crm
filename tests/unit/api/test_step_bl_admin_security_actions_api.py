@@ -1,25 +1,26 @@
 """Tests for Step BL — Admin Security Actions API."""
 from __future__ import annotations
+
 import pytest
 
 
 class TestRevokeSessionAPI:
     @pytest.mark.asyncio
     async def test_disabled(self):
-        from apps.api.routes.admin_security_actions import revoke_session, RevokeBody
+        from apps.api.routes.admin_security_actions import RevokeBody, revoke_session
         r = await revoke_session(1, RevokeBody(confirm=True))
         assert not r["ok"]
         assert "disabled" in r["error"]
 
     @pytest.mark.asyncio
     async def test_no_confirm(self):
-        from apps.api.routes.admin_security_actions import revoke_session, RevokeBody
+        from apps.api.routes.admin_security_actions import RevokeBody, revoke_session
         r = await revoke_session(1, RevokeBody(confirm=False))
         assert not r["ok"]
 
     @pytest.mark.asyncio
     async def test_no_session_hash_in_response(self):
-        from apps.api.routes.admin_security_actions import revoke_session, RevokeBody
+        from apps.api.routes.admin_security_actions import RevokeBody, revoke_session
         r = await revoke_session(1, RevokeBody(confirm=True))
         assert "session_id_hash" not in str(r)
 
@@ -27,7 +28,7 @@ class TestRevokeSessionAPI:
 class TestDisableAdminAPI:
     @pytest.mark.asyncio
     async def test_disabled(self):
-        from apps.api.routes.admin_security_actions import disable_admin, DisableBody
+        from apps.api.routes.admin_security_actions import DisableBody, disable_admin
         r = await disable_admin("u1", DisableBody(confirm=True))
         assert not r["ok"]
         assert "disabled" in r["error"]
@@ -36,7 +37,7 @@ class TestDisableAdminAPI:
 class TestEnableAdminAPI:
     @pytest.mark.asyncio
     async def test_disabled(self):
-        from apps.api.routes.admin_security_actions import enable_admin, EnableBody
+        from apps.api.routes.admin_security_actions import EnableBody, enable_admin
         r = await enable_admin("u1", EnableBody(confirm=True))
         assert not r["ok"]
 
@@ -50,27 +51,27 @@ class TestIPRulesAPI:
 
     @pytest.mark.asyncio
     async def test_create_valid(self):
-        from apps.api.routes.admin_security_actions import create_ip_rule, IPRuleCreateBody
+        from apps.api.routes.admin_security_actions import IPRuleCreateBody, create_ip_rule
         r = await create_ip_rule(IPRuleCreateBody(ip_pattern="1.2.3.4", rule_type="watch"))
         assert r["ok"]
         assert r["preview"]["ip_pattern"] == "1.2.3.4"
 
     @pytest.mark.asyncio
     async def test_create_invalid_ip(self):
-        from apps.api.routes.admin_security_actions import create_ip_rule, IPRuleCreateBody
+        from apps.api.routes.admin_security_actions import IPRuleCreateBody, create_ip_rule
         r = await create_ip_rule(IPRuleCreateBody(ip_pattern="bad", rule_type="block"))
         assert not r["ok"]
         assert "invalid" in r["error"]
 
     @pytest.mark.asyncio
     async def test_create_invalid_type(self):
-        from apps.api.routes.admin_security_actions import create_ip_rule, IPRuleCreateBody
+        from apps.api.routes.admin_security_actions import IPRuleCreateBody, create_ip_rule
         r = await create_ip_rule(IPRuleCreateBody(ip_pattern="1.2.3.4", rule_type="hack"))
         assert not r["ok"]
 
     @pytest.mark.asyncio
     async def test_disable_rule(self):
-        from apps.api.routes.admin_security_actions import disable_ip_rule, IPRuleDisableBody
+        from apps.api.routes.admin_security_actions import IPRuleDisableBody, disable_ip_rule
         r = await disable_ip_rule(1, IPRuleDisableBody(confirm=True))
         assert r["ok"]
         assert r["preview"]["is_active"] is False
@@ -90,7 +91,7 @@ class TestRouterRegistration:
 class TestNoTokenInResponse:
     @pytest.mark.asyncio
     async def test_create_rule_sanitized(self):
-        from apps.api.routes.admin_security_actions import create_ip_rule, IPRuleCreateBody
+        from apps.api.routes.admin_security_actions import IPRuleCreateBody, create_ip_rule
         r = await create_ip_rule(IPRuleCreateBody(
             ip_pattern="1.2.3.4", rule_type="watch", reason="sk-secret test",
         ))

@@ -9,7 +9,7 @@ journey events are emitted.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -70,7 +70,7 @@ class AgentMemoryService:
     ) -> AgentMemoryModel:
         et = event_type.value if isinstance(event_type, JourneyEventType) else event_type
         data = event_data or {}
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         mem = await self.get_or_create(telegram_user_id)
         mem.last_event_type = et
@@ -127,14 +127,14 @@ class AgentMemoryService:
             .values(
                 followup_enabled=False,
                 stop_reason=reason,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
             )
         )
         await self._session.execute(stmt)
         await self._session.flush()
 
     async def mark_followup_sent(self, telegram_user_id: int) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(AgentMemoryModel)
             .where(AgentMemoryModel.telegram_user_id == telegram_user_id)

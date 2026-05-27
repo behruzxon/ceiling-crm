@@ -1,5 +1,6 @@
 """Integration tests for Step CB — Full Web UI Premium flow."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

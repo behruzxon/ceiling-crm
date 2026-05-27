@@ -5,8 +5,10 @@ Strictest gate: evaluates readiness for APPROVED_LIVE_SEND.
 Approved payloads will be sent to real users. Pure functions.
 """
 from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Any
+
 from core.schemas.stage4_approval_report import Stage4ApprovalReport
 from core.schemas.stage5_live_send_readiness import Stage5LiveSendReadinessResult
 

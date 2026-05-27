@@ -9,7 +9,7 @@ Access: ADMIN / SUPERADMIN roles.
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -70,16 +70,14 @@ async def _analyze_leads(leads: list) -> dict:
         analyze_conversation,
     )
     from core.services.next_best_action_service import (
-        ACTION_LABELS,
-        CLOSING_TACTIC_LABELS,
         analyze_pipeline_bottlenecks,
-        determine_next_best_action,
         detect_at_risk,
         detect_opportunity,
+        determine_next_best_action,
         suggest_closing_tactic,
     )
 
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
 
     nba_list: list[dict] = []
     opportunities: list[dict] = []
@@ -97,7 +95,7 @@ async def _analyze_leads(leads: list) -> dict:
             mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
         else:
             mins_inactive = int(
-                (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+                (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
             )
 
         stage_str = (
@@ -277,9 +275,9 @@ async def _analyze_leads(leads: list) -> dict:
 def _format_autopilot_card(results: dict, total: int) -> str:
     """Format autopilot results into a Telegram card."""
     from core.services.next_best_action_service import (
+        _STAGE_LABELS,
         ACTION_LABELS,
         CLOSING_TACTIC_LABELS,
-        _STAGE_LABELS,
     )
 
     lines: list[str] = [
@@ -368,7 +366,7 @@ def _format_autopilot_card(results: dict, total: int) -> str:
             label = ACTION_LABELS.get(action, action)
             lines.append(f"  {label}: {count}")
 
-    lines.append(f"\n/lead_ID \u2014 batafsil ko'rish")
+    lines.append("\n/lead_ID \u2014 batafsil ko'rish")
     return "\n".join(lines)
 
 

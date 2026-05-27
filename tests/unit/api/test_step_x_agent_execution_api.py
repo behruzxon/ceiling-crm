@@ -283,8 +283,10 @@ class TestSettings:
 
     def test_check_approval_raises_when_disabled(self):
         from unittest.mock import patch
-        from apps.api.routes.admin_agent_metrics import _check_approval_enabled
+
         from fastapi import HTTPException
+
+        from apps.api.routes.admin_agent_metrics import _check_approval_enabled
         with patch("shared.config.get_settings") as mock:
             mock.return_value.business.agent_execution_api_approval_enabled = False
             with pytest.raises(HTTPException) as exc_info:

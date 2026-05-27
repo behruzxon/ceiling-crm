@@ -4,7 +4,6 @@ from __future__ import annotations
 from core.schemas.stage2_dryrun_report import (
     Stage2DryRunReport,
     Stage2NoSendSafetyMetrics,
-    Stage2PassFailResult,
 )
 from core.services.stage2_dryrun_report_service import Stage2DryRunReportService
 
@@ -163,8 +162,8 @@ class TestReportDefaults:
 
 class TestDBService:
     async def test_empty_db_safe(self):
-        from unittest.mock import AsyncMock, MagicMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock, MagicMock
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
@@ -176,8 +175,8 @@ class TestDBService:
         assert r.pass_fail.passed is True
 
     async def test_db_exception_safe(self):
-        from unittest.mock import AsyncMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock
         session = AsyncMock()
         session.execute = AsyncMock(side_effect=Exception("DB down"))
         s = Stage2DryRunReportService(session)
@@ -186,8 +185,8 @@ class TestDBService:
         assert r.total_payloads == 0
 
     async def test_has_generated_at(self):
-        from unittest.mock import AsyncMock, MagicMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock, MagicMock
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),

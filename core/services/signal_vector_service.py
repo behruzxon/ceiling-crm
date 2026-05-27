@@ -26,8 +26,8 @@ Usage::
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace as dc_replace
-
+from dataclasses import dataclass
+from dataclasses import replace as dc_replace
 
 # ── Stage → normalised progress mapping ─────────────────────────────────────
 
@@ -273,6 +273,8 @@ def build_signal_vector(
     try:
         from shared.utils.business_hours import (
             get_time_of_day_bucket,
+        )
+        from shared.utils.business_hours import (
             is_business_hours as _is_bh,
         )
         _time_bucket = get_time_of_day_bucket()

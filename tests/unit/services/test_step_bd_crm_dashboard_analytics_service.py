@@ -1,6 +1,8 @@
 """Tests for Step BD — CRMDashboardAnalyticsService."""
 from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+
 from core.schemas.crm_dashboard_analytics import CRMMissedLeadMetrics
 from core.services.crm_dashboard_analytics_service import CRMDashboardAnalyticsService
 

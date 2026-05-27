@@ -1,7 +1,9 @@
 """Unit tests for Quote domain model computed fields."""
 from __future__ import annotations
+
 from decimal import Decimal
-from core.domain.quote import Quote, QuoteAddonDetail
+
+from core.domain.quote import Quote
 from shared.constants.enums import CeilingCategory
 
 

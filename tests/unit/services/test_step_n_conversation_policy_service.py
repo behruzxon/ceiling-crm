@@ -8,11 +8,6 @@ from core.schemas.conversation_policy import (
     ConversationPolicyDecision,
 )
 from core.services.conversation_policy_service import ConversationPolicyService
-from shared.constants.enums import (
-    ConversationChannel,
-    ConversationPolicyAction,
-    ConversationRiskLevel,
-)
 
 svc = ConversationPolicyService
 

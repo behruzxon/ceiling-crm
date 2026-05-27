@@ -14,7 +14,6 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from shared.utils.area_parser import parse_area as _parse_area  # noqa: F401 — re-export
 
-
 # ── Measurement trigger detection ────────────────────────────────────────────
 
 _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset({

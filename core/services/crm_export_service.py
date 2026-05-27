@@ -5,6 +5,7 @@ CRM data export: CSV, summary data. Pure functions — no I/O.
 CSV injection guard, phone redaction, token removal.
 """
 from __future__ import annotations
+
 import csv
 import io
 import re

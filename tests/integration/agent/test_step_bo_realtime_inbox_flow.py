@@ -1,6 +1,7 @@
 """Integration tests for Step BO — Realtime Inbox flow."""
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
 
 
 class TestLiveSummaryBuild:
@@ -8,7 +9,7 @@ class TestLiveSummaryBuild:
         base = {
             "id": 1, "contact_name": "Test", "lead_status": "active",
             "temperature": "warm", "last_message_direction": "inbound",
-            "last_message_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+            "last_message_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
             "last_intent": None, "metadata_json": None,
         }
         base.update(kw)
@@ -34,13 +35,19 @@ class TestLiveSummaryBuild:
 
 class TestPulseDetection:
     def test_new_critical_pulses(self):
-        from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService, LiveInboxSummary
+        from core.services.crm_realtime_inbox_service import (
+            CRMRealtimeInboxService,
+            LiveInboxSummary,
+        )
         prev = {"critical_count": 0}
         curr = LiveInboxSummary(critical_count=2)
         assert CRMRealtimeInboxService.should_pulse(prev, curr) is True
 
     def test_same_no_pulse(self):
-        from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService, LiveInboxSummary
+        from core.services.crm_realtime_inbox_service import (
+            CRMRealtimeInboxService,
+            LiveInboxSummary,
+        )
         prev = {"critical_count": 2}
         curr = LiveInboxSummary(critical_count=2)
         assert CRMRealtimeInboxService.should_pulse(prev, curr) is False
@@ -49,6 +56,7 @@ class TestPulseDetection:
 class TestNoSendOccurs:
     def test_no_telegram_in_service(self):
         import inspect
+
         import core.services.crm_realtime_inbox_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src
@@ -56,6 +64,7 @@ class TestNoSendOccurs:
 
     def test_no_openai_in_service(self):
         import inspect
+
         import core.services.crm_realtime_inbox_service as mod
         src = inspect.getsource(mod)
         assert "openai" not in src.lower()

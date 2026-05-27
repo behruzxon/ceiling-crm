@@ -1,6 +1,8 @@
 """Tests for Step BJ — AdminAuthService."""
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
+
 from core.services.admin_auth_service import AdminAuthService, CookieSettings
 
 svc = AdminAuthService
@@ -77,7 +79,7 @@ class TestCreateSession:
         r = svc.create_session("admin1", ttl_hours=24)
         assert r.ok
         expires = datetime.fromisoformat(r.expires_at)
-        assert expires > datetime.now(timezone.utc) + timedelta(hours=23)
+        assert expires > datetime.now(UTC) + timedelta(hours=23)
 
     def test_default_role_viewer(self):
         r = svc.create_session("admin1")
@@ -118,7 +120,7 @@ class TestValidateSession:
             "role": "admin",
             "status": "active",
             "session_id_hash": "abc123",
-            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(hours=12)).isoformat(),
         }
         base.update(overrides)
         return base
@@ -136,7 +138,7 @@ class TestValidateSession:
         assert "not_found" in r.error
 
     def test_expired(self):
-        past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
         r = svc.validate_session(self._active_session(expires_at=past))
         assert not r.ok
         assert "expired" in r.error
@@ -156,9 +158,9 @@ class TestValidateSession:
         assert not r.ok
 
     def test_custom_now(self):
-        future = datetime.now(timezone.utc) + timedelta(hours=24)
+        future = datetime.now(UTC) + timedelta(hours=24)
         session = self._active_session(
-            expires_at=(datetime.now(timezone.utc) + timedelta(hours=12)).isoformat(),
+            expires_at=(datetime.now(UTC) + timedelta(hours=12)).isoformat(),
         )
         r = svc.validate_session(session, now=future)
         assert not r.ok
@@ -166,14 +168,14 @@ class TestValidateSession:
 
     def test_datetime_expires_at(self):
         session = self._active_session(
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=12),
+            expires_at=datetime.now(UTC) + timedelta(hours=12),
         )
         r = svc.validate_session(session)
         assert r.ok
 
     def test_naive_datetime_treated_as_utc(self):
         session = self._active_session(
-            expires_at=(datetime.now(timezone.utc) + timedelta(hours=12)).replace(tzinfo=None).isoformat(),
+            expires_at=(datetime.now(UTC) + timedelta(hours=12)).replace(tzinfo=None).isoformat(),
         )
         r = svc.validate_session(session)
         assert r.ok
@@ -334,6 +336,7 @@ class TestSanitizeSessionForResponse:
 class TestImmutability:
     def test_session_create_result_frozen(self):
         import pytest
+
         from core.services.admin_auth_service import SessionCreateResult
         r = SessionCreateResult(ok=True)
         with pytest.raises(AttributeError):
@@ -341,6 +344,7 @@ class TestImmutability:
 
     def test_session_validate_result_frozen(self):
         import pytest
+
         from core.services.admin_auth_service import SessionValidateResult
         r = SessionValidateResult()
         with pytest.raises(AttributeError):
@@ -348,6 +352,7 @@ class TestImmutability:
 
     def test_login_attempt_result_frozen(self):
         import pytest
+
         from core.services.admin_auth_service import LoginAttemptResult
         r = LoginAttemptResult()
         with pytest.raises(AttributeError):

@@ -21,6 +21,7 @@ class TestEndpoint:
 class TestResponseShape:
     def test_report_serializable(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         r = Stage1ObservationReport()
         d = asdict(r)
@@ -30,30 +31,35 @@ class TestResponseShape:
 
     def test_no_phone_in_default(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         text = str(asdict(Stage1ObservationReport()))
         assert "+998" not in text
 
     def test_no_token_in_default(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         text = str(asdict(Stage1ObservationReport()))
         assert "sk-" not in text
 
     def test_pass_fail_present(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         d = asdict(Stage1ObservationReport())
         assert d["pass_fail"]["passed"] is True
 
     def test_no_send_present(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         d = asdict(Stage1ObservationReport())
         assert d["no_send"]["followups_sent"] == 0
 
     def test_recommendations_present(self):
         from dataclasses import asdict
+
         from core.schemas.stage1_observation_report import Stage1ObservationReport
         d = asdict(Stage1ObservationReport())
         assert isinstance(d["recommendations"], list)

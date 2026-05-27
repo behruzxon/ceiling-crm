@@ -1,7 +1,9 @@
 """Integration tests for Step BJ — Admin Auth Flow."""
 from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class TestOldAuthStillWorks:
@@ -138,6 +140,7 @@ class TestNoTokenLeak:
 class TestNoSendOccurs:
     def test_no_telegram_import_in_auth(self):
         import inspect
+
         import core.services.admin_auth_service as mod
         source = inspect.getsource(mod)
         assert "aiogram" not in source
@@ -145,6 +148,7 @@ class TestNoSendOccurs:
 
     def test_no_telegram_import_in_csrf(self):
         import inspect
+
         import core.services.admin_csrf_service as mod
         source = inspect.getsource(mod)
         assert "aiogram" not in source

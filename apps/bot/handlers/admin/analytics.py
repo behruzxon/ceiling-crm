@@ -10,6 +10,8 @@ Access: ADMIN / SUPERADMIN roles.
 """
 from __future__ import annotations
 
+from datetime import UTC
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -68,8 +70,8 @@ async def cmd_analytics(message: Message, **data: object) -> None:
             from infrastructure.di import get_tactic_outcome_repo
             async with factory() as session2:
                 tac_repo = get_tactic_outcome_repo(session2)
-                from datetime import datetime, timedelta, timezone
-                since = datetime.now(timezone.utc) - timedelta(days=days)
+                from datetime import datetime, timedelta
+                since = datetime.now(UTC) - timedelta(days=days)
                 resolved_stats = await tac_repo.get_resolved_stats(since=since, min_samples=3)
                 if resolved_stats:
                     tactic_perf_report = build_tactic_performance(resolved_stats)
@@ -160,16 +162,16 @@ async def _build_leads_data(leads: list) -> list[dict]:
             score_raw = await get_redis().get(CacheKeys.ai_lead_score(lead.user_id))
             ai_score = int(score_raw) if score_raw else ld.get("score", 0)
 
-            from datetime import datetime, timezone
+            from datetime import datetime
             last_ts = mem.get("last_activity_ts") or mem.get("updated_at")
             if last_ts:
                 mins_inactive = max(
                     0,
-                    (int(datetime.now(timezone.utc).timestamp()) - int(last_ts)) // 60,
+                    (int(datetime.now(UTC).timestamp()) - int(last_ts)) // 60,
                 )
             else:
                 mins_inactive = int(
-                    (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
                 )
 
             ci = analyze_conversation(
@@ -255,9 +257,9 @@ async def _build_leads_data(leads: list) -> list[dict]:
         # Try autopilot enrichment (best-effort)
         try:
             from core.services.next_best_action_service import (
-                determine_next_best_action,
                 detect_at_risk,
                 detect_opportunity,
+                determine_next_best_action,
                 suggest_closing_tactic,
             )
             nba = determine_next_best_action(signal_vector=sv) if sv else \
@@ -316,9 +318,10 @@ async def _build_leads_data(leads: list) -> list[dict]:
 
         # Try auto-seller enrichment (best-effort)
         try:
+            import json as _json
+
             from infrastructure.cache.client import get_redis as _get_redis
             from infrastructure.cache.keys import CacheKeys as _CK
-            import json as _json
 
             _ar_log_raw = await _get_redis().get(_CK.auto_reply_log(lead.user_id))
             if _ar_log_raw:

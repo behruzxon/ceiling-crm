@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractBlockedChatRepository."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -47,7 +47,7 @@ class PostgresBlockedChatRepository(AbstractBlockedChatRepository):
         Returns ``True`` if this is a brand-new entry, ``False`` if it
         already existed and was refreshed.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         insert_stmt = pg_insert(BlockedChatModel).values(
             chat_id=chat_id,

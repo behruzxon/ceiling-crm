@@ -849,7 +849,7 @@ def build_autopilot_suggestion_text(
         f"\U0001f4a1 Sabab: {reason_uz}",
     ]
     if suggested_message_uz:
-        lines.append(f"\n\U0001f4ac <b>Taklif qilinadigan xabar:</b>")
+        lines.append("\n\U0001f4ac <b>Taklif qilinadigan xabar:</b>")
         lines.append(f"<code>{suggested_message_uz}</code>")
     return "\n".join(lines)
 

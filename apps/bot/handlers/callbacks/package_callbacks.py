@@ -18,7 +18,7 @@ message to reflect the new state.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from aiogram import F, Router
@@ -249,13 +249,13 @@ async def cb_block_lead(callback: CallbackQuery, **data: object) -> None:
             await session.execute(
                 sa.update(UserModel)
                 .where(UserModel.id == model.user_id)
-                .values(is_blocked=True, updated_at=datetime.now(timezone.utc))
+                .values(is_blocked=True, updated_at=datetime.now(UTC))
             )
             # Mark lead as blocked
             await session.execute(
                 sa.update(LeadModel)
                 .where(LeadModel.id == lead_id)
-                .values(lead_status="blocked", updated_at=datetime.now(timezone.utc))
+                .values(lead_status="blocked", updated_at=datetime.now(UTC))
             )
             await get_lead_action_repo(session).insert(lead_id, actor_id, "block")
             await session.commit()

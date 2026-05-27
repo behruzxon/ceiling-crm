@@ -10,7 +10,7 @@ Access: ADMIN / SUPERADMIN roles.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -75,7 +75,7 @@ async def cmd_lead_advice(message: Message, **data: object) -> None:
         # Compute classification
         from shared.utils.lead_scoring import compute_lead_score
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         hours_inactive = (now - lead.updated_at).total_seconds() / 3600
 
         score_result = compute_lead_score(

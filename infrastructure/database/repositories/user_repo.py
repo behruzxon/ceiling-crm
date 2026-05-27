@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractUserRepository."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -70,7 +70,7 @@ class PostgresUserRepository(AbstractUserRepository):
             role=user.role.value,
             source=user.source,
             is_blocked=user.is_blocked,
-            last_seen_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(UTC),
         ).on_conflict_do_update(
             index_elements=["id"],
             set_={
@@ -78,8 +78,8 @@ class PostgresUserRepository(AbstractUserRepository):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "language_code": user.language_code,
-                "last_seen_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "last_seen_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             },
         ).returning(UserModel)
 
@@ -137,7 +137,7 @@ class PostgresUserRepository(AbstractUserRepository):
                 role=entity.role.value,
                 source=entity.source,
                 is_blocked=entity.is_blocked,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
             )
             .returning(UserModel)
         )
@@ -150,7 +150,7 @@ class PostgresUserRepository(AbstractUserRepository):
         stmt = (
             update(UserModel)
             .where(UserModel.id == id)
-            .values(is_blocked=True, updated_at=datetime.now(timezone.utc))
+            .values(is_blocked=True, updated_at=datetime.now(UTC))
         )
         result = await self._session.execute(stmt)
         return result.rowcount > 0

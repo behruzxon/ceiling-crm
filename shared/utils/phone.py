@@ -1,5 +1,6 @@
 """Phone number utilities."""
 from __future__ import annotations
+
 import re
 
 UZ_PHONE_REGEX = re.compile(r"^\+?998[0-9]{9}$")

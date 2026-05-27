@@ -1,11 +1,12 @@
 """Prometheus metrics exporter."""
 from __future__ import annotations
+
 from aiohttp import web
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
-    Histogram,
     Gauge,
+    Histogram,
     generate_latest,
 )
 
@@ -84,6 +85,7 @@ async def health_handler(request: web.Request) -> web.Response:
     # ── Database ─────────────────────────────────────────────────────
     try:
         import sqlalchemy as sa
+
         from infrastructure.database.session import get_session_factory
 
         factory = get_session_factory()
@@ -105,6 +107,7 @@ async def health_handler(request: web.Request) -> web.Response:
     # ── OpenAI ───────────────────────────────────────────────────────
     try:
         import httpx
+
         from shared.config import get_settings
 
         settings = get_settings()

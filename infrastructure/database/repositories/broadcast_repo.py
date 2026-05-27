@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractBroadcastRepository (v2)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,7 +114,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         lead_stage: str | None = None,
     ) -> int:
         """Insert a new PENDING broadcast and return its ID."""
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        ts = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
         title = f"Rassilka {segment_type.value} {ts}"
 
         # message_template is a legacy NOT NULL column; populate it from the

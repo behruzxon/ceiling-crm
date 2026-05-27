@@ -236,6 +236,7 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
 
     # Log tactic outcome for outcome-based learning
     import asyncio
+
     from core.services.tactic_outcome_logger import log_tactic_outcome
     asyncio.create_task(log_tactic_outcome(
         event_type="operator",
@@ -282,7 +283,7 @@ async def cb_operator_autoclose(callback: CallbackQuery, **data: object) -> None
     mem: dict = {}
     redis_score: int = 0
     try:
-        from apps.bot.handlers.private.ai_support import _load_ai_memory, _get_lead_score
+        from apps.bot.handlers.private.ai_support import _get_lead_score, _load_ai_memory
         mem = await _load_ai_memory(lead.user_id)
         redis_score = await _get_lead_score(lead.user_id)
     except Exception:
@@ -292,7 +293,7 @@ async def cb_operator_autoclose(callback: CallbackQuery, **data: object) -> None
     lead_name = lead.name if lead.name != "Noma'lum" else mem.get("name")
 
     # Run Auto Closer
-    from core.services.ai_auto_closer_service import build_auto_close_reply, STRATEGY_LABELS
+    from core.services.ai_auto_closer_service import STRATEGY_LABELS, build_auto_close_reply
 
     ac = build_auto_close_reply(
         name=lead_name,

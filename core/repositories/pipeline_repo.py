@@ -1,6 +1,8 @@
 """Pipeline repository interface."""
 from __future__ import annotations
+
 from abc import abstractmethod
+
 from core.repositories.base import BaseRepository
 from shared.constants.enums import PipelineStage
 

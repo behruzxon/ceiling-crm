@@ -1,6 +1,8 @@
 """Frozen dataclass for Stage 5 APPROVED_LIVE_SEND readiness gate."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 
 @dataclass(frozen=True)
 class Stage5LiveSendReadinessResult:

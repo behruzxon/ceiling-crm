@@ -1,6 +1,8 @@
 """Tests for Step BB — CRMInboxAlertService."""
 from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+
 from core.services.crm_inbox_alert_service import CRMInboxAlertService, InboxAlert
 
 svc = CRMInboxAlertService

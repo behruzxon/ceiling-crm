@@ -4,9 +4,13 @@ apps.api.routes.admin_crm
 CRM contacts, messages, notes, tags endpoints. Read + basic write for admin.
 """
 from __future__ import annotations
+
+from datetime import UTC
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from apps.api.dependencies.auth import require_api_token
 from infrastructure.database.session import get_db
 
@@ -38,6 +42,7 @@ async def list_contacts(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     import sqlalchemy as sa
+
     from infrastructure.database.models.crm_contact import CRMContactModel as C
     stmt = sa.select(C).order_by(C.last_seen_at.desc().nullslast())
     if status:
@@ -156,6 +161,7 @@ async def preview_reply(
     contact_id: int, body: ReplyRequest, db: AsyncSession = Depends(get_db),
 ) -> dict:
     from dataclasses import asdict
+
     from core.services.crm_contact_service import CRMContactService
     from core.services.crm_operator_reply_service import CRMOperatorReplyService
     from shared.config import get_settings
@@ -218,12 +224,14 @@ async def live_summary(
 ) -> dict:
     """Live inbox summary for polling-based realtime updates."""
     from dataclasses import asdict
-    from datetime import datetime, timezone
-    import sqlalchemy as sa
-    from infrastructure.database.models.crm_contact import CRMContactModel as C
-    from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService
+    from datetime import datetime
 
-    now = datetime.now(timezone.utc)
+    import sqlalchemy as sa
+
+    from core.services.crm_realtime_inbox_service import CRMRealtimeInboxService
+    from infrastructure.database.models.crm_contact import CRMContactModel as C
+
+    now = datetime.now(UTC)
     stmt = sa.select(C).where(
         C.lead_status.notin_(["stopped", "lost", "won"]),
     ).order_by(C.last_message_at.desc().nullslast()).limit(200)

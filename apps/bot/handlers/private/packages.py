@@ -33,10 +33,10 @@ from aiogram.types import (
     Message,
 )
 
+from apps.bot.keyboards.main_menu import BTN_PACKAGES
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
 from infrastructure.queue.tasks.package_tasks import check_package_followup
-from apps.bot.keyboards.main_menu import BTN_PACKAGES
 from shared.config import get_settings
 from shared.logging import get_logger
 

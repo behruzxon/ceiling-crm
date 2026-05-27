@@ -1,6 +1,8 @@
 """Tests for Step BF — CRMDailyReportService."""
 from __future__ import annotations
+
 from datetime import date
+
 from core.services.crm_daily_report_service import CRMDailyReportService, CRMDailyReportSnapshot
 
 svc = CRMDailyReportService
@@ -121,6 +123,7 @@ class TestSchedulerJob:
 
     def test_job_registers(self):
         from unittest.mock import MagicMock
+
         from apps.scheduler.jobs.crm_daily_report_jobs import register_crm_daily_report_jobs
         scheduler = MagicMock()
         register_crm_daily_report_jobs(scheduler)

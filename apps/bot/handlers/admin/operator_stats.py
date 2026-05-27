@@ -18,7 +18,6 @@ Timezone: Asia/Tashkent for display.
 from __future__ import annotations
 
 import re
-from datetime import timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -146,7 +145,7 @@ async def cmd_opstats(message: Message, **data: object) -> None:
             )
         leaderboard_text = "\n".join(lb_lines)
     else:
-        leaderboard_text = f"👥 <b>Top operatorlar</b>\n<i>Ma'lumot yo'q</i>"
+        leaderboard_text = "👥 <b>Top operatorlar</b>\n<i>Ma'lumot yo'q</i>"
 
     # ── First response section ───────────────────────────────────────────────
     avg_rt = _fmt_seconds(resp.get("avg_seconds"))

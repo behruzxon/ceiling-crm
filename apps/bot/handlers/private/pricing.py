@@ -35,7 +35,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from apps.bot.handlers.private.operator import start_operator_flow
-from apps.bot.keyboards.main_menu import BTN_OPERATOR, BTN_PRICE, MAIN_MENU_BUTTONS, main_menu_keyboard
+from apps.bot.keyboards.main_menu import (
+    BTN_OPERATOR,
+    BTN_PRICE,
+    MAIN_MENU_BUTTONS,
+    main_menu_keyboard,
+)
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from apps.bot.states.pricing import PricingStates

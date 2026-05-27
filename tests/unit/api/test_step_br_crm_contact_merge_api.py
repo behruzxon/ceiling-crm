@@ -1,5 +1,6 @@
 """Tests for Step BR — CRM Contact Merge API."""
 from __future__ import annotations
+
 import pytest
 
 
@@ -30,7 +31,7 @@ class TestDuplicatesAPI:
 class TestPreviewAPI:
     @pytest.mark.asyncio
     async def test_preview(self):
-        from apps.api.routes.admin_crm_merge import merge_preview, MergePreviewBody
+        from apps.api.routes.admin_crm_merge import MergePreviewBody, merge_preview
         r = await merge_preview(MergePreviewBody(source_contact_id=1, target_contact_id=2))
         assert r["source_id"] == 1
         assert "allowed" in r
@@ -40,14 +41,14 @@ class TestPreviewAPI:
 class TestMergeAPI:
     @pytest.mark.asyncio
     async def test_disabled(self):
-        from apps.api.routes.admin_crm_merge import merge_contacts, MergeBody
+        from apps.api.routes.admin_crm_merge import MergeBody, merge_contacts
         r = await merge_contacts(MergeBody(source_contact_id=1, target_contact_id=2, confirm=True))
         assert not r["ok"]
         assert "disabled" in r["error"]
 
     @pytest.mark.asyncio
     async def test_no_confirm(self):
-        from apps.api.routes.admin_crm_merge import merge_contacts, MergeBody
+        from apps.api.routes.admin_crm_merge import MergeBody, merge_contacts
         r = await merge_contacts(MergeBody(source_contact_id=1, target_contact_id=2))
         assert not r["ok"]
 

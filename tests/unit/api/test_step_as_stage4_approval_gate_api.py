@@ -1,7 +1,10 @@
 """Tests for Step AS — APPROVAL Gate API."""
 from __future__ import annotations
+
 from dataclasses import asdict
+
 from core.schemas.stage4_approval_readiness import Stage4ApprovalReadinessResult
+
 
 class TestEndpoint:
     def test_exists(self):

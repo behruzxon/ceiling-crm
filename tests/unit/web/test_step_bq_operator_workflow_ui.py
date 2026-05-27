@@ -1,5 +1,6 @@
 """Tests for Step BQ — Operator Workflow Polish UI."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

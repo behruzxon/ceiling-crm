@@ -5,9 +5,10 @@ Security actions: session revoke, admin disable, IP rules.
 Pure validation + dict builders. No direct DB I/O.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -93,7 +94,7 @@ class AdminSecurityActionService:
     def build_revoke_session_dict() -> dict[str, Any]:
         return {
             "status": "revoked",
-            "revoked_at": datetime.now(timezone.utc).isoformat(),
+            "revoked_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -196,16 +197,16 @@ class AdminSecurityActionService:
             "reason": AdminSecurityActionService.sanitize_reason(reason),
             "is_active": True,
             "created_by": created_by[:100] if created_by else "",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
     def build_disable_ip_rule_dict(updated_by: str = "") -> dict[str, Any]:
         return {
             "is_active": False,
-            "disabled_at": datetime.now(timezone.utc).isoformat(),
+            "disabled_at": datetime.now(UTC).isoformat(),
             "updated_by": updated_by[:100] if updated_by else "",
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod
@@ -261,7 +262,7 @@ class AdminSecurityActionService:
             "status": status,
             "reason": AdminSecurityActionService.sanitize_reason(reason),
             "metadata_json": AdminSecurityActionService._sanitize_metadata(metadata),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     # ── Sanitization ───────────────────────────────────────────────────

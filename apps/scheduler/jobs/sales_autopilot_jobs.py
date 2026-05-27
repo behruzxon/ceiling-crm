@@ -1,7 +1,7 @@
 """Sales autopilot jobs — opportunity detection, risk alerts, NBA suggestions."""
 from __future__ import annotations
 
-import time
+from datetime import UTC
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -31,7 +31,7 @@ async def run_sales_autopilot() -> None:
     Normal alerts (opportunity, closing) are suppressed during off-hours.
     At-risk alerts with urgency=critical are sent anytime.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
@@ -52,7 +52,7 @@ async def run_sales_autopilot() -> None:
         return
 
     off_hours = is_off_hours()
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
 
     factory = get_session_factory()
     bot: Bot | None = None
@@ -72,13 +72,13 @@ async def run_sales_autopilot() -> None:
             analyze_conversation,
         )
         from core.services.next_best_action_service import (
+            CLOSING_TACTIC_LABELS,
             build_at_risk_alert_text,
             build_closing_alert_text,
             build_opportunity_alert_text,
             detect_at_risk,
             detect_opportunity,
             suggest_closing_tactic,
-            CLOSING_TACTIC_LABELS,
         )
 
         for lead in leads:
@@ -94,7 +94,7 @@ async def run_sales_autopilot() -> None:
                 mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
             else:
                 mins_inactive = int(
-                    (datetime.now(timezone.utc) - lead.updated_at).total_seconds() / 60
+                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
                 )
 
             stage_str = (

@@ -1,5 +1,6 @@
 """Tests for Step BC — CRMOperatorTaskService."""
 from __future__ import annotations
+
 from core.services.crm_operator_task_service import CRMOperatorTaskService, TaskRecommendation
 
 svc = CRMOperatorTaskService

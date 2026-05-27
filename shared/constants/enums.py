@@ -3,6 +3,7 @@ All business-domain enumerations.
 Single source of truth — used by domain models, DB enums, and handlers.
 """
 from __future__ import annotations
+
 from enum import Enum
 
 

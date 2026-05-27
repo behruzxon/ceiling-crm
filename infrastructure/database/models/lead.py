@@ -1,8 +1,11 @@
 """SQLAlchemy ORM model for leads table."""
 from __future__ import annotations
+
 from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.session import Base
 from shared.constants.enums import CeilingCategory, LeadSource
 

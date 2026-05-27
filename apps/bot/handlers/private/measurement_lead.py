@@ -39,8 +39,8 @@ from apps.bot.keyboards.main_menu import MAIN_MENU_BUTTONS, main_menu_keyboard
 from apps.bot.states.measurement_lead import MeasurementLeadStates
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_notification_service, get_lead_service
-from shared.constants.enums import CeilingCategory, LeadSource
 from shared.config import get_settings
+from shared.constants.enums import CeilingCategory, LeadSource
 from shared.logging import get_logger
 from shared.utils.phone import is_valid_uz_phone, normalize_phone
 
@@ -357,8 +357,8 @@ async def _create_lead_and_notify(
         # Persist AI scoring to the new lead (non-fatal)
         if lead_temperature is not None or closing_confidence is not None:
             try:
-                from shared.utils.lead_scoring import compute_next_followup
                 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+                from shared.utils.lead_scoring import compute_next_followup
                 next_fu = compute_next_followup(lead_temperature, closing_confidence)
                 async with factory() as session:
                     await PostgresLeadRepository(session).update_ai_scoring(

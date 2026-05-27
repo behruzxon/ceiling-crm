@@ -1,6 +1,12 @@
 """Main menu reply keyboard builder and button-text constants."""
 from __future__ import annotations
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 # ── Button text constants ─────────────────────────────────────────────────────
 # Single source of truth for all main-menu button labels.

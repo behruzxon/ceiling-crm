@@ -6,12 +6,9 @@ import pytest
 from core.schemas.dynamic_offer import DynamicOffer, OfferContext
 from core.services.dynamic_offer_service import DynamicOfferService
 from shared.constants.enums import (
-    CustomerIntent,
-    ObjectionType,
     OfferCTA,
     OfferPriority,
     OfferType,
-    UrgencyLevel,
 )
 
 svc = DynamicOfferService

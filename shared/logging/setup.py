@@ -23,7 +23,6 @@ from __future__ import annotations
 import contextvars
 import logging
 import logging.config
-import sys
 import uuid
 from typing import Any
 

@@ -1,6 +1,8 @@
 """Tests for Step BA — CRMConversationSyncService."""
 from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+
 from core.services.crm_conversation_sync_service import CRMConversationSyncService
 
 svc = CRMConversationSyncService

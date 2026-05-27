@@ -1,6 +1,8 @@
 """Tests for Step CB — Full Web UI Premium Completion."""
 from __future__ import annotations
+
 from pathlib import Path
+
 
 def _t(name):
     return Path(f"apps/web/templates/{name}").read_text(encoding="utf-8")

@@ -1,5 +1,6 @@
 """Shared pytest fixtures for all test layers."""
 from __future__ import annotations
+
 import os
 
 # Ensure tests run in development mode regardless of .env file values.
@@ -7,8 +8,9 @@ import os
 os.environ.setdefault("APP_ENV", "development")
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 @pytest.fixture(scope="session")

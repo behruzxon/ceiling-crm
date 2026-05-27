@@ -4,6 +4,7 @@ core.services.crm_operator_reply_service
 Operator reply validation and send (mockable). Feature-flag gated.
 """
 from __future__ import annotations
+
 import hashlib
 import re
 from dataclasses import dataclass, field

@@ -4,6 +4,7 @@ Platform Readiness Audit — read-only checks.
 No DB mutation, no secrets printed.
 """
 from __future__ import annotations
+
 import importlib
 import os
 import sys

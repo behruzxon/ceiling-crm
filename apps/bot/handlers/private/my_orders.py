@@ -13,7 +13,7 @@ Submenu buttons
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aiogram import F, Router
 from aiogram.types import Message
@@ -104,7 +104,7 @@ _STATUS_LABELS: dict[PaymentStatus, str] = {
     PaymentStatus.REFUNDED: "Qaytarildi",
 }
 
-_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 # ── Entry: show submenu ────────────────────────────────────────────────────────

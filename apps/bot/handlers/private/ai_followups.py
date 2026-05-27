@@ -17,9 +17,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from apps.bot.handlers.private.ai_states import (
-    AiSupportStates,
     _AI_FOLLOWUP_MSG_1,
     _AI_FOLLOWUP_MSG_2,
+    AiSupportStates,
     _ai_keyboard,
 )
 from shared.logging import get_logger

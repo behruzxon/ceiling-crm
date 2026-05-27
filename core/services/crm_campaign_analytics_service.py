@@ -4,9 +4,10 @@ core.services.crm_campaign_analytics_service
 Campaign delivery analytics. Pure functions — read-only, no mutations.
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -244,7 +245,7 @@ class CRMCampaignAnalyticsService:
         inbound_messages: list[dict[str, Any]] | None = None,
         status_changes: list[dict[str, Any]] | None = None,
     ) -> CampaignAnalytics:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         delivery = CRMCampaignAnalyticsService.get_delivery_metrics(attempts)
         blocked = CRMCampaignAnalyticsService.get_blocked_reason_metrics(attempts)
         failures = CRMCampaignAnalyticsService.get_failure_reason_metrics(attempts)

@@ -4,9 +4,9 @@ Supports local filesystem and S3 backends.
 """
 from __future__ import annotations
 
-import os
 import uuid
 from abc import ABC, abstractmethod
+from datetime import UTC
 from pathlib import Path
 
 import aiofiles
@@ -62,10 +62,10 @@ class LocalStorageAdapter(StorageAdapter):
 
     def _generate_path(self, filename: str) -> Path:
         """Generate unique path: uploads/YYYY/MM/uuid_filename."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         filename = self._sanitize_filename(filename)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         subdir = self._base_path / str(now.year) / f"{now.month:02d}"
         subdir.mkdir(parents=True, exist_ok=True)
         unique_name = f"{uuid.uuid4().hex[:8]}_{filename}"

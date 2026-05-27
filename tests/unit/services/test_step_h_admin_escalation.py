@@ -1,7 +1,7 @@
 """Step H tests: admin escalation service, flags, cooldown, message format."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -92,7 +92,7 @@ class TestShouldEscalate:
         assert reason == "followup_disabled"
 
     def test_cooldown_active(self, mock_session: AsyncMock) -> None:
-        recent = datetime.now(timezone.utc) - timedelta(minutes=10)
+        recent = datetime.now(UTC) - timedelta(minutes=10)
         mem = _make_memory(last_admin_escalation_at=recent, followup_count=3)
         svc = AdminEscalationService(mock_session)
         ok, reason = svc.should_escalate(mem, threshold=2, cooldown_minutes=60)
@@ -100,7 +100,7 @@ class TestShouldEscalate:
         assert reason == "cooldown"
 
     def test_cooldown_expired(self, mock_session: AsyncMock) -> None:
-        old = datetime.now(timezone.utc) - timedelta(minutes=120)
+        old = datetime.now(UTC) - timedelta(minutes=120)
         mem = _make_memory(last_admin_escalation_at=old, followup_count=3)
         svc = AdminEscalationService(mock_session)
         ok, reason = svc.should_escalate(mem, threshold=2, cooldown_minutes=60)

@@ -1,5 +1,6 @@
 """Tests for Step BM — Security Enablement Docs."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

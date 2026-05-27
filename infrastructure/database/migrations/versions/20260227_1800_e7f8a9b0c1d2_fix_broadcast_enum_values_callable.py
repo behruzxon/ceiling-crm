@@ -30,9 +30,6 @@ lowercase values.  This migration is a no-op; it exists solely to:
 """
 from __future__ import annotations
 
-from alembic import op
-
-
 # revision identifiers, used by Alembic.
 revision = "e7f8a9b0c1d2"
 down_revision = "d6e7f8a9b0c1"

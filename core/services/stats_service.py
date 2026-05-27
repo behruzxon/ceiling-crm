@@ -16,7 +16,7 @@ All lead metrics are queried in a single SQL aggregation pass.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -34,12 +34,12 @@ HOT_SCORE_THRESHOLD = 7
 
 def _since_today() -> datetime:
     """Start of today in UTC (midnight)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def _since_days(days: int) -> datetime:
-    return datetime.now(timezone.utc) - timedelta(days=days)
+    return datetime.now(UTC) - timedelta(days=days)
 
 
 class StatsService:

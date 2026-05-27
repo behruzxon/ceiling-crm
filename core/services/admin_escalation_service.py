@@ -8,7 +8,7 @@ cooldown has elapsed since last escalation.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +40,7 @@ class AdminEscalationService:
         if memory.followup_count < threshold:
             return False, "below_threshold"
         if memory.last_admin_escalation_at:
-            elapsed = (datetime.now(timezone.utc) - memory.last_admin_escalation_at).total_seconds()
+            elapsed = (datetime.now(UTC) - memory.last_admin_escalation_at).total_seconds()
             if elapsed < cooldown_minutes * 60:
                 return False, "cooldown"
         return True, "ok"
@@ -51,7 +51,7 @@ class AdminEscalationService:
         cooldown_minutes: int,
         limit: int = 20,
     ) -> list[AgentMemoryModel]:
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=cooldown_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=cooldown_minutes)
         stmt = (
             sa.select(AgentMemoryModel)
             .where(
@@ -74,7 +74,7 @@ class AdminEscalationService:
         telegram_user_id: int,
         reason: str,
     ) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(AgentMemoryModel)
             .where(AgentMemoryModel.telegram_user_id == telegram_user_id)

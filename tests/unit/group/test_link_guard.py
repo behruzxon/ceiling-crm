@@ -6,9 +6,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from aiogram.enums import MessageEntityType
+
 from apps.bot.handlers.group.link_guard import has_link
 
 

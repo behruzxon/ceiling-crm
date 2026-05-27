@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+
 from core.schemas.stage_transition_gate import StageTransitionGateResult
 
 

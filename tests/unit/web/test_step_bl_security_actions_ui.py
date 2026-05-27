@@ -1,5 +1,6 @@
 """Tests for Step BL — Security Actions UI elements."""
 from __future__ import annotations
+
 from pathlib import Path
 
 
@@ -54,10 +55,15 @@ class TestSchemas:
 
     def test_all_frozen(self):
         import pytest
+
         from core.schemas.admin_security_action import (
-            AdminSecurityActionRequest, AdminSecurityActionResult,
-            AdminSessionRevokeRequest, AdminUserDisableRequest,
-            AdminIPRuleCreate, AdminIPRuleResponse, AdminSecurityActionAuditItem,
+            AdminIPRuleCreate,
+            AdminIPRuleResponse,
+            AdminSecurityActionAuditItem,
+            AdminSecurityActionRequest,
+            AdminSecurityActionResult,
+            AdminSessionRevokeRequest,
+            AdminUserDisableRequest,
         )
         for cls in [AdminSecurityActionRequest, AdminSecurityActionResult,
                     AdminSessionRevokeRequest, AdminUserDisableRequest,

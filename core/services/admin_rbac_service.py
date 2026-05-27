@@ -5,7 +5,8 @@ Role-based access control for admin platform. Pure functions.
 Backward-compatible: when RBAC disabled, existing single-admin works.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from typing import Any
 
 _ROLES = ("owner", "admin", "operator", "analyst", "viewer")

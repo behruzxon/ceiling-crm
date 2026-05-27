@@ -3,6 +3,7 @@ AIService — guardrailed ceiling FAQ assistant.
 Only answers questions about stretch ceilings. Never goes off-topic.
 """
 from __future__ import annotations
+
 from shared.config import get_settings
 from shared.logging import get_logger
 

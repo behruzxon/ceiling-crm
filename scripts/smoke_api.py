@@ -18,11 +18,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
-import urllib.request
 import urllib.error
-import json
+import urllib.request
 
 # ── Defaults ────────────────────────────────────────────────────────────
 DEFAULT_BASE_URL = "http://localhost:8000"
@@ -204,7 +204,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"CeilingCRM API Smoke Test")
+    print("CeilingCRM API Smoke Test")
     print(f"Base URL: {args.base_url}")
     print(f"Token:    {'(set)' if args.token else '(not set -- auth tests will be skipped)'}")
     print()

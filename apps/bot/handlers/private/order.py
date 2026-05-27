@@ -44,7 +44,7 @@ from __future__ import annotations
 import asyncio as _asyncio
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from aiogram import Bot, F, Router
@@ -66,7 +66,12 @@ from core.services.journey_event_service import emit_journey_event
 from core.services.lead_notification_service import is_hot_lead
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.session import get_session_factory
-from infrastructure.di import get_lead_notification_service, get_lead_repo, get_lead_service, get_pipeline_repo
+from infrastructure.di import (
+    get_lead_notification_service,
+    get_lead_repo,
+    get_lead_service,
+    get_pipeline_repo,
+)
 from shared.config import get_settings
 from shared.constants.enums import CeilingCategory, JourneyEventType, LeadSource, PipelineStage
 from shared.logging import get_logger
@@ -718,7 +723,7 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
                     "utm_source": "order_flow",
                     "lead_status": "contacted",
                     "last_action": "order_done",
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
                 if room_area is not None:
                     update_values.update({

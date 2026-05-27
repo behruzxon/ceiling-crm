@@ -5,6 +5,7 @@ Shows database, Redis, OpenAI connectivity and uptime diagnostics.
 from __future__ import annotations
 
 import time
+from datetime import UTC
 from typing import Any
 
 from aiogram import Router
@@ -48,8 +49,9 @@ async def cmd_system_status(message: Message, **data: Any) -> None:
     # ── Database ─────────────────────────────────────────────────────
     db_status = "❌ error"
     try:
-        from infrastructure.database.session import get_session_factory
         import sqlalchemy as sa
+
+        from infrastructure.database.session import get_session_factory
 
         factory = get_session_factory()
         async with factory() as session:
@@ -74,6 +76,7 @@ async def cmd_system_status(message: Message, **data: Any) -> None:
     openai_status = "❌ error"
     try:
         import httpx
+
         from shared.config import get_settings
 
         settings = get_settings()
@@ -97,7 +100,7 @@ async def cmd_system_status(message: Message, **data: Any) -> None:
 
     # ── System errors (last 24h) ─────────────────────────────────────
     try:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         import sqlalchemy as sa
 
@@ -108,7 +111,7 @@ async def cmd_system_status(message: Message, **data: Any) -> None:
         async with factory() as session:
             result = await session.execute(
                 sa.select(sa.func.count(SystemErrorModel.id)).where(
-                    SystemErrorModel.created_at >= datetime.now(timezone.utc) - timedelta(hours=24)
+                    SystemErrorModel.created_at >= datetime.now(UTC) - timedelta(hours=24)
                 )
             )
             err_count = result.scalar() or 0

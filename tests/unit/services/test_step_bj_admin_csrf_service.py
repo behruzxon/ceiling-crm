@@ -1,5 +1,6 @@
 """Tests for Step BJ — AdminCSRFService."""
 from __future__ import annotations
+
 from core.services.admin_csrf_service import AdminCSRFService, CSRFValidateResult
 
 svc = AdminCSRFService

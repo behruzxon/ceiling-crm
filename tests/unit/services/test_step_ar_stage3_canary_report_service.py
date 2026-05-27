@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from core.schemas.stage3_canary_report import (
-    Stage3CanaryReport, Stage3PassFailResult, Stage3PublicSafetyMetrics,
+    Stage3CanaryReport,
+    Stage3PublicSafetyMetrics,
 )
 from core.services.stage3_canary_report_service import Stage3CanaryReportService
 
@@ -142,8 +143,8 @@ class TestDefaults:
 
 class TestDBService:
     async def test_empty_db(self):
-        from unittest.mock import AsyncMock, MagicMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock, MagicMock
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),
@@ -155,8 +156,8 @@ class TestDBService:
         assert r.pass_fail.passed is True
 
     async def test_db_error(self):
-        from unittest.mock import AsyncMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock
         session = AsyncMock()
         session.execute = AsyncMock(side_effect=Exception("DB"))
         s = Stage3CanaryReportService(session)
@@ -165,8 +166,8 @@ class TestDBService:
         assert r.canary_payload_count == 0
 
     async def test_generated_at(self):
-        from unittest.mock import AsyncMock, MagicMock
         from datetime import UTC, datetime, timedelta
+        from unittest.mock import AsyncMock, MagicMock
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),

@@ -5,9 +5,10 @@ Duplicate detection, merge preview/plan, data quality. Pure functions.
 Actual merge is feature-flag gated (CRM_CONTACT_MERGE_ENABLED).
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
@@ -256,7 +257,7 @@ class CRMContactMergeService:
     def build_source_merged_dict(target_contact_id: int) -> dict[str, Any]:
         return {
             "merged_into_contact_id": target_contact_id,
-            "merged_at": datetime.now(timezone.utc).isoformat(),
+            "merged_at": datetime.now(UTC).isoformat(),
             "merge_status": "merged",
         }
 
@@ -284,7 +285,7 @@ class CRMContactMergeService:
             "before_source_json": CRMContactMergeService.sanitize_snapshot(source_snapshot),
             "before_target_json": CRMContactMergeService.sanitize_snapshot(target_snapshot),
             "error_message": error[:500] if error else None,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     @staticmethod

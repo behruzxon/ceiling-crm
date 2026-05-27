@@ -224,6 +224,7 @@ class TestImmutability:
 
     def test_diff_frozen(self):
         import pytest
+
         from core.schemas.agent_rollout_preset import AgentRolloutPresetDiff
         d = AgentRolloutPresetDiff(key="k", current_value=False, target_value=True)
         with pytest.raises(AttributeError):

@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractGroupJoinRepository."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -41,7 +41,7 @@ class PostgresGroupJoinRepository(AbstractGroupJoinRepository):
         until_dt: datetime | None = None,
     ) -> int:
         """Count distinct users who joined *group_id* in [since_dt, until_dt)."""
-        until_dt = until_dt or datetime.now(timezone.utc)
+        until_dt = until_dt or datetime.now(UTC)
         stmt = (
             sa.select(sa.func.count())
             .select_from(GroupJoinEventModel)

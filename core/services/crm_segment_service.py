@@ -4,6 +4,7 @@ core.services.crm_segment_service
 Contact segmentation. Pure functions.
 """
 from __future__ import annotations
+
 from typing import Any
 
 _VALID_SEGMENTS = frozenset({

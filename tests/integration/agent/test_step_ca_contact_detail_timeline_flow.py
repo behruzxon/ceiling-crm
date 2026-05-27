@@ -1,5 +1,6 @@
 """Integration tests for Step CA — Contact Detail Timeline flow."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

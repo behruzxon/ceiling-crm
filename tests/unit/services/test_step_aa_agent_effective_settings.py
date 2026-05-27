@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 
 from core.schemas.agent_effective_settings import (
-    AgentAIComposerSettings,
     AgentAdminEscalationSettings,
+    AgentAIComposerSettings,
     AgentDecisionSettings,
     AgentEffectiveSettingsSnapshot,
     AgentExecutionSettings,
@@ -311,7 +311,6 @@ class TestCache:
         AgentEffectiveSettingsService.clear_cache()
 
     def test_cache_clears_without_error(self):
-        from core.services.agent_effective_settings_service import _CACHE
         AgentEffectiveSettingsService.clear_cache()
         from core.services.agent_effective_settings_service import _CACHE as c
         assert c == {}

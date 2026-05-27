@@ -3,11 +3,14 @@ In-process domain event bus.
 Decouples event emitters from event handlers.
 """
 from __future__ import annotations
+
 import asyncio
 from collections import defaultdict
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Coroutine
+from typing import Any
+
 from shared.logging import get_logger
 
 log = get_logger(__name__)

@@ -56,6 +56,7 @@ class TestCanaryTracking:
 class TestNoTrackingPixel:
     def test_no_pixel_in_service(self):
         import inspect
+
         import core.services.crm_campaign_analytics_service as mod
         src = inspect.getsource(mod)
         assert "pixel" not in src.lower()
@@ -65,6 +66,7 @@ class TestNoTrackingPixel:
 class TestNoSend:
     def test_no_telegram(self):
         import inspect
+
         import core.services.crm_campaign_analytics_service as mod
         src = inspect.getsource(mod)
         assert "aiogram" not in src

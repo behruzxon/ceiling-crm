@@ -1,6 +1,8 @@
 """Tests for Step AT — APPROVAL_REQUIRED docs existence."""
 from __future__ import annotations
+
 from pathlib import Path
+
 
 class TestDocsExist:
     def test_preparation(self):

@@ -1,5 +1,6 @@
 """Inline keyboard builder for lead cards sent to admin group."""
 from __future__ import annotations
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 

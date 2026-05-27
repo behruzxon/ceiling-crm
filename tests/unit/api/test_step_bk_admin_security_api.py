@@ -1,5 +1,6 @@
 """Tests for Step BK — Admin Security API endpoints."""
 from __future__ import annotations
+
 import pytest
 
 

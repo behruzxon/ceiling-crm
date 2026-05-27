@@ -6,7 +6,7 @@ recommends the next best action.  Pure function — no I/O, no side effects.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.schemas.agent_decision import AgentDecision
@@ -46,7 +46,7 @@ def _has(events: frozenset[str], et: JourneyEventType) -> bool:
 def _hours_since(dt: datetime | None) -> float:
     if dt is None:
         return 9999.0
-    delta = datetime.now(timezone.utc) - dt
+    delta = datetime.now(UTC) - dt
     return max(delta.total_seconds() / 3600.0, 0.0)
 
 
@@ -229,7 +229,7 @@ def evaluate(
     now: datetime | None = None,
 ) -> AgentDecision:
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     et_set = _event_set(recent_events)
     state = classify_customer_state(memory, et_set)
@@ -290,7 +290,7 @@ def evaluate_with_offer(
     recent_events: list[dict[str, Any]],
     lead_signal: dict[str, Any] | None = None,
     now: datetime | None = None,
-) -> tuple[AgentDecision, "DynamicOffer | None"]:
+) -> tuple[AgentDecision, DynamicOffer | None]:
     decision = evaluate(memory, recent_events, now=now)
 
     try:
@@ -320,7 +320,7 @@ def evaluate_full(
     recent_events: list[dict[str, Any]],
     lead_signal: dict[str, Any] | None = None,
     now: datetime | None = None,
-) -> tuple[AgentDecision, "DynamicOffer | None", "ConversationPolicyDecision | None"]:
+) -> tuple[AgentDecision, DynamicOffer | None, ConversationPolicyDecision | None]:
     decision, offer = evaluate_with_offer(
         memory, recent_events, lead_signal=lead_signal, now=now,
     )

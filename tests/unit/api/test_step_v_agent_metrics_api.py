@@ -2,10 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 from core.schemas.agent_metrics import (
     AgentHealthMetrics,
@@ -17,7 +14,6 @@ from core.schemas.agent_metrics import (
     SafetyMetrics,
 )
 from core.services.agent_metrics_service import AgentMetricsService
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. API route importability

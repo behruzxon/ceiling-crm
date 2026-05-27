@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from core.schemas.stage3_canary_report import (
-    Stage3CanaryReport, Stage3PassFailResult, Stage3PublicSafetyMetrics,
+    Stage3CanaryReport,
+    Stage3PassFailResult,
+    Stage3PublicSafetyMetrics,
 )
 from core.services.stage4_approval_readiness_service import (
     Stage4ApprovalReadinessService,

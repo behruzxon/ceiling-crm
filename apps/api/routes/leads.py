@@ -32,7 +32,7 @@ def _lead_to_out(lead: Lead) -> LeadOut:
     return LeadOut.model_validate(lead.model_dump())
 
 
-def _stage_subquery(alias: str = "ls_api") -> "sa.Subquery":
+def _stage_subquery(alias: str = "ls_api") -> sa.Subquery:
     """Latest pipeline stage per lead (mirrors repo helper)."""
     return (
         select(

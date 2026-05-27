@@ -1,5 +1,6 @@
 """Tests for Step AX — CRM UI templates."""
 from __future__ import annotations
+
 from pathlib import Path
 
 _CONTACTS = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")

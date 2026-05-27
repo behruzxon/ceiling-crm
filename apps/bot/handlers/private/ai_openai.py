@@ -16,9 +16,9 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from apps.bot.ai.system_prompt import (
-    INJECTION_REFUSAL,
     _SUMMARY_SYSTEM,
     _SYSTEM_PROMPT,
+    INJECTION_REFUSAL,
     detect_prompt_injection,
     sanitize_ai_reply,
 )
@@ -131,6 +131,7 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
         lines.append(f"{label}: {text}")
     history_text = "\n".join(lines)
     from openai import APIConnectionError, APITimeoutError, RateLimitError
+
     from shared.utils.retry import with_retry
 
     t0 = time.monotonic()
@@ -343,6 +344,7 @@ async def _call_ai(
         messages.pop(n_system)
 
     from openai import APIConnectionError, APITimeoutError, RateLimitError
+
     from shared.utils.retry import with_retry
 
     t0 = time.monotonic()

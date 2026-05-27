@@ -1,5 +1,6 @@
 """Tests for Step AY — CRMOperatorReplyService."""
 from __future__ import annotations
+
 from core.services.crm_operator_reply_service import CRMOperatorReplyService
 
 svc = CRMOperatorReplyService
@@ -83,7 +84,9 @@ class TestRedaction:
 
 class TestModel:
     def test_importable(self):
-        from infrastructure.database.models.crm_operator_outbound_audit import CRMOperatorOutboundAuditModel
+        from infrastructure.database.models.crm_operator_outbound_audit import (
+            CRMOperatorOutboundAuditModel,
+        )
         assert CRMOperatorOutboundAuditModel.__tablename__ == "crm_operator_outbound_audit"
 
 class TestMigration:

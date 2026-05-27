@@ -10,6 +10,7 @@ Usage:
     python scripts/security_enablement_preflight.py --json
 """
 from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -75,7 +76,7 @@ def main() -> int:
         print(json.dumps(asdict(report), indent=2, ensure_ascii=False))
         return 0 if report.can_proceed else 1
 
-    print(f"Security Enablement Preflight")
+    print("Security Enablement Preflight")
     print(f"Stage: {report.stage} — {report.stage_description}")
     print(f"Overall: {report.overall.upper()}")
     print()

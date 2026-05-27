@@ -1,5 +1,6 @@
 """Integration tests for Step BZ — CRM Inbox Premium flow."""
 from __future__ import annotations
+
 from pathlib import Path
 
 

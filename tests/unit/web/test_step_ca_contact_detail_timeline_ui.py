@@ -1,6 +1,8 @@
 """Tests for Step CA — Contact Detail Timeline Premium UI."""
 from __future__ import annotations
+
 from pathlib import Path
+
 
 def _d():
     return Path("apps/web/templates/crm_contact_detail.html").read_text(encoding="utf-8")

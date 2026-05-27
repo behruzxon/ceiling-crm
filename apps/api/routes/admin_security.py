@@ -3,6 +3,7 @@ Admin Security Audit Dashboard API endpoints.
 Read-only — no mutations.
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Query
 
 router = APIRouter(prefix="/api/v1/admin/security", tags=["admin-security"])
@@ -84,7 +85,10 @@ async def suspicious_activity(
     from core.services.admin_security_audit_service import AdminSecurityAuditService
     svc = AdminSecurityAuditService
     from core.services.admin_security_audit_service import (
-        LoginAttemptMetrics, SessionMetrics, PermissionDeniedMetrics, SensitiveActionMetrics,
+        LoginAttemptMetrics,
+        PermissionDeniedMetrics,
+        SensitiveActionMetrics,
+        SessionMetrics,
     )
     indicators = svc.detect_suspicious_activity(
         LoginAttemptMetrics(), SessionMetrics(),

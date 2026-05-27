@@ -24,7 +24,6 @@ from abc import ABC, abstractmethod
 
 from core.services.agent.base import AgentAction, AgentContext, AgentTrigger
 
-
 # ── Abstract rule ─────────────────────────────────────────────────────────────
 
 

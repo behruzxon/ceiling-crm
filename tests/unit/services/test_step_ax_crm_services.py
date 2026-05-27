@@ -1,5 +1,6 @@
 """Tests for Step AX — CRM Contact + Message services (pure logic)."""
 from __future__ import annotations
+
 from core.services.crm_contact_service import CRMContactService
 from core.services.crm_message_service import CRMMessageService
 

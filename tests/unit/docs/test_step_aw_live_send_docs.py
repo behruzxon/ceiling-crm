@@ -1,6 +1,8 @@
 """Tests for Step AW — APPROVED_LIVE_SEND docs."""
 from __future__ import annotations
+
 from pathlib import Path
+
 
 class TestDocsExist:
     def test_preparation(self):

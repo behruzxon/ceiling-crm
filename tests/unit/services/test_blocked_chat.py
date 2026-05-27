@@ -9,12 +9,10 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from aiogram.exceptions import TelegramForbiddenError
+
 from core.repositories.blocked_chat_repo import AbstractBlockedChatRepository
 from infrastructure.queue.tasks.broadcast_tasks import _classify_error
-
 
 # ── _classify_error ────────────────────────────────────────────────────────────
 

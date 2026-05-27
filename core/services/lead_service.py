@@ -30,7 +30,7 @@ class LeadService:
         lead_repo: AbstractLeadRepository,
         pipeline_repo: AbstractPipelineRepository,
         event_bus: EventBus,
-        action_repo: "PostgresLeadActionRepository | None" = None,
+        action_repo: PostgresLeadActionRepository | None = None,
     ) -> None:
         self._leads = lead_repo
         self._pipeline = pipeline_repo

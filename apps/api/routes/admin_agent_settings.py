@@ -55,7 +55,7 @@ class RollbackRequest(BaseModel):
 
 @router.get("")
 async def get_settings_list() -> dict:
-    from core.services.agent_settings_service import AgentSettingsService, _ALLOWED_KEYS
+    from core.services.agent_settings_service import _ALLOWED_KEYS, AgentSettingsService
     from shared.config import get_settings
 
     biz = get_settings().business
@@ -123,13 +123,14 @@ async def apply_change(
 
     from datetime import UTC, datetime
 
+    import sqlalchemy as sa
+
     from infrastructure.database.models.agent_runtime_setting import (
         AgentRuntimeSettingModel,
     )
     from infrastructure.database.models.agent_setting_audit_log import (
         AgentSettingAuditLogModel,
     )
-    import sqlalchemy as sa
 
     stmt = sa.select(AgentRuntimeSettingModel).where(
         AgentRuntimeSettingModel.key == body.key,
@@ -192,13 +193,14 @@ async def rollback_setting(
     _check_mutation_enabled()
     from datetime import UTC, datetime
 
+    import sqlalchemy as sa
+
     from infrastructure.database.models.agent_runtime_setting import (
         AgentRuntimeSettingModel,
     )
     from infrastructure.database.models.agent_setting_audit_log import (
         AgentSettingAuditLogModel,
     )
-    import sqlalchemy as sa
 
     stmt = sa.select(AgentRuntimeSettingModel).where(
         AgentRuntimeSettingModel.key == body.setting_key,
@@ -234,10 +236,11 @@ async def get_audit_log(
     limit: int = Query(default=50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    import sqlalchemy as sa
+
     from infrastructure.database.models.agent_setting_audit_log import (
         AgentSettingAuditLogModel,
     )
-    import sqlalchemy as sa
 
     stmt = (
         sa.select(AgentSettingAuditLogModel)
@@ -354,13 +357,14 @@ async def apply_preset(
 
     from datetime import UTC, datetime
 
+    import sqlalchemy as sa
+
     from infrastructure.database.models.agent_runtime_setting import (
         AgentRuntimeSettingModel,
     )
     from infrastructure.database.models.agent_setting_audit_log import (
         AgentSettingAuditLogModel,
     )
-    import sqlalchemy as sa
 
     snapshot = AgentSettingsService.build_rollback_snapshot(current)
     reason = f"preset:{preset}" + (f" — {body.reason}" if body and body.reason else "")

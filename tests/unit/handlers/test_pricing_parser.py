@@ -6,8 +6,6 @@ No I/O or FSM — pure function tests only.
 """
 from __future__ import annotations
 
-import pytest
-
 from apps.bot.handlers.private.pricing import (
     LED_PROMO_DESIGN,
     LED_PROMO_THRESHOLD,
@@ -15,7 +13,6 @@ from apps.bot.handlers.private.pricing import (
     _parse_dimension,
     _parse_two_dimensions,
 )
-
 
 # ─── _parse_two_dimensions ────────────────────────────────────────────────────
 

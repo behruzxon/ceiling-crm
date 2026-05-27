@@ -1,6 +1,10 @@
 """Tests for Step BG — CRMReportDeliveryService."""
 from __future__ import annotations
-from core.services.crm_report_delivery_service import CRMReportDeliveryService, DeliveryPreviewResult
+
+from core.services.crm_report_delivery_service import (
+    CRMReportDeliveryService,
+    DeliveryPreviewResult,
+)
 
 svc = CRMReportDeliveryService
 
@@ -147,7 +151,9 @@ class TestBuildMessage:
 
 class TestModel:
     def test_importable(self):
-        from infrastructure.database.models.crm_report_delivery_audit import CRMReportDeliveryAuditModel
+        from infrastructure.database.models.crm_report_delivery_audit import (
+            CRMReportDeliveryAuditModel,
+        )
         assert CRMReportDeliveryAuditModel.__tablename__ == "crm_report_delivery_audit"
 
 class TestMigration:

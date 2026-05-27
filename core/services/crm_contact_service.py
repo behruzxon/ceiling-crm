@@ -4,11 +4,14 @@ core.services.crm_contact_service
 CRM contact CRUD + lead management.
 """
 from __future__ import annotations
+
 import re
 from datetime import UTC, datetime
 from typing import Any
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from infrastructure.database.models.crm_contact import CRMContactModel
 from infrastructure.database.models.crm_message import CRMContactNoteModel, CRMContactTagModel
 from shared.logging import get_logger

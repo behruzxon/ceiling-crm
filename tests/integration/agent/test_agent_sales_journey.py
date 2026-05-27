@@ -6,7 +6,7 @@ No real database or Telegram API is used.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -84,8 +84,8 @@ class TestCatalogJourney:
         fu = ScheduledFollowupModel(
             telegram_user_id=1, followup_type="catalog",
             trigger_event_type="opened_catalog",
-            scheduled_at=datetime.now(timezone.utc),
-            created_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+            scheduled_at=datetime.now(UTC),
+            created_at=datetime.now(UTC) - timedelta(minutes=10),
         )
         session.execute.side_effect = [_scalar(0), _scalar(0)]
 
@@ -122,8 +122,8 @@ class TestPriceJourney:
         fu = ScheduledFollowupModel(
             telegram_user_id=1, followup_type="price",
             trigger_event_type="price_calculated",
-            scheduled_at=datetime.now(timezone.utc),
-            created_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+            scheduled_at=datetime.now(UTC),
+            created_at=datetime.now(UTC) - timedelta(minutes=10),
         )
         session.execute.return_value = _scalar(1)  # superseding event exists
 
@@ -154,8 +154,8 @@ class TestAbandonedOrderJourney:
         fu = ScheduledFollowupModel(
             telegram_user_id=1, followup_type="abandoned_order",
             trigger_event_type="order_form_started",
-            scheduled_at=datetime.now(timezone.utc),
-            created_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+            scheduled_at=datetime.now(UTC),
+            created_at=datetime.now(UTC) - timedelta(minutes=10),
         )
         session.execute.return_value = _scalar(1)
 
@@ -243,7 +243,7 @@ class TestAdminEscalationFlow:
 
     def test_cooldown_prevents_duplicate(self) -> None:
         session = _mock_session()
-        recent = datetime.now(timezone.utc) - timedelta(minutes=10)
+        recent = datetime.now(UTC) - timedelta(minutes=10)
         mem = AgentMemoryModel(
             telegram_user_id=1, interested_designs=[], memory_data={},
             lead_temperature="hot", followup_enabled=True, followup_count=3,

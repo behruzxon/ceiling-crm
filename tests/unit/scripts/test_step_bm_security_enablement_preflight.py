@@ -1,5 +1,6 @@
 """Tests for Step BM — Security Enablement Preflight."""
 from __future__ import annotations
+
 from core.services.security_enablement_service import SecurityEnablementService
 
 svc = SecurityEnablementService
@@ -218,6 +219,7 @@ class TestNoSecretsPrinted:
 class TestImmutability:
     def test_preflight_check_frozen(self):
         import pytest
+
         from core.services.security_enablement_service import PreflightCheck
         c = PreflightCheck()
         with pytest.raises(AttributeError):
@@ -225,6 +227,7 @@ class TestImmutability:
 
     def test_preflight_report_frozen(self):
         import pytest
+
         from core.services.security_enablement_service import PreflightReport
         r = PreflightReport()
         with pytest.raises(AttributeError):
@@ -232,6 +235,7 @@ class TestImmutability:
 
     def test_rollback_card_frozen(self):
         import pytest
+
         from core.services.security_enablement_service import RollbackCard
         c = RollbackCard()
         with pytest.raises(AttributeError):

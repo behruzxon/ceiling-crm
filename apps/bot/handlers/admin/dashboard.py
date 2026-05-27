@@ -12,7 +12,7 @@ from apps.bot.filters.role import RoleFilter
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_repo, get_user_repo
 from shared.constants.enums import PipelineStage, UserRole
-from shared.utils.formatting import bold, fmt_currency
+from shared.utils.formatting import bold
 
 router = Router(name="admin:dashboard")
 

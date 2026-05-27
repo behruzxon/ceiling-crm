@@ -1,10 +1,13 @@
 """Unit tests for CRMService pipeline transitions."""
 from __future__ import annotations
-import pytest
+
 from unittest.mock import AsyncMock
+
+import pytest
+
 from core.services.crm_service import CRMService
 from shared.constants.enums import PipelineStage
-from shared.exceptions.base import InvalidStageTransitionError, MissingLostReasonError
+from shared.exceptions.base import InvalidStageTransitionError
 
 
 class TestCRMServiceTransitions:

@@ -1,5 +1,6 @@
 """Tests for Step BU — Campaign Analytics API."""
 from __future__ import annotations
+
 import pytest
 
 

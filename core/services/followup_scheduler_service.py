@@ -19,7 +19,7 @@ after the follow-up was scheduled.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -120,7 +120,7 @@ class FollowupSchedulerService:
         if existing:
             return None
 
-        scheduled_at = datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
+        scheduled_at = datetime.now(UTC) + timedelta(minutes=delay_minutes)
         fu = ScheduledFollowupModel(
             telegram_user_id=telegram_user_id,
             followup_type=followup_type,
@@ -137,7 +137,7 @@ class FollowupSchedulerService:
         telegram_user_id: int,
         reason: str = "user_action",
     ) -> int:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(ScheduledFollowupModel)
             .where(
@@ -164,7 +164,7 @@ class FollowupSchedulerService:
         return list(result.scalars().all())
 
     async def mark_sent(self, followup_id: int, message_text: str) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(ScheduledFollowupModel)
             .where(ScheduledFollowupModel.id == followup_id)
@@ -180,7 +180,7 @@ class FollowupSchedulerService:
         await self._session.flush()
 
     async def mark_failed(self, followup_id: int, error: str) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(ScheduledFollowupModel)
             .where(ScheduledFollowupModel.id == followup_id)
@@ -195,7 +195,7 @@ class FollowupSchedulerService:
         await self._session.flush()
 
     async def mark_skipped(self, followup_id: int, reason: str) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             sa.update(ScheduledFollowupModel)
             .where(ScheduledFollowupModel.id == followup_id)
@@ -208,7 +208,7 @@ class FollowupSchedulerService:
         stmt = (
             sa.update(ScheduledFollowupModel)
             .where(ScheduledFollowupModel.id == followup_id)
-            .values(scheduled_at=new_time, updated_at=datetime.now(timezone.utc))
+            .values(scheduled_at=new_time, updated_at=datetime.now(UTC))
         )
         await self._session.execute(stmt)
         await self._session.flush()
@@ -232,7 +232,7 @@ class FollowupSchedulerService:
 
         # DB-based gap check fallback
         if memory.last_followup_at:
-            gap = (datetime.now(timezone.utc) - memory.last_followup_at).total_seconds()
+            gap = (datetime.now(UTC) - memory.last_followup_at).total_seconds()
             if gap < _MIN_GAP_SECONDS:
                 return False, "min_gap"
 
@@ -288,7 +288,7 @@ class FollowupSchedulerService:
         return (result.scalar() or 0) > 0
 
     async def _count_sent_today(self, telegram_user_id: int) -> int:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        cutoff = datetime.now(UTC) - timedelta(hours=24)
         stmt = (
             sa.select(sa.func.count())
             .select_from(ScheduledFollowupModel)

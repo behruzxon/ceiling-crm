@@ -1,6 +1,8 @@
 """Scheduler job for daily CRM report generation."""
 from __future__ import annotations
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from shared.logging import get_logger
 
 log = get_logger(__name__)

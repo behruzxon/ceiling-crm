@@ -4,8 +4,8 @@ core.services.crm_operator_task_service
 Operator task management + recommendation from alerts. Pure validation.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
-from datetime import datetime
+
+from dataclasses import dataclass
 from typing import Any
 
 _VALID_TYPES = frozenset({

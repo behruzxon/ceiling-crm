@@ -1,7 +1,7 @@
 """PostgreSQL implementation of AbstractLeadRepository."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.lead import Lead, LeadAddons
-from core.repositories.lead_repo import AbstractLeadRepository, _UNSET
+from core.repositories.lead_repo import _UNSET, AbstractLeadRepository
 from infrastructure.database.models.lead import LeadModel
 from infrastructure.database.models.pipeline_stage import PipelineStageModel
 from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
@@ -142,7 +142,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
 
     async def get_stale_new_leads(self, older_than_minutes: int) -> list[Lead]:
         """Return NEW leads with no stage change in the given minutes."""
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=older_than_minutes)
         latest = self._latest_stage_subquery()
         stmt = (
             select(LeadModel)
@@ -162,7 +162,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
             .where(LeadModel.id == lead_id)
             .values(
                 assigned_manager_id=manager_id,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
             )
             .returning(LeadModel)
         )
@@ -266,7 +266,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
                 addons=entity.addons.model_dump() if entity.addons else {},
                 notes=entity.notes,
                 assigned_manager_id=entity.assigned_manager_id,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
             )
             .returning(LeadModel)
         )
@@ -314,7 +314,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
                     lead_status=lead_status,
                     last_action="package_order",
                     score=LeadModel.score + score_delta,
-                    updated_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(UTC),
                 )
                 .returning(LeadModel)
             )
@@ -345,7 +345,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
         stmt = (
             update(LeadModel)
             .where(LeadModel.id == lead_id)
-            .values(lead_status=lead_status, updated_at=datetime.now(timezone.utc))
+            .values(lead_status=lead_status, updated_at=datetime.now(UTC))
         )
         await self._session.execute(stmt)
 
@@ -354,7 +354,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
         stmt = (
             update(LeadModel)
             .where(LeadModel.id == lead_id)
-            .values(last_action=last_action, updated_at=datetime.now(timezone.utc))
+            .values(last_action=last_action, updated_at=datetime.now(UTC))
         )
         await self._session.execute(stmt)
 
@@ -368,7 +368,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
         increment_followup_count: bool = False,
     ) -> None:
         """Persist AI scoring columns. Only non-_UNSET values are written."""
-        values: dict[str, Any] = {"updated_at": datetime.now(timezone.utc)}
+        values: dict[str, Any] = {"updated_at": datetime.now(UTC)}
         if lead_temperature is not None:
             values["lead_temperature"] = lead_temperature
         if closing_confidence is not None:
@@ -437,7 +437,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
         limit: int = 500,
     ) -> list[Lead]:
         """Return ALL leads created within *days*, newest first."""
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         latest = self._latest_stage_subquery("ls_analytics")
         stmt = (
             select(LeadModel, latest.c.stage)

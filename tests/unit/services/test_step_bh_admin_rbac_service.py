@@ -1,5 +1,6 @@
 """Tests for Step BH — AdminRBACService."""
 from __future__ import annotations
+
 from core.services.admin_rbac_service import AdminRBACService, PermissionCheckResult
 
 svc = AdminRBACService

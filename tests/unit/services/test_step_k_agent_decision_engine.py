@@ -1,7 +1,7 @@
 """Step K tests: agent decision engine — state classification, action, scoring, safety."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -98,7 +98,7 @@ class TestClassifyState:
         assert s == S.NEGOTIATING_PRICE
 
     def test_inactive_warm(self) -> None:
-        old = datetime.now(timezone.utc) - timedelta(hours=30)
+        old = datetime.now(UTC) - timedelta(hours=30)
         s = classify_customer_state(
             {"lead_temperature": "warm", "last_event_at": old},
             frozenset(),
@@ -106,7 +106,7 @@ class TestClassifyState:
         assert s == S.INACTIVE_WARM
 
     def test_inactive_cold(self) -> None:
-        old = datetime.now(timezone.utc) - timedelta(hours=80)
+        old = datetime.now(UTC) - timedelta(hours=80)
         s = classify_customer_state(
             {"lead_temperature": "cold", "last_event_at": old},
             frozenset(),
@@ -236,7 +236,7 @@ class TestSafety:
         assert "lifetime_cap_reached" in d.safety_flags
 
     def test_cold_no_admin_escalation(self) -> None:
-        old = datetime.now(timezone.utc) - timedelta(hours=30)
+        old = datetime.now(UTC) - timedelta(hours=30)
         d = evaluate(
             {"lead_temperature": "cold", "last_event_at": old},
             [],

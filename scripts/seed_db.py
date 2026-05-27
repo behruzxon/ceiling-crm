@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-from decimal import Decimal
 
 from shared.logging import configure_logging, get_logger
 
@@ -65,8 +64,8 @@ async def seed() -> None:
     log.info("seeding_database")
 
     from infrastructure.cache.client import connect_redis, get_redis
-    from infrastructure.database.session import connect_database, get_session_factory
     from infrastructure.database.models.user import UserModel
+    from infrastructure.database.session import connect_database, get_session_factory
     from shared.constants.enums import UserRole
 
     await connect_database()

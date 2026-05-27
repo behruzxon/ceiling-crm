@@ -4,13 +4,13 @@ Detects user language preference and injects translator function.
 """
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
 from shared.config import get_settings
-
 
 # Lazy-loaded message dictionaries
 _messages_cache: dict[str, dict[str, str]] = {}

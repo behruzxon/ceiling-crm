@@ -13,7 +13,7 @@ Two entry points:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -84,7 +84,7 @@ class JourneyEventService:
         within_minutes: int = 10,
     ) -> bool:
         et = event_type.value if isinstance(event_type, JourneyEventType) else event_type
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=within_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=within_minutes)
         stmt = (
             sa.select(sa.func.count())
             .select_from(JourneyEventModel)

@@ -1,6 +1,8 @@
 """Celery application factory."""
 from __future__ import annotations
+
 from celery import Celery
+
 from shared.config import get_settings
 
 

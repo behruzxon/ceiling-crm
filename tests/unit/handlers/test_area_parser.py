@@ -1,7 +1,7 @@
 """Unit tests for shared.utils.area_parser.parse_area."""
 import pytest
-from shared.utils.area_parser import parse_area
 
+from shared.utils.area_parser import parse_area
 
 # ── Dimension pair — symbol separators ────────────────────────────────────────
 

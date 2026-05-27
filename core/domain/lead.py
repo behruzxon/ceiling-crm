@@ -1,8 +1,11 @@
 """Lead domain model."""
 from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, Field
+
 from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
 
 

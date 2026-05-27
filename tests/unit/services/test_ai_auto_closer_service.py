@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from core.services.ai_auto_closer_service import (
-    AutoCloseDecision,
     STRATEGY_LABELS,
+    AutoCloseDecision,
     build_auto_close_reply,
 )
 

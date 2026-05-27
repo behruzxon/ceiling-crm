@@ -40,7 +40,7 @@ _FALLBACK_UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5
 # ── Timezone resolution ─────────────────────────────────────────────────────
 
 
-def _get_tz() -> timezone | "ZoneInfo":
+def _get_tz() -> timezone | ZoneInfo:
     """Return the configured timezone, falling back to UTC+5 on any error."""
     try:
         from shared.config import get_settings

@@ -4,11 +4,14 @@ core.services.crm_dashboard_analytics_service
 Pure CRM analytics computation from contact/task data. No I/O.
 """
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 
 from core.schemas.crm_dashboard_analytics import (
-    CRMDashboardAnalytics, CRMFunnelStage, CRMMissedLeadMetrics,
+    CRMDashboardAnalytics,
+    CRMFunnelStage,
+    CRMMissedLeadMetrics,
 )
 from core.services.crm_sla_service import CRMSLAService
 
@@ -38,7 +41,8 @@ class CRMDashboardAnalyticsService:
         tasks: list[dict[str, Any]] | None = None,
         now: datetime | None = None,
     ) -> CRMDashboardAnalytics:
-        from datetime import UTC, datetime as dt
+        from datetime import UTC
+        from datetime import datetime as dt
         if now is None:
             now = dt.now(UTC)
         tasks = tasks or []

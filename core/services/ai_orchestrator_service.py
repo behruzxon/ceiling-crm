@@ -21,7 +21,6 @@ from core.services.ai_auto_closer_service import (
 )
 from core.services.ai_sales_brain_service import SalesBrainDecision, build_sales_brain
 
-
 # ── Risk flag slug mapping (Uzbek → English) ────────────────────────────────
 
 _RISK_SLUG_MAP: dict[str, str] = {

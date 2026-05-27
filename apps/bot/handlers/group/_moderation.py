@@ -15,7 +15,7 @@ Provides
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from aiogram import Bot
 from aiogram.enums import ChatMemberStatus
@@ -76,7 +76,7 @@ async def try_delete(message: Message) -> bool:
 
 async def mute_user(bot: Bot, chat_id: int, user_id: int, seconds: int) -> bool:
     """Restrict *user_id* from sending messages for *seconds*. Returns True on success."""
-    until = datetime.now(tz=timezone.utc) + timedelta(seconds=seconds)
+    until = datetime.now(tz=UTC) + timedelta(seconds=seconds)
     try:
         await bot.restrict_chat_member(
             chat_id=chat_id,

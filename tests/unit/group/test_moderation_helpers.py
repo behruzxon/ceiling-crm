@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-
 from apps.bot.handlers.group._moderation import (
     _flood_msgs,
     _link_violations,

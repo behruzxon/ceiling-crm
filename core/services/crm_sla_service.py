@@ -4,7 +4,8 @@ core.services.crm_sla_service
 SLA computation for CRM contacts. Pure functions — no I/O.
 """
 from __future__ import annotations
-from datetime import datetime, timezone
+
+from datetime import datetime
 from typing import Any
 
 _NO_SLA_STATUSES = frozenset({"stopped", "lost", "won"})

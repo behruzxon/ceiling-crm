@@ -1,10 +1,13 @@
 """Step AT — APPROVAL_REQUIRED safety integration tests."""
 from __future__ import annotations
+
 from types import SimpleNamespace
+
 from core.services.agent_control_center_service import AgentControlCenterService
 from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
 from core.services.agent_execution_sandbox_service import AgentExecutionSandboxService
 from core.services.agent_rollout_preset_service import AgentRolloutPresetService
+
 
 def _approval_overrides():
     return AgentRolloutPresetService.build_preset_settings("approval_required")
@@ -138,15 +141,17 @@ class TestCallbackSafety:
 
 class TestQueueService:
     def test_can_execute_proposed_false(self):
-        from core.services.agent_execution_queue_service import AgentExecutionQueueService
         from unittest.mock import MagicMock
+
+        from core.services.agent_execution_queue_service import AgentExecutionQueueService
         r = MagicMock()
         r.status = "proposed"
         assert AgentExecutionQueueService.can_execute(r) is False
 
     def test_can_execute_approved_true(self):
-        from core.services.agent_execution_queue_service import AgentExecutionQueueService
         from unittest.mock import MagicMock
+
+        from core.services.agent_execution_queue_service import AgentExecutionQueueService
         r = MagicMock()
         r.status = "approved"
         assert AgentExecutionQueueService.can_execute(r) is True

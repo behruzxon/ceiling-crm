@@ -1,5 +1,6 @@
 """Tests for Step BJ — DB models, migration, schemas, settings."""
 from __future__ import annotations
+
 import importlib
 
 
@@ -97,6 +98,7 @@ class TestSchemas:
 
     def test_login_request_frozen(self):
         import pytest
+
         from core.schemas.admin_auth import AdminLoginRequest
         obj = AdminLoginRequest()
         with pytest.raises(AttributeError):
@@ -104,6 +106,7 @@ class TestSchemas:
 
     def test_login_result_frozen(self):
         import pytest
+
         from core.schemas.admin_auth import AdminLoginResult
         obj = AdminLoginResult()
         with pytest.raises(AttributeError):
@@ -111,6 +114,7 @@ class TestSchemas:
 
     def test_session_record_frozen(self):
         import pytest
+
         from core.schemas.admin_auth import AdminSessionRecord
         obj = AdminSessionRecord()
         with pytest.raises(AttributeError):
@@ -118,6 +122,7 @@ class TestSchemas:
 
     def test_session_principal_frozen(self):
         import pytest
+
         from core.schemas.admin_auth import AdminSessionPrincipal
         obj = AdminSessionPrincipal()
         with pytest.raises(AttributeError):
@@ -125,6 +130,7 @@ class TestSchemas:
 
     def test_logout_result_frozen(self):
         import pytest
+
         from core.schemas.admin_auth import AdminLogoutResult
         obj = AdminLogoutResult()
         with pytest.raises(AttributeError):

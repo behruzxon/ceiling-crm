@@ -66,10 +66,12 @@ class TestPreviewResponse:
 
 class TestMutationGate:
     def test_apply_requires_mutation(self):
-        from apps.api.routes.admin_agent_settings import _check_mutation_enabled
         from unittest.mock import patch
-        from fastapi import HTTPException
+
         import pytest
+        from fastapi import HTTPException
+
+        from apps.api.routes.admin_agent_settings import _check_mutation_enabled
         with patch("shared.config.get_settings") as mock:
             mock.return_value.business.agent_settings_mutation_enabled = False
             with pytest.raises(HTTPException):

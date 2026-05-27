@@ -2,8 +2,8 @@
 Revision ID: z1a2b3c4d5e6
 Revises: y0z1a2b3c4d5
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "z1a2b3c4d5e6"
 down_revision = "y0z1a2b3c4d5"
