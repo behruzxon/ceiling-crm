@@ -199,6 +199,32 @@ async def admin_security(
     )
 
 
+@app.get("/crm/handoffs", response_class=HTMLResponse)
+async def crm_handoffs(
+    request: Request,
+    status: str = Query("", max_length=30),
+    priority: str = Query("", max_length=20),
+):
+    """Operator Handoff Queue — view and manage operator requests."""
+    summary = await api_get("/api/v1/admin/crm/handoffs/summary")
+    params = {"limit": 50}
+    if status:
+        params["status"] = status
+    if priority:
+        params["priority"] = priority
+    queue = await api_get("/api/v1/admin/crm/handoffs/queue", params=params)
+    return templates.TemplateResponse(
+        "crm_handoffs.html",
+        {
+            "request": request,
+            "summary": summary,
+            "queue": queue,
+            "status_filter": status,
+            "priority_filter": priority,
+        },
+    )
+
+
 @app.get("/crm/campaigns", response_class=HTMLResponse)
 async def crm_campaigns(request: Request):
     """CRM Campaigns page — draft list and segment overview."""

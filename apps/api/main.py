@@ -94,6 +94,9 @@ def create_app() -> FastAPI:
 
     app.include_router(admin_crm_merge_router)
     app.include_router(admin_crm_campaigns_router)
+    from apps.api.routes.admin_crm_handoffs import router as admin_crm_handoffs_router
+
+    app.include_router(admin_crm_handoffs_router)
 
     return app
 
