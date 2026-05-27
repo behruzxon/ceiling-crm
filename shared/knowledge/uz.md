@@ -19,16 +19,18 @@
 
 | Tur                    | Narx (UZS/m²) |
 |------------------------|---------------|
-| Gulli                  | 120 000       |
-| Odnotonniy             | 80 000        |
+| Gulli                  | 130 000       |
+| Odnotonniy (Adnatonniy)| 80 000        |
 | Mramor                 | 120 000       |
 | Qora naqsh (UF pechat) | 140 000       |
-| Hi-tech                | 130 000       |
+| Hi-tech                | 120 000       |
 | Kosmos                 | 120 000       |
 | Osmon                  | 120 000       |
 | Oshxona                | 120 000       |
 | Naqsh ramka            | 120 000       |
 | Naqsh oq               | 120 000       |
+
+> Bu narxlar TAXMINIY. Yakuniy narx faqat bepul o'lchovdan keyin aniqlanadi.
 
 ## Narx formulasi
 
@@ -98,6 +100,82 @@ Kafolat doirasida bepul tuzatiladi. Operatorga qo'ng'iroq qiling.
 - Mahalliy kompaniya — tez murojaat va tez xizmat
 - Suv o'tkazmaydigan PVC material — suv ofatiga chidamli
 - Yashirin to'lov yo'q: kelishilgan narx = to'lanadigan narx
+
+## Bot bo'limlari va tugmalar
+
+- **AI yordam** — savollar, narx hisoblash, katalog, operator bo'yicha yordam beradi
+- **Narx kalkulyator** — razmer va potolok turi bo'yicha taxminiy hisobga yo'naltiradi
+- **Katalog** — dizayn turlarini ko'rish va tanlash imkoniyati
+- **Buyurtma/Zakaz** — buyurtma formasini bosqichma-bosqich to'ldirish
+- **Operator** — telefon raqam so'raydi, operator ko'rib chiqishi uchun yo'naltiradi
+- **Tayyor paketlar** — tayyor yechimlar (oddiy, dekorativ, premium)
+- **Buyurtmalarim** — mavjud buyurtmalar holati
+- **Menyu/Orqaga** — asosiy menyuga qaytaradi
+
+## AI rejim tugmalari
+
+AI rejimida quyidagi tezkor tugmalar mavjud:
+- 💰 Narx — xona razmerini so'raydi va taxminiy narx hisoblaydi
+- 📂 Katalog — dizayn turlarini ko'rsatadi
+- 👨‍💼 Operator — telefon so'raydi, operator ko'rib chiqishi uchun yo'naltiradi
+- 🔄 Reset — AI suhbat xotirasini tozalaydi (CRM ma'lumotlari saqlanadi)
+- ❓ Yordam — AI imkoniyatlarini tushuntiradi
+- ⬅️ Menyu — asosiy menyuga qaytaradi
+
+## Buyurtma jarayoni (batafsil)
+
+1. Mijoz potolok turi yoki xizmatni tanlaydi
+2. Xona razmer/maydoni aniqlanadi (5x4 yoki 20 m2)
+3. Hudud/tuman tanlanadi (Qashqadaryo tumanlari)
+4. Telefon raqam olinadi
+5. Operator/admin ko'rib chiqadi
+6. Usta bepul o'lchovga keladi
+7. O'lchovdan keyin yakuniy narx aniqlanadi va tasdiqlanadi
+
+> AI "buyurtmani qabul qilib qo'ydim" DEMASIN.
+> AI "Zakaz tugmasini bosing" yoki "telefon raqamingizni yuboring" deb yo'naltirsin.
+
+## Paketlar / xizmat turlari
+
+- Oddiy/standart yechim — Odnotonniy, eng tejamkor
+- Dekorativ/gulli yechim — Gulli, chiroyli naqsh
+- Premium yechim — Hi-tech, Mramor, LED yoritish bilan
+- Qo'shimcha xizmatlar (LED lenta, nish, spot, lyustra) yakuniy narxga ta'sir qiladi
+
+> Aniq paket narxlari razmer va dizaynga qarab hisoblanadi.
+
+## Operatorga ulash qoidasi
+
+- Telefon bo'lmasa telefon so'rash kerak
+- Aniq vaqt va'da qilmaslik: "Operator ko'rib chiqadi" deyish mumkin
+- "Operator hozir qo'ng'iroq qiladi" DEMASLIK
+- "Bugun bog'lanadi" DEMASLIK
+- Navbat yoki aniq daqiqa aytmaslik
+
+## To'lov qoidasi
+
+- To'lov cheki/proof admin tomonidan ko'rib chiqiladi
+- Payme/Click avtomatik to'lov hozircha yo'q
+- Bank karta raqami yoki maxfiy ma'lumotni oshkor qilmaslik
+
+## Taqiqlangan gaplar
+
+AI quyidagilarni HECH QACHON aytmasin:
+- "aniq narx" yoki "final narx" (faqat taxminiy)
+- "yozib qo'ydim" (faqat FSM orqali)
+- "usta boradi" (faqat o'lchov flow orqali)
+- "operator hozir bog'lanadi" (aniq vaqt va'da qilmasin)
+- "bugun qilamiz" (vaqt kafolatlamasin)
+- "eng arzon" (taqqoslash qilmasin)
+- "100% kafolat" (kafolat 15 yil, lekin 100% demasin)
+- "maxsus chegirma qilib beraman" (agar rasmiy aksiya bo'lmasa)
+
+## Chegirma qoidasi
+
+- 20 m2 dan ortiq maydon: 5% chegirma (avtomatik)
+- 40 m2 dan ortiq maydon: 10% chegirma (avtomatik)
+- Boshqa chegirma yo'q (maxsus aksiya bo'lmasa)
+- AI o'zidan chegirma o'ylab topmasin
 
 ## E'tirozlarga javob
 

@@ -3,7 +3,7 @@
 ## Pre-Apply
 
 - [ ] DB backup completed
-- [ ] Git pull latest commit (322f06a or later)
+- [ ] Git pull latest commit (e0fc58a or later)
 - [ ] Git status CLEAN
 - [ ] `alembic upgrade head` completed without error
 - [ ] `python -c "from apps.bot.main import build_dispatcher"` OK

@@ -19,9 +19,7 @@ lives in handlers/, middlewares/, and core/.
 from __future__ import annotations
 
 import asyncio
-import logging
 import sys
-from typing import Any
 
 import sentry_sdk
 from aiogram import Bot, Dispatcher, Router
@@ -34,56 +32,63 @@ from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
 from apps.bot.handlers.admin.analytics import router as analytics_router
+from apps.bot.handlers.admin.autopilot import router as autopilot_router
+from apps.bot.handlers.admin.broadcasts import router as broadcasts_router
+from apps.bot.handlers.admin.close_advice import router as close_advice_router
 from apps.bot.handlers.admin.dashboard import router as dashboard_router
+from apps.bot.handlers.admin.lead_advice import router as lead_advice_router
 from apps.bot.handlers.admin.lead_status import router as lead_status_router
 from apps.bot.handlers.admin.leads import router as admin_leads_router
 from apps.bot.handlers.admin.media import router as media_router
 from apps.bot.handlers.admin.operator_stats import router as operator_stats_router
 from apps.bot.handlers.admin.pipeline import router as pipeline_router
 from apps.bot.handlers.admin.radar import router as radar_router
-from apps.bot.handlers.admin.lead_advice import router as lead_advice_router
 from apps.bot.handlers.admin.reports import router as reports_router
 from apps.bot.handlers.admin.sales_report import router as sales_report_router
+from apps.bot.handlers.admin.scheduler import router as scheduler_router
 from apps.bot.handlers.admin.stats import router as stats_router
 from apps.bot.handlers.admin.system_status import router as system_status_router
-from apps.bot.handlers.admin.scheduler import router as scheduler_router
-from apps.bot.handlers.admin.autopilot import router as autopilot_router
-from apps.bot.handlers.admin.close_advice import router as close_advice_router
-from apps.bot.handlers.callbacks.admin_escalation_callbacks import router as admin_escalation_callbacks_router
-from apps.bot.handlers.callbacks.agent_followup_callbacks import router as agent_followup_callbacks_router
+from apps.bot.handlers.callbacks.admin_escalation_callbacks import (
+    router as admin_escalation_callbacks_router,
+)
+from apps.bot.handlers.callbacks.agent_execution_callbacks import (
+    router as agent_execution_callbacks_router,
+)
+from apps.bot.handlers.callbacks.agent_followup_callbacks import (
+    router as agent_followup_callbacks_router,
+)
 from apps.bot.handlers.callbacks.cta_callbacks import router as cta_callbacks_router
 from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
+from apps.bot.handlers.callbacks.operator_callbacks import router as operator_callbacks_router
 from apps.bot.handlers.callbacks.package_callbacks import router as package_callbacks_router
 from apps.bot.handlers.callbacks.payment_callbacks import router as payment_callbacks_router
 from apps.bot.handlers.callbacks.pipeline_callbacks import router as pipeline_callbacks_router
-from apps.bot.handlers.callbacks.operator_callbacks import router as operator_callbacks_router
-from apps.bot.handlers.callbacks.sales_closer_callbacks import router as sales_closer_callbacks_router
-from apps.bot.handlers.callbacks.agent_execution_callbacks import router as agent_execution_callbacks_router
+from apps.bot.handlers.callbacks.sales_closer_callbacks import (
+    router as sales_closer_callbacks_router,
+)
+from apps.bot.handlers.error_handler import register_error_handler
 from apps.bot.handlers.group.admin import router as group_admin_router
-from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.admin_group_tracker import router as admin_group_tracker_router
 from apps.bot.handlers.group.member_status import router as member_status_router
 from apps.bot.handlers.group.messages import router as group_messages_router
 from apps.bot.handlers.group.moderation import router as moderation_router
+from apps.bot.handlers.group.start import router as group_start_router
 from apps.bot.handlers.group.welcome import router as welcome_router
 from apps.bot.handlers.private.about import router as about_router
-from apps.bot.handlers.private.packages import router as packages_router
 from apps.bot.handlers.private.ai_support import router as ai_support_router
 from apps.bot.handlers.private.catalog import router as catalog_router
 from apps.bot.handlers.private.lead_capture import router as lead_capture_router
-from apps.bot.handlers.private.my_orders import router as my_orders_router
 from apps.bot.handlers.private.measurement_lead import router as measurement_lead_router
+from apps.bot.handlers.private.my_orders import router as my_orders_router
 from apps.bot.handlers.private.operator import router as operator_router
-from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.order import router as order_router
+from apps.bot.handlers.private.packages import router as packages_router
+from apps.bot.handlers.private.payment import router as payment_router
 from apps.bot.handlers.private.pricing import router as pricing_router
 from apps.bot.handlers.private.promotions import router as promotions_router
 from apps.bot.handlers.private.support import router as support_router
-from apps.bot.tasks import daily_report, inactive_cta
-from apps.bot.handlers.error_handler import register_error_handler
 from apps.bot.middlewares.audit import AuditMiddleware
 from apps.bot.middlewares.auth import AuthMiddleware
 from apps.bot.middlewares.group_context import GroupContextMiddleware
@@ -91,7 +96,8 @@ from apps.bot.middlewares.group_menu_injector import GroupMenuInjectorMiddleware
 from apps.bot.middlewares.locale import LocaleMiddleware
 from apps.bot.middlewares.rate_limit import RateLimitMiddleware
 from apps.bot.middlewares.security import SecurityMiddleware
-from infrastructure.cache.client import connect_redis, disconnect_redis, get_sessions_redis
+from apps.bot.tasks import daily_report, inactive_cta
+from infrastructure.cache.client import connect_redis, disconnect_redis
 from infrastructure.database.session import connect_database, disconnect_database
 from infrastructure.monitoring.prometheus import setup_prometheus
 from shared.config import get_settings
@@ -113,6 +119,8 @@ BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="help",    description="Yordam"),
     BotCommand(command="cancel",  description="Amalni bekor qilish"),
     BotCommand(command="ai_off",  description="AI rejimdan chiqish"),
+    BotCommand(command="ai_help", description="AI yordam imkoniyatlari"),
+    BotCommand(command="ai_reset", description="AI suhbat xotirasini tozalash"),
 ]
 
 
@@ -298,7 +306,7 @@ def _preflight_checks() -> None:
     if errors:
         for err in errors:
             log.error("preflight_check_failed", detail=err)
-        raise SystemExit(f"Preflight checks failed:\n" + "\n".join(f"  - {e}" for e in errors))
+        raise SystemExit("Preflight checks failed:\n" + "\n".join(f"  - {e}" for e in errors))
 
     log.info("preflight_checks_passed")
 

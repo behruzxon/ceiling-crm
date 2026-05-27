@@ -41,89 +41,101 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+from apps.bot.ai.system_prompt import _parse_ai_scoring
+from apps.bot.handlers.private.ai_detection import (  # noqa: F401
+    _GENERIC_CONFIRMATIONS,
+    _build_smart_catalog_response,
+    _catalog_link_kb,
+    _detect_catalog_context,
+    _detect_room_type,
+    _is_catalog_request,
+    _is_greeting,
+    _is_measurement_request,
+    _is_price_query,
+    _normalize_room,
+    _parse_area,
+    _room_design_text,
+    detect_district,
+    is_valid_name,
+    normalize_name,
+    parse_combo,
+)
+from apps.bot.handlers.private.ai_followups import (
+    _photo_followup_task,
+    _refresh_ai_followup_nonce,
+    _schedule_ai_followup,
+    _schedule_catalog_followup,
+)
+from apps.bot.handlers.private.ai_memory import (  # noqa: F401
+    _ai_stats_count_user,
+    _ai_stats_incr,
+    _build_greeting_from_memory,
+    _load_ai_memory,
+    _save_ai_memory,
+    _update_ai_memory_from_interaction,
+)
+from apps.bot.handlers.private.ai_notifications import (
+    _notify_ai_lead_collected,
+    _notify_phone_captured,
+    _notify_warm_interest,
+    _update_lead_ai_scoring,
+)
+from apps.bot.handlers.private.ai_openai import (
+    _build_context_block,
+    _call_ai,
+    _load_context,
+    _persist_exchange,
+    _store_user_message_only,
+    clear_ai_conversation,  # noqa: F401 — re-exported for support.py
+)
+from apps.bot.handlers.private.ai_pricing_helpers import (
+    _show_price_upsell,
+)
+from apps.bot.handlers.private.ai_scoring import (  # noqa: F401
+    _add_lead_score,
+    _get_lead_score,
+    _handle_objection,
+    classify_score,
+    detect_objection,
+    detect_objection_full,
+)
+
+# ── Sibling module imports ──────────────────────────────────────────────────
+from apps.bot.handlers.private.ai_states import (  # noqa: F401
+    _AI_HELP_TEXT,
+    _AI_MODE_STATUS,
+    _AI_OPERATOR_PROMPT,
+    _AI_PRICE_PROMPT,
+    _AI_QUICK_BUTTONS,
+    _AI_RATE_LIMIT_TEXT,
+    _AI_RESET_SUCCESS,
+    _AI_ROOM_ADVICE_PROMPT,
+    _AI_UNAVAILABLE_TEXT,
+    _CANCEL_PHONE,
+    _CATALOG_INTRO,
+    _CATALOG_SOFT_CTA,
+    _EXIT_TEXTS,
+    _FAILSAFE_KB,
+    _FAILSAFE_TEXT,
+    _NEUTRAL_REPLY,
+    _PRICE_ASK_DESIGN_TEXT,
+    BTN_AI_CATALOG,
+    BTN_AI_HELP,
+    BTN_AI_OPERATOR,
+    BTN_AI_PRICE,
+    BTN_AI_RESET,
+    AiSupportStates,
+    _ai_keyboard,
+    _phone_request_keyboard,
+)
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
-from apps.bot.ai.system_prompt import _parse_ai_scoring
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
 from shared.logging import get_logger
 from shared.utils.phone import extract_phone_from_text
-
-# ── Sibling module imports ──────────────────────────────────────────────────
-from apps.bot.handlers.private.ai_states import (  # noqa: F401
-    AiSupportStates,
-    _EXIT_TEXTS,
-    _CANCEL_PHONE,
-    _FAILSAFE_TEXT,
-    _FAILSAFE_KB,
-    _NEUTRAL_REPLY,
-    _CATALOG_SOFT_CTA,
-    _CATALOG_INTRO,
-    _PRICE_ASK_DESIGN_TEXT,
-    _ai_keyboard,
-    _phone_request_keyboard,
-)
-from apps.bot.handlers.private.ai_detection import (  # noqa: F401
-    _is_measurement_request,
-    _is_catalog_request,
-    _detect_catalog_context,
-    _build_smart_catalog_response,
-    _catalog_link_kb,
-    _is_price_query,
-    parse_combo,
-    _normalize_room,
-    _GENERIC_CONFIRMATIONS,
-    _is_greeting,
-    _detect_room_type,
-    _room_design_text,
-    is_valid_name,
-    normalize_name,
-    _parse_area,
-    detect_district,
-)
-from apps.bot.handlers.private.ai_memory import (  # noqa: F401
-    _load_ai_memory,
-    _save_ai_memory,
-    _build_greeting_from_memory,
-    _update_ai_memory_from_interaction,
-    _ai_stats_incr,
-    _ai_stats_count_user,
-)
-from apps.bot.handlers.private.ai_scoring import (  # noqa: F401
-    _get_lead_score,
-    _add_lead_score,
-    classify_score,
-    detect_objection,
-    detect_objection_full,
-    _handle_objection,
-)
-from apps.bot.handlers.private.ai_openai import (
-    _build_context_block,
-    _load_context,
-    _persist_exchange,
-    clear_ai_conversation,  # noqa: F401 — re-exported for support.py
-    _store_user_message_only,
-    _call_ai,
-)
-from apps.bot.handlers.private.ai_notifications import (
-    _update_lead_ai_scoring,
-    _notify_phone_captured,
-    _notify_ai_lead_collected,
-    _notify_warm_interest,
-)
-from apps.bot.handlers.private.ai_followups import (
-    _schedule_catalog_followup,
-    _schedule_ai_followup,
-    _refresh_ai_followup_nonce,
-    _photo_followup_task,
-    _enter_photo_funnel,
-)
-from apps.bot.handlers.private.ai_pricing_helpers import (
-    _show_price_upsell,
-    _show_combo_confirmation,
-)
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
@@ -132,17 +144,15 @@ router = Router(name="private:ai_support")
 
 # Extracted module imports (agent pipeline + auto-reply)
 from apps.bot.handlers.private.ai_support_agent import (  # noqa: F401, E402
-    _run_orchestrator,
     _process_lead_signal,
+    _run_orchestrator,
 )
 from apps.bot.handlers.private.ai_support_auto_reply import (  # noqa: F401, E402
     _check_ai_rate_limit,
-    _try_auto_reply,
     _detect_simple_intent,
     _reset_auto_reply_counter,
+    _try_auto_reply,
 )
-
-
 
 # ── Explicit AI mode — entry ────────────────────────────────────────────────
 
@@ -471,6 +481,91 @@ async def handle_ai_off(
     await message.answer("🤖 AI rejim o'chirildi.", reply_markup=main_menu_keyboard())
 
 
+# ── /ai_help & /ai_reset commands ──────────────────────────────────────────
+
+
+@router.message(Command("ai_help"))
+async def cmd_ai_help(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Show AI capabilities and usage examples."""
+    await message.answer(_AI_HELP_TEXT, parse_mode="HTML", reply_markup=_ai_keyboard())
+
+
+@router.message(Command("ai_reset"))
+async def cmd_ai_reset(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Clear AI conversation memory (keeps CRM data)."""
+    if message.from_user is None:
+        return
+    try:
+        await clear_ai_conversation(message.from_user.id)
+        await state.clear()
+        await state.set_state(AiSupportStates.waiting_for_ai_question)
+    except Exception:
+        pass
+    await message.answer(_AI_RESET_SUCCESS, reply_markup=_ai_keyboard())
+
+
+# ── Quick button handlers ──────────────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_HELP,
+)
+async def handle_ai_help_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Quick button: show AI help."""
+    await cmd_ai_help(message, state, **data)
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_RESET,
+)
+async def handle_ai_reset_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Quick button: reset AI memory."""
+    await cmd_ai_reset(message, state, **data)
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_PRICE,
+)
+async def handle_ai_price_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Quick button: prompt for pricing input."""
+    await message.answer(_AI_PRICE_PROMPT, parse_mode="HTML", reply_markup=_ai_keyboard())
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_CATALOG,
+)
+async def handle_ai_catalog_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Quick button: show catalog."""
+    await message.answer(_CATALOG_INTRO, parse_mode="HTML", reply_markup=catalog_list_keyboard())
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_OPERATOR,
+)
+async def handle_ai_operator_btn(
+    message: Message, state: FSMContext, **data: object
+) -> None:
+    """Quick button: operator handoff prompt."""
+    await message.answer(_AI_OPERATOR_PROMPT, reply_markup=_ai_keyboard())
+
+
 # ── Photo funnel handlers ───────────────────────────────────────────────────
 
 @router.message(
@@ -702,7 +797,7 @@ async def handle_ai_question(
 
     if user_id and not await _check_ai_rate_limit(user_id):
         await message.answer(
-            "Kunlik AI limit tugadi. Ertaga yana urinib ko'ring.",
+            _AI_RATE_LIMIT_TEXT,
             reply_markup=_ai_keyboard(),
         )
         return
@@ -934,7 +1029,7 @@ async def handle_ai_message(
 
     if user_id and not await _check_ai_rate_limit(user_id):
         await message.answer(
-            "Kunlik AI limit tugadi. Ertaga yana urinib ko'ring.",
+            _AI_RATE_LIMIT_TEXT,
         )
         return
 

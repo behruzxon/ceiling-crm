@@ -15,7 +15,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
-
 # ── FSM states ───────────────────────────────────────────────────────────────
 
 class AiSupportStates(StatesGroup):
@@ -50,11 +49,29 @@ def _phone_request_keyboard() -> ReplyKeyboardMarkup:
 
 
 def _ai_keyboard() -> ReplyKeyboardMarkup:
-    """Persistent exit button shown throughout the AI chat session."""
+    """AI mode keyboard with quick actions."""
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="⬅️ Menyu")]],
+        keyboard=[
+            [KeyboardButton(text="💰 Narx"), KeyboardButton(text="📂 Katalog")],
+            [KeyboardButton(text="👨‍💼 Operator"), KeyboardButton(text="🔄 Reset")],
+            [KeyboardButton(text="❓ Yordam"), KeyboardButton(text="⬅️ Menyu")],
+        ],
         resize_keyboard=True,
     )
+
+
+# ── Quick button text constants ─────────────────────────────────────────────
+
+BTN_AI_PRICE = "💰 Narx"
+BTN_AI_CATALOG = "📂 Katalog"
+BTN_AI_OPERATOR = "👨‍💼 Operator"
+BTN_AI_RESET = "🔄 Reset"
+BTN_AI_HELP = "❓ Yordam"
+
+_AI_QUICK_BUTTONS: frozenset[str] = frozenset({
+    BTN_AI_PRICE, BTN_AI_CATALOG, BTN_AI_OPERATOR,
+    BTN_AI_RESET, BTN_AI_HELP,
+})
 
 
 # ── Failsafe UI ──────────────────────────────────────────────────────────────
@@ -105,6 +122,66 @@ _PRICE_ASK_DESIGN_TEXT = (
 _UPSELL_SOFT_CTA = (
     "Xohlasangiz ustamiz kelib bepul o'lchov qilib beradi 🙂\n\n"
     "Qaysi tumandasiz?"
+)
+
+# ── AI mode entry / status ──────────────────────────────────────────────────
+
+_AI_MODE_STATUS = (
+    "🤖 <b>AI yordam rejimi yoqildi</b>\n\n"
+    "Menga xonangiz razmeri, potolok turi yoki savolingizni yozing.\n\n"
+    "Masalan:\n"
+    '• "20 kv qancha?"\n'
+    '• "5x4 mehmonxona gulli"\n'
+    '• "Katalog ko\'rsat"\n'
+    '• "Operator kerak"'
+)
+
+_AI_HELP_TEXT = (
+    "🤖 <b>AI yordam — imkoniyatlar</b>\n\n"
+    "Men sizga quyidagilar bo'yicha yordam bera olaman:\n\n"
+    "💰 <b>Narx hisoblash</b> — xona razmeri bo'yicha taxminiy narx\n"
+    "🎨 <b>Dizayn maslahat</b> — potolok turi bo'yicha tavsiya\n"
+    "📂 <b>Katalog</b> — dizayn variantlarini ko'rish\n"
+    "👨‍💼 <b>Operator</b> — mutaxassis bilan bog'lanish\n"
+    "🧠 <b>Xotira</b> — savollaringizni eslab davom ettirish\n\n"
+    "Misollar:\n"
+    '• "5x4 xona narx"\n'
+    '• "20 kv gulli qancha"\n'
+    '• "Mehmonxona uchun tavsiya"\n'
+    '• "Operator kerak"\n\n'
+    "⚠️ Aniq narx o'lchovdan keyin tasdiqlanadi."
+)
+
+_AI_RESET_SUCCESS = (
+    "✅ AI suhbat xotirasi tozalandi.\n"
+    "Yangi savol yozishingiz mumkin."
+)
+
+_AI_PRICE_PROMPT = (
+    "💰 Narx hisoblash uchun xonangiz razmerini yozing.\n\n"
+    "Masalan: <b>5x4</b> yoki <b>20 kv</b>"
+)
+
+_AI_OPERATOR_PROMPT = (
+    "👨‍💼 Operator bilan bog'lanishga yordam beraman.\n\n"
+    "Telefon raqamingizni yuboring yoki savolingizni "
+    "shu yerga yozing — operator ko'rib chiqadi."
+)
+
+_AI_ROOM_ADVICE_PROMPT = (
+    "🏠 Xona bo'yicha maslahat uchun razmerini yozing.\n\n"
+    "Masalan: <b>mehmonxona 5x4</b>\n"
+    "Men mos potolok turini tavsiya qilaman."
+)
+
+_AI_RATE_LIMIT_TEXT = (
+    "⏳ Kunlik AI so'rovlar limiti tugadi.\n"
+    "Ertaga yana urinib ko'ring yoki operator bilan bog'laning."
+)
+
+_AI_UNAVAILABLE_TEXT = (
+    "⚠️ Hozir AI javob berishda qiynalyapti.\n\n"
+    "Savolingizni yozib qoldiring — operator ko'rib chiqadi."
 )
 
 # ── AI follow-up reminder messages ───────────────────────────────────────────
