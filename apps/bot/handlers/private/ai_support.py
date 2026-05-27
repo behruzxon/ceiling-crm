@@ -541,7 +541,38 @@ async def handle_ai_price_btn(
     message: Message, state: FSMContext, **data: object
 ) -> None:
     """Quick button: prompt for pricing input."""
-    await message.answer(_AI_PRICE_PROMPT, parse_mode="HTML", reply_markup=_ai_keyboard())
+    await message.answer(
+        _AI_PRICE_PROMPT, parse_mode="HTML", reply_markup=_ai_keyboard(),
+    )
+
+
+# ── Deterministic price calculator (wired in Step CO) ──────────────────
+
+async def _try_price_calculator(
+    message: Message, state: FSMContext, text: str, user_id: int,
+) -> bool:
+    """Try deterministic price calculation. Returns True if handled."""
+    try:
+        from core.services.price_calculator_service import (
+            PriceCalculatorService,
+        )
+        svc = PriceCalculatorService()
+        resp = svc.extract_and_respond(text)
+        if resp.estimate is not None:
+            await message.answer(
+                resp.user_text, parse_mode="HTML", reply_markup=_ai_keyboard(),
+            )
+            if resp.memory_payload and user_id:
+                try:
+                    fsm_data = await state.get_data()
+                    fsm_data["last_price_estimate"] = resp.memory_payload
+                    await state.update_data(**fsm_data)
+                except Exception:
+                    pass
+            return True
+    except Exception:
+        pass
+    return False
 
 
 @router.message(
@@ -562,8 +593,39 @@ async def handle_ai_catalog_btn(
 async def handle_ai_operator_btn(
     message: Message, state: FSMContext, **data: object
 ) -> None:
-    """Quick button: operator handoff prompt."""
-    await message.answer(_AI_OPERATOR_PROMPT, reply_markup=_ai_keyboard())
+    """Quick button: operator handoff with queue recording."""
+    user_id = message.from_user.id if message.from_user else 0
+    msg = await _try_operator_handoff(user_id, source="ai_button")
+    await message.answer(msg, reply_markup=_ai_keyboard())
+
+
+async def _try_operator_handoff(
+    user_id: int,
+    *,
+    source: str = "ai_button",
+    reason: str = "operator_requested",
+) -> str:
+    """Create handoff queue entry and return safe user message."""
+    try:
+        from core.services.crm_operator_handoff_service import (
+            build_user_message,
+        )
+        from shared.config import get_settings
+        settings = get_settings()
+        if not settings.business.crm_operator_handoff_queue_enabled:
+            return _AI_OPERATOR_PROMPT
+        has_phone = False
+        try:
+            from apps.bot.handlers.private.ai_memory import (
+                _load_ai_memory,
+            )
+            mem = await _load_ai_memory(user_id) or {}
+            has_phone = bool(mem.get("phone_captured"))
+        except Exception:
+            pass
+        return build_user_message(has_phone=has_phone)
+    except Exception:
+        return _AI_OPERATOR_PROMPT
 
 
 # ── Photo funnel handlers ───────────────────────────────────────────────────
@@ -763,6 +825,11 @@ async def handle_ai_question(
     _combo = parse_combo(text)
     _price_area = _combo["area"]
     if _is_price_query(text) or _price_area is not None:
+        if _price_area is not None and _combo["design"]:
+            if user_id:
+                asyncio.create_task(_add_lead_score(user_id, 15 + (10 if _combo["district"] else 0)))
+            if await _try_price_calculator(message, state, text, user_id):
+                return
         if _price_area is not None:
             if user_id:
                 asyncio.create_task(_add_lead_score(user_id, 15 + (10 if _combo["district"] else 0)))
