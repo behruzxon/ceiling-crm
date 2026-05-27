@@ -286,5 +286,96 @@
             grid-template-columns: 1fr !important;
         }
     }
+    .chart-bar-container { display: flex; flex-direction: column; gap: 6px; }
+    .chart-bar-row { display: flex; align-items: center; gap: 8px; }
+    .chart-bar-label { font-size: 11px; color: #64748b; min-width: 100px; text-align: right; }
+    .chart-bar-track { flex: 1; height: 18px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; min-width: 2px; }
+    .chart-bar-value { font-size: 11px; font-weight: 600; color: #1e293b; min-width: 36px; }
 </style>
+
+<!-- Visual Charts Section -->
+<div style="margin-top:28px;">
+    <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Visual Charts</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="analytics-2col-grid" id="chartsGrid">
+
+        <!-- Temperature Chart -->
+        <div class="vp-card" id="chartTemperature">
+            <div class="vp-card-header"><div class="vp-card-title">Lead Temperature</div></div>
+            <div class="chart-bar-container" id="tempBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Hot</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#ef4444;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Warm</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Cold</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Intent Chart -->
+        <div class="vp-card" id="chartIntent">
+            <div class="vp-card-header"><div class="vp-card-title">Intent Breakdown</div></div>
+            <div class="chart-bar-container" id="intentBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Price</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#4f46e5;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Operator</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Catalog</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Order</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Missed Severity Chart -->
+        <div class="vp-card" id="chartMissed">
+            <div class="vp-card-header"><div class="vp-card-title">Missed Leads Severity</div></div>
+            <div class="chart-bar-container" id="missedBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Critical</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#dc2626;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">High</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Medium</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Handoff Status Chart -->
+        <div class="vp-card" id="chartHandoff">
+            <div class="vp-card-header"><div class="vp-card-title">Handoff Status</div></div>
+            <div class="chart-bar-container" id="handoffBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Open</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Assigned</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#8b5cf6;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Contacted</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Resolved</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quick Links -->
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/crm/missed-leads" class="vp-btn vp-btn-ghost" style="font-size:12px;">Missed Leads Dashboard</a>
+        <a href="/crm/handoffs" class="vp-btn vp-btn-ghost" style="font-size:12px;">Handoff Queue</a>
+    </div>
+</div>
+
+<script>
+(async function loadCharts() {
+    try {
+        const r = await fetch('/api/v1/admin/crm/analytics/charts?days=30');
+        if (!r.ok) return;
+        const d = await r.json();
+        function renderBars(containerId, data) {
+            if (!data || !data.points) return;
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const max = Math.max(...data.points.map(p => p.value), 1);
+            const rows = el.querySelectorAll('.chart-bar-row');
+            data.points.forEach((p, i) => {
+                if (rows[i]) {
+                    const fill = rows[i].querySelector('.chart-bar-fill');
+                    const val = rows[i].querySelector('.chart-bar-value');
+                    if (fill) fill.style.width = Math.max((p.value / max) * 100, 2) + '%';
+                    if (val) val.textContent = p.value;
+                }
+            });
+        }
+        renderBars('tempBars', d.lead_temperature);
+        renderBars('intentBars', d.intent_breakdown);
+        renderBars('missedBars', d.missed_severity);
+        renderBars('handoffBars', d.handoff_status);
+    } catch(e) {}
+})();
+</script>
 {% endblock %}
