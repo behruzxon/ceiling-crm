@@ -110,6 +110,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(admin_crm_conversation_replay_router)
+    from apps.api.routes.admin_crm_price_estimates import (
+        router as admin_crm_price_estimates_router,
+    )
+
+    app.include_router(admin_crm_price_estimates_router)
 
     return app
 

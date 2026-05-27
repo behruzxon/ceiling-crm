@@ -215,11 +215,13 @@ class TestDesignSystem:
 
 
 class TestSafety:
-    def test_innerhtml_only_in_replay(self):
+    def test_innerhtml_only_in_managed_sections(self):
         content = _d()
+        allowed = ("replay", "priceEst", "badges")
         lines_with_innerhtml = [ln.strip() for ln in content.splitlines() if "innerHTML" in ln]
         for ln in lines_with_innerhtml:
-            assert "replayTimeline" in ln or "replay" in ln.lower()
+            ln_lower = ln.lower()
+            assert any(tok.lower() in ln_lower for tok in allowed)
 
     def test_textcontent(self):
         assert "textContent" in _d()

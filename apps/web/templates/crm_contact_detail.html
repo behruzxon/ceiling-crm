@@ -170,6 +170,27 @@
             <button onclick="addNote()" class="vp-btn vp-btn-primary" style="font-size:11px;">Saqlash</button>
         </div>
 
+        <!-- Price Estimate History -->
+        <div id="priceEstimateHistory" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Price Estimate History</div>
+                <span id="priceEstCount" style="font-size:11px;color:#94a3b8;">yuklanmoqda...</span>
+            </div>
+            <div id="priceEstLatest" style="display:none;margin-bottom:8px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border-left:3px solid #10b981;">
+                <div style="font-size:11px;color:#64748b;">Oxirgi hisob</div>
+                <div id="priceEstLatestTotal" style="font-size:16px;font-weight:700;color:#059669;"></div>
+                <div id="priceEstLatestDetail" style="font-size:11px;color:#475569;"></div>
+            </div>
+            <div id="priceEstSummaryBadges" style="display:none;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
+            <div id="priceEstItems" class="price-est-list"></div>
+            <div id="priceEstEmpty" class="vp-empty-state" style="padding:16px 8px;">
+                <div style="font-size:11px;">Hali narx hisoblari yo'q.</div>
+            </div>
+            <div id="priceEstTaxminiy" style="font-size:10px;color:#94a3b8;margin-top:6px;display:none;">
+                &#9888; Barcha narxlar taxminiy. Yakuniy narx o'lchovdan keyin aniqlanadi.
+            </div>
+        </div>
+
         <!-- AI Trace Viewer -->
         <div id="aiTraceSection" class="vp-card">
             <div class="vp-card-header">
@@ -227,6 +248,15 @@
 .checklist-item.checklist-done { color: #059669; }
 .checklist-icon { font-size: 14px; width: 18px; text-align: center; }
 .checklist-progress { font-weight: 600; }
+
+.price-est-list { display: flex; flex-direction: column; gap: 6px; }
+.price-est-item { padding: 6px 8px; border-radius: 6px; background: #f8fafc; border-left: 3px solid #e2e8f0; font-size: 11px; }
+.price-est-item-area { color: #1e293b; font-weight: 500; }
+.price-est-item-detail { color: #64748b; margin-top: 2px; }
+.price-est-item-total { color: #059669; font-weight: 600; }
+.price-est-item-discount { color: #d97706; font-size: 10px; }
+.price-est-item-handoff { color: #6366f1; font-size: 10px; }
+.price-est-item-time { color: #94a3b8; font-size: 10px; }
 
 .timeline { display: flex; flex-direction: column; gap: 8px; }
 .timeline-item { padding: 10px 12px; border-radius: 10px; max-width: 85%; }
@@ -324,7 +354,54 @@ function renderReplay(data) {
     });
     document.getElementById('replayTimeline').innerHTML = html;
 }
-document.addEventListener('DOMContentLoaded', loadReplay);
+async function loadPriceEstimates() {
+    try {
+        var r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/price-estimates');
+        if (!r.ok) { document.getElementById('priceEstCount').textContent = 'xato'; return; }
+        var d = await r.json();
+        renderPriceEstimates(d);
+    } catch(e) { document.getElementById('priceEstCount').textContent = 'yuklash xatosi'; }
+}
+function fmtUzs(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function renderPriceEstimates(data) {
+    var s = data.summary || {};
+    var items = data.items || [];
+    document.getElementById('priceEstCount').textContent = s.total_estimates + ' hisob';
+    if (!items.length) { document.getElementById('priceEstEmpty').style.display = 'block'; return; }
+    document.getElementById('priceEstEmpty').style.display = 'none';
+    document.getElementById('priceEstTaxminiy').style.display = 'block';
+    if (s.latest_total_uzs > 0) {
+        document.getElementById('priceEstLatest').style.display = 'block';
+        document.getElementById('priceEstLatestTotal').textContent = fmtUzs(s.latest_total_uzs) + " so'm";
+        var det = [];
+        if (s.most_requested_design) det.push(s.most_requested_design);
+        if (s.total_area_m2 > 0) det.push(s.total_area_m2 + ' m²');
+        document.getElementById('priceEstLatestDetail').textContent = det.join(' | ');
+    }
+    var badges = document.getElementById('priceEstSummaryBadges');
+    badges.style.display = 'flex';
+    badges.innerHTML = '<span class="vp-badge vp-badge-neutral">Jami: ' + s.total_estimates + '</span>' +
+        (s.min_total_uzs > 0 && s.max_total_uzs > 0 ? '<span class="vp-badge vp-badge-info">' + fmtUzs(s.min_total_uzs) + ' — ' + fmtUzs(s.max_total_uzs) + " so'm</span>" : '') +
+        (s.handoff_after_estimate_count > 0 ? '<span class="vp-badge vp-badge-warning">Handoff: ' + s.handoff_after_estimate_count + '</span>' : '');
+    var html = '';
+    items.forEach(function(it) {
+        html += '<div class="price-est-item">' +
+            '<div class="price-est-item-area">' + (it.area_m2 > 0 ? it.area_m2 + ' m²' : '') + (it.design_title ? ' — ' + it.design_title : '') + '</div>' +
+            '<div class="price-est-item-detail">' +
+            (it.rate_uzs_per_m2 > 0 ? fmtUzs(it.rate_uzs_per_m2) + " so'm/m² " : '') +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-top:2px;">' +
+            '<span class="price-est-item-total">' + (it.total_uzs > 0 ? fmtUzs(it.total_uzs) + " so'm" : '') + '</span>' +
+            (it.discount_percent > 0 ? '<span class="price-est-item-discount">-' + it.discount_percent + '%</span>' : '') +
+            '<span class="vp-badge vp-badge-neutral" style="font-size:9px;">taxminiy</span>' +
+            (it.handoff_after_estimate ? '<span class="price-est-item-handoff">&#8594; handoff</span>' : '') +
+            '</div>' +
+            '<div class="price-est-item-time">' + (it.timestamp || '') + ' | ' + it.source + '</div>' +
+            '</div>';
+    });
+    document.getElementById('priceEstItems').innerHTML = html;
+}
+document.addEventListener('DOMContentLoaded', function() { loadReplay(); loadPriceEstimates(); });
 
 let _replyAllowed = false;
 async function previewReply() {
