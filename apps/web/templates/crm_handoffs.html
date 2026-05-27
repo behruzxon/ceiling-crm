@@ -30,6 +30,12 @@
     </div>
   </div>
 
+  <!-- Operator Workload -->
+  <div id="operatorWorkload" class="vp-card" style="margin-bottom:16px;">
+    <div class="vp-card-header"><div class="vp-card-title">Operator yuklamasi</div></div>
+    <div id="workloadContent" style="font-size:12px;color:#94a3b8;">Yuklanmoqda...</div>
+  </div>
+
   <!-- Filters -->
   <div class="vp-card" style="margin-bottom:16px;">
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
@@ -49,9 +55,17 @@
         <option value="normal" {% if priority_filter == 'normal' %}selected{% endif %}>Normal</option>
         <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
       </select>
+      <select class="vp-select" id="assignedFilter" onchange="applyFilters()">
+        <option value="">Barcha tayinlash</option>
+        <option value="unassigned" {% if assigned_filter == 'unassigned' %}selected{% endif %}>Tayinlanmagan</option>
+        <option value="assigned" {% if assigned_filter == 'assigned' %}selected{% endif %}>Tayinlangan</option>
+      </select>
       <button class="vp-btn vp-btn-secondary" onclick="location.reload()">Yangilash</button>
     </div>
   </div>
+
+  <!-- Action Banner -->
+  <div id="actionBanner" class="vp-alert" style="display:none;margin-bottom:12px;"></div>
 
   <!-- Queue Table -->
   <div class="vp-card">
@@ -61,6 +75,7 @@
         <tr>
           <th>Ustuvorlik</th>
           <th>Holat</th>
+          <th>Tayinlangan</th>
           <th>Telefon</th>
           <th>Tuman</th>
           <th>Sabab</th>
@@ -100,27 +115,38 @@
               <span class="vp-badge vp-badge-neutral">{{ item.status }}</span>
             {% endif %}
           </td>
+          <td>
+            {% if item.assigned_to_admin_id %}
+              <span class="vp-badge vp-badge-info assigned-badge">{{ item.assigned_to_admin_id }}</span>
+            {% else %}
+              <span class="vp-badge vp-badge-neutral unassigned-badge">Tayinlanmagan</span>
+            {% endif %}
+          </td>
           <td>{{ item.phone_masked or '—' }}</td>
           <td>{{ item.district or '—' }}</td>
           <td>{{ item.reason or item.source or '—' }}</td>
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.user_message_preview or '—' }}</td>
           <td style="font-size:12px;color:#64748b;">{{ item.created_at[:16] if item.created_at else '—' }}</td>
           <td>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <div class="handoff-actions" style="display:flex;gap:4px;flex-wrap:wrap;">
               {% if item.contact_id %}
               <a href="/crm/{{ item.contact_id }}" class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;">Kontakt</a>
               {% endif %}
-              {% if item.status in ('open', 'waiting_phone') %}
-              <button class="vp-btn vp-btn-secondary" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'assign')">Tayinlash</button>
+              {% if item.status in ('open', 'waiting_phone') and not item.assigned_to_admin_id %}
+              <button class="vp-btn vp-btn-secondary take-btn" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'take')">Olish</button>
+              <button class="vp-btn vp-btn-secondary assign-btn" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'assign')">Tayinlash</button>
+              {% endif %}
+              {% if item.assigned_to_admin_id and item.status in ('assigned', 'open', 'waiting_phone') %}
+              <button class="vp-btn vp-btn-ghost unassign-btn" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'unassign')">Chiqarish</button>
               {% endif %}
               {% if item.status in ('open', 'waiting_phone', 'assigned') %}
-              <button class="vp-btn vp-btn-primary" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'contacted')">Bog'landim</button>
+              <button class="vp-btn vp-btn-primary contacted-btn" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'contacted')">Bog'landim</button>
               {% endif %}
               {% if item.status in ('contacted', 'assigned') %}
-              <button class="vp-btn vp-btn-primary" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'resolve')">Hal qildim</button>
+              <button class="vp-btn vp-btn-primary resolve-btn" style="font-size:11px;padding:3px 8px;" onclick="handoffAction({{ item.id }},'resolve')">Hal qildim</button>
               {% endif %}
               {% if item.status not in ('resolved', 'cancelled') %}
-              <button class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;color:#94a3b8;" onclick="handoffAction({{ item.id }},'cancel')">Bekor</button>
+              <button class="vp-btn vp-btn-ghost cancel-btn" style="font-size:11px;padding:3px 8px;color:#94a3b8;" onclick="handoffAction({{ item.id }},'cancel')">Bekor</button>
               {% endif %}
             </div>
           </td>
@@ -139,38 +165,84 @@
 </div>
 
 <style>
+.workload-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.workload-item { flex: 1 1 200px; padding: 8px 12px; border-radius: 6px; background: #f8fafc; border-left: 3px solid #e2e8f0; font-size: 12px; }
+.workload-item-label { color: #64748b; font-size: 11px; }
+.workload-item-value { font-size: 16px; font-weight: 600; color: #1e293b; }
+.workload-item-urgent { border-left-color: #dc2626; }
+.handoff-actions { gap: 4px; }
+.action-banner-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.action-banner-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
 @media (max-width: 767px) {
-  .vp-table th:nth-child(5), .vp-table td:nth-child(5),
-  .vp-table th:nth-child(6), .vp-table td:nth-child(6) { display: none; }
+  .vp-table th:nth-child(6), .vp-table td:nth-child(6),
+  .vp-table th:nth-child(7), .vp-table td:nth-child(7) { display: none; }
+  .handoff-actions { flex-direction: column; }
 }
 </style>
 
 <script>
 function applyFilters() {
-  const s = document.getElementById('statusFilter').value;
-  const p = document.getElementById('priorityFilter').value;
-  let url = '/crm/handoffs?';
+  var s = document.getElementById('statusFilter').value;
+  var p = document.getElementById('priorityFilter').value;
+  var a = document.getElementById('assignedFilter').value;
+  var url = '/crm/handoffs?';
   if (s) url += 'status=' + s + '&';
   if (p) url += 'priority=' + p + '&';
+  if (a) url += 'assigned=' + a + '&';
   location.href = url;
+}
+
+function showBanner(msg, isError) {
+  var el = document.getElementById('actionBanner');
+  el.style.display = 'block';
+  el.className = 'vp-alert ' + (isError ? 'action-banner-error' : 'action-banner-success');
+  el.textContent = msg;
+  if (!isError) { setTimeout(function() { location.reload(); }, 800); }
 }
 
 async function handoffAction(id, action) {
   try {
-    const r = await fetch('/api/v1/admin/crm/handoffs/' + id + '/' + action, {
+    var r = await fetch('/api/v1/admin/crm/handoffs/' + id + '/' + action, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({})
     });
     if (r.ok) {
-      location.reload();
+      var d = await r.json();
+      showBanner('Muvaffaqiyat: ' + action + ' (#' + id + ')', false);
     } else {
-      const d = await r.json();
-      alert(d.detail || 'Xatolik yuz berdi');
+      var d = await r.json();
+      showBanner(d.detail || 'Xatolik yuz berdi', true);
     }
   } catch (e) {
-    alert('Tarmoq xatosi');
+    showBanner('Tarmoq xatosi', true);
   }
 }
+
+async function loadWorkload() {
+  try {
+    var r = await fetch('/api/v1/admin/crm/handoffs/operators/summary');
+    if (!r.ok) { document.getElementById('workloadContent').textContent = 'Yuklab bo\'lmadi'; return; }
+    var d = await r.json();
+    var ops = d.operators || [];
+    if (!ops.length) { document.getElementById('workloadContent').textContent = 'Hozir faol operator yo\'q'; return; }
+    var html = '<div class="workload-grid">';
+    ops.forEach(function(op) {
+      html += '<div class="workload-item' + (op.urgent_assigned > 0 ? ' workload-item-urgent' : '') + '">' +
+        '<div class="workload-item-label">' + op.operator_id + '</div>' +
+        '<div class="workload-item-value">' + op.assigned_open + ' ochiq</div>' +
+        '<div style="font-size:11px;color:#64748b;">' +
+        (op.contacted > 0 ? 'Bog\'lanildi: ' + op.contacted + ' | ' : '') +
+        'Bugun hal: ' + (op.resolved_today || 0) +
+        (op.urgent_assigned > 0 ? ' | <span style="color:#dc2626;">Urgent: ' + op.urgent_assigned + '</span>' : '') +
+        (op.oldest_assigned_minutes > 0 ? ' | Eng eski: ' + op.oldest_assigned_minutes + 'min' : '') +
+        '</div></div>';
+    });
+    html += '</div>';
+    document.getElementById('workloadContent').innerHTML = html;
+  } catch(e) { document.getElementById('workloadContent').textContent = 'Xato: ' + e.message; }
+}
+document.addEventListener('DOMContentLoaded', loadWorkload);
 </script>
 {% endblock %}

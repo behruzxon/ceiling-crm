@@ -152,3 +152,101 @@ async def cancel_handoff(
     row.updated_at = datetime.now(UTC)
     await db.commit()
     return {"status": "cancelled", "id": handoff_id}
+
+
+@router.post("/{handoff_id}/take")
+async def take_handoff(
+    handoff_id: int,
+    body: dict | None = None,
+    db=Depends(get_db),
+) -> dict:
+    row = await _get_handoff(db, handoff_id)
+    admin_id = (body or {}).get("admin_id", "current")
+    row.status = "assigned"
+    row.assigned_to_admin_id = str(admin_id)
+    row.assigned_at = datetime.now(UTC)
+    row.updated_at = datetime.now(UTC)
+    await db.commit()
+    return {"status": "assigned", "id": handoff_id, "assigned_to": str(admin_id)}
+
+
+@router.post("/{handoff_id}/unassign")
+async def unassign_handoff(
+    handoff_id: int,
+    db=Depends(get_db),
+) -> dict:
+    row = await _get_handoff(db, handoff_id)
+    new_status = "waiting_phone" if row.phone_masked else "open"
+    row.status = new_status
+    row.assigned_to_admin_id = None
+    row.assigned_at = None
+    row.updated_at = datetime.now(UTC)
+    await db.commit()
+    return {"status": new_status, "id": handoff_id}
+
+
+@router.get("/operators/summary")
+async def operator_workload_summary(
+    db=Depends(get_db),
+) -> dict:
+    active_statuses = ("open", "waiting_phone", "assigned", "contacted")
+    result = await db.execute(
+        sa.select(CRMOperatorHandoffModel).where(
+            CRMOperatorHandoffModel.status.in_(active_statuses)
+        )
+    )
+    rows = result.scalars().all()
+
+    operators: dict[str, dict] = {}
+    now = datetime.now(UTC)
+    for r in rows:
+        admin_id = r.assigned_to_admin_id or "unassigned"
+        if admin_id not in operators:
+            operators[admin_id] = {
+                "operator_id": admin_id,
+                "assigned_open": 0,
+                "contacted": 0,
+                "urgent_assigned": 0,
+                "oldest_assigned_minutes": 0,
+            }
+        op = operators[admin_id]
+        if r.status in ("assigned", "open", "waiting_phone"):
+            op["assigned_open"] += 1
+        if r.status == "contacted":
+            op["contacted"] += 1
+        if r.priority == "urgent" and r.status in ("assigned", "open", "waiting_phone"):
+            op["urgent_assigned"] += 1
+        if r.assigned_at:
+            age_min = int((now - r.assigned_at).total_seconds() / 60)
+            if age_min > op["oldest_assigned_minutes"]:
+                op["oldest_assigned_minutes"] = age_min
+
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    resolved_result = await db.execute(
+        sa.select(
+            CRMOperatorHandoffModel.assigned_to_admin_id,
+            sa.func.count().label("cnt"),
+        )
+        .where(
+            CRMOperatorHandoffModel.status == "resolved",
+            CRMOperatorHandoffModel.resolved_at >= today_start,
+        )
+        .group_by(CRMOperatorHandoffModel.assigned_to_admin_id)
+    )
+    for row in resolved_result:
+        admin_id = row.assigned_to_admin_id or "unassigned"
+        if admin_id not in operators:
+            operators[admin_id] = {
+                "operator_id": admin_id,
+                "assigned_open": 0,
+                "contacted": 0,
+                "urgent_assigned": 0,
+                "oldest_assigned_minutes": 0,
+            }
+        operators[admin_id]["resolved_today"] = row.cnt
+
+    items = list(operators.values())
+    for it in items:
+        it.setdefault("resolved_today", 0)
+
+    return {"operators": items}
