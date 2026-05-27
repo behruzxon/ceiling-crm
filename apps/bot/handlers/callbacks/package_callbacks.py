@@ -16,6 +16,7 @@ Callback prefixes handled here
 All callbacks write audit-level log entries and update the notification
 message to reflect the new state.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -47,37 +48,42 @@ def _updated_keyboard(lead_id: int, status: str) -> InlineKeyboardMarkup:
     lid = lead_id
     se = _STATUS_EMOJI.get(status, "⬜")
     sl = _STATUS_LABEL.get(status, status.upper())
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text=f"✅ HOT{'  ←' if status == 'hot' else ''}",
-                callback_data=f"pkg:admin:hot:{lid}",
-            ),
-            InlineKeyboardButton(
-                text=f"🟡 WARM{'  ←' if status == 'warm' else ''}",
-                callback_data=f"pkg:admin:warm:{lid}",
-            ),
-            InlineKeyboardButton(
-                text=f"❄️ COLD{'  ←' if status == 'cold' else ''}",
-                callback_data=f"pkg:admin:cold:{lid}",
-            ),
-        ],
-        [
-            InlineKeyboardButton(text="📞 Telefon",  callback_data=f"pkg:admin:phone:{lid}"),
-            InlineKeyboardButton(text="📅 O'lchov", callback_data=f"pkg:admin:schedule:{lid}"),
-        ],
-        [
-            InlineKeyboardButton(text="📝 Izoh",  callback_data=f"pkg:admin:note:{lid}"),
-            InlineKeyboardButton(text="🚫 Block", callback_data=f"pkg:admin:block:{lid}"),
-        ],
-        [InlineKeyboardButton(
-            text=f"{se} Holat: {sl}",
-            callback_data=f"pkg:admin:noop:{lid}",
-        )],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ HOT{'  ←' if status == 'hot' else ''}",
+                    callback_data=f"pkg:admin:hot:{lid}",
+                ),
+                InlineKeyboardButton(
+                    text=f"🟡 WARM{'  ←' if status == 'warm' else ''}",
+                    callback_data=f"pkg:admin:warm:{lid}",
+                ),
+                InlineKeyboardButton(
+                    text=f"❄️ COLD{'  ←' if status == 'cold' else ''}",
+                    callback_data=f"pkg:admin:cold:{lid}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="📞 Telefon", callback_data=f"pkg:admin:phone:{lid}"),
+                InlineKeyboardButton(text="📅 O'lchov", callback_data=f"pkg:admin:schedule:{lid}"),
+            ],
+            [
+                InlineKeyboardButton(text="📝 Izoh", callback_data=f"pkg:admin:note:{lid}"),
+                InlineKeyboardButton(text="🚫 Block", callback_data=f"pkg:admin:block:{lid}"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"{se} Holat: {sl}",
+                    callback_data=f"pkg:admin:noop:{lid}",
+                )
+            ],
+        ]
+    )
 
 
 # ── Shared utilities ───────────────────────────────────────────────────────────
+
 
 def _parse_lead_id(callback_data: str) -> int | None:
     parts = (callback_data or "").split(":")
@@ -109,7 +115,7 @@ async def cb_set_status(callback: CallbackQuery, **data: object) -> None:
     """Mark lead status as hot / warm / cold."""
     cd = callback.data  # type: ignore[union-attr]
     parts = cd.split(":")
-    new_status = parts[2]   # hot | warm | cold
+    new_status = parts[2]  # hot | warm | cold
     lead_id = _parse_lead_id(cd)
     if lead_id is None:
         await callback.answer("Noto'g'ri so'rov", show_alert=True)
@@ -147,6 +153,7 @@ async def cb_set_status(callback: CallbackQuery, **data: object) -> None:
     if new_status == "hot":
         try:
             from infrastructure.di import get_lead_notification_service
+
             await get_lead_notification_service().notify_hot_lead(lead_id)
         except Exception:
             log.exception("pkg_hot_lead_notify_error", lead_id=lead_id)

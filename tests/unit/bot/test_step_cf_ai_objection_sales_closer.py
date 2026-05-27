@@ -1,4 +1,5 @@
 """Tests for Step CF — AI Objection Detection & Sales Closer."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_scoring import (
@@ -145,6 +146,7 @@ class TestSalesCloser:
             pick_closing_action,
             should_attempt_close,
         )
+
         assert callable(should_attempt_close)
         assert callable(pick_closing_action)
         assert callable(attempt_close)
@@ -153,8 +155,12 @@ class TestSalesCloser:
         from apps.bot.handlers.private.sales_closer import (
             should_attempt_close,
         )
+
         result = should_attempt_close(
-            score=50, intent="other", memory={}, closing_confidence=None,
+            score=50,
+            intent="other",
+            memory={},
+            closing_confidence=None,
         )
         assert result is True
 
@@ -162,8 +168,12 @@ class TestSalesCloser:
         from apps.bot.handlers.private.sales_closer import (
             should_attempt_close,
         )
+
         result = should_attempt_close(
-            score=10, intent="price", memory={}, closing_confidence=None,
+            score=10,
+            intent="price",
+            memory={},
+            closing_confidence=None,
         )
         assert result is True
 
@@ -171,7 +181,11 @@ class TestSalesCloser:
         from apps.bot.handlers.private.sales_closer import (
             should_attempt_close,
         )
+
         result = should_attempt_close(
-            score=5, intent="other", memory={}, closing_confidence=None,
+            score=5,
+            intent="other",
+            memory={},
+            closing_confidence=None,
         )
         assert result is False

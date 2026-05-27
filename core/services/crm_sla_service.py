@@ -3,6 +3,7 @@ core.services.crm_sla_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SLA computation for CRM contacts. Pure functions — no I/O.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -16,7 +17,8 @@ class CRMSLAService:
 
     @staticmethod
     def compute_unanswered_minutes(
-        contact: dict[str, Any], now: datetime,
+        contact: dict[str, Any],
+        now: datetime,
     ) -> int | None:
         if contact.get("lead_status") in _NO_SLA_STATUSES:
             return None
@@ -40,9 +42,13 @@ class CRMSLAService:
 
     @staticmethod
     def compute_sla_status(
-        contact: dict[str, Any], now: datetime,
-        due_soon: int = 5, overdue: int = 15, critical: int = 30,
-        hot_critical: int = 10, operator_critical: int = 5,
+        contact: dict[str, Any],
+        now: datetime,
+        due_soon: int = 5,
+        overdue: int = 15,
+        critical: int = 30,
+        hot_critical: int = 10,
+        operator_critical: int = 5,
     ) -> str:
         if contact.get("lead_status") in _NO_SLA_STATUSES:
             return "ok"
@@ -74,7 +80,8 @@ class CRMSLAService:
 
     @staticmethod
     def build_sla_overview(
-        contacts: list[dict[str, Any]], now: datetime,
+        contacts: list[dict[str, Any]],
+        now: datetime,
     ) -> dict[str, int]:
         counts = {"ok": 0, "due_soon": 0, "overdue": 0, "critical": 0, "unanswered": 0}
         for c in contacts:

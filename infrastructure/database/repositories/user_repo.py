@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractUserRepository."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -60,28 +61,33 @@ class PostgresUserRepository(AbstractUserRepository):
                 f"upsert() called with non-positive user id={user.id}. "
                 "Only private Telegram users (id > 0) may be stored in `users`."
             )
-        stmt = insert(UserModel).values(
-            id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone,
-            language_code=user.language_code,
-            role=user.role.value,
-            source=user.source,
-            is_blocked=user.is_blocked,
-            last_seen_at=datetime.now(UTC),
-        ).on_conflict_do_update(
-            index_elements=["id"],
-            set_={
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "language_code": user.language_code,
-                "last_seen_at": datetime.now(UTC),
-                "updated_at": datetime.now(UTC),
-            },
-        ).returning(UserModel)
+        stmt = (
+            insert(UserModel)
+            .values(
+                id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                phone=user.phone,
+                language_code=user.language_code,
+                role=user.role.value,
+                source=user.source,
+                is_blocked=user.is_blocked,
+                last_seen_at=datetime.now(UTC),
+            )
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "language_code": user.language_code,
+                    "last_seen_at": datetime.now(UTC),
+                    "updated_at": datetime.now(UTC),
+                },
+            )
+            .returning(UserModel)
+        )
 
         result = await self._session.execute(stmt)
         model = result.scalar_one()
@@ -99,9 +105,7 @@ class PostgresUserRepository(AbstractUserRepository):
 
     async def count_active(self) -> int:
         """Count all non-blocked users."""
-        stmt = select(func.count()).select_from(UserModel).where(
-            UserModel.is_blocked.is_(False)
-        )
+        stmt = select(func.count()).select_from(UserModel).where(UserModel.is_blocked.is_(False))
         result = await self._session.execute(stmt)
         return result.scalar_one()
 

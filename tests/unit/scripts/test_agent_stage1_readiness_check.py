@@ -1,4 +1,5 @@
 """Tests for Stage 1 LOG_ONLY readiness check script."""
+
 from __future__ import annotations
 
 import os

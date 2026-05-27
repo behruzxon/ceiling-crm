@@ -1,4 +1,5 @@
 """Tests for Step CD — Final UI QA + Stage 1 Prep Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -125,6 +126,7 @@ class TestScript:
 
     def test_importable(self):
         import importlib
+
         mod = importlib.import_module("scripts.final_ui_stage1_check")
         assert callable(mod.main)
         assert callable(mod.check_critical_docs)

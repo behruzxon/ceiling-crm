@@ -1,4 +1,5 @@
 """Callback handlers for admin escalation alert buttons."""
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -13,6 +14,7 @@ router = Router(name="callbacks:admin_escalation")
 def _is_admin(user_id: int) -> bool:
     try:
         from shared.config import get_settings
+
         settings = get_settings()
         admin_id = settings.bot.admin_user_id
         return admin_id is not None and user_id == admin_id
@@ -74,10 +76,12 @@ async def cb_admin_escalation(callback: CallbackQuery, **data: object) -> None:
             factory = get_session_factory()
             async with factory() as session:
                 await AgentMemoryService(session).disable_followup(
-                    target_user_id, "admin_marked_stop",
+                    target_user_id,
+                    "admin_marked_stop",
                 )
                 await FollowupSchedulerService(session).cancel_all_pending(
-                    target_user_id, "admin_marked_stop",
+                    target_user_id,
+                    "admin_marked_stop",
                 )
                 await session.commit()
         except Exception:
@@ -92,7 +96,7 @@ async def cb_admin_escalation(callback: CallbackQuery, **data: object) -> None:
         if callback.message:
             link = f"tg://user?id={target_user_id}"
             await callback.message.answer(
-                f"💬 <a href=\"{link}\">Mijozga yozish</a>",
+                f'💬 <a href="{link}">Mijozga yozish</a>',
             )
 
     else:

@@ -1,4 +1,5 @@
 """Tests for Step CL — Operator Handoff Knowledge Updates."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -114,12 +115,15 @@ class TestMigration:
 class TestSmoke:
     def test_bot_dispatcher(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_ai_support(self):
         from apps.bot.handlers.private import ai_support
+
         assert ai_support is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

@@ -12,6 +12,7 @@ requires Telegram-specific imports).  Fields that depend on Redis
 enrichment (buyer_type_stats, objections, tactic stats, conversation
 health, autopilot, auto-seller) will be empty/zero.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -57,9 +58,7 @@ def _lead_to_signal_dict(lead) -> dict:
     """
     return {
         "lead_id": lead.id,
-        "source": (
-            lead.source.value if hasattr(lead.source, "value") else str(lead.source)
-        ),
+        "source": (lead.source.value if hasattr(lead.source, "value") else str(lead.source)),
         "current_stage": (
             lead.current_stage.value
             if hasattr(lead.current_stage, "value")

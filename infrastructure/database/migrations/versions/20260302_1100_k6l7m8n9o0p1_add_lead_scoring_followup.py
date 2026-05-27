@@ -18,6 +18,7 @@ leads table:
 
 Index ix_leads_next_follow_up_at speeds up the scheduler query.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

@@ -11,6 +11,7 @@ Callback data patterns:
   closer:price         — prompt area input for price calculation
   closer:later         — soft dismiss
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -33,9 +34,7 @@ router = Router(name="callbacks:sales_closer")
 
 @router.callback_query(F.data == "closer:book:today")
 @router.callback_query(F.data == "closer:book:tomorrow")
-async def cb_closer_book(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_closer_book(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """User wants to book a free measurement."""
     await callback.answer()
     if not callback.message:
@@ -56,9 +55,7 @@ async def cb_closer_book(
 
 
 @router.callback_query(F.data == "closer:call")
-async def cb_closer_call(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_closer_call(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """User agrees to share phone for a manager call-back."""
     await callback.answer()
     if not callback.message:
@@ -85,9 +82,7 @@ async def cb_closer_call(
 
 
 @router.callback_query(F.data == "closer:catalog")
-async def cb_closer_catalog(
-    callback: CallbackQuery, **data: object
-) -> None:
+async def cb_closer_catalog(callback: CallbackQuery, **data: object) -> None:
     """Show the visual catalog inline keyboard."""
     await callback.answer()
     if not callback.message:
@@ -106,9 +101,7 @@ async def cb_closer_catalog(
 
 
 @router.callback_query(F.data == "closer:price")
-async def cb_closer_price(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_closer_price(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Prompt user to enter room area so AI can calculate a price."""
     await callback.answer()
     if not callback.message:
@@ -127,9 +120,7 @@ async def cb_closer_price(
 
 
 @router.callback_query(F.data == "closer:later")
-async def cb_closer_later(
-    callback: CallbackQuery, **data: object
-) -> None:
+async def cb_closer_later(callback: CallbackQuery, **data: object) -> None:
     """User taps 'Later' — acknowledge and add +5 to lead score."""
     await callback.answer()
     if not callback.message:

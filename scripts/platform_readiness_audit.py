@@ -3,6 +3,7 @@
 Platform Readiness Audit — read-only checks.
 No DB mutation, no secrets printed.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -62,14 +63,21 @@ def check_dangerous_flags() -> list[tuple[str, str, str]]:
     results = []
     try:
         from shared.config.settings import BusinessSettings
+
         fields = BusinessSettings.model_fields
         dangerous_off = [
-            "agent_followups_enabled", "agent_execution_live_sender_enabled",
-            "agent_execution_auto_execute_approved", "crm_operator_reply_enabled",
-            "crm_campaign_send_enabled", "crm_daily_report_delivery_enabled",
-            "admin_session_auth_enabled", "admin_csrf_enabled",
-            "admin_db_rbac_enabled", "admin_security_actions_enabled",
-            "admin_ip_block_enforcement_enabled", "crm_contact_merge_enabled",
+            "agent_followups_enabled",
+            "agent_execution_live_sender_enabled",
+            "agent_execution_auto_execute_approved",
+            "crm_operator_reply_enabled",
+            "crm_campaign_send_enabled",
+            "crm_daily_report_delivery_enabled",
+            "admin_session_auth_enabled",
+            "admin_csrf_enabled",
+            "admin_db_rbac_enabled",
+            "admin_security_actions_enabled",
+            "admin_ip_block_enforcement_enabled",
+            "crm_contact_merge_enabled",
         ]
         for flag in dangerous_off:
             if flag in fields:

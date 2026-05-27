@@ -4,6 +4,7 @@ These tests wire real service instances together (with mocked DB sessions)
 to verify the full event→memory→followup→escalation pipeline works as a unit.
 No real database or Telegram API is used.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
@@ -59,7 +60,9 @@ class TestCatalogJourney:
 
         svc = AgentMemoryService(session)
         result = await svc.update_from_event(
-            1, JourneyEventType.VIEWED_CATALOG_ITEM, {"design": "gulli"},
+            1,
+            JourneyEventType.VIEWED_CATALOG_ITEM,
+            {"design": "gulli"},
         )
         assert "gulli" in result.interested_designs
 
@@ -78,11 +81,15 @@ class TestCatalogJourney:
     async def test_catalog_followup_should_send_ok(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
-            followup_enabled=True, followup_count=0,
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
+            followup_enabled=True,
+            followup_count=0,
         )
         fu = ScheduledFollowupModel(
-            telegram_user_id=1, followup_type="catalog",
+            telegram_user_id=1,
+            followup_type="catalog",
             trigger_event_type="opened_catalog",
             scheduled_at=datetime.now(UTC),
             created_at=datetime.now(UTC) - timedelta(minutes=10),
@@ -102,14 +109,17 @@ class TestPriceJourney:
     async def test_price_event_updates_memory(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
             lead_temperature="cold",
         )
         session.execute.return_value = _scalar(mem)
 
         svc = AgentMemoryService(session)
         result = await svc.update_from_event(
-            1, JourneyEventType.PRICE_CALCULATED,
+            1,
+            JourneyEventType.PRICE_CALCULATED,
             {"area_m2": 20.0, "design": "gulli", "price": 5_000_000},
         )
         assert result.area_m2 == 20.0
@@ -120,7 +130,8 @@ class TestPriceJourney:
     async def test_price_followup_stale_after_order(self) -> None:
         session = _mock_session()
         fu = ScheduledFollowupModel(
-            telegram_user_id=1, followup_type="price",
+            telegram_user_id=1,
+            followup_type="price",
             trigger_event_type="price_calculated",
             scheduled_at=datetime.now(UTC),
             created_at=datetime.now(UTC) - timedelta(minutes=10),
@@ -139,7 +150,9 @@ class TestAbandonedOrderJourney:
     async def test_order_started_updates_memory(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
             lead_temperature="cold",
         )
         session.execute.return_value = _scalar(mem)
@@ -152,7 +165,8 @@ class TestAbandonedOrderJourney:
     async def test_abandoned_followup_stale_after_phone(self) -> None:
         session = _mock_session()
         fu = ScheduledFollowupModel(
-            telegram_user_id=1, followup_type="abandoned_order",
+            telegram_user_id=1,
+            followup_type="abandoned_order",
             trigger_event_type="order_form_started",
             scheduled_at=datetime.now(UTC),
             created_at=datetime.now(UTC) - timedelta(minutes=10),
@@ -198,7 +212,9 @@ class TestOperatorCancelsFlow:
     async def test_operator_event_disables_followup(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
             followup_enabled=True,
         )
         session.execute.return_value = _scalar(mem)
@@ -219,8 +235,12 @@ class TestAdminEscalationFlow:
     def test_warm_lead_above_threshold_escalates(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
-            lead_temperature="warm", followup_enabled=True, followup_count=3,
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
+            lead_temperature="warm",
+            followup_enabled=True,
+            followup_count=3,
             admin_escalation_count=0,
         )
 
@@ -231,8 +251,12 @@ class TestAdminEscalationFlow:
     def test_cold_lead_no_escalation(self) -> None:
         session = _mock_session()
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
-            lead_temperature="cold", followup_enabled=True, followup_count=5,
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
+            lead_temperature="cold",
+            followup_enabled=True,
+            followup_count=5,
             admin_escalation_count=0,
         )
 
@@ -245,9 +269,14 @@ class TestAdminEscalationFlow:
         session = _mock_session()
         recent = datetime.now(UTC) - timedelta(minutes=10)
         mem = AgentMemoryModel(
-            telegram_user_id=1, interested_designs=[], memory_data={},
-            lead_temperature="hot", followup_enabled=True, followup_count=3,
-            admin_escalation_count=1, last_admin_escalation_at=recent,
+            telegram_user_id=1,
+            interested_designs=[],
+            memory_data={},
+            lead_temperature="hot",
+            followup_enabled=True,
+            followup_count=3,
+            admin_escalation_count=1,
+            last_admin_escalation_at=recent,
         )
 
         svc = AdminEscalationService(session)
@@ -257,10 +286,16 @@ class TestAdminEscalationFlow:
 
     def test_admin_alert_has_lead_summary(self) -> None:
         mem = AgentMemoryModel(
-            telegram_user_id=1, full_name="Ali", interested_designs=[],
-            memory_data={}, lead_temperature="hot", followup_count=3,
-            phone_masked="+998**…**67", district="Qarshi",
-            area_m2=25.0, estimated_price=5_000_000,
+            telegram_user_id=1,
+            full_name="Ali",
+            interested_designs=[],
+            memory_data={},
+            lead_temperature="hot",
+            followup_count=3,
+            phone_masked="+998**…**67",
+            district="Qarshi",
+            area_m2=25.0,
+            estimated_price=5_000_000,
             admin_escalation_count=0,
         )
         text = AdminEscalationService.build_admin_alert(mem)
@@ -276,6 +311,7 @@ class TestAIComposerFallback:
     @pytest.mark.asyncio
     async def test_disabled_returns_deterministic(self) -> None:
         from core.services.ai_message_composer_service import compose_followup
+
         result = await compose_followup("catalog", {}, "FALLBACK_TEXT")
         assert result == "FALLBACK_TEXT"
 
@@ -286,7 +322,8 @@ class TestAIComposerFallback:
             side_effect=RuntimeError("API crash"),
         ):
             text, buttons = await FollowupSchedulerService.build_message_ai(
-                "price", memory_data={"full_name": "X"},
+                "price",
+                memory_data={"full_name": "X"},
             )
         assert "Hisob" in text
         assert len(buttons) == 3
@@ -298,6 +335,7 @@ class TestAIComposerFallback:
 class TestFeatureFlagsOff:
     def test_all_flags_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_followups_enabled is False
         assert s.agent_catalog_followup_enabled is False
@@ -352,18 +390,22 @@ class TestDuplicateFollowupPrevention:
 class TestMigrationChain:
     def test_journey_events_model_imports(self) -> None:
         from infrastructure.database.models.journey_event import JourneyEventModel
+
         assert JourneyEventModel.__tablename__ == "customer_journey_events"
 
     def test_agent_memory_model_imports(self) -> None:
         from infrastructure.database.models.agent_memory import AgentMemoryModel
+
         assert AgentMemoryModel.__tablename__ == "customer_agent_memory"
 
     def test_scheduled_followup_model_imports(self) -> None:
         from infrastructure.database.models.scheduled_followup import ScheduledFollowupModel
+
         assert ScheduledFollowupModel.__tablename__ == "scheduled_followups"
 
     def test_escalation_columns_exist(self) -> None:
         from infrastructure.database.models.agent_memory import AgentMemoryModel
+
         m = AgentMemoryModel(telegram_user_id=1, interested_designs=[], memory_data={})
         assert hasattr(m, "admin_escalation_count")
         assert hasattr(m, "last_admin_escalation_at")

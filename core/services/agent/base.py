@@ -13,6 +13,7 @@ Import constraints:
   - Cooldown import is lazy (inside method body) to avoid early Redis init
   - NO imports from ``apps/``
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -157,17 +158,17 @@ class AgentAction:
 #   ORDER_DROPOFF             — 60s: one dropoff notice per minute is enough.
 #   PRICING_DONE              — 10s: light gate, user-initiated.
 _TRIGGER_COOLDOWNS: dict[str, tuple[str, int]] = {
-    AgentTrigger.USER_MESSAGE.value:  ("reply", 5),
-    AgentTrigger.OBJECTION.value:     ("reply", 5),
+    AgentTrigger.USER_MESSAGE.value: ("reply", 5),
+    AgentTrigger.OBJECTION.value: ("reply", 5),
     AgentTrigger.ATTEMPT_CLOSE.value: ("attempt_close", 120),
-    AgentTrigger.CATALOG_OPEN.value:  ("catalog_followup", 30),
+    AgentTrigger.CATALOG_OPEN.value: ("catalog_followup", 30),
     AgentTrigger.PHONE_CAPTURED.value: ("admin_alert", 60),
-    AgentTrigger.LEAD_CREATED.value:  ("admin_alert", 60),
-    AgentTrigger.FOLLOWUP_DUE.value:  ("schedule_followup", 300),
-    AgentTrigger.INACTIVITY.value:    ("reply", 300),
-    AgentTrigger.STALE_LEAD.value:    ("reply", 300),
+    AgentTrigger.LEAD_CREATED.value: ("admin_alert", 60),
+    AgentTrigger.FOLLOWUP_DUE.value: ("schedule_followup", 300),
+    AgentTrigger.INACTIVITY.value: ("reply", 300),
+    AgentTrigger.STALE_LEAD.value: ("reply", 300),
     AgentTrigger.ORDER_DROPOFF.value: ("reply", 60),
-    AgentTrigger.PRICING_DONE.value:  ("reply", 10),
+    AgentTrigger.PRICING_DONE.value: ("reply", 10),
 }
 
 
@@ -227,7 +228,9 @@ class AgentOrchestrator:
                 cd = self._get_cooldown()
                 at = ActionType(action_type_value)
                 if not await cd.can_act(  # type: ignore[union-attr]
-                    context.user_id, at, cooldown_seconds=cooldown_seconds,
+                    context.user_id,
+                    at,
+                    cooldown_seconds=cooldown_seconds,
                 ):
                     log.debug(
                         "agent_cooldown_blocked",
@@ -261,7 +264,9 @@ class AgentOrchestrator:
                 cd = self._get_cooldown()
                 at = ActionType(cooldown_spec[0])
                 await cd.mark_acted(  # type: ignore[union-attr]
-                    context.user_id, at, cooldown_seconds=cooldown_spec[1],
+                    context.user_id,
+                    at,
+                    cooldown_seconds=cooldown_spec[1],
                 )
             except Exception:
                 log.warning(

@@ -1,4 +1,5 @@
 """Tests for Step CI — NotebookLM Knowledge Review Pack."""
+
 from __future__ import annotations
 
 from pathlib import Path

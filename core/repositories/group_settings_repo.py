@@ -1,4 +1,5 @@
 """Abstract repository interface for group settings."""
+
 from __future__ import annotations
 
 from abc import abstractmethod

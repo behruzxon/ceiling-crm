@@ -1,4 +1,5 @@
 """Tests for Step BI — DB models, migration, and schema imports."""
+
 from __future__ import annotations
 
 import importlib
@@ -7,14 +8,17 @@ import importlib
 class TestModels:
     def test_admin_user_model_importable(self):
         from infrastructure.database.models.admin_user import AdminUserModel
+
         assert AdminUserModel.__tablename__ == "admin_users"
 
     def test_admin_audit_log_model_importable(self):
         from infrastructure.database.models.admin_user import AdminAuditLogModel
+
         assert AdminAuditLogModel.__tablename__ == "admin_audit_logs"
 
     def test_admin_user_columns(self):
         from infrastructure.database.models.admin_user import AdminUserModel
+
         cols = {c.name for c in AdminUserModel.__table__.columns}
         assert "admin_id" in cols
         assert "role" in cols
@@ -26,6 +30,7 @@ class TestModels:
 
     def test_admin_audit_log_columns(self):
         from infrastructure.database.models.admin_user import AdminAuditLogModel
+
         cols = {c.name for c in AdminAuditLogModel.__table__.columns}
         assert "actor_admin_id" in cols
         assert "actor_role" in cols
@@ -38,6 +43,7 @@ class TestModels:
 
     def test_admin_user_unique_admin_id(self):
         from infrastructure.database.models.admin_user import AdminUserModel
+
         col = AdminUserModel.__table__.c.admin_id
         assert col.unique is True
 
@@ -62,6 +68,7 @@ class TestMigration:
 class TestSchemas:
     def test_admin_user_record(self):
         from core.schemas.admin_user import AdminUserRecord
+
         r = AdminUserRecord(admin_id="test1", role="admin")
         assert r.admin_id == "test1"
         assert r.role == "admin"
@@ -70,22 +77,26 @@ class TestSchemas:
         import pytest
 
         from core.schemas.admin_user import AdminUserRecord
+
         r = AdminUserRecord()
         with pytest.raises(AttributeError):
             r.admin_id = "x"  # type: ignore[misc]
 
     def test_admin_user_create_request(self):
         from core.schemas.admin_user import AdminUserCreateRequest
+
         r = AdminUserCreateRequest(admin_id="u1", role="viewer")
         assert r.admin_id == "u1"
 
     def test_admin_user_update_request(self):
         from core.schemas.admin_user import AdminUserUpdateRequest
+
         r = AdminUserUpdateRequest(role="admin", updated_by="own1")
         assert r.role == "admin"
 
     def test_admin_audit_entry(self):
         from core.schemas.admin_user import AdminAuditEntry
+
         e = AdminAuditEntry(action="test", status="success")
         assert e.action == "test"
 
@@ -93,12 +104,14 @@ class TestSchemas:
         import pytest
 
         from core.schemas.admin_user import AdminAuditEntry
+
         e = AdminAuditEntry()
         with pytest.raises(AttributeError):
             e.action = "x"  # type: ignore[misc]
 
     def test_service_result(self):
         from core.schemas.admin_user import AdminUserServiceResult
+
         r = AdminUserServiceResult(ok=True)
         assert r.ok
 
@@ -106,6 +119,7 @@ class TestSchemas:
         import pytest
 
         from core.schemas.admin_user import AdminUserServiceResult
+
         r = AdminUserServiceResult()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]

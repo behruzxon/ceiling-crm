@@ -1,4 +1,5 @@
 """Broadcast domain model."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -16,6 +17,7 @@ from shared.constants.enums import (
 
 class SegmentFilter(BaseModel):
     """Audience segment definition for broadcasts (legacy v1 filter)."""
+
     categories: list[CeilingCategory] | None = None
     pipeline_stages: list[PipelineStage] | None = None
     districts: list[str] | None = None
@@ -27,6 +29,7 @@ class SegmentFilter(BaseModel):
 
 class Broadcast(BaseModel):
     """Segmented broadcast message."""
+
     model_config = {"frozen": True}
 
     id: int

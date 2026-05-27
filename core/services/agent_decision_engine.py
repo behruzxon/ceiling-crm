@@ -4,6 +4,7 @@ core.services.agent_decision_engine
 Deterministic rules engine that evaluates a customer's journey state and
 recommends the next best action.  Pure function — no I/O, no side effects.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -22,17 +23,21 @@ log = get_logger(__name__)
 _INACTIVE_WARM_HOURS = 24
 _INACTIVE_COLD_HOURS = 72
 
-_TERMINAL_STATES: frozenset[str] = frozenset({
-    AgentCustomerState.STOPPED.value,
-    AgentCustomerState.LOST.value,
-    AgentCustomerState.CLOSED.value,
-})
+_TERMINAL_STATES: frozenset[str] = frozenset(
+    {
+        AgentCustomerState.STOPPED.value,
+        AgentCustomerState.LOST.value,
+        AgentCustomerState.CLOSED.value,
+    }
+)
 
-_HIGH_IMPACT_ACTIONS: frozenset[str] = frozenset({
-    AgentActionType.ESCALATE_TO_ADMIN.value,
-    AgentActionType.MARK_HOT_LEAD.value,
-    AgentActionType.NOTIFY_ADMIN.value,
-})
+_HIGH_IMPACT_ACTIONS: frozenset[str] = frozenset(
+    {
+        AgentActionType.ESCALATE_TO_ADMIN.value,
+        AgentActionType.MARK_HOT_LEAD.value,
+        AgentActionType.NOTIFY_ADMIN.value,
+    }
+)
 
 
 def _event_set(events: list[dict[str, Any]]) -> frozenset[str]:
@@ -132,21 +137,21 @@ def classify_customer_state(
 
 
 _STATE_ACTION_MAP: dict[AgentCustomerState, tuple[AgentActionType, int]] = {
-    AgentCustomerState.NEW_VISITOR:       (AgentActionType.WAIT, 10),
-    AgentCustomerState.BROWSING_CATALOG:  (AgentActionType.SEND_CATALOG_FOLLOWUP, 40),
+    AgentCustomerState.NEW_VISITOR: (AgentActionType.WAIT, 10),
+    AgentCustomerState.BROWSING_CATALOG: (AgentActionType.SEND_CATALOG_FOLLOWUP, 40),
     AgentCustomerState.DESIGN_INTERESTED: (AgentActionType.SUGGEST_PRICE_CALCULATOR, 50),
-    AgentCustomerState.PRICE_CHECKING:    (AgentActionType.REQUEST_AREA, 45),
+    AgentCustomerState.PRICE_CHECKING: (AgentActionType.REQUEST_AREA, 45),
     AgentCustomerState.PRICE_CONSIDERING: (AgentActionType.SEND_PRICE_FOLLOWUP, 65),
-    AgentCustomerState.ORDER_INTENT:      (AgentActionType.REQUEST_PHONE, 70),
-    AgentCustomerState.ORDER_ABANDONED:   (AgentActionType.SEND_ORDER_FOLLOWUP, 80),
-    AgentCustomerState.PHONE_SHARED_HOT:  (AgentActionType.MARK_HOT_LEAD, 90),
-    AgentCustomerState.OPERATOR_HANDOFF:  (AgentActionType.DISABLE_FOLLOWUP, 85),
+    AgentCustomerState.ORDER_INTENT: (AgentActionType.REQUEST_PHONE, 70),
+    AgentCustomerState.ORDER_ABANDONED: (AgentActionType.SEND_ORDER_FOLLOWUP, 80),
+    AgentCustomerState.PHONE_SHARED_HOT: (AgentActionType.MARK_HOT_LEAD, 90),
+    AgentCustomerState.OPERATOR_HANDOFF: (AgentActionType.DISABLE_FOLLOWUP, 85),
     AgentCustomerState.NEGOTIATING_PRICE: (AgentActionType.SUGGEST_OPERATOR, 70),
-    AgentCustomerState.INACTIVE_WARM:     (AgentActionType.ESCALATE_TO_ADMIN, 75),
-    AgentCustomerState.INACTIVE_COLD:     (AgentActionType.WAIT, 15),
-    AgentCustomerState.STOPPED:           (AgentActionType.WAIT, 0),
-    AgentCustomerState.LOST:              (AgentActionType.WAIT, 0),
-    AgentCustomerState.CLOSED:            (AgentActionType.WAIT, 0),
+    AgentCustomerState.INACTIVE_WARM: (AgentActionType.ESCALATE_TO_ADMIN, 75),
+    AgentCustomerState.INACTIVE_COLD: (AgentActionType.WAIT, 15),
+    AgentCustomerState.STOPPED: (AgentActionType.WAIT, 0),
+    AgentCustomerState.LOST: (AgentActionType.WAIT, 0),
+    AgentCustomerState.CLOSED: (AgentActionType.WAIT, 0),
 }
 
 _FOLLOWUP_MAP: dict[AgentActionType, str] = {
@@ -156,21 +161,21 @@ _FOLLOWUP_MAP: dict[AgentActionType, str] = {
 }
 
 _REASON_MAP: dict[AgentCustomerState, str] = {
-    AgentCustomerState.NEW_VISITOR:       "Yangi foydalanuvchi, hali harakat qilmagan",
-    AgentCustomerState.BROWSING_CATALOG:  "Katalog ko'ryapti, narx so'rash kerak",
+    AgentCustomerState.NEW_VISITOR: "Yangi foydalanuvchi, hali harakat qilmagan",
+    AgentCustomerState.BROWSING_CATALOG: "Katalog ko'ryapti, narx so'rash kerak",
     AgentCustomerState.DESIGN_INTERESTED: "Dizayn tanlamoqda, narx hisoblashga undash",
-    AgentCustomerState.PRICE_CHECKING:    "Kalkulyatorda, maydon kiritish kutilmoqda",
+    AgentCustomerState.PRICE_CHECKING: "Kalkulyatorda, maydon kiritish kutilmoqda",
     AgentCustomerState.PRICE_CONSIDERING: "Narx oldi, buyurtma hali yo'q",
-    AgentCustomerState.ORDER_INTENT:      "Buyurtma niyati bor, telefon kerak",
-    AgentCustomerState.ORDER_ABANDONED:   "Buyurtma yarimta qoldi, eslatish kerak",
-    AgentCustomerState.PHONE_SHARED_HOT:  "Telefon yubordi — issiq lead!",
-    AgentCustomerState.OPERATOR_HANDOFF:  "Operator so'radi, follow-up to'xtatildi",
+    AgentCustomerState.ORDER_INTENT: "Buyurtma niyati bor, telefon kerak",
+    AgentCustomerState.ORDER_ABANDONED: "Buyurtma yarimta qoldi, eslatish kerak",
+    AgentCustomerState.PHONE_SHARED_HOT: "Telefon yubordi — issiq lead!",
+    AgentCustomerState.OPERATOR_HANDOFF: "Operator so'radi, follow-up to'xtatildi",
     AgentCustomerState.NEGOTIATING_PRICE: "Narx e'tirozi bor, operator taklif qilish",
-    AgentCustomerState.INACTIVE_WARM:     "Warm lead 24+ soat jim, admin eslatmasi kerak",
-    AgentCustomerState.INACTIVE_COLD:     "Sovuq lead, kutish",
-    AgentCustomerState.STOPPED:           "Foydalanuvchi to'xtaldi yoki rad etdi",
-    AgentCustomerState.LOST:              "Lead yo'qotilgan",
-    AgentCustomerState.CLOSED:            "Deal yopilgan",
+    AgentCustomerState.INACTIVE_WARM: "Warm lead 24+ soat jim, admin eslatmasi kerak",
+    AgentCustomerState.INACTIVE_COLD: "Sovuq lead, kutish",
+    AgentCustomerState.STOPPED: "Foydalanuvchi to'xtaldi yoki rad etdi",
+    AgentCustomerState.LOST: "Lead yo'qotilgan",
+    AgentCustomerState.CLOSED: "Deal yopilgan",
 }
 
 
@@ -234,7 +239,8 @@ def evaluate(
     et_set = _event_set(recent_events)
     state = classify_customer_state(memory, et_set)
     action, base_priority = _STATE_ACTION_MAP.get(
-        state, (AgentActionType.WAIT, 0),
+        state,
+        (AgentActionType.WAIT, 0),
     )
     priority = calculate_priority_score(memory, et_set, base_priority)
     confidence = calculate_confidence_score(memory, et_set)
@@ -274,7 +280,8 @@ def evaluate(
         confidence_score=confidence,
         reason=reason,
         lead_temperature=temp,
-        admin_escalation_needed=action in (
+        admin_escalation_needed=action
+        in (
             AgentActionType.ESCALATE_TO_ADMIN,
             AgentActionType.NOTIFY_ADMIN,
         ),
@@ -295,11 +302,13 @@ def evaluate_with_offer(
 
     try:
         from shared.config import get_settings
+
         biz = get_settings().business
         if not biz.agent_dynamic_offer_enabled:
             return decision, None
 
         from core.services.dynamic_offer_service import DynamicOfferService
+
         offer = DynamicOfferService.choose_offer(
             memory=memory,
             lead_signal=lead_signal,
@@ -322,11 +331,15 @@ def evaluate_full(
     now: datetime | None = None,
 ) -> tuple[AgentDecision, DynamicOffer | None, ConversationPolicyDecision | None]:
     decision, offer = evaluate_with_offer(
-        memory, recent_events, lead_signal=lead_signal, now=now,
+        memory,
+        recent_events,
+        lead_signal=lead_signal,
+        now=now,
     )
 
     try:
         from shared.config import get_settings
+
         biz = get_settings().business
         if not biz.agent_conversation_policy_enabled:
             return decision, offer, None
@@ -338,10 +351,7 @@ def evaluate_full(
             "action_type": decision.action_type,
             "priority_score": decision.priority_score,
         }
-        offer_dict = (
-            {"offer_type": offer.offer_type, "cta": offer.cta}
-            if offer else {}
-        )
+        offer_dict = {"offer_type": offer.offer_type, "cta": offer.cta} if offer else {}
         signal_dict = lead_signal or {}
 
         policy = ConversationPolicyService.evaluate(

@@ -20,6 +20,7 @@ Import constraints
   - May import from ``core/`` and ``infrastructure/``
   - Must NOT import from ``apps/bot/handlers/``
 """
+
 from __future__ import annotations
 
 import time

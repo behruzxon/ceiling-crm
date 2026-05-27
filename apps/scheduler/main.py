@@ -2,6 +2,7 @@
 APScheduler entry point.
 Runs as a separate process alongside the bot.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,6 +45,7 @@ def _add_error_listener(scheduler: AsyncIOScheduler) -> None:
             log.exception("scheduler_job_error", job_id=job_id)
             try:
                 from infrastructure.error_logger import log_system_error
+
                 asyncio.ensure_future(
                     log_system_error("scheduler", exc, message=f"job={job_id}: {exc}")
                 )
@@ -61,9 +63,9 @@ async def run_scheduler() -> None:
     scheduler = AsyncIOScheduler(
         timezone="Asia/Tashkent",
         job_defaults={
-            "coalesce": True,         # collapse missed runs into one execution
-            "max_instances": 1,       # never run the same job twice in parallel
-            "misfire_grace_time": 60, # tolerate up to 60 s late start before skipping
+            "coalesce": True,  # collapse missed runs into one execution
+            "max_instances": 1,  # never run the same job twice in parallel
+            "misfire_grace_time": 60,  # tolerate up to 60 s late start before skipping
         },
     )
     _add_error_listener(scheduler)

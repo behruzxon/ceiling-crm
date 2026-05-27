@@ -3,6 +3,7 @@
 Stores unhandled exceptions from bot handlers, scheduler jobs,
 and background tasks for post-mortem analysis.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -12,6 +12,7 @@ Public API
   LeadNotificationService.notify_new_lead(lead)   — "🆕 Yangi lid" card
   LeadNotificationService.notify_hot_lead(lead_id) — "🔥 HOT LEAD" alert (deduped)
 """
+
 from __future__ import annotations
 
 from core.domain.lead import Lead
@@ -51,46 +52,49 @@ class LeadNotificationService:
     def _lead_status_keyboard(lead_id: int) -> InlineKeyboardMarkup:
         """Build the quick-action inline keyboard appended to every lead card."""
         from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="📌 Kanban'da ochish",
-                    callback_data=f"kanban:lead:{lead_id}:new",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✅ Bog'landim",
-                    callback_data=f"lead:{lead_id}:status:contacted",
-                ),
-                InlineKeyboardButton(
-                    text="📅 O'lchov",
-                    callback_data=f"lead:{lead_id}:status:measurement",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="💰 Narx yuborildi",
-                    callback_data=f"lead:{lead_id}:status:quoted",
-                ),
-                InlineKeyboardButton(
-                    text="🧾 Zakaz",
-                    callback_data=f"lead:{lead_id}:status:deal",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="\u274c Yo'qotildi",
-                    callback_data=f"lead:{lead_id}:status:lost",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="\U0001f4a1 Operator yordam",
-                    callback_data=f"op:menu:{lead_id}",
-                ),
-            ],
-        ])
+
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="📌 Kanban'da ochish",
+                        callback_data=f"kanban:lead:{lead_id}:new",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✅ Bog'landim",
+                        callback_data=f"lead:{lead_id}:status:contacted",
+                    ),
+                    InlineKeyboardButton(
+                        text="📅 O'lchov",
+                        callback_data=f"lead:{lead_id}:status:measurement",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="💰 Narx yuborildi",
+                        callback_data=f"lead:{lead_id}:status:quoted",
+                    ),
+                    InlineKeyboardButton(
+                        text="🧾 Zakaz",
+                        callback_data=f"lead:{lead_id}:status:deal",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="\u274c Yo'qotildi",
+                        callback_data=f"lead:{lead_id}:status:lost",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="\U0001f4a1 Operator yordam",
+                        callback_data=f"op:menu:{lead_id}",
+                    ),
+                ],
+            ]
+        )
 
     async def notify_new_lead(self, lead: Lead) -> None:
         """Send a NEW lead card to admin DM + all admin groups. Never raises."""
@@ -206,9 +210,7 @@ class LeadNotificationService:
         if not admin_group_id:
             log.warning("admin_group_id_not_configured")
             return
-        ok = await safe_send_message(
-            bot, admin_group_id, text, reply_markup=keyboard
-        )
+        ok = await safe_send_message(bot, admin_group_id, text, reply_markup=keyboard)
         if not ok:
             log.warning("notify_group_failed", chat_id=admin_group_id)
 
@@ -297,7 +299,7 @@ class LeadNotificationService:
 
     # Shared score badges used by several notification methods
     _SCORE_BADGES: dict[str, str] = {
-        "hot":  "🔥 HOT LEAD",
+        "hot": "🔥 HOT LEAD",
         "warm": "🟡 WARM LEAD",
         "cold": "⚪ COLD LEAD",
     }
@@ -439,6 +441,7 @@ class LeadNotificationService:
         # ── Negotiation section (concise) ───────────────────────────
         if negotiation_tactic and negotiation_tactic != "none":
             from core.services.negotiation_engine_service import TACTIC_LABELS
+
             tactic_label = TACTIC_LABELS.get(negotiation_tactic, negotiation_tactic)
             esc_flag = " \u26a0\ufe0f ESCALATE" if negotiation_escalated else ""
             lines.append(f"\U0001f91d Muzokara: {tactic_label}{esc_flag}")
@@ -449,6 +452,7 @@ class LeadNotificationService:
                 STAGE_LABELS,
                 TREND_LABELS,
             )
+
             cg = conversation_graph
             stage_label = STAGE_LABELS.get(
                 cg.current_decision_stage, cg.current_decision_stage  # type: ignore[union-attr]
@@ -456,15 +460,14 @@ class LeadNotificationService:
             trend_label = TREND_LABELS.get(
                 cg.engagement_trend, cg.engagement_trend  # type: ignore[union-attr]
             )
-            lines.append(
-                f"\U0001f4cd Bosqich: {stage_label} | {trend_label}"
-            )
+            lines.append(f"\U0001f4cd Bosqich: {stage_label} | {trend_label}")
             if cg.recommended_next_step:  # type: ignore[union-attr]
                 lines.append(f"\u27a1 Keyingi: {cg.recommended_next_step}")  # type: ignore[union-attr]
 
         # ── Follow-up decision section (concise) ──────────────────
         if followup_decision is not None and followup_decision.should_follow_up:  # type: ignore[union-attr]
             from core.services.followup_brain_service import FU_TYPE_LABELS
+
             fd = followup_decision
             fd_label = FU_TYPE_LABELS.get(
                 fd.follow_up_type, fd.follow_up_type  # type: ignore[union-attr]
@@ -481,17 +484,16 @@ class LeadNotificationService:
         # ── Conversation health section (concise) ─────────────────
         if conversation_health is not None:
             from core.services.conversation_intelligence_service import RISK_LABELS
+
             ch = conversation_health
             _risk_badges = {
-                "low": "\U0001f7e2", "medium": "\U0001f7e1",
-                "high": "\U0001f534", "critical": "\u26d4",
+                "low": "\U0001f7e2",
+                "medium": "\U0001f7e1",
+                "high": "\U0001f534",
+                "critical": "\u26d4",
             }
-            risk_badge = _risk_badges.get(
-                ch.risk_level, "\u26aa"  # type: ignore[union-attr]
-            )
-            risk_label = RISK_LABELS.get(
-                ch.risk_level, ch.risk_level  # type: ignore[union-attr]
-            )
+            risk_badge = _risk_badges.get(ch.risk_level, "\u26aa")  # type: ignore[union-attr]
+            risk_label = RISK_LABELS.get(ch.risk_level, ch.risk_level)  # type: ignore[union-attr]
             lines.append(
                 f"\U0001f3e5 Suhbat: {ch.health_score}/100"  # type: ignore[union-attr]
                 f" | {risk_badge} {risk_label}"
@@ -504,6 +506,7 @@ class LeadNotificationService:
         # ── Sales Brain unified section (replaces standalone radar) ──
         if sales_brain is not None:
             from core.services.deal_radar_service import BUCKET_LABELS
+
             _bl = BUCKET_LABELS.get(
                 sales_brain.priority, sales_brain.priority  # type: ignore[union-attr]
             )
@@ -511,9 +514,7 @@ class LeadNotificationService:
                 f"\U0001f9e0 Brain: {_bl} | "
                 f"{sales_brain.win_probability}% ehtimol"  # type: ignore[union-attr]
             )
-            lines.append(
-                f"\u27a1 {sales_brain.recommended_action}"  # type: ignore[union-attr]
-            )
+            lines.append(f"\u27a1 {sales_brain.recommended_action}")  # type: ignore[union-attr]
             if sales_brain.risk_flags:  # type: ignore[union-attr]
                 lines.append(
                     f"\u26a0\ufe0f {sales_brain.risk_flags[0]}"  # type: ignore[union-attr]
@@ -527,10 +528,12 @@ class LeadNotificationService:
                 from core.services.deal_radar_service import (
                     rank_lead_for_radar,
                 )
+
                 # Try SV path for radar
                 _radar_sv = None
                 try:
                     from core.services.signal_vector_service import build_signal_vector
+
                     _radar_sv = build_signal_vector(
                         lead_score=score,
                         phone_captured=bool(phone),
@@ -541,28 +544,34 @@ class LeadNotificationService:
                     )
                     # Enrich with upstream results
                     from dataclasses import replace as _dc_replace
+
                     _radar_sv = _dc_replace(
                         _radar_sv,
                         predicted_revenue_best=(
                             revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
-                            if revenue_estimate else None
+                            if revenue_estimate
+                            else None
                         ),
                         predicted_revenue_max=(
                             revenue_estimate.predicted_revenue_max  # type: ignore[union-attr]
-                            if revenue_estimate else None
+                            if revenue_estimate
+                            else None
                         ),
                         decision_stage=(
                             conversation_graph.current_decision_stage  # type: ignore[union-attr]
-                            if conversation_graph else None
+                            if conversation_graph
+                            else None
                         ),
                         engagement_trend=(
                             conversation_graph.engagement_trend  # type: ignore[union-attr]
-                            if conversation_graph else None
+                            if conversation_graph
+                            else None
                         ),
                         negotiation_escalated=negotiation_escalated,
                     )
                     if deal_probability:
                         from core.services.signal_vector_service import with_deal_probability
+
                         _radar_sv = with_deal_probability(
                             _radar_sv,
                             deal_probability.deal_probability_percent,  # type: ignore[union-attr]
@@ -570,29 +579,36 @@ class LeadNotificationService:
                 except Exception:
                     _radar_sv = None
 
-                _radar = rank_lead_for_radar(signal_vector=_radar_sv) if _radar_sv else \
-                    rank_lead_for_radar(
+                _radar = (
+                    rank_lead_for_radar(signal_vector=_radar_sv)
+                    if _radar_sv
+                    else rank_lead_for_radar(
                         score=score,
                         deal_probability_percent=(
                             deal_probability.deal_probability_percent  # type: ignore[union-attr]
-                            if deal_probability else None
+                            if deal_probability
+                            else None
                         ),
                         predicted_revenue_best=(
                             revenue_estimate.predicted_revenue_best  # type: ignore[union-attr]
-                            if revenue_estimate else None
+                            if revenue_estimate
+                            else None
                         ),
                         buyer_type=(
                             buyer_profile.buyer_type  # type: ignore[union-attr]
-                            if buyer_profile else None
+                            if buyer_profile
+                            else None
                         ),
                         negotiation_escalated=negotiation_escalated,
                         decision_stage=(
                             conversation_graph.current_decision_stage  # type: ignore[union-attr]
-                            if conversation_graph else None
+                            if conversation_graph
+                            else None
                         ),
                         engagement_trend=(
                             conversation_graph.engagement_trend  # type: ignore[union-attr]
-                            if conversation_graph else None
+                            if conversation_graph
+                            else None
                         ),
                         phone_captured=bool(phone),
                         has_area=area is not None,
@@ -601,10 +617,9 @@ class LeadNotificationService:
                         closing_confidence=None,
                         lead_status=None,
                     )
-                _bl2 = _BL.get(_radar.radar_bucket, _radar.radar_bucket)
-                lines.append(
-                    f"\U0001f4e1 Radar: {_bl2} | {_radar.radar_priority_score}%"
                 )
+                _bl2 = _BL.get(_radar.radar_bucket, _radar.radar_bucket)
+                lines.append(f"\U0001f4e1 Radar: {_bl2} | {_radar.radar_priority_score}%")
             except Exception:
                 pass
 

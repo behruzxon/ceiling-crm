@@ -1,4 +1,5 @@
 """Tests for Step CD — Final UI Route Quality (50+ tests)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -239,8 +240,10 @@ class TestMobileResponsive:
 class TestSmoke:
     def test_web_app(self):
         from apps.web.main import app
+
         assert app is not None
 
     def test_api_app(self):
         from apps.api.main import app
+
         assert app is not None

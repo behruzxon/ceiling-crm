@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_operator_tasks."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,14 +22,22 @@ class CRMOperatorTaskModel(Base):
     status: Mapped[str] = mapped_column(sa.String(20), server_default="todo")
     priority: Mapped[str] = mapped_column(sa.String(20), server_default="normal")
     due_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    snoozed_until: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    cancelled_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    snoozed_until: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
     assigned_to: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     created_by: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     source: Mapped[str] = mapped_column(sa.String(20), server_default="manual")
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
 
     __table_args__ = (

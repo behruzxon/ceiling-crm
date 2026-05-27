@@ -1,4 +1,5 @@
 """Scheduler job for sending approved agent execution payloads."""
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -13,7 +14,9 @@ def register_approved_execution_sender_jobs(
 ) -> None:
     scheduler.add_job(
         process_approved_executions,
-        "interval", minutes=1, id="agent_process_approved_executions",
+        "interval",
+        minutes=1,
+        id="agent_process_approved_executions",
     )
 
 
@@ -21,6 +24,7 @@ async def process_approved_executions() -> None:
     """Find approved execution records and send via bot."""
     try:
         from shared.config import get_settings
+
         biz = get_settings().business
         if not biz.agent_execution_live_sender_enabled:
             return
@@ -28,11 +32,13 @@ async def process_approved_executions() -> None:
             return
 
         from infrastructure.database.session import get_session_factory
+
         factory = get_session_factory()
         async with factory() as session:
             from core.services.agent_execution_queue_service import (
                 AgentExecutionQueueService,
             )
+
             queue = AgentExecutionQueueService(session)
             records = await queue.list_approved_pending(
                 limit=biz.agent_execution_live_sender_batch_limit,

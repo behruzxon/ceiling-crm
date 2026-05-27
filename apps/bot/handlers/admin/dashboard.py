@@ -2,6 +2,7 @@
 Admin dashboard handler.
 Shows CRM summary stats in the admin group.
 """
+
 from __future__ import annotations
 
 from aiogram import Router
@@ -38,9 +39,7 @@ async def cmd_dashboard(message: Message, **data: object) -> None:
         completed = pipeline_counts.get(PipelineStage.COMPLETED, 0)
         lost = pipeline_counts.get(PipelineStage.LOST, 0)
 
-        conversion_rate = (
-            f"{(completed / total_leads * 100):.1f}%" if total_leads > 0 else "—"
-        )
+        conversion_rate = f"{(completed / total_leads * 100):.1f}%" if total_leads > 0 else "—"
 
         text = (
             f"📊 {bold('CRM Dashboard')}\n\n"

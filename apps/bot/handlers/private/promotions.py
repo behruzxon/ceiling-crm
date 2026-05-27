@@ -9,6 +9,7 @@ Displays current discounts and promotional offers with three CTA buttons:
   - ✅ Zakaz berish     → starts order FSM
   - 📞 Operator         → starts operator contact flow
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -52,13 +53,14 @@ def _promo_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🧮 Narx kalkulyator", callback_data="open_pricing")],
-            [InlineKeyboardButton(text="✅ Zakaz berish",     callback_data="order_start")],
-            [InlineKeyboardButton(text="📞 Operator",         callback_data="contact_operator")],
+            [InlineKeyboardButton(text="✅ Zakaz berish", callback_data="order_start")],
+            [InlineKeyboardButton(text="📞 Operator", callback_data="contact_operator")],
         ]
     )
 
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
+
 
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_PROMOS)
 async def cmd_promotions(message: Message, **data: object) -> None:
@@ -69,10 +71,9 @@ async def cmd_promotions(message: Message, **data: object) -> None:
 
 # ─── CTA callbacks ────────────────────────────────────────────────────────────
 
+
 @router.callback_query(F.data == "open_pricing")
-async def cb_open_pricing(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_open_pricing(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the pricing calculator flow."""
     await callback.answer()
     msg = callback.message
@@ -82,9 +83,7 @@ async def cb_open_pricing(
 
 
 @router.callback_query(F.data == "order_start")
-async def cb_order_start(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_order_start(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the order (Zakaz berish) flow."""
     await callback.answer()
     msg = callback.message
@@ -93,15 +92,12 @@ async def cb_order_start(
     await state.clear()
     await state.set_state(OrderFlow.waiting_for_name)
     await msg.answer(
-        "📋 <b>Zakaz berish</b>\n\n"
-        "Ismingizni kiriting:",
+        "📋 <b>Zakaz berish</b>\n\n" "Ismingizni kiriting:",
     )
 
 
 @router.callback_query(F.data == "contact_operator")
-async def cb_contact_operator(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_contact_operator(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the operator contact-request flow."""
     await callback.answer()
     msg = callback.message

@@ -13,6 +13,7 @@ Public API
 Callback data namespace: ``cta:*``
 Handled by apps.bot.handlers.callbacks.cta_callbacks.
 """
+
 from __future__ import annotations
 
 from aiogram import Bot
@@ -26,7 +27,7 @@ log = get_logger(__name__)
 # ── Keyword sets for intent detection ─────────────────────────────────────────
 
 _PRICING_KW: frozenset[str] = frozenset({"narx", "necha", "kv", "hisob"})
-_ORDER_KW:   frozenset[str] = frozenset({"zakaz", "buyurtma", "o'lchov", "kelib"})
+_ORDER_KW: frozenset[str] = frozenset({"zakaz", "buyurtma", "o'lchov", "kelib"})
 
 
 # ── Keyboard builders ──────────────────────────────────────────────────────────
@@ -39,21 +40,21 @@ def cta_keyboard() -> InlineKeyboardMarkup:
     ``settings.cta.discount_percent`` is set.
     """
     settings = get_settings()
-    pct_suffix = (
-        f" (-{settings.cta.discount_percent}%)"
-        if settings.cta.discount_percent
-        else ""
-    )
+    pct_suffix = f" (-{settings.cta.discount_percent}%)" if settings.cta.discount_percent else ""
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"🔥 Chegirma aktiv!{pct_suffix}",
-                callback_data="cta:discount",
-            )],
-            [InlineKeyboardButton(
-                text="🛒 Zakaz berish",
-                callback_data="cta:order",
-            )],
+            [
+                InlineKeyboardButton(
+                    text=f"🔥 Chegirma aktiv!{pct_suffix}",
+                    callback_data="cta:discount",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🛒 Zakaz berish",
+                    callback_data="cta:order",
+                )
+            ],
         ]
     )
 
@@ -61,25 +62,27 @@ def cta_keyboard() -> InlineKeyboardMarkup:
 def cta_discount_keyboard() -> InlineKeyboardMarkup:
     """Extended 3-button keyboard shown after the user taps the discount button."""
     settings = get_settings()
-    pct_suffix = (
-        f" (-{settings.cta.discount_percent}%)"
-        if settings.cta.discount_percent
-        else ""
-    )
+    pct_suffix = f" (-{settings.cta.discount_percent}%)" if settings.cta.discount_percent else ""
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"🔥 Chegirma aktiv!{pct_suffix}",
-                callback_data="cta:discount",
-            )],
-            [InlineKeyboardButton(
-                text="💰 Narx kalkulyator",
-                callback_data="cta:pricing",
-            )],
-            [InlineKeyboardButton(
-                text="🛒 Zakaz berish",
-                callback_data="cta:order",
-            )],
+            [
+                InlineKeyboardButton(
+                    text=f"🔥 Chegirma aktiv!{pct_suffix}",
+                    callback_data="cta:discount",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💰 Narx kalkulyator",
+                    callback_data="cta:pricing",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🛒 Zakaz berish",
+                    callback_data="cta:order",
+                )
+            ],
         ]
     )
 
@@ -97,42 +100,54 @@ def cta_intent_keyboard(user_text: str) -> InlineKeyboardMarkup:
     if any(kw in lower for kw in _PRICING_KW):
         return InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="💰 Narx kalkulyator",
-                    callback_data="cta:pricing",
-                )],
-                [InlineKeyboardButton(
-                    text="🛒 Zakaz berish",
-                    callback_data="cta:order",
-                )],
+                [
+                    InlineKeyboardButton(
+                        text="💰 Narx kalkulyator",
+                        callback_data="cta:pricing",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="🛒 Zakaz berish",
+                        callback_data="cta:order",
+                    )
+                ],
             ]
         )
 
     if any(kw in lower for kw in _ORDER_KW):
         return InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="🛒 Zakaz berish",
-                    callback_data="cta:order",
-                )],
-                [InlineKeyboardButton(
-                    text="☎️ Operator",
-                    callback_data="cta:operator",
-                )],
+                [
+                    InlineKeyboardButton(
+                        text="🛒 Zakaz berish",
+                        callback_data="cta:order",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="☎️ Operator",
+                        callback_data="cta:operator",
+                    )
+                ],
             ]
         )
 
     # Generic fallback
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text="🛒 Zakaz berish",
-                callback_data="cta:order",
-            )],
-            [InlineKeyboardButton(
-                text="📂 Katalog",
-                callback_data="cta:catalog",
-            )],
+            [
+                InlineKeyboardButton(
+                    text="🛒 Zakaz berish",
+                    callback_data="cta:order",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📂 Katalog",
+                    callback_data="cta:catalog",
+                )
+            ],
         ]
     )
 

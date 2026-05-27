@@ -1,4 +1,5 @@
 """Inline keyboards for the admin broadcast FSM."""
+
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -7,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shared.constants.enums import PipelineStage
 
 # ── Segment chooser ───────────────────────────────────────────────────────────
+
 
 def segment_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -28,29 +30,32 @@ def segment_keyboard() -> InlineKeyboardMarkup:
 # ── Pipeline stage chooser ────────────────────────────────────────────────────
 
 _STAGE_LABELS: dict[str, str] = {
-    PipelineStage.NEW.value:          "🆕 Yangi",
-    PipelineStage.CONTACTED.value:    "📞 Bog'lanildi",
-    PipelineStage.MEASUREMENT.value:  "📐 O'lchov",
-    PipelineStage.QUOTE.value:        "💵 Narx taklifi",
-    PipelineStage.DEAL.value:         "🤝 Shartnoma",
+    PipelineStage.NEW.value: "🆕 Yangi",
+    PipelineStage.CONTACTED.value: "📞 Bog'lanildi",
+    PipelineStage.MEASUREMENT.value: "📐 O'lchov",
+    PipelineStage.QUOTE.value: "💵 Narx taklifi",
+    PipelineStage.DEAL.value: "🤝 Shartnoma",
     PipelineStage.INSTALLATION.value: "🔧 O'rnatish",
-    PipelineStage.COMPLETED.value:    "✅ Yakunlandi",
-    PipelineStage.LOST.value:         "❌ Yo'qotildi",
+    PipelineStage.COMPLETED.value: "✅ Yakunlandi",
+    PipelineStage.LOST.value: "❌ Yo'qotildi",
 }
 
 
 def stage_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for value, label in _STAGE_LABELS.items():
-        builder.row(InlineKeyboardButton(
-            text=label,
-            callback_data=f"bcast:stage:{value}",
-        ))
+        builder.row(
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"bcast:stage:{value}",
+            )
+        )
     builder.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="bcast:back:seg"))
     return builder.as_markup()
 
 
 # ── Payload type chooser ──────────────────────────────────────────────────────
+
 
 def payload_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -67,6 +72,7 @@ def payload_keyboard() -> InlineKeyboardMarkup:
 
 
 # ── Confirm / cancel ──────────────────────────────────────────────────────────
+
 
 def confirm_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()

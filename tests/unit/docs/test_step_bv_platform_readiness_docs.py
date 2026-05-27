@@ -1,4 +1,5 @@
 """Tests for Step BV — Platform Readiness Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +18,9 @@ class TestDocsExist:
 
 class TestAuditDoc:
     def _content(self):
-        return Path("docs/AI_AGENT_SYSTEM/81_PLATFORM_READINESS_AUDIT.md").read_text(encoding="utf-8")
+        return Path("docs/AI_AGENT_SYSTEM/81_PLATFORM_READINESS_AUDIT.md").read_text(
+            encoding="utf-8"
+        )
 
     def test_test_status(self):
         assert "3540" in self._content() or "unit" in self._content().lower()
@@ -48,7 +51,9 @@ class TestAuditDoc:
 
 class TestChecklist:
     def _content(self):
-        return Path("docs/AI_AGENT_SYSTEM/82_STAGE_1_GO_NO_GO_CHECKLIST.md").read_text(encoding="utf-8")
+        return Path("docs/AI_AGENT_SYSTEM/82_STAGE_1_GO_NO_GO_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        )
 
     def test_backup(self):
         assert "backup" in self._content().lower()
@@ -68,7 +73,9 @@ class TestChecklist:
 
 class TestRiskRegister:
     def _content(self):
-        return Path("docs/AI_AGENT_SYSTEM/83_PRODUCTION_RISK_REGISTER.md").read_text(encoding="utf-8")
+        return Path("docs/AI_AGENT_SYSTEM/83_PRODUCTION_RISK_REGISTER.md").read_text(
+            encoding="utf-8"
+        )
 
     def test_severity(self):
         assert "HIGH" in self._content() or "MEDIUM" in self._content()
@@ -90,6 +97,7 @@ class TestScript:
 
     def test_importable(self):
         import importlib
+
         mod = importlib.import_module("scripts.platform_readiness_audit")
         assert callable(mod.main)
         assert callable(mod.check_imports)

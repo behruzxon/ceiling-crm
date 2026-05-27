@@ -11,6 +11,7 @@ Two entry points:
    handlers so that the user-facing flow is never blocked or broken by a
    tracking failure.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -50,7 +51,9 @@ class JourneyEventService:
         return evt
 
     async def get_recent(
-        self, user_id: int, limit: int = 20,
+        self,
+        user_id: int,
+        limit: int = 20,
     ) -> list[JourneyEventModel]:
         stmt = (
             sa.select(JourneyEventModel)
@@ -62,7 +65,9 @@ class JourneyEventService:
         return list(result.scalars().all())
 
     async def get_last(
-        self, user_id: int, event_type: JourneyEventType | str,
+        self,
+        user_id: int,
+        event_type: JourneyEventType | str,
     ) -> JourneyEventModel | None:
         et = event_type.value if isinstance(event_type, JourneyEventType) else event_type
         stmt = (
@@ -138,6 +143,7 @@ async def emit_journey_event(
             # Update agent memory from this event
             try:
                 from core.services.agent_memory_service import AgentMemoryService
+
                 mem_svc = AgentMemoryService(session)
                 await mem_svc.update_from_event(user_id, et_str, safe_data)
             except Exception:
@@ -147,14 +153,19 @@ async def emit_journey_event(
             try:
                 from core.services.followup_scheduler_service import FollowupSchedulerService
                 from shared.config import get_settings
+
                 biz = get_settings().business
                 fu_svc = FollowupSchedulerService(session)
 
                 if biz.agent_followups_enabled:
-                    if et_str in {
-                        JourneyEventType.OPENED_CATALOG.value,
-                        JourneyEventType.VIEWED_CATALOG_ITEM.value,
-                    } and biz.agent_catalog_followup_enabled:
+                    if (
+                        et_str
+                        in {
+                            JourneyEventType.OPENED_CATALOG.value,
+                            JourneyEventType.VIEWED_CATALOG_ITEM.value,
+                        }
+                        and biz.agent_catalog_followup_enabled
+                    ):
                         delay = biz.agent_catalog_followup_delay_minutes
                         await fu_svc.schedule(user_id, "catalog", et_str, delay_minutes=delay)
 
@@ -170,7 +181,9 @@ async def emit_journey_event(
                         and biz.agent_order_followup_enabled
                     ):
                         delay = biz.agent_order_followup_delay_minutes
-                        await fu_svc.schedule(user_id, "abandoned_order", et_str, delay_minutes=delay)
+                        await fu_svc.schedule(
+                            user_id, "abandoned_order", et_str, delay_minutes=delay
+                        )
 
                 # Cancel runs regardless of feature flag
                 if AgentMemoryService.should_cancel_followup_for_event(et_str):
@@ -182,6 +195,7 @@ async def emit_journey_event(
             try:
                 if biz.agent_decision_engine_enabled:
                     from core.services.agent_decision_engine import evaluate as _evaluate
+
                     mem_svc2 = AgentMemoryService(session)
                     mem_obj = await mem_svc2.get_or_create(user_id)
                     mem_dict = {

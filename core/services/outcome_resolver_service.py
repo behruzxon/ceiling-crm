@@ -11,6 +11,7 @@ Resolution logic:
 
 Batch size: 200 per cycle, run every 5 minutes by scheduler.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -58,7 +59,9 @@ class OutcomeResolverService:
 
                 for row in pending:
                     outcome = await self._resolve_one(
-                        row, now, session,
+                        row,
+                        now,
+                        session,
                     )
                     if outcome:
                         await repo.resolve_outcome(row["id"], outcome, now)
@@ -144,10 +147,7 @@ class OutcomeResolverService:
 
         from infrastructure.database.models.lead import LeadModel
 
-        stmt = (
-            sa.select(LeadModel.lead_status)
-            .where(LeadModel.id == lead_id)
-        )
+        stmt = sa.select(LeadModel.lead_status).where(LeadModel.id == lead_id)
         result = await session.execute(stmt)  # type: ignore[union-attr]
         return result.scalar_one_or_none()
 
@@ -173,6 +173,7 @@ class OutcomeResolverService:
             # Parse ISO timestamp
             if isinstance(updated_at, str):
                 from datetime import datetime as dt
+
                 mem_ts = dt.fromisoformat(updated_at)
             elif isinstance(updated_at, (int, float)):
                 mem_ts = datetime.fromtimestamp(updated_at, tz=UTC)

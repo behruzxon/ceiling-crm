@@ -7,6 +7,7 @@ has_link() returns True when a message contains a blockable link:
 - Telegram URL or TEXT_LINK entities (most reliable)
 - Bare https://, www. or t.me/ references not parsed as entities
 """
+
 from __future__ import annotations
 
 import re
@@ -19,10 +20,12 @@ from aiogram.types import Message
 _LINK_RE = re.compile(r"(https?://|www\.|t\.me/)", re.IGNORECASE)
 
 # Entity types that always represent a blockable link.
-_LINK_ENTITY_TYPES: frozenset[str] = frozenset({
-    MessageEntityType.URL,
-    MessageEntityType.TEXT_LINK,
-})
+_LINK_ENTITY_TYPES: frozenset[str] = frozenset(
+    {
+        MessageEntityType.URL,
+        MessageEntityType.TEXT_LINK,
+    }
+)
 
 
 def has_link(message: Message) -> bool:

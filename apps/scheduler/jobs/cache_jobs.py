@@ -1,4 +1,5 @@
 """Cache warm-up and maintenance jobs."""
+
 from __future__ import annotations
 
 from datetime import UTC

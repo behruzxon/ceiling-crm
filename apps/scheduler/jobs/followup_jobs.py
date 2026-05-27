@@ -1,4 +1,5 @@
 """Follow-up funnel jobs — brain-driven + inactivity-based reminders."""
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -87,8 +88,8 @@ async def check_inactive_leads() -> None:
 
     off_hours = is_off_hours()
     now = datetime.now(UTC)
-    h24 = settings.business.follow_up_day1_hours   # 24
-    h72 = settings.business.follow_up_day3_hours   # 72
+    h24 = settings.business.follow_up_day1_hours  # 24
+    h72 = settings.business.follow_up_day3_hours  # 72
     h168 = settings.business.follow_up_day7_hours  # 168
 
     factory = get_session_factory()
@@ -149,7 +150,8 @@ async def check_inactive_leads() -> None:
                     )
                     await safe_send_message(bot, admin_id, text)
                     await repo.update_ai_scoring(
-                        lead.id, increment_followup_count=True,
+                        lead.id,
+                        increment_followup_count=True,
                     )
                     sent += 1
 
@@ -170,7 +172,8 @@ async def check_inactive_leads() -> None:
                     )
                     await safe_send_message(bot, admin_id, text)
                     await repo.update_ai_scoring(
-                        lead.id, increment_followup_count=True,
+                        lead.id,
+                        increment_followup_count=True,
                     )
                     sent += 1
 
@@ -228,7 +231,8 @@ async def check_hot_lead_inactivity() -> None:
 
         # Filter to HOT leads only
         hot_leads = [
-            l for l in inactive
+            l
+            for l in inactive
             if (l.lead_status or "").lower() in ("hot",)
             or (l.lead_temperature or "").lower() == "hot"
             or (l.score or 0) >= 60

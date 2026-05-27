@@ -27,6 +27,7 @@ Usage::
     )
     # result.radar_bucket == "attack_now"
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -200,8 +201,13 @@ def _rank_from_vector(sv: SignalVector) -> RadarResult:
 
     # ── 4. Decision stage (0-15) ─────────────────────────────────
     _stage_pts: dict[str, float] = {
-        "close_ready": 15, "negotiating": 12, "comparing": 8,
-        "researching": 5, "new_interest": 3, "delayed": 2, "cold": 0,
+        "close_ready": 15,
+        "negotiating": 12,
+        "comparing": 8,
+        "researching": 5,
+        "new_interest": 3,
+        "delayed": 2,
+        "cold": 0,
     }
     pts += _stage_pts.get(sv.decision_stage or "", 3)
     if sv.decision_stage:
@@ -209,7 +215,10 @@ def _rank_from_vector(sv: SignalVector) -> RadarResult:
 
     # ── 5. Engagement trend (0-10) ───────────────────────────────
     _trend_pts: dict[str, float] = {
-        "warming_up": 10, "reactivated": 7, "stable": 5, "cooling_down": 2,
+        "warming_up": 10,
+        "reactivated": 7,
+        "stable": 5,
+        "cooling_down": 2,
     }
     pts += _trend_pts.get(sv.engagement_trend or "", 3)
     if sv.engagement_trend:
@@ -235,6 +244,7 @@ def _rank_from_vector(sv: SignalVector) -> RadarResult:
     # ── 9. Freshness ±5 ──────────────────────────────────────────
     if sv.last_activity_ts:
         import time
+
         age_hours = (time.time() - sv.last_activity_ts) / 3600
         if age_hours < 1:
             pts += 5
@@ -347,8 +357,13 @@ def _rank_legacy(
         signals.append("warm ball")
 
     _stage_pts: dict[str, float] = {
-        "close_ready": 15, "negotiating": 12, "comparing": 8,
-        "researching": 5, "new_interest": 3, "delayed": 2, "cold": 0,
+        "close_ready": 15,
+        "negotiating": 12,
+        "comparing": 8,
+        "researching": 5,
+        "new_interest": 3,
+        "delayed": 2,
+        "cold": 0,
     }
     stage_pts = _stage_pts.get(decision_stage or "", 3)
     pts += stage_pts
@@ -356,7 +371,10 @@ def _rank_legacy(
         signals.append(decision_stage)
 
     _trend_pts: dict[str, float] = {
-        "warming_up": 10, "reactivated": 7, "stable": 5, "cooling_down": 2,
+        "warming_up": 10,
+        "reactivated": 7,
+        "stable": 5,
+        "cooling_down": 2,
     }
     trend_pts = _trend_pts.get(engagement_trend or "", 3)
     pts += trend_pts
@@ -384,6 +402,7 @@ def _rank_legacy(
 
     if last_activity_ts:
         import time
+
         age_hours = (time.time() - last_activity_ts) / 3600
         if age_hours < 1:
             pts += 5
@@ -448,11 +467,7 @@ def _determine_bucket(
     """Assign a radar bucket based on priority score + context signals."""
 
     # Rule 1: close_ready + warming + high prob → attack_now
-    if (
-        decision_stage == "close_ready"
-        and engagement_trend == "warming_up"
-        and dp >= 60
-    ):
+    if decision_stage == "close_ready" and engagement_trend == "warming_up" and dp >= 60:
         return BUCKET_ATTACK_NOW
 
     # Rule 2: escalation flag → attack_now
@@ -556,14 +571,16 @@ def rank_leads_for_radar(
         lead_id = lead_signals.get("lead_id", 0)
         kwargs = {k: v for k, v in lead_signals.items() if k != "lead_id"}
         result = rank_lead_for_radar(**kwargs)
-        results.append({
-            "lead_id": lead_id,
-            "radar_priority_score": result.radar_priority_score,
-            "radar_bucket": result.radar_bucket,
-            "radar_reason": result.radar_reason,
-            "recommended_immediate_action": result.recommended_immediate_action,
-            "radar_signals": result.radar_signals,
-        })
+        results.append(
+            {
+                "lead_id": lead_id,
+                "radar_priority_score": result.radar_priority_score,
+                "radar_bucket": result.radar_bucket,
+                "radar_reason": result.radar_reason,
+                "recommended_immediate_action": result.recommended_immediate_action,
+                "radar_signals": result.radar_signals,
+            }
+        )
 
     # Sort: bucket order first, then priority score desc
     results.sort(

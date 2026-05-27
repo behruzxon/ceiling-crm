@@ -9,6 +9,7 @@ Additionally sends the persistent URL InlineKeyboard to the group whenever the b
 gains an active presence (freshly added or promoted from member to admin).
 When the bot becomes admin it also tries to pin the menu message.
 """
+
 from __future__ import annotations
 
 from aiogram import Router

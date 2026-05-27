@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_report_delivery_audit."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,7 +23,9 @@ class CRMReportDeliveryAuditModel(Base):
     recipient_hash: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     message_preview: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     sent_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     failed_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     __table_args__ = (

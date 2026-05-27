@@ -10,6 +10,7 @@ Changes
 2. leads(source_group_id) — FK column, used in group-based lead lookups
 3. leads(user_id, created_at DESC) — composite for list_by_user, get_by_user_id ordering
 """
+
 from __future__ import annotations
 
 from alembic import op

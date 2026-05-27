@@ -10,6 +10,7 @@ Changes
 2. leads.score >= 0     — score must be non-negative
 3. leads.closing_confidence BETWEEN 0 AND 1 — probability range (nullable OK)
 """
+
 from __future__ import annotations
 
 from alembic import op

@@ -29,6 +29,7 @@ Usage::
     )
     # result.deal_probability_percent == 78
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -207,14 +208,16 @@ def _evaluate_from_vector(sv: SignalVector) -> DealProbability:
     deal_value = _compute_deal_value(sv.area_m2, sv.design_type)
 
     # ── Confidence level ─────────────────────────────────────────────
-    strong_signals = sum([
-        sv.phone_captured,
-        sv.has_area,
-        sv.has_district,
-        sv.closing_attempted,
-        sv.engagement_score >= 0.5,
-        sv.confidence_score >= 0.6,
-    ])
+    strong_signals = sum(
+        [
+            sv.phone_captured,
+            sv.has_area,
+            sv.has_district,
+            sv.closing_attempted,
+            sv.engagement_score >= 0.5,
+            sv.confidence_score >= 0.6,
+        ]
+    )
     if strong_signals >= 4:
         confidence_level = "high"
     elif strong_signals >= 2:
@@ -306,14 +309,16 @@ def _evaluate_legacy(
     probability = max(0, min(100, round(pts)))
     deal_value = _compute_deal_value(area_m2, design_type)
 
-    strong_signals = sum([
-        phone_captured,
-        has_area or area_m2 is not None,
-        has_district,
-        closing_attempted,
-        score_clamped >= 50,
-        (closing_confidence or 0) >= 0.6,
-    ])
+    strong_signals = sum(
+        [
+            phone_captured,
+            has_area or area_m2 is not None,
+            has_district,
+            closing_attempted,
+            score_clamped >= 50,
+            (closing_confidence or 0) >= 0.6,
+        ]
+    )
     if strong_signals >= 4:
         confidence_level = "high"
     elif strong_signals >= 2:
@@ -336,14 +341,16 @@ def _evaluate_legacy(
 
 
 def _compute_deal_value(
-    area_m2: float | None, design_type: str | None,
+    area_m2: float | None,
+    design_type: str | None,
 ) -> int | None:
     if area_m2 is None or area_m2 <= 0:
         return None
     price_per_m2 = _DEFAULT_PRICE_PER_M2
     if design_type:
         price_per_m2 = _DESIGN_PRICES.get(
-            design_type.lower().strip(), _DEFAULT_PRICE_PER_M2,
+            design_type.lower().strip(),
+            _DEFAULT_PRICE_PER_M2,
         )
     return round(area_m2 * price_per_m2)
 

@@ -1,4 +1,5 @@
 """Integration tests for database connectivity (requires running PG)."""
+
 from __future__ import annotations
 
 import pytest

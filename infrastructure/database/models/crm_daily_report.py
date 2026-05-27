@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_daily_reports."""
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -20,9 +21,13 @@ class CRMDailyReportModel(Base):
     title: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     summary_json: Mapped[dict] = mapped_column(sa.JSON, nullable=False, server_default="{}")
     recommendations_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
-    generated_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    generated_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     sent_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     failed_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     __table_args__ = (sa.Index("ix_daily_report_status", "status"),)

@@ -1,4 +1,5 @@
 """Abstract repository interface for group join events."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

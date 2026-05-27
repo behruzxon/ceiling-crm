@@ -1,4 +1,5 @@
 """Tests for Step BI — AdminAuditLogService."""
+
 from __future__ import annotations
 
 from core.services.admin_audit_log_service import AdminAuditLogService
@@ -202,6 +203,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_audit_log_service import AuditEntryResult
+
         r = AuditEntryResult(ok=True)
         with pytest.raises(AttributeError):
             r.ok = False  # type: ignore[misc]

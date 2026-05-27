@@ -1,4 +1,5 @@
 """Business logic for tracked admin groups."""
+
 from __future__ import annotations
 
 from core.repositories.admin_group_repo import AbstractAdminGroupRepository

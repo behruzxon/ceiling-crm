@@ -1,4 +1,5 @@
 """Tests for Step CH — Measurement Lead Handler."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,14 +14,17 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.bot.handlers.private import measurement_lead
+
         assert measurement_lead is not None
 
     def test_router(self):
         from apps.bot.handlers.private.measurement_lead import router
+
         assert router is not None
 
     def test_states(self):
         from apps.bot.states.measurement_lead import MeasurementLeadStates
+
         assert hasattr(MeasurementLeadStates, "waiting_for_name")
         assert hasattr(MeasurementLeadStates, "waiting_for_phone")
         assert hasattr(MeasurementLeadStates, "waiting_for_location")

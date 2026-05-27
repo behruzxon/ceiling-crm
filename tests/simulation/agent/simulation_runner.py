@@ -1,4 +1,5 @@
 """Simulation runner — executes a scenario through the full agent pipeline."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -91,18 +92,29 @@ def run_scenario(
 
     offer = DynamicOfferService.choose_offer(
         memory=mem,
-        lead_signal={"intent": result.signal_intent, "objection_type": result.signal_objection,
-                     "urgency": result.signal_urgency} if text else None,
+        lead_signal=(
+            {
+                "intent": result.signal_intent,
+                "objection_type": result.signal_objection,
+                "urgency": result.signal_urgency,
+            }
+            if text
+            else None
+        ),
         recent_events=events or [],
     )
     result.offer_type = offer.offer_type
     result.offer_cta = offer.cta
 
-    signal_dict = {
-        "intent": result.signal_intent,
-        "objection_type": result.signal_objection,
-        "urgency": result.signal_urgency,
-    } if text else {}
+    signal_dict = (
+        {
+            "intent": result.signal_intent,
+            "objection_type": result.signal_objection,
+            "urgency": result.signal_urgency,
+        }
+        if text
+        else {}
+    )
 
     policy = ConversationPolicyService.evaluate(
         memory=mem,

@@ -1,4 +1,5 @@
 """Operator handoff queue service — safe, no-ETA, dedup-aware."""
+
 from __future__ import annotations
 
 import re
@@ -15,14 +16,26 @@ class HandoffResult:
     user_message: str = ""
 
 
-VALID_STATUSES = frozenset({
-    "open", "waiting_phone", "assigned",
-    "contacted", "resolved", "cancelled", "expired",
-})
+VALID_STATUSES = frozenset(
+    {
+        "open",
+        "waiting_phone",
+        "assigned",
+        "contacted",
+        "resolved",
+        "cancelled",
+        "expired",
+    }
+)
 VALID_PRIORITIES = frozenset({"low", "normal", "high", "urgent"})
-VALID_SOURCES = frozenset({
-    "ai_button", "text_intent", "operator_button", "crm_manual",
-})
+VALID_SOURCES = frozenset(
+    {
+        "ai_button",
+        "text_intent",
+        "operator_button",
+        "crm_manual",
+    }
+)
 
 _TOKEN_PATTERN = re.compile(r"(sk-[a-zA-Z0-9]{8,}|Bearer\s+\S{10,})", re.I)
 _PHONE_PATTERN = re.compile(r"\+?\d{10,}")

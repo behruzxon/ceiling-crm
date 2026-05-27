@@ -5,6 +5,7 @@ Global error handler for the bot dispatcher.
 Catches unhandled exceptions from all handlers and persists them
 to the system_errors table via the centralized error logger.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -55,9 +56,7 @@ def register_error_handler(dp: Dispatcher) -> None:
         return True
 
 
-async def _persist_error(
-    exc: BaseException, user_id: int | None, handler_name: str
-) -> None:
+async def _persist_error(exc: BaseException, user_id: int | None, handler_name: str) -> None:
     """Fire-and-forget: write to system_errors. Never raises."""
     try:
         from infrastructure.error_logger import log_system_error

@@ -30,7 +30,9 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_journey_user_created", "customer_journey_events", ["user_id", "created_at"])
-    op.create_index("ix_journey_type_created", "customer_journey_events", ["event_type", "created_at"])
+    op.create_index(
+        "ix_journey_type_created", "customer_journey_events", ["event_type", "created_at"]
+    )
 
 
 def downgrade() -> None:

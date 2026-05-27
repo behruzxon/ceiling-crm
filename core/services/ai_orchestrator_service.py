@@ -10,6 +10,7 @@ rich brain summary.
 
 Pure function — no I/O, no DB, no Redis. Fully deterministic.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

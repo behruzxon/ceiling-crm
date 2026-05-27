@@ -36,8 +36,18 @@ def upgrade() -> None:
         sa.Column("next_followup_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("stop_reason", sa.String(50), nullable=True),
         sa.Column("memory_data", sa.JSON, server_default="{}", nullable=False),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
     )
     op.create_index("ix_agent_mem_temp", "customer_agent_memory", ["lead_temperature"])
     op.create_index("ix_agent_mem_next_fu", "customer_agent_memory", ["next_followup_at"])

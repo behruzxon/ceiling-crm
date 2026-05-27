@@ -1,4 +1,5 @@
 """Tests for Step BP — Browser Notification + Sound Alerts UI."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -155,28 +156,40 @@ class TestExistingFeatures:
 class TestSettings:
     def test_notifications_enabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_browser_notifications_enabled"].default is True
 
     def test_notifications_default_off(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_browser_notifications_default"].default is False
 
     def test_sound_enabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_sound_alerts_enabled"].default is True
 
     def test_sound_default_off(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_sound_alerts_default"].default is False
 
     def test_notif_cooldown(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields["crm_alert_notification_cooldown_seconds"].default == 60
+
+        assert (
+            BusinessSettings.model_fields["crm_alert_notification_cooldown_seconds"].default == 60
+        )
 
     def test_sound_cooldown(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_alert_sound_cooldown_seconds"].default == 30
 
     def test_notify_severities(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields["crm_alert_notify_severities"].default == "critical,danger"
+
+        assert (
+            BusinessSettings.model_fields["crm_alert_notify_severities"].default
+            == "critical,danger"
+        )

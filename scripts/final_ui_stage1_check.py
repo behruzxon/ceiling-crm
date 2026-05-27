@@ -3,6 +3,7 @@
 Final UI + Stage 1 Readiness Check — read-only.
 No DB mutation, no secrets printed.
 """
+
 from __future__ import annotations
 
 import os
@@ -35,10 +36,17 @@ def check_critical_docs() -> list[tuple[str, str, str]]:
 def check_templates() -> list[tuple[str, str, str]]:
     results = []
     templates = [
-        "base.html", "login.html", "dashboard.html", "leads.html",
-        "pipeline.html", "analytics.html", "agent.html",
-        "crm_contacts.html", "crm_contact_detail.html",
-        "crm_campaigns.html", "security.html",
+        "base.html",
+        "login.html",
+        "dashboard.html",
+        "leads.html",
+        "pipeline.html",
+        "analytics.html",
+        "agent.html",
+        "crm_contacts.html",
+        "crm_contact_detail.html",
+        "crm_campaigns.html",
+        "security.html",
     ]
     tpl_dir = Path("apps/web/templates")
     for name in templates:
@@ -87,6 +95,7 @@ def check_dangerous_flags() -> list[tuple[str, str, str]]:
     results = []
     try:
         from shared.config.settings import BusinessSettings
+
         fields = BusinessSettings.model_fields
         flags = [
             "agent_followups_enabled",

@@ -5,6 +5,7 @@ Admin pipeline management handler.
 /lead ID           — lead card + last 20 timeline actions
 lead_N / /lead_N   — shortcut alias for /lead N
 """
+
 from __future__ import annotations
 
 import re
@@ -60,6 +61,7 @@ _STAGE_ALIASES: dict[str, PipelineStage] = {"DONE": PipelineStage.COMPLETED}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _summarize_payload(payload: dict) -> str:  # type: ignore[type-arg]
     """One-line summary of an action payload for the timeline."""
     if "new" in payload and "old" in payload:
@@ -98,31 +100,34 @@ def _format_lead_card(lead: Lead) -> str:
 
 def build_pipeline_keyboard(lead_id: int) -> InlineKeyboardMarkup:
     """4-button action keyboard attached to a lead card."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="➡️ Keyingi bosqich",
-                callback_data=f"pipeline:next:{lead_id}",
-            ),
-            InlineKeyboardButton(
-                text="⬅️ Oldingi bosqich",
-                callback_data=f"pipeline:prev:{lead_id}",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="❌ Yo'qotildi",
-                callback_data=f"pipeline:lost:{lead_id}",
-            ),
-            InlineKeyboardButton(
-                text="🕓 Timeline",
-                callback_data=f"timeline:{lead_id}",
-            ),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➡️ Keyingi bosqich",
+                    callback_data=f"pipeline:next:{lead_id}",
+                ),
+                InlineKeyboardButton(
+                    text="⬅️ Oldingi bosqich",
+                    callback_data=f"pipeline:prev:{lead_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Yo'qotildi",
+                    callback_data=f"pipeline:lost:{lead_id}",
+                ),
+                InlineKeyboardButton(
+                    text="🕓 Timeline",
+                    callback_data=f"timeline:{lead_id}",
+                ),
+            ],
+        ]
+    )
 
 
 # ── /pipeline [days] ──────────────────────────────────────────────────────────
+
 
 @router.message(Command("pipeline"), RoleFilter(*_MGMT_ROLES))
 async def cmd_pipeline(message: Message, **data: object) -> None:
@@ -138,12 +143,14 @@ async def cmd_pipeline(message: Message, **data: object) -> None:
     for kanban_stage in KANBAN_STAGES:
         label = KANBAN_DISPLAY[kanban_stage]
         cnt = counts.get(kanban_stage, 0)
-        buttons.append([
-            InlineKeyboardButton(
-                text=f"{label} ({cnt})",
-                callback_data=f"kanban:stage:{kanban_stage}",
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{label} ({cnt})",
+                    callback_data=f"kanban:stage:{kanban_stage}",
+                )
+            ]
+        )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     await message.answer(
@@ -155,6 +162,7 @@ async def cmd_pipeline(message: Message, **data: object) -> None:
 
 
 # ── /stage STAGE [page] ───────────────────────────────────────────────────────
+
 
 @router.message(Command("stage"), RoleFilter(*_MGMT_ROLES))
 async def cmd_stage(message: Message, command: CommandObject, **data: object) -> None:
@@ -231,15 +239,19 @@ async def _send_stage_page(
     # Pagination keyboard
     row = []
     if page > 0:
-        row.append(InlineKeyboardButton(
-            text="◀️ Oldingi",
-            callback_data=f"stage_page:{stage.value}:{page - 1}",
-        ))
+        row.append(
+            InlineKeyboardButton(
+                text="◀️ Oldingi",
+                callback_data=f"stage_page:{stage.value}:{page - 1}",
+            )
+        )
     if has_more:
-        row.append(InlineKeyboardButton(
-            text="▶️ Keyingi",
-            callback_data=f"stage_page:{stage.value}:{page + 1}",
-        ))
+        row.append(
+            InlineKeyboardButton(
+                text="▶️ Keyingi",
+                callback_data=f"stage_page:{stage.value}:{page + 1}",
+            )
+        )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[row]) if row else None
 
     text = "\n".join(lines)
@@ -250,6 +262,7 @@ async def _send_stage_page(
 
 
 # ── /lead <id>  and  lead_N shortcut ─────────────────────────────────────────
+
 
 @router.message(Command("lead"), RoleFilter(*_MGMT_ROLES))
 async def cmd_lead(message: Message, command: CommandObject, **data: object) -> None:
@@ -303,9 +316,7 @@ async def _show_lead_with_timeline(message: Message, lead_id: int) -> None:
             payload_str = ""
             if act.get("payload"):
                 payload_str = f" — {_summarize_payload(act['payload'])}"
-            timeline_lines.append(
-                f"{emoji} [{dt}] {act['action_type']} — {actor_str}{payload_str}"
-            )
+            timeline_lines.append(f"{emoji} [{dt}] {act['action_type']} — {actor_str}{payload_str}")
 
     full_text = card + "\n".join(timeline_lines)
     # Telegram message limit is 4096 chars

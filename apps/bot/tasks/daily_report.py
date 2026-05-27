@@ -14,6 +14,7 @@ then immediately sleeps again until the following day.  asyncio.CancelledError
 is a BaseException, so the plain `except Exception` guard in _run() never
 swallows it — the task exits cleanly when stop() is called.
 """
+
 from __future__ import annotations
 
 import asyncio

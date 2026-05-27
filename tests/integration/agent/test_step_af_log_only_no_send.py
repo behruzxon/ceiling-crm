@@ -4,6 +4,7 @@ Step AF — LOG_ONLY No-Send Guarantee Tests.
 Verifies that LOG_ONLY preset never triggers real sends, follow-ups,
 or admin escalations.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -83,26 +84,30 @@ class TestOrchestratorLogOnly:
 class TestPipelineTraceOnly:
     def test_price_question_no_live_send(self):
         p = AgentResponseOrchestrator.run_pipeline(
-            _log_only_mem(), text="20 kv qancha",
+            _log_only_mem(),
+            text="20 kv qancha",
         )
         assert p.action in ("send_user_reply", "store_memory_only")
         assert "source" in p.debug_trace
 
     def test_objection_trace_only(self):
         p = AgentResponseOrchestrator.run_pipeline(
-            _log_only_mem(), text="qimmat ekan",
+            _log_only_mem(),
+            text="qimmat ekan",
         )
         assert p.debug_trace.get("signal", {}).get("intent") or True
 
     def test_operator_trace_only(self):
         p = AgentResponseOrchestrator.run_pipeline(
-            _log_only_mem(), text="operator kerak",
+            _log_only_mem(),
+            text="operator kerak",
         )
         assert p.debug_trace is not None
 
     def test_stop_signal_trace(self):
         p = AgentResponseOrchestrator.run_pipeline(
-            _log_only_mem(), text="kerak emas",
+            _log_only_mem(),
+            text="kerak emas",
         )
         assert p.action == "disable_agent"
 
@@ -110,12 +115,17 @@ class TestPipelineTraceOnly:
 class TestStageDetection:
     def test_log_only_detected(self):
         overrides = _log_only_overrides()
-        biz = SimpleNamespace(**{**overrides, **{
-            "agent_execution_canary_user_ids": "",
-            "agent_execution_approval_admin_notify": False,
-            "agent_execution_max_daily_per_user": 3,
-            "agent_execution_live_sender_batch_limit": 10,
-        }})
+        biz = SimpleNamespace(
+            **{
+                **overrides,
+                **{
+                    "agent_execution_canary_user_ids": "",
+                    "agent_execution_approval_admin_notify": False,
+                    "agent_execution_max_daily_per_user": 3,
+                    "agent_execution_live_sender_batch_limit": 10,
+                },
+            }
+        )
         stage = AgentControlCenterService.detect_rollout_stage(biz)
         assert stage.stage == "log_only"
 
@@ -135,12 +145,17 @@ class TestRollbackOFF:
 class TestPreflightGreen:
     def test_no_red_for_log_only(self):
         overrides = _log_only_overrides()
-        biz = SimpleNamespace(**{**overrides, **{
-            "agent_execution_canary_user_ids": "",
-            "agent_execution_approval_admin_notify": False,
-            "agent_execution_max_daily_per_user": 3,
-            "agent_execution_live_sender_batch_limit": 10,
-        }})
+        biz = SimpleNamespace(
+            **{
+                **overrides,
+                **{
+                    "agent_execution_canary_user_ids": "",
+                    "agent_execution_approval_admin_notify": False,
+                    "agent_execution_max_daily_per_user": 3,
+                    "agent_execution_live_sender_batch_limit": 10,
+                },
+            }
+        )
         settings = SimpleNamespace(
             business=biz,
             bot=SimpleNamespace(admin_group_id="-100"),

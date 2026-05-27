@@ -50,6 +50,7 @@ Usage::
     # graph.current_decision_stage == "close_ready"
     # graph.engagement_trend == "warming_up"
 """
+
 from __future__ import annotations
 
 import time
@@ -283,8 +284,7 @@ def _collect_signals(
         "angry_objection": last_objection == "angry",
         "expensive_objection": last_objection == "expensive",
         "compare_objection": last_objection == "compare",
-        "negotiation_active": negotiation_tactic is not None
-        and negotiation_tactic != "none",
+        "negotiation_active": negotiation_tactic is not None and negotiation_tactic != "none",
         "negotiation_escalated": negotiation_escalated,
         "many_followups": follow_up_count >= 3,
     }
@@ -331,9 +331,7 @@ def _determine_trend(
                 return "cooling_down"
 
     # Cooling: delay/angry objection + many follow-ups + no strong positive signals
-    if (
-        signals.get("delay_objection") or signals.get("angry_objection")
-    ) and follow_up_count >= 2:
+    if (signals.get("delay_objection") or signals.get("angry_objection")) and follow_up_count >= 2:
         return "cooling_down"
 
     # Warming: progressive signal accumulation
@@ -400,8 +398,10 @@ def _determine_stage(
     # ── Close ready: strong closing signals ──────────────────────────
     if phone_captured and closing_attempted and prob >= 60:
         return "close_ready"
-    if phone_captured and score >= 60 and (
-        closing_confidence is not None and closing_confidence >= 0.7
+    if (
+        phone_captured
+        and score >= 60
+        and (closing_confidence is not None and closing_confidence >= 0.7)
     ):
         return "close_ready"
 

@@ -21,6 +21,7 @@ CRM side effects for "Zakaz berish"
   - Admin groups + admin DM notified with inline action buttons
   - Celery follow-up task scheduled for 15 minutes
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -111,24 +112,29 @@ _PACKAGES_LIST_TEXT = (
 
 # ── Keyboards ──────────────────────────────────────────────────────────────────
 
+
 def _packages_list_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🥉 Standard", callback_data="pkg:detail:standard"),
-            InlineKeyboardButton(text="🥈 Premium ⭐", callback_data="pkg:detail:premium"),
-            InlineKeyboardButton(text="🥇 VIP", callback_data="pkg:detail:vip"),
-        ],
-        [InlineKeyboardButton(text="⬅️ Ortga", callback_data="pkg:back_main")],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🥉 Standard", callback_data="pkg:detail:standard"),
+                InlineKeyboardButton(text="🥈 Premium ⭐", callback_data="pkg:detail:premium"),
+                InlineKeyboardButton(text="🥇 VIP", callback_data="pkg:detail:vip"),
+            ],
+            [InlineKeyboardButton(text="⬅️ Ortga", callback_data="pkg:back_main")],
+        ]
+    )
 
 
 def _package_detail_keyboard(pkg_key: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📐 Hisoblash", callback_data=f"pkg:calc:{pkg_key}")],
-        [InlineKeyboardButton(text="📝 Zakaz berish", callback_data=f"pkg:order:{pkg_key}")],
-        [InlineKeyboardButton(text="📞 Operator", callback_data="pkg:operator")],
-        [InlineKeyboardButton(text="⬅️ Ortga", callback_data="pkg:back_list")],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📐 Hisoblash", callback_data=f"pkg:calc:{pkg_key}")],
+            [InlineKeyboardButton(text="📝 Zakaz berish", callback_data=f"pkg:order:{pkg_key}")],
+            [InlineKeyboardButton(text="📞 Operator", callback_data="pkg:operator")],
+            [InlineKeyboardButton(text="⬅️ Ortga", callback_data="pkg:back_list")],
+        ]
+    )
 
 
 async def show_packages_list(message: Message) -> None:
@@ -141,34 +147,40 @@ async def show_packages_list(message: Message) -> None:
 
 
 def _price_estimate_keyboard(pkg_key: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📝 Zakaz berish", callback_data=f"pkg:order:{pkg_key}")],
-        [InlineKeyboardButton(text="⬅️ Ortga", callback_data=f"pkg:detail:{pkg_key}")],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📝 Zakaz berish", callback_data=f"pkg:order:{pkg_key}")],
+            [InlineKeyboardButton(text="⬅️ Ortga", callback_data=f"pkg:detail:{pkg_key}")],
+        ]
+    )
 
 
 # ── Admin notification keyboard ────────────────────────────────────────────────
 
+
 def _admin_action_keyboard(lead_id: int) -> InlineKeyboardMarkup:
     lid = lead_id
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ HOT",   callback_data=f"pkg:admin:hot:{lid}"),
-            InlineKeyboardButton(text="🟡 WARM",  callback_data=f"pkg:admin:warm:{lid}"),
-            InlineKeyboardButton(text="❄️ COLD",  callback_data=f"pkg:admin:cold:{lid}"),
-        ],
-        [
-            InlineKeyboardButton(text="📞 Telefon",    callback_data=f"pkg:admin:phone:{lid}"),
-            InlineKeyboardButton(text="📅 O'lchov",    callback_data=f"pkg:admin:schedule:{lid}"),
-        ],
-        [
-            InlineKeyboardButton(text="📝 Izoh",  callback_data=f"pkg:admin:note:{lid}"),
-            InlineKeyboardButton(text="🚫 Block", callback_data=f"pkg:admin:block:{lid}"),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ HOT", callback_data=f"pkg:admin:hot:{lid}"),
+                InlineKeyboardButton(text="🟡 WARM", callback_data=f"pkg:admin:warm:{lid}"),
+                InlineKeyboardButton(text="❄️ COLD", callback_data=f"pkg:admin:cold:{lid}"),
+            ],
+            [
+                InlineKeyboardButton(text="📞 Telefon", callback_data=f"pkg:admin:phone:{lid}"),
+                InlineKeyboardButton(text="📅 O'lchov", callback_data=f"pkg:admin:schedule:{lid}"),
+            ],
+            [
+                InlineKeyboardButton(text="📝 Izoh", callback_data=f"pkg:admin:note:{lid}"),
+                InlineKeyboardButton(text="🚫 Block", callback_data=f"pkg:admin:block:{lid}"),
+            ],
+        ]
+    )
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _admin_notification_text(
     lead_id: int,
@@ -310,8 +322,7 @@ async def cb_package_calc(callback: CallbackQuery, **data: object) -> None:
 async def cb_operator(callback: CallbackQuery, **data: object) -> None:
     """Show operator contact details."""
     await callback.answer(
-        "📞 Operator: +998 90 000 00 00\n"
-        "Ish vaqti: 09:00 – 18:00",
+        "📞 Operator: +998 90 000 00 00\n" "Ish vaqti: 09:00 – 18:00",
         show_alert=True,
     )
 
@@ -374,6 +385,7 @@ async def cb_package_order(callback: CallbackQuery, **data: object) -> None:
     try:
         from core.services.lead_notification_service import is_hot_lead
         from infrastructure.di import get_lead_notification_service
+
         if is_hot_lead(lead):
             await get_lead_notification_service().notify_hot_lead(lead.id)
     except Exception:

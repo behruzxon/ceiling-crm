@@ -1,4 +1,5 @@
 """Tests for Step AL — Stage1ObservationReportService (pure pass/fail logic)."""
+
 from __future__ import annotations
 
 from core.schemas.stage1_observation_report import (
@@ -190,6 +191,7 @@ class TestReportSchema:
 
     def test_frozen(self):
         import pytest
+
         r = Stage1ObservationReport()
         with pytest.raises(AttributeError):
             r.health_status = "red"  # type: ignore[misc]
@@ -208,6 +210,7 @@ class TestDBService:
     async def test_empty_db_safe(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),
@@ -221,6 +224,7 @@ class TestDBService:
     async def test_db_exception_safe(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock
+
         session = AsyncMock()
         session.execute = AsyncMock(side_effect=Exception("DB down"))
         s = Stage1ObservationReportService(session)
@@ -231,6 +235,7 @@ class TestDBService:
     async def test_report_has_generated_at(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),
@@ -243,6 +248,7 @@ class TestDBService:
     async def test_duration_calculated(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),
@@ -255,6 +261,7 @@ class TestDBService:
     async def test_environment_set(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=0)),

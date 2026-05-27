@@ -1,4 +1,5 @@
 """Tests for Step CL — CRM Operator Handoff Service."""
+
 from __future__ import annotations
 
 from core.services.crm_operator_handoff_service import (
@@ -33,14 +34,17 @@ class TestHandoffResult:
 
     def test_custom_values(self):
         r = HandoffResult(
-            handoff_id=1, status="assigned",
-            priority="urgent", is_duplicate=True,
+            handoff_id=1,
+            status="assigned",
+            priority="urgent",
+            is_duplicate=True,
         )
         assert r.handoff_id == 1
         assert r.status == "assigned"
 
     def test_frozen(self):
         import pytest
+
         r = HandoffResult()
         with pytest.raises(AttributeError):
             r.status = "x"
@@ -158,13 +162,15 @@ class TestCalculatePriority:
 
     def test_repeated_high_score_urgent(self):
         result = calculate_priority(
-            lead_score=65, is_repeated=True,
+            lead_score=65,
+            is_repeated=True,
         )
         assert result == "urgent"
 
     def test_phone_price_high(self):
         result = calculate_priority(
-            has_phone=True, reason="price_question",
+            has_phone=True,
+            reason="price_question",
         )
         assert result == "high"
 
@@ -183,7 +189,8 @@ class TestCalculatePriority:
 
     def test_custom_threshold(self):
         result = calculate_priority(
-            lead_score=50, urgent_threshold=50,
+            lead_score=50,
+            urgent_threshold=50,
         )
         assert result == "urgent"
 
@@ -244,18 +251,21 @@ class TestDBModel:
         from infrastructure.database.models.crm_operator_handoff import (
             CRMOperatorHandoffModel,
         )
+
         assert CRMOperatorHandoffModel is not None
 
     def test_table_name(self):
         from infrastructure.database.models.crm_operator_handoff import (
             CRMOperatorHandoffModel,
         )
+
         assert CRMOperatorHandoffModel.__tablename__ == "crm_operator_handoff_requests"
 
     def test_has_indexes(self):
         from infrastructure.database.models.crm_operator_handoff import (
             CRMOperatorHandoffModel,
         )
+
         idx_names = [idx.name for idx in CRMOperatorHandoffModel.__table__.indexes]
         assert "ix_handoff_contact_status" in idx_names
         assert "ix_handoff_tg_user_status" in idx_names
@@ -264,30 +274,36 @@ class TestDBModel:
 class TestConfigFlags:
     def test_queue_enabled_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_queue_enabled"].default is True
 
     def test_admin_notify_disabled(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_admin_notify_enabled"].default is False
 
     def test_require_phone_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_require_phone"].default is True
 
     def test_dedup_minutes_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_dedup_minutes"].default == 30
 
     def test_expire_hours_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_expire_hours"].default == 24
 
     def test_urgent_threshold_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_urgent_score_threshold"].default == 80

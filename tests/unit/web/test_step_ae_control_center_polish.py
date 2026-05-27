@@ -1,4 +1,5 @@
 """Tests for Step AE — Control Center Polish + Operator UX."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -186,41 +187,48 @@ class TestRecommendedNextStage:
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("off") == "log_only"
 
     def test_log_only_to_dry_run(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("log_only") == "dry_run"
 
     def test_dry_run_to_canary(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("dry_run") == "canary"
 
     def test_canary_to_approval(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("canary") == "approval_required"
 
     def test_live_send_no_next(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("approved_live_send") is None
 
     def test_unknown_defaults_off(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         assert AgentControlCenterService.recommend_next_stage("unknown") == "off"
 
     def test_no_secrets(self):
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         result = AgentControlCenterService.recommend_next_stage("off")
         assert "sk-" not in str(result)

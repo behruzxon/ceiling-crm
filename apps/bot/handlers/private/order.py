@@ -39,6 +39,7 @@ Admin notifications
   If the user shared their location a Google Maps link is appended.
   Admin send failure is non-fatal and never blocks the user confirmation.
 """
+
 from __future__ import annotations
 
 import asyncio as _asyncio
@@ -81,13 +82,15 @@ log = get_logger(__name__)
 router = Router(name="private:order")
 
 # Stages at or past QUOTE — inserting QUOTE on top of these would be a downgrade.
-_QUOTE_OR_BEYOND: frozenset[PipelineStage] = frozenset({
-    PipelineStage.QUOTE,
-    PipelineStage.DEAL,
-    PipelineStage.INSTALLATION,
-    PipelineStage.COMPLETED,
-    PipelineStage.LOST,
-})
+_QUOTE_OR_BEYOND: frozenset[PipelineStage] = frozenset(
+    {
+        PipelineStage.QUOTE,
+        PipelineStage.DEAL,
+        PipelineStage.INSTALLATION,
+        PipelineStage.COMPLETED,
+        PipelineStage.LOST,
+    }
+)
 
 # ── Admin DM that receives new-order alerts ───────────────────────────────────
 # Uses BOT_ADMIN_USER_ID (private DM). Admin must have started the bot first.
@@ -118,16 +121,16 @@ _DISTRICT_SET: frozenset[str] = frozenset(_DISTRICTS)  # O(1) membership check
 # Each entry: (DB enum value, UI display label)
 
 _CATEGORIES: tuple[tuple[str, str], ...] = (
-    ("gulli",         "🌸 Gulli"),
-    ("odnotonny",     "🎨 Odnotonny"),
-    ("mramor",        "🪨 Mramor"),
+    ("gulli", "🌸 Gulli"),
+    ("odnotonny", "🎨 Odnotonny"),
+    ("mramor", "🪨 Mramor"),
     ("qora_naqsh_uf", "🖤 Qora naqsh (UF)"),
-    ("hi_tech",       "✨ Hi-tech"),
-    ("kosmos",        "🌌 Kosmos"),
-    ("osmon",         "☁️ Osmon"),
-    ("oshxona",       "🍳 Oshxona"),
-    ("naqsh_ramka",   "🖼 Naqsh ramka"),
-    ("naqsh_oq",      "💎 Naqsh oq"),
+    ("hi_tech", "✨ Hi-tech"),
+    ("kosmos", "🌌 Kosmos"),
+    ("osmon", "☁️ Osmon"),
+    ("oshxona", "🍳 Oshxona"),
+    ("naqsh_ramka", "🖼 Naqsh ramka"),
+    ("naqsh_oq", "💎 Naqsh oq"),
 )
 
 _CATEGORY_VALUES: frozenset[str] = frozenset(v for v, _ in _CATEGORIES)
@@ -137,8 +140,8 @@ _CATEGORY_VALUES: frozenset[str] = frozenset(v for v, _ in _CATEGORIES)
 
 _CTA_KEYBOARD = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="▶️ YouTube",        url="https://www.youtube.com/@vashpotolokuz")],
-        [InlineKeyboardButton(text="📸 Instagram",      url="https://www.instagram.com/vashpotolok_uz")],
+        [InlineKeyboardButton(text="▶️ YouTube", url="https://www.youtube.com/@vashpotolokuz")],
+        [InlineKeyboardButton(text="📸 Instagram", url="https://www.instagram.com/vashpotolok_uz")],
         [InlineKeyboardButton(text="💬 Telegram guruh", url="https://t.me/vashpotolokuz")],
     ]
 )
@@ -146,9 +149,11 @@ _CTA_KEYBOARD = InlineKeyboardMarkup(
 
 # ─── Room-area parser ────────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class _AreaResult:
     """Immutable result of one room-size parse."""
+
     area: float
     length: float | None = None
     width: float | None = None
@@ -205,16 +210,18 @@ def _parse_area(raw: str) -> _AreaResult | None:
 
 # ─── FSM states ─────────────────────────────────────────────────────────────────
 
+
 class OrderFlow(StatesGroup):
-    waiting_for_name     = State()
-    waiting_for_phone    = State()
+    waiting_for_name = State()
+    waiting_for_phone = State()
     waiting_for_district = State()
     waiting_for_category = State()  # inline keyboard — ceiling type
-    waiting_for_area     = State()
+    waiting_for_area = State()
     waiting_for_location = State()
 
 
 # ─── Keyboards ──────────────────────────────────────────────────────────────────
+
 
 def _phone_keyboard(is_private: bool = True) -> ReplyKeyboardMarkup:
     """Phone-request keyboard.
@@ -254,7 +261,9 @@ def _category_keyboard() -> InlineKeyboardMarkup:
     for i in range(0, len(cats), 2):
         row = [InlineKeyboardButton(text=cats[i][1], callback_data=f"cat:{cats[i][0]}")]
         if i + 1 < len(cats):
-            row.append(InlineKeyboardButton(text=cats[i + 1][1], callback_data=f"cat:{cats[i + 1][0]}"))
+            row.append(
+                InlineKeyboardButton(text=cats[i + 1][1], callback_data=f"cat:{cats[i + 1][0]}")
+            )
         rows.append(row)
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -313,7 +322,8 @@ async def _start_order_flow(
                 _closed_statuses = ("won", "lost")
                 active = next(
                     (
-                        l for l in existing
+                        l
+                        for l in existing
                         if l.current_stage.value not in _closed_stages
                         and l.lead_status not in _closed_statuses
                     ),
@@ -367,8 +377,7 @@ async def _start_order_flow(
 
     await state.set_state(OrderFlow.waiting_for_name)
     await message.answer(
-        "📋 <b>Zakaz berish</b>\n\n"
-        "Ismingizni kiriting:",
+        "📋 <b>Zakaz berish</b>\n\n" "Ismingizni kiriting:",
         reply_markup=ReplyKeyboardRemove(),
     )
 
@@ -387,14 +396,17 @@ async def cmd_order_start(message: Message, state: FSMContext, **data: object) -
         user_id=user.id if user else 0,
         first_name=(user.first_name or "—") if user else "—",
     )
-    _asyncio.create_task(emit_journey_event(
-        user_id=user.id if user else 0,
-        event_type=JourneyEventType.CLICKED_ORDER,
-        source_handler="order:cmd_order_start",
-    ))
+    _asyncio.create_task(
+        emit_journey_event(
+            user_id=user.id if user else 0,
+            event_type=JourneyEventType.CLICKED_ORDER,
+            source_handler="order:cmd_order_start",
+        )
+    )
 
 
 # ─── Step 1: Name ────────────────────────────────────────────────────────────────
+
 
 @router.message(StateFilter(OrderFlow.waiting_for_name), F.text, ~F.text.startswith("/"))
 async def handle_name(message: Message, state: FSMContext, **data: object) -> None:
@@ -405,12 +417,14 @@ async def handle_name(message: Message, state: FSMContext, **data: object) -> No
 
     await state.update_data(name=name)
     await state.set_state(OrderFlow.waiting_for_phone)
-    _asyncio.create_task(emit_journey_event(
-        user_id=message.from_user.id if message.from_user else 0,
-        event_type=JourneyEventType.ORDER_FORM_STARTED,
-        event_data={"form_step": "name_entered"},
-        source_handler="order:handle_name",
-    ))
+    _asyncio.create_task(
+        emit_journey_event(
+            user_id=message.from_user.id if message.from_user else 0,
+            event_type=JourneyEventType.ORDER_FORM_STARTED,
+            event_data={"form_step": "name_entered"},
+            source_handler="order:handle_name",
+        )
+    )
     await message.answer(
         f"✅ Ism: <b>{name}</b>\n\n"
         "📱 Telefon raqamingizni kiriting yoki tugmani bosing:\n"
@@ -421,6 +435,7 @@ async def handle_name(message: Message, state: FSMContext, **data: object) -> No
 
 # ─── Step 2: Phone ───────────────────────────────────────────────────────────────
 
+
 @router.message(StateFilter(OrderFlow.waiting_for_phone), F.contact)
 async def handle_phone_contact(message: Message, state: FSMContext, **data: object) -> None:
     """Accept a phone number shared via the Telegram contact button."""
@@ -428,8 +443,7 @@ async def handle_phone_contact(message: Message, state: FSMContext, **data: obje
     phone = normalize_phone(raw)
     if not phone or not is_valid_uz_phone(phone):
         await message.answer(
-            "❌ Raqam o'qilmadi. Qo'lda kiriting:\n"
-            "<i>Masalan: <code>+998901234567</code></i>",
+            "❌ Raqam o'qilmadi. Qo'lda kiriting:\n" "<i>Masalan: <code>+998901234567</code></i>",
             reply_markup=_phone_keyboard(is_private=(message.chat.type == "private")),
         )
         return
@@ -478,13 +492,13 @@ async def _advance_from_phone(message: Message, state: FSMContext, phone: str) -
     await state.update_data(phone=phone)
     await state.set_state(OrderFlow.waiting_for_district)
     await message.answer(
-        f"✅ Telefon: <b>{phone}</b>\n\n"
-        "📍 Tumaningizni tanlang:",
+        f"✅ Telefon: <b>{phone}</b>\n\n" "📍 Tumaningizni tanlang:",
         reply_markup=_district_keyboard(),
     )
 
 
 # ─── Step 3: District ────────────────────────────────────────────────────────────
+
 
 @router.message(StateFilter(OrderFlow.waiting_for_district), F.text, ~F.text.startswith("/"))
 async def handle_district(message: Message, state: FSMContext, **data: object) -> None:
@@ -501,13 +515,13 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
     # district keyboard is one_time_keyboard=True — it auto-dismisses on tap.
     # Send the category inline keyboard in the next message.
     await message.answer(
-        f"✅ Tuman: <b>{district}</b>\n\n"
-        "🏷 Patalok turini tanlang:",
+        f"✅ Tuman: <b>{district}</b>\n\n" "🏷 Patalok turini tanlang:",
         reply_markup=_category_keyboard(),
     )
 
 
 # ─── Step 4: Category ────────────────────────────────────────────────────────────
+
 
 @router.callback_query(
     StateFilter(OrderFlow.waiting_for_category),
@@ -540,6 +554,7 @@ async def handle_category(callback: CallbackQuery, state: FSMContext, **data: ob
 
 
 # ─── Step 5: Area ────────────────────────────────────────────────────────────────
+
 
 @router.message(
     StateFilter(OrderFlow.waiting_for_area),
@@ -578,13 +593,13 @@ async def handle_area(message: Message, state: FSMContext, **data: object) -> No
 
     await state.set_state(OrderFlow.waiting_for_location)
     await message.answer(
-        f"✅ Maydon: {dim_label}\n\n"
-        "📍 Manzilingizni ulashing yoki o'tkazib yuboring:",
+        f"✅ Maydon: {dim_label}\n\n" "📍 Manzilingizni ulashing yoki o'tkazib yuboring:",
         reply_markup=_location_keyboard(),
     )
 
 
 # ─── Step 6: Location (optional) ────────────────────────────────────────────────
+
 
 @router.message(StateFilter(OrderFlow.waiting_for_location), F.location)
 async def handle_location(message: Message, state: FSMContext, **data: object) -> None:
@@ -614,6 +629,7 @@ async def handle_location_fallback(message: Message, state: FSMContext, **data: 
 
 # ─── Admin notification ──────────────────────────────────────────────────────────
 
+
 async def _notify_admin(
     bot: Bot,
     *,
@@ -634,11 +650,7 @@ async def _notify_admin(
     admin_group_id = settings.bot.admin_group_id
 
     area_line = f"📐 Maydon:   <b>{area} m²</b>\n" if area is not None else ""
-    location_line = (
-        f"🗺 Manzil:   https://maps.google.com/?q={location}\n"
-        if location
-        else ""
-    )
+    location_line = f"🗺 Manzil:   https://maps.google.com/?q={location}\n" if location else ""
     text = (
         "🔔 <b>Yangi buyurtma!</b>\n\n"
         f"👤 Ism:     <b>{name}</b>\n"
@@ -649,19 +661,21 @@ async def _notify_admin(
         f"{location_line}"
         f"🔖 Lead ID: <code>#{lead_id}</code>"
     )
-    group_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text="📌 Kanban'da ochish",
-            callback_data=f"kanban:lead:{lead_id}:new",
-        ),
-    ]])
+    group_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📌 Kanban'da ochish",
+                    callback_data=f"kanban:lead:{lead_id}:new",
+                ),
+            ]
+        ]
+    )
 
     # ── Admin group (primary destination) ────────────────────────────────
     if admin_group_id:
         try:
-            await bot.send_message(
-                chat_id=admin_group_id, text=text, reply_markup=group_keyboard
-            )
+            await bot.send_message(chat_id=admin_group_id, text=text, reply_markup=group_keyboard)
             log.info("admin_group_notified", lead_id=lead_id, chat_id=admin_group_id)
         except Exception:
             log.exception("admin_group_notify_failed", lead_id=lead_id, chat_id=admin_group_id)
@@ -669,19 +683,19 @@ async def _notify_admin(
         log.warning("admin_group_id_not_set_skipping_order_notify", lead_id=lead_id)
 
 
-
 # ─── Persistence + confirmation ──────────────────────────────────────────────────
+
 
 async def _save_and_confirm(message: Message, state: FSMContext) -> None:
     """Persist the lead and send confirmation + CTA. Non-fatal on DB error."""
     fsm = await state.get_data()
-    name: str             = fsm["name"]
-    phone: str            = fsm["phone"]
-    district: str         = fsm["district"]
-    location: str | None  = fsm.get("location")
-    room_area: float | None   = fsm.get("room_area")
+    name: str = fsm["name"]
+    phone: str = fsm["phone"]
+    district: str = fsm["district"]
+    location: str | None = fsm.get("location")
+    room_area: float | None = fsm.get("room_area")
     room_length: float | None = fsm.get("room_length")
-    room_width: float | None  = fsm.get("room_width")
+    room_width: float | None = fsm.get("room_width")
 
     # Category selected by the user; fall back to ODNOTONNY if FSM data is missing.
     category_value: str = fsm.get("category_value", CeilingCategory.ODNOTONNY.value)
@@ -726,11 +740,13 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
                     "updated_at": datetime.now(UTC),
                 }
                 if room_area is not None:
-                    update_values.update({
-                        "room_length": room_length,
-                        "room_width": room_width,
-                        "room_area": room_area,
-                    })
+                    update_values.update(
+                        {
+                            "room_length": room_length,
+                            "room_width": room_width,
+                            "room_area": room_area,
+                        }
+                    )
                 await session.execute(
                     sa.update(LeadModel)
                     .where(LeadModel.id == existing_lead_id)

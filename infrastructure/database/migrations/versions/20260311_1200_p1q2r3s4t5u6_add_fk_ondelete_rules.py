@@ -22,18 +22,18 @@ from alembic import op
 # (table, constraint_name, column, referred_table, referred_column, ondelete)
 _FK_RULES: list[tuple[str, str, str, str, str, str]] = [
     # ── leads ────────────────────────────────────────────────────
-    ("leads", "fk_leads_user_id",            "user_id",             "users",  "id", "RESTRICT"),
-    ("leads", "fk_leads_source_group_id",    "source_group_id",     "groups", "id", "SET NULL"),
-    ("leads", "fk_leads_assigned_manager_id","assigned_manager_id", "users",  "id", "SET NULL"),
+    ("leads", "fk_leads_user_id", "user_id", "users", "id", "RESTRICT"),
+    ("leads", "fk_leads_source_group_id", "source_group_id", "groups", "id", "SET NULL"),
+    ("leads", "fk_leads_assigned_manager_id", "assigned_manager_id", "users", "id", "SET NULL"),
     # ── pipeline_stages ──────────────────────────────────────────
-    ("pipeline_stages", "fk_pipeline_stages_lead_id",    "lead_id",    "leads", "id", "CASCADE"),
+    ("pipeline_stages", "fk_pipeline_stages_lead_id", "lead_id", "leads", "id", "CASCADE"),
     ("pipeline_stages", "fk_pipeline_stages_changed_by", "changed_by", "users", "id", "RESTRICT"),
     # ── appointments ─────────────────────────────────────────────
-    ("appointments", "fk_appointments_lead_id",      "lead_id",      "leads", "id", "CASCADE"),
+    ("appointments", "fk_appointments_lead_id", "lead_id", "leads", "id", "CASCADE"),
     ("appointments", "fk_appointments_installer_id", "installer_id", "users", "id", "SET NULL"),
-    ("appointments", "fk_appointments_created_by",   "created_by",   "users", "id", "RESTRICT"),
+    ("appointments", "fk_appointments_created_by", "created_by", "users", "id", "RESTRICT"),
     # ── quotes ───────────────────────────────────────────────────
-    ("quotes", "fk_quotes_lead_id",    "lead_id",    "leads", "id", "CASCADE"),
+    ("quotes", "fk_quotes_lead_id", "lead_id", "leads", "id", "CASCADE"),
     ("quotes", "fk_quotes_created_by", "created_by", "users", "id", "RESTRICT"),
     # ── broadcasts ───────────────────────────────────────────────
     ("broadcasts", "fk_broadcasts_created_by", "created_by", "users", "id", "RESTRICT"),
@@ -52,8 +52,11 @@ def upgrade() -> None:
         old_name = _get_existing_fk_name(table, column)
         op.drop_constraint(old_name, table, type_="foreignkey")
         op.create_foreign_key(
-            new_name, table, ref_table,
-            [column], [ref_col],
+            new_name,
+            table,
+            ref_table,
+            [column],
+            [ref_col],
             ondelete=ondelete,
         )
 
@@ -63,6 +66,9 @@ def downgrade() -> None:
         old_name = _get_existing_fk_name(table, column)
         op.drop_constraint(new_name, table, type_="foreignkey")
         op.create_foreign_key(
-            old_name, table, ref_table,
-            [column], [ref_col],
+            old_name,
+            table,
+            ref_table,
+            [column],
+            [ref_col],
         )

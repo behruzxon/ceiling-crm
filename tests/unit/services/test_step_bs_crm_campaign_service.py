@@ -1,14 +1,25 @@
 """Tests for Step BS — CRMCampaignService."""
+
 from __future__ import annotations
 
 from core.services.crm_campaign_service import CRMCampaignService
 
 svc = CRMCampaignService
 
+
 def _c(**kw):
-    base = {"id": 1, "lead_status": "active", "temperature": "warm", "lead_score": 30,
-            "phone": None, "first_name": "Ali", "username": "ali", "merge_status": "active",
-            "marketing_allowed": True, "metadata_json": {}}
+    base = {
+        "id": 1,
+        "lead_status": "active",
+        "temperature": "warm",
+        "lead_score": 30,
+        "phone": None,
+        "first_name": "Ali",
+        "username": "ali",
+        "merge_status": "active",
+        "marketing_allowed": True,
+        "metadata_json": {},
+    }
     base.update(kw)
     return base
 
@@ -211,6 +222,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_service import SegmentInfo
+
         s = SegmentInfo()
         with pytest.raises(AttributeError):
             s.key = "x"  # type: ignore[misc]
@@ -219,6 +231,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_service import SafetyCheckResult
+
         r = SafetyCheckResult()
         with pytest.raises(AttributeError):
             r.status = "x"  # type: ignore[misc]
@@ -227,6 +240,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_service import DraftValidation
+
         r = DraftValidation()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]

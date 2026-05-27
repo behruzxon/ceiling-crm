@@ -8,6 +8,7 @@ get_first_response_stats()— avg/median seconds from lead creation to first act
 get_funnel_stats()        — per-stage and per-status counts for a cohort of leads
 get_lead_timeline()       — last N actions for a specific lead
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -72,9 +73,7 @@ class PostgresLeadActionRepository:
 
     # ── Legacy read (kept for backwards-compat) ───────────────────────────────
 
-    async def get_operator_stats(
-        self, since_dt: datetime
-    ) -> list[dict[str, Any]]:
+    async def get_operator_stats(self, since_dt: datetime) -> list[dict[str, Any]]:
         """Return top-5 operators by total action count since ``since_dt``.
 
         Each entry is a dict::
@@ -89,10 +88,11 @@ class PostgresLeadActionRepository:
                 "note": 4, "block": 3,
             }
         """
+
         def _sum(action: str) -> sa.Label:
-            return sa.func.sum(
-                sa.case((LeadActionModel.action_type == action, 1), else_=0)
-            ).label(action)
+            return sa.func.sum(sa.case((LeadActionModel.action_type == action, 1), else_=0)).label(
+                action
+            )
 
         stmt = (
             sa.select(
@@ -117,31 +117,37 @@ class PostgresLeadActionRepository:
 
         actor_ids = [r["actor_user_id"] for r in rows]
         user_rows = (
-            await self._session.execute(
-                sa.select(UserModel.id, UserModel.first_name, UserModel.username).where(
-                    UserModel.id.in_(actor_ids)
+            (
+                await self._session.execute(
+                    sa.select(UserModel.id, UserModel.first_name, UserModel.username).where(
+                        UserModel.id.in_(actor_ids)
+                    )
                 )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         user_map: dict[int, Any] = {u["id"]: u for u in user_rows}
 
         result = []
         for r in rows:
             uid = r["actor_user_id"]
             u = user_map.get(uid, {})
-            result.append({
-                "actor_user_id": uid,
-                "first_name": u.get("first_name") or "—",
-                "username": u.get("username"),
-                "total": r["total"],
-                "hot": r["hot"] or 0,
-                "warm": r["warm"] or 0,
-                "cold": r["cold"] or 0,
-                "phone": r["phone"] or 0,
-                "measurement": r["measurement"] or 0,
-                "note": r["note"] or 0,
-                "block": r["block"] or 0,
-            })
+            result.append(
+                {
+                    "actor_user_id": uid,
+                    "first_name": u.get("first_name") or "—",
+                    "username": u.get("username"),
+                    "total": r["total"],
+                    "hot": r["hot"] or 0,
+                    "warm": r["warm"] or 0,
+                    "cold": r["cold"] or 0,
+                    "phone": r["phone"] or 0,
+                    "measurement": r["measurement"] or 0,
+                    "note": r["note"] or 0,
+                    "block": r["block"] or 0,
+                }
+            )
         return result
 
     # ── New analytics queries ─────────────────────────────────────────────────
@@ -165,13 +171,11 @@ class PostgresLeadActionRepository:
         stmt = (
             sa.select(
                 LeadActionModel.actor_user_id,
-                sa.func.count(
-                    sa.func.distinct(LeadActionModel.lead_id)
-                ).label("handled_leads"),
+                sa.func.count(sa.func.distinct(LeadActionModel.lead_id)).label("handled_leads"),
                 sa.func.count().label("total_actions"),
-                sa.func.sum(
-                    sa.case((LeadActionModel.action_type == "hot", 1), else_=0)
-                ).label("hot_count"),
+                sa.func.sum(sa.case((LeadActionModel.action_type == "hot", 1), else_=0)).label(
+                    "hot_count"
+                ),
             )
             .where(LeadActionModel.created_at >= since_dt)
             .group_by(LeadActionModel.actor_user_id)
@@ -184,26 +188,32 @@ class PostgresLeadActionRepository:
 
         actor_ids = [r["actor_user_id"] for r in rows]
         user_rows = (
-            await self._session.execute(
-                sa.select(UserModel.id, UserModel.first_name, UserModel.username).where(
-                    UserModel.id.in_(actor_ids)
+            (
+                await self._session.execute(
+                    sa.select(UserModel.id, UserModel.first_name, UserModel.username).where(
+                        UserModel.id.in_(actor_ids)
+                    )
                 )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         user_map: dict[int, Any] = {u["id"]: u for u in user_rows}
 
         result = []
         for r in rows:
             uid = r["actor_user_id"]
             u = user_map.get(uid, {})
-            result.append({
-                "actor_user_id": uid,
-                "first_name": u.get("first_name") or "—",
-                "username": u.get("username"),
-                "handled_leads": r["handled_leads"],
-                "total_actions": r["total_actions"],
-                "hot_count": int(r["hot_count"] or 0),
-            })
+            result.append(
+                {
+                    "actor_user_id": uid,
+                    "first_name": u.get("first_name") or "—",
+                    "username": u.get("username"),
+                    "handled_leads": r["handled_leads"],
+                    "total_actions": r["total_actions"],
+                    "hot_count": int(r["hot_count"] or 0),
+                }
+            )
         return result
 
     async def get_first_response_stats(self, days: int) -> dict[str, Any]:
@@ -248,9 +258,7 @@ class PostgresLeadActionRepository:
         stmt = (
             sa.select(
                 sa.func.avg(diff_expr).label("avg_seconds"),
-                sa.func.percentile_cont(0.5)
-                .within_group(diff_expr.asc())
-                .label("median_seconds"),
+                sa.func.percentile_cont(0.5).within_group(diff_expr.asc()).label("median_seconds"),
                 sa.func.count().label("responded_leads"),
             )
             .select_from(leads_subq)
@@ -263,7 +271,9 @@ class PostgresLeadActionRepository:
 
         return {
             "avg_seconds": float(row["avg_seconds"]) if row["avg_seconds"] is not None else None,
-            "median_seconds": float(row["median_seconds"]) if row["median_seconds"] is not None else None,
+            "median_seconds": (
+                float(row["median_seconds"]) if row["median_seconds"] is not None else None
+            ),
             "responded_leads": int(row["responded_leads"]),
         }
 
@@ -294,9 +304,7 @@ class PostgresLeadActionRepository:
 
         # 2. Latest pipeline stage per lead (for leads in cohort)
         lead_ids_subq = (
-            sa.select(LeadModel.id)
-            .where(LeadModel.created_at >= since_dt)
-            .subquery("cohort_ids")
+            sa.select(LeadModel.id).where(LeadModel.created_at >= since_dt).subquery("cohort_ids")
         )
         latest_stage_subq = (
             sa.select(
@@ -343,9 +351,7 @@ class PostgresLeadActionRepository:
             "status_counts": status_counts,
         }
 
-    async def get_lead_timeline(
-        self, lead_id: int, limit: int = 10
-    ) -> list[dict[str, Any]]:
+    async def get_lead_timeline(self, lead_id: int, limit: int = 10) -> list[dict[str, Any]]:
         """Last *limit* actions for a specific lead, newest first.
 
         Each entry::

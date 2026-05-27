@@ -1,4 +1,5 @@
 """Business logic for per-group moderation settings."""
+
 from __future__ import annotations
 
 from core.domain.group_settings import GroupSettings
@@ -8,13 +9,15 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 
 # Fields that can be toggled (bool only).
-_TOGGLEABLE: frozenset[str] = frozenset({
-    "welcome_enabled",
-    "captcha_enabled",
-    "link_block_enabled",
-    "flood_enabled",
-    "logs_enabled",
-})
+_TOGGLEABLE: frozenset[str] = frozenset(
+    {
+        "welcome_enabled",
+        "captcha_enabled",
+        "link_block_enabled",
+        "flood_enabled",
+        "logs_enabled",
+    }
+)
 
 
 class GroupSettingsService:

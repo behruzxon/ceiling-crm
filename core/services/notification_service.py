@@ -2,6 +2,7 @@
 NotificationService — sends Telegram notifications to users and admins.
 Decoupled from handlers; called by services and event handlers.
 """
+
 from __future__ import annotations
 
 from core.domain.appointment import Appointment

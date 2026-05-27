@@ -14,6 +14,7 @@ Safety rules:
   - Never auto-reply when health_score < 60
   - Always allow manager override
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -81,17 +82,11 @@ class EscalationResult:
 
 REPLY_TEMPLATES: dict[str, dict] = {
     "price_inquiry": {
-        "text": (
-            "Aniq narxni o'lchov asosida ayta olamiz. "
-            "Bepul o'lchov buyurtma qilasizmi?"
-        ),
+        "text": ("Aniq narxni o'lchov asosida ayta olamiz. " "Bepul o'lchov buyurtma qilasizmi?"),
         "next_step": "o'lchov taklif qilish",
     },
     "measurement_interest": {
-        "text": (
-            "Ustamiz bepul o'lchov qilib berishi mumkin. "
-            "Qaysi vaqt sizga qulay bo'ladi?"
-        ),
+        "text": ("Ustamiz bepul o'lchov qilib berishi mumkin. " "Qaysi vaqt sizga qulay bo'ladi?"),
         "next_step": "vaqt kelishish",
     },
     "material_question": {
@@ -102,17 +97,11 @@ REPLY_TEMPLATES: dict[str, dict] = {
         "next_step": "katalog ko'rsatish",
     },
     "package_question": {
-        "text": (
-            "Tayyor paketlarimiz bor \u2014 oddiydan premiumgacha. "
-            "Ko'rib chiqasizmi?"
-        ),
+        "text": ("Tayyor paketlarimiz bor \u2014 oddiydan premiumgacha. " "Ko'rib chiqasizmi?"),
         "next_step": "paket tafsilotlari",
     },
     "greeting": {
-        "text": (
-            "Assalomu alaykum! Stretch potalok bo'yicha yordam beramiz. "
-            "Qanday savol bor?"
-        ),
+        "text": ("Assalomu alaykum! Stretch potalok bo'yicha yordam beramiz. " "Qanday savol bor?"),
         "next_step": "ehtiyoj aniqlash",
     },
     "general_followup": {
@@ -132,8 +121,7 @@ _BUYER_TYPE_VARIANTS: dict[str, dict[str, str]] = {
             "aytamiz \u2014 bepul o'lchov buyurtma qilasizmi?"
         ),
         "package_question": (
-            "Eng qulay narxdagi paketimiz bor. "
-            "Tafsilotlarini ko'rsatib beraymi?"
+            "Eng qulay narxdagi paketimiz bor. " "Tafsilotlarini ko'rsatib beraymi?"
         ),
     },
     "quality_buyer": {
@@ -147,12 +135,8 @@ _BUYER_TYPE_VARIANTS: dict[str, dict[str, str]] = {
         ),
     },
     "fast_buyer": {
-        "price_inquiry": (
-            "Tezkor hisob beramiz. Bepul o'lchov \u2014 bugunoq bo'ladimi?"
-        ),
-        "measurement_interest": (
-            "Bugunoq o'lchov qila olamiz. Qaysi soat qulay?"
-        ),
+        "price_inquiry": ("Tezkor hisob beramiz. Bepul o'lchov \u2014 bugunoq bo'ladimi?"),
+        "measurement_interest": ("Bugunoq o'lchov qila olamiz. Qaysi soat qulay?"),
     },
 }
 
@@ -414,10 +398,7 @@ def should_escalate(
             urgency="high",
             reason="high_severity_valuable_lead",
             reason_uz="Qimmatli lid yuqori darajali e'tirozga ega",
-            suggested_action_uz=(
-                "Shaxsan qo'ng'iroq qiling. "
-                "Sifat va kafolatni tushuntiring."
-            ),
+            suggested_action_uz=("Shaxsan qo'ng'iroq qiling. " "Sifat va kafolatni tushuntiring."),
             escalation_signals=signals,
         )
 
@@ -433,19 +414,14 @@ def should_escalate(
             escalation_signals=signals,
         )
 
-    if (
-        consecutive_auto_replies >= MAX_CONSECUTIVE_AUTO_REPLIES
-        and health_score < 50
-    ):
+    if consecutive_auto_replies >= MAX_CONSECUTIVE_AUTO_REPLIES and health_score < 50:
         signals.append("auto_reply_exhausted_low_health")
         return EscalationResult(
             should_escalate=True,
             urgency="medium",
             reason="auto_reply_limit_low_health",
             reason_uz="Avto-javob limiti va past suhbat sifati",
-            suggested_action_uz=(
-                "Shaxsiy xabar yuboring yoki qo'ng'iroq qiling."
-            ),
+            suggested_action_uz=("Shaxsiy xabar yuboring yoki qo'ng'iroq qiling."),
             escalation_signals=signals,
         )
 

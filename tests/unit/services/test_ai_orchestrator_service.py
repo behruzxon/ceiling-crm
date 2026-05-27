@@ -1,4 +1,5 @@
 """Unit tests for the AI Orchestrator / Control Center service."""
+
 from __future__ import annotations
 
 from core.services.ai_orchestrator_service import (
@@ -15,7 +16,11 @@ class TestBuildOrchestratorMinimal:
         result = build_ai_orchestrator_state()
         assert isinstance(result, AIOrchestratorState)
         assert result.priority in (
-            "attack_now", "work_today", "nurture", "revive", "low_priority",
+            "attack_now",
+            "work_today",
+            "nurture",
+            "revive",
+            "low_priority",
         )
         assert 0 <= result.priority_score <= 100
         assert 0.0 <= result.win_probability <= 1.0
@@ -25,8 +30,11 @@ class TestBuildOrchestratorMinimal:
         assert result.recommended_action
         assert result.recommended_operator_reply
         assert result.recommended_message_type in (
-            "budget_option", "premium_design", "measurement_push",
-            "direct_close", "soft_followup",
+            "budget_option",
+            "premium_design",
+            "measurement_push",
+            "direct_close",
+            "soft_followup",
         )
 
     def test_sales_brain_pass_through(self):
@@ -64,7 +72,9 @@ class TestOrchestratorPriority:
 
     def test_terminal_deal_low_priority(self):
         result = build_ai_orchestrator_state(
-            score=80, phone_captured=True, lead_status="deal",
+            score=80,
+            phone_captured=True,
+            lead_status="deal",
         )
         assert result.priority == "low_priority"
         assert result.priority_score == 0
@@ -87,7 +97,9 @@ class TestOrchestratorRiskFlags:
 
     def test_flags_are_english_slugs(self):
         result = build_ai_orchestrator_state(
-            score=45, last_objection="delay", follow_up_count=5,
+            score=45,
+            last_objection="delay",
+            follow_up_count=5,
             lead_temperature="cold",
         )
         for flag in result.risk_flags:
@@ -96,7 +108,9 @@ class TestOrchestratorRiskFlags:
 
     def test_max_six_flags(self):
         result = build_ai_orchestrator_state(
-            score=45, last_objection="angry", follow_up_count=5,
+            score=45,
+            last_objection="angry",
+            follow_up_count=5,
             lead_temperature="cold",
         )
         assert len(result.risk_flags) <= 6
@@ -146,7 +160,9 @@ class TestOrchestratorRevenue:
 
     def test_area_has_revenue(self):
         result = build_ai_orchestrator_state(
-            score=50, has_area=True, area_m2=20.0,
+            score=50,
+            has_area=True,
+            area_m2=20.0,
         )
         assert result.revenue_best is not None
         assert result.revenue_range is not None
@@ -162,23 +178,30 @@ class TestBrainSummary:
 
     def test_includes_objection_line(self):
         result = build_ai_orchestrator_state(
-            score=40, last_objection="expensive",
+            score=40,
+            last_objection="expensive",
         )
-        assert any("objection" in s.lower() or "price" in s.lower()
-                    for s in result.brain_summary)
+        assert any("objection" in s.lower() or "price" in s.lower() for s in result.brain_summary)
 
     def test_includes_captured_data(self):
         result = build_ai_orchestrator_state(
-            score=50, phone_captured=True, has_area=True,
+            score=50,
+            phone_captured=True,
+            has_area=True,
         )
         assert any("shared" in s.lower() for s in result.brain_summary)
 
     def test_includes_trend(self):
         result = build_ai_orchestrator_state(score=50)
-        assert any("trend" in s.lower() or "engagement" in s.lower() or
-                    "warming" in s.lower() or "cooling" in s.lower() or
-                    "stable" in s.lower() or "reactivated" in s.lower()
-                    for s in result.brain_summary)
+        assert any(
+            "trend" in s.lower()
+            or "engagement" in s.lower()
+            or "warming" in s.lower()
+            or "cooling" in s.lower()
+            or "stable" in s.lower()
+            or "reactivated" in s.lower()
+            for s in result.brain_summary
+        )
 
     def test_name_in_auto_reply(self):
         result = build_ai_orchestrator_state(name="Aziz", score=30)

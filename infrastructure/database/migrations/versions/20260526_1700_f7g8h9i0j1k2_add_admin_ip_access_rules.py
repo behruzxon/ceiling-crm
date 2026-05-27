@@ -2,6 +2,7 @@
 Revision ID: f7g8h9i0j1k2
 Revises: e6f7g8h9i0j1
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -10,8 +11,10 @@ down_revision = "e6f7g8h9i0j1"
 branch_labels = None
 depends_on = None
 
+
 def upgrade() -> None:
-    op.create_table("admin_ip_access_rules",
+    op.create_table(
+        "admin_ip_access_rules",
         sa.Column("id", sa.BigInteger, sa.Identity(), primary_key=True),
         sa.Column("ip_pattern", sa.String(100), nullable=False),
         sa.Column("rule_type", sa.String(20), nullable=False),
@@ -28,6 +31,7 @@ def upgrade() -> None:
     op.create_index("ix_ip_rule_type", "admin_ip_access_rules", ["rule_type"])
     op.create_index("ix_ip_rule_active", "admin_ip_access_rules", ["is_active"])
     op.create_index("ix_ip_rule_created", "admin_ip_access_rules", ["created_at"])
+
 
 def downgrade() -> None:
     op.drop_index("ix_ip_rule_created", table_name="admin_ip_access_rules")

@@ -2,6 +2,7 @@
 Admin scheduler management handler.
 View and manage scheduled appointments and jobs.
 """
+
 from __future__ import annotations
 
 from aiogram import Router

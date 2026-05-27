@@ -3,6 +3,7 @@ core.services.stage4_approval_report_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Read-only APPROVAL_REQUIRED observation report. No mutations, no sends.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -25,7 +26,10 @@ class Stage4ApprovalReportService:
         self._session = session
 
     async def build_report(
-        self, since: datetime, until: datetime, environment: str = "unknown",
+        self,
+        since: datetime,
+        until: datetime,
+        environment: str = "unknown",
     ) -> Stage4ApprovalReport:
         now = datetime.now(UTC)
         duration = int((until - since).total_seconds() / 60)
@@ -34,15 +38,22 @@ class Stage4ApprovalReportService:
         health = await self._get_health()
 
         report = Stage4ApprovalReport(
-            generated_at=now.isoformat(), since=since.isoformat(),
-            until=until.isoformat(), environment=environment,
-            duration_minutes=duration, **m, no_send=ns, health_status=health,
+            generated_at=now.isoformat(),
+            since=since.isoformat(),
+            until=until.isoformat(),
+            environment=environment,
+            duration_minutes=duration,
+            **m,
+            no_send=ns,
+            health_status=health,
         )
         pf = self.evaluate_pass_fail(report)
         recs = self.build_recommendations(report, pf)
         return Stage4ApprovalReport(
-            generated_at=report.generated_at, since=report.since,
-            until=report.until, environment=report.environment,
+            generated_at=report.generated_at,
+            since=report.since,
+            until=report.until,
+            environment=report.environment,
             duration_minutes=report.duration_minutes,
             total_proposals=report.total_proposals,
             proposed_count=report.proposed_count,
@@ -53,8 +64,10 @@ class Stage4ApprovalReportService:
             executed_count=report.executed_count,
             pending_count=report.pending_count,
             stale_pending_count=report.stale_pending_count,
-            no_send=report.no_send, health_status=report.health_status,
-            pass_fail=pf, recommendations=recs,
+            no_send=report.no_send,
+            health_status=report.health_status,
+            pass_fail=pf,
+            recommendations=recs,
         )
 
     @staticmethod
@@ -85,10 +98,13 @@ class Stage4ApprovalReportService:
 
     @staticmethod
     def build_recommendations(
-        report: Stage4ApprovalReport, pf: Stage4PassFailResult,
+        report: Stage4ApprovalReport,
+        pf: Stage4PassFailResult,
     ) -> list[str]:
         if not pf.passed:
-            if any("executed" in f or "live_sender" in f or "auto_execute" in f for f in pf.failures):
+            if any(
+                "executed" in f or "live_sender" in f or "auto_execute" in f for f in pf.failures
+            ):
                 return ["Executed records detected — rollback OFF immediately"]
             return ["APPROVAL FAIL — investigate and rollback"]
         if report.total_proposals == 0:
@@ -106,6 +122,7 @@ class Stage4ApprovalReportService:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
+
             status_q = (
                 sa.select(M.status, sa.func.count())
                 .where(M.created_at.between(since, until))
@@ -115,16 +132,28 @@ class Stage4ApprovalReportService:
             by = {str(r[0]): int(r[1]) for r in rows}
             total = sum(by.values())
             return {
-                "total_proposals": total, "proposed_count": by.get("proposed", 0),
-                "approved_count": by.get("approved", 0), "rejected_count": by.get("rejected", 0),
-                "expired_count": by.get("expired", 0), "blocked_count": by.get("blocked", 0),
-                "executed_count": by.get("executed", 0), "pending_count": by.get("proposed", 0),
+                "total_proposals": total,
+                "proposed_count": by.get("proposed", 0),
+                "approved_count": by.get("approved", 0),
+                "rejected_count": by.get("rejected", 0),
+                "expired_count": by.get("expired", 0),
+                "blocked_count": by.get("blocked", 0),
+                "executed_count": by.get("executed", 0),
+                "pending_count": by.get("proposed", 0),
                 "stale_pending_count": 0,
             }
         except Exception:
-            return {"total_proposals": 0, "proposed_count": 0, "approved_count": 0,
-                    "rejected_count": 0, "expired_count": 0, "blocked_count": 0,
-                    "executed_count": 0, "pending_count": 0, "stale_pending_count": 0}
+            return {
+                "total_proposals": 0,
+                "proposed_count": 0,
+                "approved_count": 0,
+                "rejected_count": 0,
+                "expired_count": 0,
+                "blocked_count": 0,
+                "executed_count": 0,
+                "pending_count": 0,
+                "stale_pending_count": 0,
+            }
 
     async def _collect_no_send(self, since: datetime, until: datetime) -> Stage4NoSendSafetyMetrics:
         executed = 0
@@ -132,8 +161,11 @@ class Stage4ApprovalReportService:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(M).where(M.executed_at.between(since, until)),
+                sa.select(sa.func.count())
+                .select_from(M)
+                .where(M.executed_at.between(since, until)),
             )
             executed = r.scalar() or 0
         except Exception:
@@ -143,6 +175,7 @@ class Stage4ApprovalReportService:
     async def _get_health(self) -> str:
         try:
             from core.services.agent_metrics_service import AgentMetricsService
+
             return (await AgentMetricsService(self._session).get_overview()).health.status
         except Exception:
             return "green"

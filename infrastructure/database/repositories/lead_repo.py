@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractLeadRepository."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -27,7 +28,11 @@ class PostgresLeadRepository(AbstractLeadRepository):
         return Lead(
             id=model.id,
             user_id=model.user_id,
-            category=CeilingCategory(model.category) if isinstance(model.category, str) else model.category,
+            category=(
+                CeilingCategory(model.category)
+                if isinstance(model.category, str)
+                else model.category
+            ),
             source=LeadSource(model.source) if isinstance(model.source, str) else model.source,
             source_group_id=model.source_group_id,
             name=model.name,
@@ -173,10 +178,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
 
     async def get_pipeline_counts(self) -> dict[PipelineStage, int]:
         latest = self._latest_stage_subquery()
-        stmt = (
-            select(latest.c.stage, func.count())
-            .group_by(latest.c.stage)
-        )
+        stmt = select(latest.c.stage, func.count()).group_by(latest.c.stage)
         result = await self._session.execute(stmt)
         counts: dict[PipelineStage, int] = {}
         for stage_val, count in result.all():
@@ -471,33 +473,49 @@ class PostgresLeadRepository(AbstractLeadRepository):
     async def get_daily_stats(self, since: datetime) -> dict:
         """Return aggregate stats since *since*."""
         # New leads
-        new_stmt = select(func.count()).select_from(LeadModel).where(
-            LeadModel.created_at >= since,
+        new_stmt = (
+            select(func.count())
+            .select_from(LeadModel)
+            .where(
+                LeadModel.created_at >= since,
+            )
         )
         new_leads = (await self._session.execute(new_stmt)).scalar() or 0
 
         # Converted (lead_status = 'deal')
-        converted_stmt = select(func.count()).select_from(LeadModel).where(
-            LeadModel.created_at >= since,
-            LeadModel.lead_status == "deal",
+        converted_stmt = (
+            select(func.count())
+            .select_from(LeadModel)
+            .where(
+                LeadModel.created_at >= since,
+                LeadModel.lead_status == "deal",
+            )
         )
         converted = (await self._session.execute(converted_stmt)).scalar() or 0
 
         # Lost (lead_status = 'lost')
-        lost_stmt = select(func.count()).select_from(LeadModel).where(
-            LeadModel.created_at >= since,
-            LeadModel.lead_status == "lost",
+        lost_stmt = (
+            select(func.count())
+            .select_from(LeadModel)
+            .where(
+                LeadModel.created_at >= since,
+                LeadModel.lead_status == "lost",
+            )
         )
         lost = (await self._session.execute(lost_stmt)).scalar() or 0
 
         # Active deals (not terminal)
         _TERMINAL = frozenset({"deal", "lost"})
-        active_stmt = select(func.count()).select_from(LeadModel).where(
-            LeadModel.created_at >= since,
-            sa.or_(
-                LeadModel.lead_status.is_(None),
-                LeadModel.lead_status.notin_(_TERMINAL),
-            ),
+        active_stmt = (
+            select(func.count())
+            .select_from(LeadModel)
+            .where(
+                LeadModel.created_at >= since,
+                sa.or_(
+                    LeadModel.lead_status.is_(None),
+                    LeadModel.lead_status.notin_(_TERMINAL),
+                ),
+            )
         )
         active_deals = (await self._session.execute(active_stmt)).scalar() or 0
 
@@ -527,9 +545,7 @@ class PostgresLeadRepository(AbstractLeadRepository):
     async def set_lost_reason(self, lead_id: int, reason: str) -> None:
         """Set lost_reason on the lead row."""
         await self._session.execute(
-            update(LeadModel)
-            .where(LeadModel.id == lead_id)
-            .values(lost_reason=reason[:128])
+            update(LeadModel).where(LeadModel.id == lead_id).values(lost_reason=reason[:128])
         )
 
     async def get_lost_reason_counts(
@@ -537,9 +553,8 @@ class PostgresLeadRepository(AbstractLeadRepository):
         since: datetime | None = None,
     ) -> dict[str, int]:
         """Return counts of lost leads grouped by lost_reason."""
-        stmt = (
-            select(LeadModel.lost_reason, func.count().label("cnt"))
-            .where(LeadModel.lost_reason.isnot(None))
+        stmt = select(LeadModel.lost_reason, func.count().label("cnt")).where(
+            LeadModel.lost_reason.isnot(None)
         )
         if since is not None:
             stmt = stmt.where(LeadModel.created_at >= since)
@@ -551,11 +566,15 @@ class PostgresLeadRepository(AbstractLeadRepository):
 
     # Map kanban bucket → pipeline stage values stored in pipeline_stages.stage
     _KANBAN_PIPELINE_MAP: dict[str, list[str]] = {
-        "new":         [PipelineStage.NEW.value, PipelineStage.PACKAGE_SELECTED.value],
-        "hot":         [PipelineStage.CONTACTED.value],
+        "new": [PipelineStage.NEW.value, PipelineStage.PACKAGE_SELECTED.value],
+        "hot": [PipelineStage.CONTACTED.value],
         "measurement": [PipelineStage.MEASUREMENT.value, PipelineStage.QUOTE.value],
-        "won":         [PipelineStage.DEAL.value, PipelineStage.INSTALLATION.value, PipelineStage.COMPLETED.value],
-        "lost":        [PipelineStage.LOST.value],
+        "won": [
+            PipelineStage.DEAL.value,
+            PipelineStage.INSTALLATION.value,
+            PipelineStage.COMPLETED.value,
+        ],
+        "lost": [PipelineStage.LOST.value],
     }
 
     async def get_counts_by_stage(self) -> dict[str, int]:
@@ -591,7 +610,11 @@ class PostgresLeadRepository(AbstractLeadRepository):
 
         result = await self._session.execute(stmt)
         counts: dict[str, int] = {
-            "new": 0, "hot": 0, "measurement": 0, "won": 0, "lost": 0,
+            "new": 0,
+            "hot": 0,
+            "measurement": 0,
+            "won": 0,
+            "lost": 0,
         }
         for kanban_stage, cnt in result.all():
             if kanban_stage in counts:

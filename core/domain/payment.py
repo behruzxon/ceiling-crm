@@ -1,4 +1,5 @@
 """Domain model for a payment record."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,15 +14,15 @@ class Payment(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    id: int                          # 0 before DB insert (placeholder convention)
+    id: int  # 0 before DB insert (placeholder convention)
     lead_id: int
-    amount: int                      # UZS, integer so'm
+    amount: int  # UZS, integer so'm
     method: PaymentMethod
     status: PaymentStatus
     paid_at: datetime | None = None
     receipt_url: str | None = None
     notes: str | None = None
-    proof_file_id: str | None = None   # Telegram file_id of payment receipt (photo or doc)
+    proof_file_id: str | None = None  # Telegram file_id of payment receipt (photo or doc)
     created_by: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

@@ -1,4 +1,5 @@
 """Tests for Step AL — Stage 1 Observation Report UI."""
+
 from __future__ import annotations
 
 from pathlib import Path

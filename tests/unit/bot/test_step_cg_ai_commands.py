@@ -1,4 +1,5 @@
 """Tests for Step CG — AI Commands (/ai_help, /ai_reset, quick buttons)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +14,7 @@ def _src() -> str:
 class TestAiHelpCommand:
     def test_handler_importable(self):
         from apps.bot.handlers.private.ai_support import cmd_ai_help
+
         assert callable(cmd_ai_help)
 
     def test_handler_registered(self):
@@ -32,6 +34,7 @@ class TestAiHelpCommand:
 class TestAiResetCommand:
     def test_handler_importable(self):
         from apps.bot.handlers.private.ai_support import cmd_ai_reset
+
         assert callable(cmd_ai_reset)
 
     def test_handler_registered(self):
@@ -117,48 +120,59 @@ class TestRateLimitText:
 class TestExportCompatibility:
     def test_router(self):
         from apps.bot.handlers.private.ai_support import router
+
         assert router is not None
 
     def test_states(self):
         from apps.bot.handlers.private.ai_support import AiSupportStates
+
         assert AiSupportStates is not None
 
     def test_load_memory(self):
         from apps.bot.handlers.private.ai_support import _load_ai_memory
+
         assert callable(_load_ai_memory)
 
     def test_get_lead_score(self):
         from apps.bot.handlers.private.ai_support import _get_lead_score
+
         assert callable(_get_lead_score)
 
     def test_add_lead_score(self):
         from apps.bot.handlers.private.ai_support import _add_lead_score
+
         assert callable(_add_lead_score)
 
     def test_clear_conversation(self):
         from apps.bot.handlers.private.ai_support import (
             clear_ai_conversation,
         )
+
         assert callable(clear_ai_conversation)
 
     def test_cmd_ai_start(self):
         from apps.bot.handlers.private.ai_support import cmd_ai_start
+
         assert callable(cmd_ai_start)
 
     def test_cmd_ai_help(self):
         from apps.bot.handlers.private.ai_support import cmd_ai_help
+
         assert callable(cmd_ai_help)
 
     def test_cmd_ai_reset(self):
         from apps.bot.handlers.private.ai_support import cmd_ai_reset
+
         assert callable(cmd_ai_reset)
 
 
 class TestSmoke:
     def test_dispatcher_builds(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_ai_support_imports(self):
         from apps.bot.handlers.private import ai_support
+
         assert ai_support is not None

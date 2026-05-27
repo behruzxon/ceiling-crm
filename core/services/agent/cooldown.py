@@ -26,6 +26,7 @@ Usage (future)::
         # … execute close CTA …
         await mgr.mark_acted(user_id, ActionType.ATTEMPT_CLOSE, cooldown_seconds=600)
 """
+
 from __future__ import annotations
 
 from enum import Enum

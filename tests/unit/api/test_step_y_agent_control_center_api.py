@@ -1,4 +1,5 @@
 """Tests for Step Y — Agent Control Center API endpoint."""
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -9,18 +10,21 @@ from core.services.agent_control_center_service import AgentControlCenterService
 class TestAPIEndpoint:
     def test_control_status_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         paths = [r.path for r in app.routes]
         assert any("control/status" in p for p in paths)
 
     def test_endpoint_has_auth(self):
         from apps.api.routes.admin_agent_metrics import router
+
         assert len(router.dependencies) > 0
 
 
 class TestResponseShape:
     def test_snapshot_serializable(self):
         from types import SimpleNamespace
+
         settings = SimpleNamespace(
             business=SimpleNamespace(
                 agent_followups_enabled=False,
@@ -60,6 +64,7 @@ class TestResponseShape:
 
     def test_no_secret_in_response(self):
         from types import SimpleNamespace
+
         settings = SimpleNamespace(
             business=SimpleNamespace(
                 agent_followups_enabled=False,
@@ -96,6 +101,7 @@ class TestResponseShape:
 
     def test_all_off_returns_off(self):
         from types import SimpleNamespace
+
         settings = SimpleNamespace(
             business=SimpleNamespace(
                 agent_followups_enabled=False,
@@ -130,6 +136,7 @@ class TestResponseShape:
 
     def test_dangerous_combo_returns_blockers(self):
         from types import SimpleNamespace
+
         settings = SimpleNamespace(
             business=SimpleNamespace(
                 agent_followups_enabled=False,
@@ -167,31 +174,37 @@ class TestResponseShape:
 class TestFrontendTemplate:
     def test_template_has_control_center(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "Control Center" in html
 
     def test_template_has_rollout_stage(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "Rollout Stage" in html
 
     def test_template_has_preflight(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "Preflight" in html
 
     def test_template_has_feature_flags(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "Feature Flags" in html
 
     def test_template_has_mutation_disabled(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "mutation" in html.lower()
 
     def test_template_no_secret_placeholders(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "api_key" not in html.lower()
         assert "bot_token" not in html.lower()
@@ -200,6 +213,7 @@ class TestFrontendTemplate:
 class TestNonRegression:
     def test_signal_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("narxi qancha")
         assert sig.intent == "wants_price"
 
@@ -207,7 +221,12 @@ class TestNonRegression:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"

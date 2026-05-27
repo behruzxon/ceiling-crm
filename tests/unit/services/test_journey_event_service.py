@@ -1,4 +1,5 @@
 """Unit tests for JourneyEventService and emit_journey_event helper."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,11 +19,21 @@ class TestJourneyEventType:
 
     def test_all_event_types_exist(self) -> None:
         expected = {
-            "started_bot", "opened_catalog", "viewed_catalog_item",
-            "used_price_calculator", "price_calculated", "clicked_order",
-            "order_form_started", "order_form_abandoned", "phone_shared",
-            "location_shared", "image_sent", "operator_requested",
-            "admin_notified", "deal_closed", "lost_lead",
+            "started_bot",
+            "opened_catalog",
+            "viewed_catalog_item",
+            "used_price_calculator",
+            "price_calculated",
+            "clicked_order",
+            "order_form_started",
+            "order_form_abandoned",
+            "phone_shared",
+            "location_shared",
+            "image_sent",
+            "operator_requested",
+            "admin_notified",
+            "deal_closed",
+            "lost_lead",
         }
         actual = {e.value for e in JourneyEventType}
         assert expected == actual

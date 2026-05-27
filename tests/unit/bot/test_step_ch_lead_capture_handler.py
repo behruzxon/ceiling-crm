@@ -1,4 +1,5 @@
 """Tests for Step CH — Lead Capture Handler."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,14 +14,17 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.bot.handlers.private import lead_capture
+
         assert lead_capture is not None
 
     def test_router(self):
         from apps.bot.handlers.private.lead_capture import router
+
         assert router is not None
 
     def test_states(self):
         from apps.bot.states.lead_capture import LeadCaptureStates
+
         assert hasattr(LeadCaptureStates, "waiting_for_name")
         assert hasattr(LeadCaptureStates, "waiting_for_phone")
         assert hasattr(LeadCaptureStates, "waiting_for_district")
@@ -89,6 +93,7 @@ class TestSafety:
 
     def test_phone_utility_safe(self):
         from shared.utils.phone import is_valid_uz_phone
+
         assert not is_valid_uz_phone("")
         assert not is_valid_uz_phone("abc")
 

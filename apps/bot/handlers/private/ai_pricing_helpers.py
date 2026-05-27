@@ -3,6 +3,7 @@ apps.bot.handlers.private.ai_pricing_helpers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Price display helpers: combo confirmation and upsell flow.
 """
+
 from __future__ import annotations
 
 from typing import Any

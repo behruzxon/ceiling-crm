@@ -1,4 +1,5 @@
 """Lead scoring & follow-up scheduling helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,9 +11,10 @@ from datetime import UTC, datetime, timedelta
 @dataclass(frozen=True)
 class LeadScore:
     """Result of lead scoring computation."""
-    total_score: int          # 0-100
-    classification: str       # "hot" / "warm" / "cold"
-    breakdown: dict[str, int] # component scores
+
+    total_score: int  # 0-100
+    classification: str  # "hot" / "warm" / "cold"
+    breakdown: dict[str, int]  # component scores
 
 
 def compute_lead_score(
@@ -69,13 +71,13 @@ def compute_lead_score(
     # Recency: decays with inactivity (max 15)
     recency = 15
     if hours_since_last_activity is not None:
-        if hours_since_last_activity > 168:    # > 7 days
+        if hours_since_last_activity > 168:  # > 7 days
             recency = 0
-        elif hours_since_last_activity > 72:   # > 3 days
+        elif hours_since_last_activity > 72:  # > 3 days
             recency = 3
-        elif hours_since_last_activity > 24:   # > 1 day
+        elif hours_since_last_activity > 24:  # > 1 day
             recency = 7
-        elif hours_since_last_activity > 6:    # > 6h
+        elif hours_since_last_activity > 6:  # > 6h
             recency = 12
     breakdown["recency"] = recency
 

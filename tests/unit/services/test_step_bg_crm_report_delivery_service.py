@@ -1,4 +1,5 @@
 """Tests for Step BG — CRMReportDeliveryService."""
+
 from __future__ import annotations
 
 from core.services.crm_report_delivery_service import (
@@ -35,8 +36,13 @@ class TestValidationBlockers:
         assert "log_only_disabled" in r.blockers
 
     def test_approval_required(self):
-        r = svc.validate_delivery("telegram", delivery_enabled=True, telegram_enabled=True,
-                                  approval_required=True, is_approved=False)
+        r = svc.validate_delivery(
+            "telegram",
+            delivery_enabled=True,
+            telegram_enabled=True,
+            approval_required=True,
+            is_approved=False,
+        )
         assert "approval_required" in r.blockers
 
     def test_token_in_message(self):
@@ -44,8 +50,9 @@ class TestValidationBlockers:
         assert "token_in_message" in r.blockers
 
     def test_bot_token_in_message(self):
-        r = svc.validate_delivery("log_only",
-                                  message_text="1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj")
+        r = svc.validate_delivery(
+            "log_only", message_text="1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj"
+        )
         assert "bot_token_in_message" in r.blockers
 
 
@@ -59,18 +66,29 @@ class TestValidationAllowed:
         assert r.allowed
 
     def test_telegram_approved(self):
-        r = svc.validate_delivery("telegram", delivery_enabled=True, telegram_enabled=True,
-                                  approval_required=True, is_approved=True)
+        r = svc.validate_delivery(
+            "telegram",
+            delivery_enabled=True,
+            telegram_enabled=True,
+            approval_required=True,
+            is_approved=True,
+        )
         assert r.allowed
 
     def test_email_approved(self):
-        r = svc.validate_delivery("email", delivery_enabled=True, email_enabled=True,
-                                  approval_required=True, is_approved=True)
+        r = svc.validate_delivery(
+            "email",
+            delivery_enabled=True,
+            email_enabled=True,
+            approval_required=True,
+            is_approved=True,
+        )
         assert r.allowed
 
     def test_no_approval_needed(self):
-        r = svc.validate_delivery("telegram", delivery_enabled=True, telegram_enabled=True,
-                                  approval_required=False)
+        r = svc.validate_delivery(
+            "telegram", delivery_enabled=True, telegram_enabled=True, approval_required=False
+        )
         assert r.allowed
 
     def test_preview_truncated(self):
@@ -113,25 +131,39 @@ class TestRecipient:
 class TestSanitize:
     def test_token(self):
         assert "sk-" not in svc.sanitize_message("sk-secret123")
+
     def test_bot_token(self):
-        assert "1234567890:" not in svc.sanitize_message("1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj")
+        assert "1234567890:" not in svc.sanitize_message(
+            "1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj"
+        )
+
     def test_clean(self):
         assert svc.sanitize_message("salom") == "salom"
+
 
 class TestRedactError:
     def test_token(self):
         assert "sk-" not in svc.redact_error("sk-secret error")
+
     def test_truncate(self):
         assert len(svc.redact_error("x" * 1000)) <= 500
 
 
 class TestBuildMessage:
     def test_basic(self):
-        msg = svc.build_report_message({
-            "report_date": "2026-05-26", "new_contacts": 10, "hot_leads": 5,
-            "unanswered_count": 3, "critical_count": 1, "missed_leads": 0,
-            "tasks_open": 8, "tasks_overdue": 2, "recommendations": ["Fix SLA"],
-        })
+        msg = svc.build_report_message(
+            {
+                "report_date": "2026-05-26",
+                "new_contacts": 10,
+                "hot_leads": 5,
+                "unanswered_count": 3,
+                "critical_count": 1,
+                "missed_leads": 0,
+                "tasks_open": 8,
+                "tasks_overdue": 2,
+                "recommendations": ["Fix SLA"],
+            }
+        )
         assert "Yangi mijozlar: 10" in msg
         assert "Hot leadlar: 5" in msg
         assert "Fix SLA" in msg
@@ -154,34 +186,50 @@ class TestModel:
         from infrastructure.database.models.crm_report_delivery_audit import (
             CRMReportDeliveryAuditModel,
         )
+
         assert CRMReportDeliveryAuditModel.__tablename__ == "crm_report_delivery_audit"
+
 
 class TestMigration:
     def test_importable(self):
         import importlib
+
         mod = importlib.import_module(
             "infrastructure.database.migrations.versions."
             "20260526_1505_c4d5e6f7g8h9_add_crm_report_delivery_audit"
         )
         assert callable(mod.upgrade)
 
+
 class TestSettings:
     def test_delivery_disabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_daily_report_delivery_enabled"].default is False
+
     def test_approval_required(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields["crm_daily_report_delivery_require_approval"].default is True
+
+        assert (
+            BusinessSettings.model_fields["crm_daily_report_delivery_require_approval"].default
+            is True
+        )
+
     def test_telegram_disabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_daily_report_telegram_enabled"].default is False
+
     def test_email_disabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_daily_report_email_enabled"].default is False
+
 
 class TestImmutability:
     def test_frozen(self):
         import pytest
+
         r = DeliveryPreviewResult()
         with pytest.raises(AttributeError):
             r.allowed = True  # type: ignore[misc]

@@ -1,4 +1,5 @@
 """Concrete PostgreSQL repository for ai_tactic_outcomes."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -116,9 +117,9 @@ class PostgresTacticOutcomeRepository(AbstractTacticOutcomeRepository):
 
         total_col = sa.func.count().label("total")
         engaged_col = sa.func.count().filter(t.outcome == "engaged").label("engaged")
-        meas_col = sa.func.count().filter(
-            t.outcome == "measurement_booked"
-        ).label("measurement_booked")
+        meas_col = (
+            sa.func.count().filter(t.outcome == "measurement_booked").label("measurement_booked")
+        )
         conv_col = sa.func.count().filter(t.outcome == "converted").label("converted")
         lost_col = sa.func.count().filter(t.outcome == "lost").label("lost")
         ignored_col = sa.func.count().filter(t.outcome == "ignored").label("ignored")
@@ -153,17 +154,19 @@ class PostgresTacticOutcomeRepository(AbstractTacticOutcomeRepository):
         for r in rows:
             total = r.total or 1
             success = (r.engaged or 0) + (r.measurement_booked or 0) + (r.converted or 0)
-            stats.append({
-                "event_type": r.event_type,
-                "tactic_name": r.tactic_name,
-                "objection_type": r.objection_type,
-                "segment": r.segment,
-                "total": total,
-                "engaged": r.engaged or 0,
-                "measurement_booked": r.measurement_booked or 0,
-                "converted": r.converted or 0,
-                "lost": r.lost or 0,
-                "ignored": r.ignored or 0,
-                "success_rate": success / total,
-            })
+            stats.append(
+                {
+                    "event_type": r.event_type,
+                    "tactic_name": r.tactic_name,
+                    "objection_type": r.objection_type,
+                    "segment": r.segment,
+                    "total": total,
+                    "engaged": r.engaged or 0,
+                    "measurement_booked": r.measurement_booked or 0,
+                    "converted": r.converted or 0,
+                    "lost": r.lost or 0,
+                    "ignored": r.ignored or 0,
+                    "success_rate": success / total,
+                }
+            )
         return stats

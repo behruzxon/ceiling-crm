@@ -1,15 +1,25 @@
 """Tests for Step BE — CRMExportService."""
+
 from __future__ import annotations
 
 from core.services.crm_export_service import CRMExportService
 
 svc = CRMExportService
 
+
 def _c(**kw):
-    defaults = {"contact_id": 1, "username": "test", "first_name": "Aziz",
-                "last_name": "K", "lead_status": "active", "temperature": "warm",
-                "lead_score": 50, "source": "telegram_bot", "created_at": "2026-05-26",
-                "phone": "+998901234567"}
+    defaults = {
+        "contact_id": 1,
+        "username": "test",
+        "first_name": "Aziz",
+        "last_name": "K",
+        "lead_status": "active",
+        "temperature": "warm",
+        "lead_score": 50,
+        "source": "telegram_bot",
+        "created_at": "2026-05-26",
+        "phone": "+998901234567",
+    }
     defaults.update(kw)
     return defaults
 
@@ -52,16 +62,34 @@ class TestHotLeadsCSV:
 
 class TestFunnelCSV:
     def test_exports(self):
-        stages = [{"stage": "new", "count": 10, "conversion_from_previous": 1.0, "conversion_from_total": 1.0}]
+        stages = [
+            {
+                "stage": "new",
+                "count": 10,
+                "conversion_from_previous": 1.0,
+                "conversion_from_total": 1.0,
+            }
+        ]
         csv = svc.export_funnel_csv(stages)
         assert "new" in csv and "10" in csv
 
 
 class TestTasksCSV:
     def test_exports(self):
-        tasks = [{"task_id": 1, "contact_id": 1, "title": "Call", "task_type": "call",
-                  "status": "todo", "priority": "high", "due_at": "", "completed_at": "",
-                  "assigned_to": "", "source": "manual"}]
+        tasks = [
+            {
+                "task_id": 1,
+                "contact_id": 1,
+                "title": "Call",
+                "task_type": "call",
+                "status": "todo",
+                "priority": "high",
+                "due_at": "",
+                "completed_at": "",
+                "assigned_to": "",
+                "source": "manual",
+            }
+        ]
         csv = svc.export_tasks_csv(tasks)
         assert "Call" in csv
 
@@ -94,7 +122,9 @@ class TestRedaction:
         assert "sk-secret" not in svc.sanitize_csv_value("sk-secret123abc")
 
     def test_bot_token_redacted(self):
-        assert "1234567890:" not in svc.sanitize_csv_value("1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj")
+        assert "1234567890:" not in svc.sanitize_csv_value(
+            "1234567890:AABBCCDDEEFFaabbccddeeffgghhiijj"
+        )
 
     def test_row_phone_redacted(self):
         row = svc.redact_row({"phone": "+998901234567"}, include_phone=False)
@@ -125,13 +155,18 @@ class TestFilename:
 
 class TestDailySummary:
     def test_builds(self):
-        data = svc.build_daily_summary_data({
-            "total_contacts": 100, "hot_leads": 10,
-            "unanswered_count": 5, "critical_count": 2,
-            "missed": {"missed_lead_count": 3},
-            "task_open": 8, "task_overdue": 2,
-            "recommendations": ["Fix SLA"],
-        })
+        data = svc.build_daily_summary_data(
+            {
+                "total_contacts": 100,
+                "hot_leads": 10,
+                "unanswered_count": 5,
+                "critical_count": 2,
+                "missed": {"missed_lead_count": 3},
+                "task_open": 8,
+                "task_overdue": 2,
+                "recommendations": ["Fix SLA"],
+            }
+        )
         assert data["total_contacts"] == 100
         assert data["missed_leads"] == 3
 

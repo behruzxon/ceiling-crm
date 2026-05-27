@@ -4,6 +4,7 @@ core.services.agent_metrics_service
 Read-only metrics aggregation for the agent system.
 No mutations, no sends, no AI calls.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -69,6 +70,7 @@ class AgentMetricsService:
             from infrastructure.database.models.journey_event import (
                 JourneyEventModel,
             )
+
             base = sa.select(JourneyEventModel)
             if since:
                 base = base.where(JourneyEventModel.created_at >= since)
@@ -85,9 +87,8 @@ class AgentMetricsService:
                 active_q = active_q.where(JourneyEventModel.created_at >= since)
             active = (await self._session.execute(active_q)).scalar() or 0
 
-            type_q = (
-                sa.select(JourneyEventModel.event_type, sa.func.count())
-                .group_by(JourneyEventModel.event_type)
+            type_q = sa.select(JourneyEventModel.event_type, sa.func.count()).group_by(
+                JourneyEventModel.event_type
             )
             if since:
                 type_q = type_q.where(JourneyEventModel.created_at >= since)
@@ -112,22 +113,28 @@ class AgentMetricsService:
             from infrastructure.database.models.agent_memory import (
                 AgentMemoryModel,
             )
-            total = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel),
-            )).scalar() or 0
 
-            temp_q = (
-                sa.select(AgentMemoryModel.lead_temperature, sa.func.count())
-                .group_by(AgentMemoryModel.lead_temperature)
+            total = (
+                await self._session.execute(
+                    sa.select(sa.func.count()).select_from(AgentMemoryModel),
+                )
+            ).scalar() or 0
+
+            temp_q = sa.select(AgentMemoryModel.lead_temperature, sa.func.count()).group_by(
+                AgentMemoryModel.lead_temperature
             )
             temp_rows = (await self._session.execute(temp_q)).all()
             temp_map = {str(r[0]): int(r[1]) for r in temp_rows}
 
-            stopped = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel).where(
-                    AgentMemoryModel.followup_enabled == sa.false(),
-                ),
-            )).scalar() or 0
+            stopped = (
+                await self._session.execute(
+                    sa.select(sa.func.count())
+                    .select_from(AgentMemoryModel)
+                    .where(
+                        AgentMemoryModel.followup_enabled == sa.false(),
+                    ),
+                )
+            ).scalar() or 0
 
             return LeadMetrics(
                 total_memories=total,
@@ -147,29 +154,32 @@ class AgentMetricsService:
             from infrastructure.database.models.scheduled_followup import (
                 ScheduledFollowupModel,
             )
+
             if now is None:
                 now = datetime.now(UTC)
 
-            status_q = (
-                sa.select(ScheduledFollowupModel.status, sa.func.count())
-                .group_by(ScheduledFollowupModel.status)
+            status_q = sa.select(ScheduledFollowupModel.status, sa.func.count()).group_by(
+                ScheduledFollowupModel.status
             )
             status_rows = (await self._session.execute(status_q)).all()
             by_status = {str(r[0]): int(r[1]) for r in status_rows}
 
-            type_q = (
-                sa.select(ScheduledFollowupModel.followup_type, sa.func.count())
-                .group_by(ScheduledFollowupModel.followup_type)
+            type_q = sa.select(ScheduledFollowupModel.followup_type, sa.func.count()).group_by(
+                ScheduledFollowupModel.followup_type
             )
             type_rows = (await self._session.execute(type_q)).all()
             by_type = {str(r[0]): int(r[1]) for r in type_rows}
 
-            due = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(ScheduledFollowupModel).where(
-                    ScheduledFollowupModel.status == "pending",
-                    ScheduledFollowupModel.scheduled_at <= now,
-                ),
-            )).scalar() or 0
+            due = (
+                await self._session.execute(
+                    sa.select(sa.func.count())
+                    .select_from(ScheduledFollowupModel)
+                    .where(
+                        ScheduledFollowupModel.status == "pending",
+                        ScheduledFollowupModel.scheduled_at <= now,
+                    ),
+                )
+            ).scalar() or 0
 
             total = sum(by_status.values())
 
@@ -194,16 +204,23 @@ class AgentMetricsService:
             from infrastructure.database.models.agent_memory import (
                 AgentMemoryModel,
             )
-            total = (await self._session.execute(
-                sa.select(sa.func.sum(AgentMemoryModel.admin_escalation_count)),
-            )).scalar() or 0
+
+            total = (
+                await self._session.execute(
+                    sa.select(sa.func.sum(AgentMemoryModel.admin_escalation_count)),
+                )
+            ).scalar() or 0
 
             cutoff = datetime.now(UTC) - timedelta(hours=24)
-            last_24h = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel).where(
-                    AgentMemoryModel.last_admin_escalation_at >= cutoff,
-                ),
-            )).scalar() or 0
+            last_24h = (
+                await self._session.execute(
+                    sa.select(sa.func.count())
+                    .select_from(AgentMemoryModel)
+                    .where(
+                        AgentMemoryModel.last_admin_escalation_at >= cutoff,
+                    ),
+                )
+            ).scalar() or 0
 
             return AdminEscalationMetrics(
                 total=int(total),
@@ -217,16 +234,15 @@ class AgentMetricsService:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel,
             )
-            status_q = (
-                sa.select(AgentExecutionRecordModel.status, sa.func.count())
-                .group_by(AgentExecutionRecordModel.status)
+
+            status_q = sa.select(AgentExecutionRecordModel.status, sa.func.count()).group_by(
+                AgentExecutionRecordModel.status
             )
             status_rows = (await self._session.execute(status_q)).all()
             by_status = {str(r[0]): int(r[1]) for r in status_rows}
 
-            mode_q = (
-                sa.select(AgentExecutionRecordModel.mode, sa.func.count())
-                .group_by(AgentExecutionRecordModel.mode)
+            mode_q = sa.select(AgentExecutionRecordModel.mode, sa.func.count()).group_by(
+                AgentExecutionRecordModel.mode
             )
             mode_rows = (await self._session.execute(mode_q)).all()
             by_mode = {str(r[0]): int(r[1]) for r in mode_rows}
@@ -252,22 +268,32 @@ class AgentMetricsService:
             from infrastructure.database.models.agent_memory import (
                 AgentMemoryModel,
             )
-            stop_count = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel).where(
-                    AgentMemoryModel.stop_reason.isnot(None),
-                ),
-            )).scalar() or 0
+
+            stop_count = (
+                await self._session.execute(
+                    sa.select(sa.func.count())
+                    .select_from(AgentMemoryModel)
+                    .where(
+                        AgentMemoryModel.stop_reason.isnot(None),
+                    ),
+                )
+            ).scalar() or 0
 
             blocked = 0
             try:
                 from infrastructure.database.models.agent_execution_record import (
                     AgentExecutionRecordModel,
                 )
-                blocked = (await self._session.execute(
-                    sa.select(sa.func.count()).select_from(
-                        AgentExecutionRecordModel,
-                    ).where(AgentExecutionRecordModel.status == "blocked"),
-                )).scalar() or 0
+
+                blocked = (
+                    await self._session.execute(
+                        sa.select(sa.func.count())
+                        .select_from(
+                            AgentExecutionRecordModel,
+                        )
+                        .where(AgentExecutionRecordModel.status == "blocked"),
+                    )
+                ).scalar() or 0
             except Exception:
                 pass
 

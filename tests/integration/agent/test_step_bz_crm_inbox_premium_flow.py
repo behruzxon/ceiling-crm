@@ -1,4 +1,5 @@
 """Integration tests for Step BZ — CRM Inbox Premium flow."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,12 +9,15 @@ class TestPremiumLayout:
     def test_vp_kpi_grid(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "vp-kpi-grid" in c
+
     def test_vp_card(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "vp-card" in c
+
     def test_vp_table(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "vp-table" in c
+
     def test_vp_badge(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "vp-badge" in c
@@ -24,6 +28,7 @@ class TestLivePollingPreserved:
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "fetchLiveSummary" in c
         assert "setInterval" in c
+
     def test_url(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "live-summary" in c
@@ -33,9 +38,11 @@ class TestFiltersPreserved:
     def test_data_status(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "data-status" in c
+
     def test_data_temp(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "data-temp" in c
+
     def test_hidden_by_filter(self):
         c = Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
         assert "hidden-by-filter" in c
@@ -70,10 +77,15 @@ class TestMobile:
 class TestSmoke:
     def test_api(self):
         from apps.api.main import app
+
         assert app is not None
+
     def test_web(self):
         from apps.web.main import app
+
         assert app is not None
+
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

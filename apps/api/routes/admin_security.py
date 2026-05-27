@@ -2,6 +2,7 @@
 Admin Security Audit Dashboard API endpoints.
 Read-only — no mutations.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
@@ -14,9 +15,12 @@ async def security_dashboard(
     hours: int = Query(24, ge=1, le=720),
 ) -> dict:
     from core.services.admin_security_audit_service import AdminSecurityAuditService
+
     svc = AdminSecurityAuditService
     dashboard = svc.build_security_dashboard(
-        login_attempts=[], sessions=[], audit_entries=[],
+        login_attempts=[],
+        sessions=[],
+        audit_entries=[],
         period_hours=hours,
     )
     return {
@@ -83,6 +87,7 @@ async def suspicious_activity(
     hours: int = Query(24, ge=1, le=720),
 ) -> dict:
     from core.services.admin_security_audit_service import AdminSecurityAuditService
+
     svc = AdminSecurityAuditService
     from core.services.admin_security_audit_service import (
         LoginAttemptMetrics,
@@ -90,9 +95,12 @@ async def suspicious_activity(
         SensitiveActionMetrics,
         SessionMetrics,
     )
+
     indicators = svc.detect_suspicious_activity(
-        LoginAttemptMetrics(), SessionMetrics(),
-        PermissionDeniedMetrics(), SensitiveActionMetrics(),
+        LoginAttemptMetrics(),
+        SessionMetrics(),
+        PermissionDeniedMetrics(),
+        SensitiveActionMetrics(),
     )
     return {
         "indicators": [_indicator_to_dict(i) for i in indicators],
@@ -103,14 +111,17 @@ async def suspicious_activity(
 
 def _metrics_to_dict(obj: object) -> dict:
     from dataclasses import asdict
+
     return asdict(obj)  # type: ignore[arg-type]
 
 
 def _indicator_to_dict(obj: object) -> dict:
     from dataclasses import asdict
+
     return asdict(obj)  # type: ignore[arg-type]
 
 
 def _rec_to_dict(obj: object) -> dict:
     from dataclasses import asdict
+
     return asdict(obj)  # type: ignore[arg-type]

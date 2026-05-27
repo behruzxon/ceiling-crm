@@ -1,4 +1,5 @@
 """Tests for Step T — AgentMetricsService."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -67,7 +68,8 @@ class TestHealthComputation:
 
     def test_red_overrides_yellow(self):
         h = svc.compute_health(
-            pending_due=25, failed_24h=25,
+            pending_due=25,
+            failed_24h=25,
         )
         assert h.status == "red"
 
@@ -183,7 +185,9 @@ class TestJourneyMetrics:
     async def test_empty_db_returns_zeros(self):
         session = AsyncMock()
         session.execute = AsyncMock(
-            return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
+            return_value=MagicMock(
+                scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])
+            ),
         )
         s = AgentMetricsService(session)
         j = await s.get_journey_metrics()
@@ -207,7 +211,9 @@ class TestLeadMetrics:
     async def test_empty_db_returns_zeros(self):
         session = AsyncMock()
         session.execute = AsyncMock(
-            return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
+            return_value=MagicMock(
+                scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])
+            ),
         )
         s = AgentMetricsService(session)
         l = await s.get_lead_metrics()
@@ -231,7 +237,9 @@ class TestFollowupMetrics:
     async def test_empty_db(self):
         session = AsyncMock()
         session.execute = AsyncMock(
-            return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
+            return_value=MagicMock(
+                scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])
+            ),
         )
         s = AgentMetricsService(session)
         f = await s.get_followup_metrics()
@@ -352,14 +360,17 @@ class TestOverview:
 class TestDI:
     def test_di_importable(self):
         from infrastructure.di import get_agent_metrics_service
+
         assert callable(get_agent_metrics_service)
 
     def test_service_importable(self):
         from core.services.agent_metrics_service import AgentMetricsService
+
         assert AgentMetricsService is not None
 
     def test_schemas_importable(self):
         from core.schemas.agent_metrics import AgentMetricsOverview
+
         assert AgentMetricsOverview is not None
 
 
@@ -417,16 +428,21 @@ class TestReadOnly:
 class TestWithData:
     def test_health_multiple_issues(self):
         h = svc.compute_health(
-            pending_due=30, failed_24h=25, expired_approvals=15,
-            execution_failures=12, stale_followups=2,
+            pending_due=30,
+            failed_24h=25,
+            expired_approvals=15,
+            execution_failures=12,
+            stale_followups=2,
         )
         assert h.status == "red"
         assert len(h.warnings) >= 2
 
     def test_health_stores_values(self):
         h = svc.compute_health(
-            pending_due=5, failed_24h=3,
-            expired_approvals=2, execution_failures=1,
+            pending_due=5,
+            failed_24h=3,
+            expired_approvals=2,
+            execution_failures=1,
         )
         assert h.pending_followups_due == 5
         assert h.failed_followups_24h == 3
@@ -453,13 +469,21 @@ class TestSchemaWithData:
 
     def test_lead_with_temps(self):
         l = LeadMetrics(
-            total_memories=100, hot_count=20, warm_count=50, cold_count=30,
+            total_memories=100,
+            hot_count=20,
+            warm_count=50,
+            cold_count=30,
         )
         assert l.hot_count + l.warm_count + l.cold_count == 100
 
     def test_followup_with_statuses(self):
         f = FollowupMetrics(
-            total=50, pending=10, sent=30, cancelled=5, failed=3, skipped=2,
+            total=50,
+            pending=10,
+            sent=30,
+            cancelled=5,
+            failed=3,
+            skipped=2,
         )
         assert f.total == 50
         assert f.pending == 10
@@ -495,8 +519,10 @@ class TestSchemaWithData:
 class TestHealthEdgeCases:
     def test_all_zeros_green(self):
         h = svc.compute_health(
-            pending_due=0, failed_24h=0,
-            expired_approvals=0, execution_failures=0,
+            pending_due=0,
+            failed_24h=0,
+            expired_approvals=0,
+            execution_failures=0,
             stale_followups=0,
         )
         assert h.status == "green"
@@ -523,8 +549,10 @@ class TestHealthEdgeCases:
 
     def test_large_numbers_red(self):
         h = svc.compute_health(
-            pending_due=1000, failed_24h=500,
-            expired_approvals=200, execution_failures=100,
+            pending_due=1000,
+            failed_24h=500,
+            expired_approvals=200,
+            execution_failures=100,
             stale_followups=50,
         )
         assert h.status == "red"
@@ -546,19 +574,26 @@ class TestNonRegression:
         from core.services.agent_execution_sandbox_service import (
             AgentExecutionSandboxService,
         )
+
         assert AgentExecutionSandboxService is not None
 
     def test_orchestrator_still_works(self):
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"
 
     def test_signal_service_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("narxi qancha")
         assert sig.intent == "wants_price"
 
@@ -566,14 +601,19 @@ class TestNonRegression:
         from core.services.conversation_policy_service import (
             ConversationPolicyService,
         )
+
         p = ConversationPolicyService.evaluate(
-            {"followup_enabled": True, "lead_temperature": "warm",
-             "memory_data": {"last_intent": "wants_price"}},
+            {
+                "followup_enabled": True,
+                "lead_temperature": "warm",
+                "memory_data": {"last_intent": "wants_price"},
+            },
         )
         assert p.policy_action == "reply_now"
 
     def test_offer_still_works(self):
         from core.services.dynamic_offer_service import DynamicOfferService
+
         o = DynamicOfferService.choose_offer(
             {"lead_temperature": "warm", "memory_data": {"last_intent": "wants_price"}},
         )
@@ -583,6 +623,7 @@ class TestNonRegression:
         from core.services.text_normalization_service import (
             TextNormalizationService,
         )
+
         r = TextNormalizationService.normalize("нархи қанча")
         assert "narxi" in r.latin
 
@@ -590,4 +631,5 @@ class TestNonRegression:
         from core.services.agent_execution_queue_service import (
             AgentExecutionQueueService,
         )
+
         assert callable(AgentExecutionQueueService.can_execute)

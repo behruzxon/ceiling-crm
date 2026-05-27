@@ -1,4 +1,5 @@
 """Tests for Step CN — Price Knowledge Consistency."""
+
 from __future__ import annotations
 
 from pathlib import Path

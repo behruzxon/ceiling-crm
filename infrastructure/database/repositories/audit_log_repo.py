@@ -1,4 +1,5 @@
 """Simple write-only repository for audit_logs."""
+
 from __future__ import annotations
 
 from typing import Any

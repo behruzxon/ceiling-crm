@@ -1,4 +1,5 @@
 """Tests for Step M — DynamicOfferService (rule-based offer engine)."""
+
 from __future__ import annotations
 
 import pytest
@@ -294,8 +295,11 @@ class TestValidation:
 
     def test_reject_eng_arzon_hint(self):
         offer = DynamicOffer(
-            offer_type="test", cta="test", priority="low",
-            confidence_score=50, reason="test",
+            offer_type="test",
+            cta="test",
+            priority="low",
+            confidence_score=50,
+            reason="test",
             message_hint="Eng arzon variant",
         )
         ok, reason = svc.validate_offer(offer)
@@ -304,8 +308,11 @@ class TestValidation:
 
     def test_reject_bugun_qilamiz_hint(self):
         offer = DynamicOffer(
-            offer_type="test", cta="test", priority="low",
-            confidence_score=50, reason="test",
+            offer_type="test",
+            cta="test",
+            priority="low",
+            confidence_score=50,
+            reason="test",
             message_hint="Bugun qilamiz",
         )
         ok, reason = svc.validate_offer(offer)
@@ -354,10 +361,15 @@ class TestButtons:
 
 class TestConfidence:
     def test_high_confidence_with_many_signals(self):
-        offer = svc.choose_offer(_mem(
-            intent="wants_price", objection="price",
-            urgency="high", area=20.0, lead_score=80,
-        ))
+        offer = svc.choose_offer(
+            _mem(
+                intent="wants_price",
+                objection="price",
+                urgency="high",
+                area=20.0,
+                lead_score=80,
+            )
+        )
         assert offer.confidence_score >= 70
 
     def test_low_confidence_unclear(self):
@@ -371,6 +383,7 @@ class TestConfidence:
 class TestDecisionEngineIntegration:
     def test_evaluate_with_offer_returns_tuple(self):
         from core.services.agent_decision_engine import evaluate_with_offer
+
         memory = {"followup_enabled": True, "memory_data": {}}
         decision, offer = evaluate_with_offer(memory, [])
         assert decision is not None
@@ -379,6 +392,7 @@ class TestDecisionEngineIntegration:
 
     def test_evaluate_still_works(self):
         from core.services.agent_decision_engine import evaluate
+
         memory = {"followup_enabled": True, "memory_data": {}}
         decision = evaluate(memory, [])
         assert decision.customer_state is not None
@@ -390,6 +404,7 @@ class TestDecisionEngineIntegration:
 class TestComposerIntegration:
     def test_build_prompt_with_offer_hint(self):
         from core.services.ai_message_composer_service import _build_user_prompt
+
         md = {
             "full_name": "Aziz",
             "last_dynamic_offer": {
@@ -401,12 +416,14 @@ class TestComposerIntegration:
 
     def test_build_prompt_without_offer(self):
         from core.services.ai_message_composer_service import _build_user_prompt
+
         md = {"full_name": "Aziz"}
         prompt = _build_user_prompt("catalog", md)
         assert "taklif" not in prompt.lower()
 
     def test_build_prompt_offer_warns_no_prices(self):
         from core.services.ai_message_composer_service import _build_user_prompt
+
         md = {
             "last_dynamic_offer": {
                 "message_hint": "Some hint",

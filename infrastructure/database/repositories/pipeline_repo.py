@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractPipelineRepository."""
+
 from __future__ import annotations
 
 from sqlalchemy import select

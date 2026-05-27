@@ -2,6 +2,7 @@
 Admin Users & Audit Log API endpoints.
 Feature-gated by ADMIN_DB_RBAC_ENABLED.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
@@ -48,6 +49,7 @@ async def get_admin_user(admin_id: str) -> dict:
 @router.post("")
 async def create_admin_user(body: AdminUserCreateBody) -> dict:
     from core.services.admin_user_service import AdminUserService
+
     svc = AdminUserService()
     err = svc.validate_admin_id(body.admin_id)
     if err:
@@ -73,6 +75,7 @@ async def create_admin_user(body: AdminUserCreateBody) -> dict:
 @router.put("/{admin_id}")
 async def update_admin_user(admin_id: str, body: AdminUserUpdateBody) -> dict:
     from core.services.admin_user_service import AdminUserService
+
     svc = AdminUserService()
     if body.role:
         err = svc.validate_role(body.role)
@@ -123,10 +126,12 @@ async def list_audit_logs(
 @audit_router.get("/actions")
 async def list_valid_actions() -> dict:
     from core.services.admin_audit_log_service import AdminAuditLogService
+
     return {"actions": list(AdminAuditLogService.get_valid_actions())}
 
 
 @audit_router.get("/statuses")
 async def list_valid_statuses() -> dict:
     from core.services.admin_audit_log_service import AdminAuditLogService
+
     return {"statuses": list(AdminAuditLogService.get_valid_statuses())}

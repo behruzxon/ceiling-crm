@@ -1,4 +1,5 @@
 """Pydantic response schemas for the pipeline/kanban API."""
+
 from __future__ import annotations
 
 from datetime import datetime

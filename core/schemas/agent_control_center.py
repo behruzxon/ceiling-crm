@@ -1,4 +1,5 @@
 """Frozen dataclasses for agent control center."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

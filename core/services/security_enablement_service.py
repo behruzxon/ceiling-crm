@@ -4,6 +4,7 @@ core.services.security_enablement_service
 Security staged enablement preflight checks. Pure functions.
 No DB I/O, no mutations, no secrets printed.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -24,53 +25,77 @@ _STAGE_DESCRIPTIONS = {
 
 _STAGE_FLAGS: dict[str, dict[str, bool]] = {
     "S0": {
-        "admin_rbac_enabled": False, "admin_db_rbac_enabled": False,
-        "admin_session_auth_enabled": False, "admin_csrf_enabled": False,
-        "admin_security_actions_enabled": False, "admin_ip_rules_enabled": False,
+        "admin_rbac_enabled": False,
+        "admin_db_rbac_enabled": False,
+        "admin_session_auth_enabled": False,
+        "admin_csrf_enabled": False,
+        "admin_security_actions_enabled": False,
+        "admin_ip_rules_enabled": False,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S1": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": False,
-        "admin_session_auth_enabled": False, "admin_csrf_enabled": False,
-        "admin_security_actions_enabled": False, "admin_ip_rules_enabled": False,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": False,
+        "admin_session_auth_enabled": False,
+        "admin_csrf_enabled": False,
+        "admin_security_actions_enabled": False,
+        "admin_ip_rules_enabled": False,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S2": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
         "admin_db_rbac_fallback_to_env": True,
-        "admin_session_auth_enabled": False, "admin_csrf_enabled": False,
-        "admin_security_actions_enabled": False, "admin_ip_rules_enabled": False,
+        "admin_session_auth_enabled": False,
+        "admin_csrf_enabled": False,
+        "admin_security_actions_enabled": False,
+        "admin_ip_rules_enabled": False,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S3": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
         "admin_db_rbac_fallback_to_env": True,
-        "admin_session_auth_enabled": True, "admin_csrf_enabled": False,
-        "admin_security_actions_enabled": False, "admin_ip_rules_enabled": False,
+        "admin_session_auth_enabled": True,
+        "admin_csrf_enabled": False,
+        "admin_security_actions_enabled": False,
+        "admin_ip_rules_enabled": False,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S4": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
-        "admin_session_auth_enabled": True, "admin_csrf_enabled": True,
-        "admin_security_actions_enabled": False, "admin_ip_rules_enabled": False,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
+        "admin_session_auth_enabled": True,
+        "admin_csrf_enabled": True,
+        "admin_security_actions_enabled": False,
+        "admin_ip_rules_enabled": False,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S5": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
-        "admin_session_auth_enabled": True, "admin_csrf_enabled": True,
-        "admin_security_actions_enabled": True, "admin_ip_rules_enabled": True,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
+        "admin_session_auth_enabled": True,
+        "admin_csrf_enabled": True,
+        "admin_security_actions_enabled": True,
+        "admin_ip_rules_enabled": True,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S6": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
-        "admin_session_auth_enabled": True, "admin_csrf_enabled": True,
-        "admin_security_actions_enabled": True, "admin_ip_rules_enabled": True,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
+        "admin_session_auth_enabled": True,
+        "admin_csrf_enabled": True,
+        "admin_security_actions_enabled": True,
+        "admin_ip_rules_enabled": True,
         "admin_ip_block_enforcement_enabled": False,
     },
     "S7": {
-        "admin_rbac_enabled": True, "admin_db_rbac_enabled": True,
-        "admin_session_auth_enabled": True, "admin_csrf_enabled": True,
-        "admin_security_actions_enabled": True, "admin_ip_rules_enabled": True,
+        "admin_rbac_enabled": True,
+        "admin_db_rbac_enabled": True,
+        "admin_session_auth_enabled": True,
+        "admin_csrf_enabled": True,
+        "admin_security_actions_enabled": True,
+        "admin_ip_rules_enabled": True,
         "admin_ip_block_enforcement_enabled": True,
     },
 }
@@ -147,66 +172,161 @@ class SecurityEnablementService:
         # Check 1: Session auth + secret key
         if settings.get("admin_session_auth_enabled"):
             if not has_secret_key:
-                checks.append(PreflightCheck("secret_key", "red", "Session auth enabled but no APP_SECRET_KEY", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "secret_key",
+                        "red",
+                        "Session auth enabled but no APP_SECRET_KEY",
+                        target_stage,
+                    )
+                )
                 blockers.append("Session auth requires APP_SECRET_KEY")
             else:
-                checks.append(PreflightCheck("secret_key", "green", "APP_SECRET_KEY present", target_stage))
+                checks.append(
+                    PreflightCheck("secret_key", "green", "APP_SECRET_KEY present", target_stage)
+                )
 
         # Check 2: DB RBAC + owner
         if settings.get("admin_db_rbac_enabled"):
             fallback = settings.get("admin_db_rbac_fallback_to_env", True)
             if not has_db_owner and not fallback:
-                checks.append(PreflightCheck("db_rbac_owner", "red", "DB RBAC enabled, no owner, fallback disabled — LOCKOUT RISK", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "db_rbac_owner",
+                        "red",
+                        "DB RBAC enabled, no owner, fallback disabled — LOCKOUT RISK",
+                        target_stage,
+                    )
+                )
                 blockers.append("DB RBAC without owner and without fallback = lockout")
             elif not has_db_owner and fallback:
-                checks.append(PreflightCheck("db_rbac_owner", "yellow", "DB RBAC enabled, no owner in DB — env fallback active", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "db_rbac_owner",
+                        "yellow",
+                        "DB RBAC enabled, no owner in DB — env fallback active",
+                        target_stage,
+                    )
+                )
                 warnings.append("No owner in admin_users DB — relying on env fallback")
             else:
-                checks.append(PreflightCheck("db_rbac_owner", "green", "DB RBAC enabled with owner in DB", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "db_rbac_owner", "green", "DB RBAC enabled with owner in DB", target_stage
+                    )
+                )
 
         # Check 3: CSRF + session auth
         if settings.get("admin_csrf_enabled") and not settings.get("admin_session_auth_enabled"):
-            checks.append(PreflightCheck("csrf_session", "red", "CSRF enabled but session auth disabled — CSRF useless", target_stage))
+            checks.append(
+                PreflightCheck(
+                    "csrf_session",
+                    "red",
+                    "CSRF enabled but session auth disabled — CSRF useless",
+                    target_stage,
+                )
+            )
             blockers.append("CSRF requires session auth to be enabled first")
         elif settings.get("admin_csrf_enabled"):
-            checks.append(PreflightCheck("csrf_session", "green", "CSRF enabled with session auth", target_stage))
+            checks.append(
+                PreflightCheck(
+                    "csrf_session", "green", "CSRF enabled with session auth", target_stage
+                )
+            )
 
         # Check 4: Security actions + audit
         if settings.get("admin_security_actions_enabled"):
             if not settings.get("admin_security_action_audit_enabled", True):
-                checks.append(PreflightCheck("actions_audit", "yellow", "Security actions enabled without audit logging", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "actions_audit",
+                        "yellow",
+                        "Security actions enabled without audit logging",
+                        target_stage,
+                    )
+                )
                 warnings.append("Security actions without audit = no accountability trail")
             else:
-                checks.append(PreflightCheck("actions_audit", "green", "Security actions with audit enabled", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "actions_audit",
+                        "green",
+                        "Security actions with audit enabled",
+                        target_stage,
+                    )
+                )
 
         # Check 5: IP enforcement + fallback
         if settings.get("admin_ip_block_enforcement_enabled"):
             if not settings.get("admin_db_rbac_fallback_to_env", True):
-                checks.append(PreflightCheck("ip_enforcement_fallback", "red", "IP enforcement ON without env fallback — lockout risk", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "ip_enforcement_fallback",
+                        "red",
+                        "IP enforcement ON without env fallback — lockout risk",
+                        target_stage,
+                    )
+                )
                 blockers.append("IP enforcement without env fallback = potential lockout")
             else:
-                checks.append(PreflightCheck("ip_enforcement_fallback", "green", "IP enforcement ON with env fallback", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "ip_enforcement_fallback",
+                        "green",
+                        "IP enforcement ON with env fallback",
+                        target_stage,
+                    )
+                )
 
         # Check 6: Secure cookie on localhost
-        if settings.get("admin_session_auth_enabled") and settings.get("admin_session_secure_cookie", True):
+        if settings.get("admin_session_auth_enabled") and settings.get(
+            "admin_session_secure_cookie", True
+        ):
             app_env = settings.get("app_env", "development")
             if app_env == "development":
-                checks.append(PreflightCheck("secure_cookie_dev", "yellow", "Secure cookie=true on development — may fail on HTTP", target_stage))
+                checks.append(
+                    PreflightCheck(
+                        "secure_cookie_dev",
+                        "yellow",
+                        "Secure cookie=true on development — may fail on HTTP",
+                        target_stage,
+                    )
+                )
                 warnings.append("Secure cookie on dev mode may block cookie setting over HTTP")
 
         # Check 7: Login max attempts
         max_attempts = settings.get("admin_login_max_attempts", 5)
         if max_attempts < 3:
-            checks.append(PreflightCheck("login_max_attempts", "yellow", f"Login max attempts={max_attempts} — easy lockout", target_stage))
+            checks.append(
+                PreflightCheck(
+                    "login_max_attempts",
+                    "yellow",
+                    f"Login max attempts={max_attempts} — easy lockout",
+                    target_stage,
+                )
+            )
             warnings.append(f"Login max attempts={max_attempts} is very low")
 
         # Check 8: All defaults = safe mode
-        if not any(settings.get(k) for k in [
-            "admin_rbac_enabled", "admin_db_rbac_enabled",
-            "admin_session_auth_enabled", "admin_csrf_enabled",
-            "admin_security_actions_enabled", "admin_ip_block_enforcement_enabled",
-        ]):
-            checks.append(PreflightCheck("safe_mode", "green", "All security features OFF — safe legacy mode", target_stage))
+        if not any(
+            settings.get(k)
+            for k in [
+                "admin_rbac_enabled",
+                "admin_db_rbac_enabled",
+                "admin_session_auth_enabled",
+                "admin_csrf_enabled",
+                "admin_security_actions_enabled",
+                "admin_ip_block_enforcement_enabled",
+            ]
+        ):
+            checks.append(
+                PreflightCheck(
+                    "safe_mode",
+                    "green",
+                    "All security features OFF — safe legacy mode",
+                    target_stage,
+                )
+            )
 
         overall = "red" if blockers else ("yellow" if warnings else "green")
         return PreflightReport(
@@ -247,11 +367,13 @@ class SecurityEnablementService:
         matrix: list[dict[str, Any]] = []
         for stage in _STAGES:
             flags = _STAGE_FLAGS[stage]
-            matrix.append({
-                "stage": stage,
-                "description": _STAGE_DESCRIPTIONS[stage],
-                "flags": flags,
-            })
+            matrix.append(
+                {
+                    "stage": stage,
+                    "description": _STAGE_DESCRIPTIONS[stage],
+                    "flags": flags,
+                }
+            )
         return matrix
 
     @staticmethod

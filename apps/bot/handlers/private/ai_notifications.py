@@ -6,6 +6,7 @@ Admin notification helpers and AI scoring persistence.
 Orchestrates deal probability, buyer type, revenue, conversation graph,
 and follow-up brain for the admin lead card.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,6 +22,7 @@ log = get_logger(__name__)
 
 # ── AI scoring -> lead persistence (non-fatal, fire-and-forget) ─────────────
 
+
 async def _update_lead_ai_scoring(
     *,
     user_id: int,
@@ -29,10 +31,12 @@ async def _update_lead_ai_scoring(
 ) -> None:
     """Find the latest lead for *user_id* and persist AI scoring. Never raises."""
     from shared.utils.lead_scoring import compute_next_followup
+
     try:
         factory = get_session_factory()
         async with factory() as session:
             from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+
             repo = PostgresLeadRepository(session)
             leads = await repo.list_by_user(user_id, limit=1)
             if not leads:
@@ -47,6 +51,7 @@ async def _update_lead_ai_scoring(
                     _save_ai_memory,
                 )
                 from core.services.followup_brain_service import decide_follow_up
+
                 _mem = await _load_ai_memory(user_id)
                 _brain = decide_follow_up(
                     score=lead.score or 0,
@@ -63,9 +68,8 @@ async def _update_lead_ai_scoring(
                 if _brain.should_follow_up and _brain.follow_up_delay_minutes:
                     from datetime import datetime as _dt
                     from datetime import timedelta as _td
-                    next_fu = _dt.now(UTC) + _td(
-                        minutes=_brain.follow_up_delay_minutes
-                    )
+
+                    next_fu = _dt.now(UTC) + _td(minutes=_brain.follow_up_delay_minutes)
                     _mem["last_fu_type"] = _brain.follow_up_type
                     asyncio.create_task(_save_ai_memory(user_id, _mem))
             except Exception:
@@ -86,6 +90,7 @@ async def _update_lead_ai_scoring(
 
 
 # ── Phone capture helper ────────────────────────────────────────────────────
+
 
 async def _notify_phone_captured(
     *,
@@ -114,6 +119,7 @@ async def _notify_phone_captured(
 
 
 # ── AI lead collected (full intelligence stack) ─────────────────────────────
+
 
 async def _notify_ai_lead_collected(
     *,
@@ -171,9 +177,11 @@ async def _notify_ai_lead_collected(
             from core.services.conversation_intelligence_service import (
                 analyze_conversation,
             )
+
             _mins = 0
             if last_activity_ts:
                 import time as _time
+
                 _mins = max(0, (int(_time.time()) - int(last_activity_ts)) // 60)
             conv_health = analyze_conversation(
                 score=score,
@@ -185,7 +193,8 @@ async def _notify_ai_lead_collected(
                 closing_confidence=closing_confidence,
                 buyer_type=(
                     brain.buyer_profile.buyer_type  # type: ignore[union-attr]
-                    if brain.buyer_profile else None
+                    if brain.buyer_profile
+                    else None
                 ),
                 last_negotiation_tactic=negotiation_tactic,
                 negotiation_escalated=negotiation_escalated,
@@ -231,6 +240,7 @@ async def _notify_ai_lead_collected(
 
 
 # ── Warm interest notification ──────────────────────────────────────────────
+
 
 async def _notify_warm_interest(
     *,

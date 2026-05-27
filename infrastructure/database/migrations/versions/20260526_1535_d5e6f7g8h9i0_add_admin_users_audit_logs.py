@@ -2,6 +2,7 @@
 Revision ID: d5e6f7g8h9i0
 Revises: c4d5e6f7g8h9
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -10,8 +11,10 @@ down_revision = "c4d5e6f7g8h9"
 branch_labels = None
 depends_on = None
 
+
 def upgrade() -> None:
-    op.create_table("admin_users",
+    op.create_table(
+        "admin_users",
         sa.Column("id", sa.BigInteger, sa.Identity(), primary_key=True),
         sa.Column("admin_id", sa.String(100), nullable=False, unique=True),
         sa.Column("display_name", sa.String(128), nullable=True),
@@ -28,7 +31,8 @@ def upgrade() -> None:
     )
     op.create_index("ix_admin_user_role", "admin_users", ["role"])
     op.create_index("ix_admin_user_active", "admin_users", ["is_active"])
-    op.create_table("admin_audit_logs",
+    op.create_table(
+        "admin_audit_logs",
         sa.Column("id", sa.BigInteger, sa.Identity(), primary_key=True),
         sa.Column("actor_admin_id", sa.String(100), nullable=True),
         sa.Column("actor_role", sa.String(20), nullable=True),
@@ -43,6 +47,7 @@ def upgrade() -> None:
     op.create_index("ix_admin_audit_actor", "admin_audit_logs", ["actor_admin_id", "created_at"])
     op.create_index("ix_admin_audit_action", "admin_audit_logs", ["action", "created_at"])
     op.create_index("ix_admin_audit_status", "admin_audit_logs", ["status", "created_at"])
+
 
 def downgrade() -> None:
     op.drop_index("ix_admin_audit_status", table_name="admin_audit_logs")

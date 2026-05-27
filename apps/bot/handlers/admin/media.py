@@ -2,6 +2,7 @@
 Admin media upload handler.
 Accepts photo/video/document uploads from admin users.
 """
+
 from __future__ import annotations
 
 import io

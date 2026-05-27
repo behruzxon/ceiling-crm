@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractBlockedChatRepository."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -28,9 +29,7 @@ class PostgresBlockedChatRepository(AbstractBlockedChatRepository):
         if not chat_ids:
             return []
 
-        stmt = sa.select(BlockedChatModel.chat_id).where(
-            BlockedChatModel.chat_id.in_(chat_ids)
-        )
+        stmt = sa.select(BlockedChatModel.chat_id).where(BlockedChatModel.chat_id.in_(chat_ids))
         result = await self._session.execute(stmt)
         blocked: frozenset[int] = frozenset(result.scalars().all())
         return [cid for cid in chat_ids if cid not in blocked]

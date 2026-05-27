@@ -3,18 +3,33 @@ core.services.crm_segment_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Contact segmentation. Pure functions.
 """
+
 from __future__ import annotations
 
 from typing import Any
 
-_VALID_SEGMENTS = frozenset({
-    "hot_leads", "unanswered", "overdue", "critical_sla",
-    "price_interested", "catalog_viewed", "phone_shared",
-    "operator_requested", "order_started", "objection_price",
-    "objection_trust", "inactive_3_days", "inactive_7_days",
-    "stopped_users", "location_known", "area_known",
-    "ceiling_type_known", "marketing_allowed",
-})
+_VALID_SEGMENTS = frozenset(
+    {
+        "hot_leads",
+        "unanswered",
+        "overdue",
+        "critical_sla",
+        "price_interested",
+        "catalog_viewed",
+        "phone_shared",
+        "operator_requested",
+        "order_started",
+        "objection_price",
+        "objection_trust",
+        "inactive_3_days",
+        "inactive_7_days",
+        "stopped_users",
+        "location_known",
+        "area_known",
+        "ceiling_type_known",
+        "marketing_allowed",
+    }
+)
 
 _NEXT_OFFERS: dict[str, str] = {
     "objection_price": "Arzonroq variant yoki to'lov rejasi taklif qiling",
@@ -83,8 +98,15 @@ class CRMSegmentService:
     @staticmethod
     def build_next_best_offer(contact: dict[str, Any]) -> str | None:
         segs = CRMSegmentService.build_contact_segments(contact)
-        for seg in ("operator_requested", "phone_shared", "objection_price",
-                     "area_known", "price_interested", "catalog_viewed", "order_started"):
+        for seg in (
+            "operator_requested",
+            "phone_shared",
+            "objection_price",
+            "area_known",
+            "price_interested",
+            "catalog_viewed",
+            "order_started",
+        ):
             if seg in segs and seg in _NEXT_OFFERS:
                 return _NEXT_OFFERS[seg]
         return None

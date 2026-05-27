@@ -1,4 +1,5 @@
 """Unit tests for Quote domain model computed fields."""
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -10,7 +11,8 @@ from shared.constants.enums import CeilingCategory
 def test_quote_base_total():
     """Verify base_total = base_price × area × modifier."""
     quote = Quote(
-        id=1, lead_id=1,
+        id=1,
+        lead_id=1,
         category=CeilingCategory.HI_TECH,
         base_price_per_sqm=Decimal("95000"),
         area_sqm=Decimal("20"),
@@ -24,7 +26,8 @@ def test_quote_base_total():
 def test_quote_total_with_discount():
     """Verify discount applies correctly."""
     quote = Quote(
-        id=1, lead_id=1,
+        id=1,
+        lead_id=1,
         category=CeilingCategory.ODNOTONNY,
         base_price_per_sqm=Decimal("45000"),
         area_sqm=Decimal("10"),

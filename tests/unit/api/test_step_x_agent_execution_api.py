@@ -1,4 +1,5 @@
 """Tests for Step X — Agent execution approve/reject API endpoints."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -57,30 +58,35 @@ def _rec(
 class TestRouteAvailability:
     def test_detail_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         paths = [r.path for r in app.routes]
         assert any("{execution_id}" in p and "executions" in p for p in paths)
 
     def test_approve_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         paths = [r.path for r in app.routes]
         assert any("approve" in p for p in paths)
 
     def test_reject_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         paths = [r.path for r in app.routes]
         assert any("reject" in p for p in paths)
 
     def test_expire_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         paths = [r.path for r in app.routes]
         assert any("expire" in p for p in paths)
 
     def test_router_has_auth_dependency(self):
         from apps.api.routes.admin_agent_metrics import router
+
         assert len(router.dependencies) > 0
 
 
@@ -277,9 +283,10 @@ class TestRejectLifecycle:
 class TestSettings:
     def test_api_approval_default_false(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_execution_api_approval_enabled"
-        ].default is False
+
+        assert (
+            BusinessSettings.model_fields["agent_execution_api_approval_enabled"].default is False
+        )
 
     def test_check_approval_raises_when_disabled(self):
         from unittest.mock import patch
@@ -287,6 +294,7 @@ class TestSettings:
         from fastapi import HTTPException
 
         from apps.api.routes.admin_agent_metrics import _check_approval_enabled
+
         with patch("shared.config.get_settings") as mock:
             mock.return_value.business.agent_execution_api_approval_enabled = False
             with pytest.raises(HTTPException) as exc_info:
@@ -302,26 +310,31 @@ class TestSettings:
 class TestFrontend:
     def test_template_has_approve_button(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "approveExec" in html
 
     def test_template_has_reject_button(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "rejectExec" in html
 
     def test_template_has_confirm_dialog(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "confirm" in html
 
     def test_template_has_reason_prompt(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "prompt" in html
 
     def test_template_no_raw_payload(self):
         from pathlib import Path
+
         html = Path("apps/web/templates/agent.html").read_text(encoding="utf-8")
         assert "payload_json" not in html
 
@@ -334,16 +347,19 @@ class TestFrontend:
 class TestNonRegression:
     def test_pending_endpoint_still_works(self):
         from apps.api.routes.admin_agent_metrics import router
+
         route_paths = [r.path for r in router.routes]
         assert any("pending" in p for p in route_paths)
 
     def test_overview_endpoint_still_works(self):
         from apps.api.routes.admin_agent_metrics import router
+
         route_paths = [r.path for r in router.routes]
         assert any("overview" in p for p in route_paths)
 
     def test_health_endpoint_still_works(self):
         from apps.api.routes.admin_agent_metrics import router
+
         route_paths = [r.path for r in router.routes]
         assert any("health" in p for p in route_paths)
 
@@ -358,10 +374,12 @@ class TestNonRegression:
         from core.services.approved_execution_sender_service import (
             ApprovedExecutionSenderService,
         )
+
         assert ApprovedExecutionSenderService is not None
 
     def test_signal_service_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("narxi qancha")
         assert sig.intent == "wants_price"
 
@@ -369,7 +387,12 @@ class TestNonRegression:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"

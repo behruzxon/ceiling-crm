@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models for admin_sessions and admin_login_attempts."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,8 +19,12 @@ class AdminSessionModel(Base):
     status: Mapped[str] = mapped_column(sa.String(20), server_default="active")
     ip_address: Mapped[str | None] = mapped_column(sa.String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
-    last_seen_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
     expires_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
@@ -37,7 +42,9 @@ class AdminLoginAttemptModel(Base):
     ip_address: Mapped[str | None] = mapped_column(sa.String(45), nullable=True)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     reason: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     __table_args__ = (
         sa.Index("ix_admin_login_admin_created", "admin_id", "created_at"),

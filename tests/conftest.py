@@ -1,4 +1,5 @@
 """Shared pytest fixtures for all test layers."""
+
 from __future__ import annotations
 
 import os
@@ -51,6 +52,7 @@ def mock_event_bus() -> MagicMock:
 def mock_admin_group_repo() -> AsyncMock:
     """Mock AbstractAdminGroupRepository for service tests."""
     from core.repositories.admin_group_repo import AbstractAdminGroupRepository
+
     return AsyncMock(spec=AbstractAdminGroupRepository)
 
 
@@ -58,6 +60,7 @@ def mock_admin_group_repo() -> AsyncMock:
 def mock_broadcast_repo() -> AsyncMock:
     """Mock AbstractBroadcastRepository for broadcast service tests."""
     from core.repositories.broadcast_repo import AbstractBroadcastRepository
+
     return AsyncMock(spec=AbstractBroadcastRepository)
 
 

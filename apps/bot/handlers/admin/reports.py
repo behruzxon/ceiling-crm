@@ -2,6 +2,7 @@
 Admin analytics and reports handler.
 Generate and export business reports.
 """
+
 from __future__ import annotations
 
 from aiogram import Router

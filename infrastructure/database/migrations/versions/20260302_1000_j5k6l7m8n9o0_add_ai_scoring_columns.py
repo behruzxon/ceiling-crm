@@ -14,6 +14,7 @@ ai_conversations table:
 
 Both columns are nullable so existing rows and partial AI responses are unaffected.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

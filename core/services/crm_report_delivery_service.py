@@ -3,6 +3,7 @@ core.services.crm_report_delivery_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Daily report delivery validation + approval. Pure functions.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -67,11 +68,7 @@ class CRMReportDeliveryService:
         if message_text and _BOT_TOKEN_RE.search(message_text):
             blockers.append("bot_token_in_message")
 
-        needs_approval = (
-            channel in ("telegram", "email")
-            and approval_required
-            and not is_approved
-        )
+        needs_approval = channel in ("telegram", "email") and approval_required and not is_approved
 
         preview = (message_text or "")[:2000]
 

@@ -7,6 +7,7 @@ Read-only — no DB mutations, no sends, no secret printing.
 Usage:
     python scripts/agent_preflight_check.py
 """
+
 from __future__ import annotations
 
 import os
@@ -71,31 +72,24 @@ def run_preflight() -> CheckResult:
 
     # ── Canary mode without IDs ──────────────────────────────────────
     if execution_mode == "canary" and not canary_ids:
-        result.errors.append(
-            "FAIL: AGENT_EXECUTION_MODE=canary but CANARY_USER_IDS empty"
-        )
+        result.errors.append("FAIL: AGENT_EXECUTION_MODE=canary but CANARY_USER_IDS empty")
         result.status = "red"
 
     # ── Live sender without queue ────────────────────────────────────
     if live_sender and not queue_enabled:
         result.errors.append(
-            "FAIL: LIVE_SENDER enabled but QUEUE disabled — "
-            "approved records won't be created"
+            "FAIL: LIVE_SENDER enabled but QUEUE disabled — " "approved records won't be created"
         )
         result.status = "red"
 
     # ── Auto execute without live sender ─────────────────────────────
     if auto_execute and not live_sender:
-        result.errors.append(
-            "FAIL: AUTO_EXECUTE_APPROVED=true but LIVE_SENDER disabled"
-        )
+        result.errors.append("FAIL: AUTO_EXECUTE_APPROVED=true but LIVE_SENDER disabled")
         result.status = "red"
 
     # ── Admin notify without admin group ─────────────────────────────
     if admin_notify and not admin_group:
-        result.warnings.append(
-            "WARN: APPROVAL_ADMIN_NOTIFY=true but BOT_ADMIN_GROUP_ID not set"
-        )
+        result.warnings.append("WARN: APPROVAL_ADMIN_NOTIFY=true but BOT_ADMIN_GROUP_ID not set")
         if result.status == "green":
             result.status = "yellow"
 
@@ -110,9 +104,7 @@ def run_preflight() -> CheckResult:
 
     # ── Live mode safety ─────────────────────────────────────────────
     if execution_mode == "live" and live_sender and auto_execute:
-        result.warnings.append(
-            "WARN: Full LIVE mode — agent can send messages autonomously"
-        )
+        result.warnings.append("WARN: Full LIVE mode — agent can send messages autonomously")
         if result.status == "green":
             result.status = "yellow"
 
@@ -133,9 +125,7 @@ def run_preflight() -> CheckResult:
 
 
 def print_result(result: CheckResult) -> None:
-    status_icon = {"green": "🟢", "yellow": "🟡", "red": "🔴"}.get(
-        result.status, "⚪"
-    )
+    status_icon = {"green": "🟢", "yellow": "🟡", "red": "🔴"}.get(result.status, "⚪")
     print(f"\n{status_icon} Agent Preflight: {result.status.upper()}\n")
     for c in result.checks:
         print(f"  {c}")

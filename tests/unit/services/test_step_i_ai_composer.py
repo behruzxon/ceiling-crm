@@ -1,4 +1,5 @@
 """Step I tests: AI message composer, validation, fallback, prompts."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,21 +19,25 @@ from core.services.followup_scheduler_service import FollowupSchedulerService
 class TestComposerFlags:
     def test_flag_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_ai_composer_enabled is False
 
     def test_model_default(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_ai_composer_model == "gpt-4o-mini"
 
     def test_timeout_default(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_ai_composer_timeout_seconds == 8
 
     def test_max_tokens_default(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_ai_composer_max_tokens == 180
 
@@ -180,10 +185,13 @@ class TestValidation:
 
 class TestPromptBuilding:
     def test_catalog_prompt_includes_designs(self) -> None:
-        prompt = _build_user_prompt("catalog", {
-            "full_name": "Bobur",
-            "interested_designs": ["gulli", "mramor"],
-        })
+        prompt = _build_user_prompt(
+            "catalog",
+            {
+                "full_name": "Bobur",
+                "interested_designs": ["gulli", "mramor"],
+            },
+        )
         assert "gulli" in prompt
         assert "mramor" in prompt
         assert "Bobur" in prompt
@@ -193,27 +201,36 @@ class TestPromptBuilding:
         assert "kvadrat" in prompt.lower() or "narx" in prompt.lower()
 
     def test_price_prompt_includes_area(self) -> None:
-        prompt = _build_user_prompt("price", {
-            "area_m2": 25.0,
-            "estimated_price": 5_000_000,
-            "ceiling_type": "gulli",
-        })
+        prompt = _build_user_prompt(
+            "price",
+            {
+                "area_m2": 25.0,
+                "estimated_price": 5_000_000,
+                "ceiling_type": "gulli",
+            },
+        )
         assert "25" in prompt
         assert "5,000,000" in prompt
         assert "gulli" in prompt
 
     def test_abandoned_prompt_no_phone(self) -> None:
-        prompt = _build_user_prompt("abandoned_order", {
-            "full_name": "Ali",
-        })
+        prompt = _build_user_prompt(
+            "abandoned_order",
+            {
+                "full_name": "Ali",
+            },
+        )
         assert "Ali" in prompt
         assert "yo'q" in prompt.lower()
 
     def test_abandoned_prompt_with_phone(self) -> None:
-        prompt = _build_user_prompt("abandoned_order", {
-            "full_name": "Ali",
-            "phone_masked": "+998**…**67",
-        })
+        prompt = _build_user_prompt(
+            "abandoned_order",
+            {
+                "full_name": "Ali",
+                "phone_masked": "+998**…**67",
+            },
+        )
         assert "bor" in prompt.lower()
 
 
@@ -234,7 +251,8 @@ class TestBuildMessageAI:
             return_value="AI text",
         ):
             text, buttons = await FollowupSchedulerService.build_message_ai(
-                "price", memory_data={"full_name": "Test"},
+                "price",
+                memory_data={"full_name": "Test"},
             )
         assert len(buttons) == 3
 
@@ -245,7 +263,8 @@ class TestBuildMessageAI:
             side_effect=RuntimeError("fail"),
         ):
             text, buttons = await FollowupSchedulerService.build_message_ai(
-                "abandoned_order", memory_data={"full_name": "X"},
+                "abandoned_order",
+                memory_data={"full_name": "X"},
             )
         assert "Buyurtma" in text or "davom" in text
         assert len(buttons) == 3

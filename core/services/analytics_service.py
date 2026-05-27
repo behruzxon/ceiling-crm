@@ -1,6 +1,7 @@
 """
 AnalyticsService — business metrics and reporting.
 """
+
 from __future__ import annotations
 
 from datetime import date

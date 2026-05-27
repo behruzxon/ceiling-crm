@@ -10,6 +10,7 @@ Displays company info with a four-button CTA inline keyboard:
   - 📞 Operator         → contact_operator (handled by promotions.py)
   - ✅ Zakaz berish     → order_start    (handled by promotions.py)
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -50,15 +51,16 @@ _CATALOG_INTRO: str = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 def _about_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📂 Katalog",           callback_data="open_catalog")],
-            [InlineKeyboardButton(text="🧮 Narx kalkulyator",  callback_data="open_pricing")],
-            [InlineKeyboardButton(text="📞 Operator",          callback_data="contact_operator")],
-            [InlineKeyboardButton(text="✅ Zakaz berish",      callback_data="order_start")],
+            [InlineKeyboardButton(text="📂 Katalog", callback_data="open_catalog")],
+            [InlineKeyboardButton(text="🧮 Narx kalkulyator", callback_data="open_pricing")],
+            [InlineKeyboardButton(text="📞 Operator", callback_data="contact_operator")],
+            [InlineKeyboardButton(text="✅ Zakaz berish", callback_data="order_start")],
         ]
     )
 
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
+
 
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_ABOUT)
 async def cmd_about(message: Message, **data: object) -> None:
@@ -70,6 +72,7 @@ async def cmd_about(message: Message, **data: object) -> None:
 # ─── CTA callback ─────────────────────────────────────────────────────────────
 # open_pricing / order_start / contact_operator are registered in promotions.py
 # and will be matched there first (promotions_router is included before about_router).
+
 
 @router.callback_query(F.data == "open_catalog")
 async def cb_open_catalog(callback: CallbackQuery, **data: object) -> None:

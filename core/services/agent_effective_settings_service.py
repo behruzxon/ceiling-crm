@@ -4,6 +4,7 @@ core.services.agent_effective_settings_service
 Read-through settings service: runtime DB override → env → safe default.
 No writes, no secrets, fail-open to env on DB error.
 """
+
 from __future__ import annotations
 
 import time
@@ -31,6 +32,7 @@ _CACHE_TTL: float = 30.0
 def _env_settings() -> dict[str, Any]:
     try:
         from shared.config import get_settings
+
         biz = get_settings().business
         return {attr: getattr(biz, attr, None) for attr in dir(biz) if attr.startswith("agent_")}
     except Exception:
@@ -45,6 +47,7 @@ class AgentEffectiveSettingsService:
         self._runtime_enabled: bool = False
         try:
             from shared.config import get_settings
+
             biz = get_settings().business
             self._runtime_enabled = getattr(biz, "agent_runtime_settings_enabled", False)
         except Exception:
@@ -179,6 +182,7 @@ async def load_runtime_overrides_from_db(session: Any) -> dict[str, Any]:
         from infrastructure.database.models.agent_runtime_setting import (
             AgentRuntimeSettingModel,
         )
+
         stmt = sa.select(AgentRuntimeSettingModel).where(
             AgentRuntimeSettingModel.is_active == sa.true(),
         )

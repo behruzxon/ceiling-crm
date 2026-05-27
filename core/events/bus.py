@@ -2,6 +2,7 @@
 In-process domain event bus.
 Decouples event emitters from event handlers.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,6 +22,7 @@ Handler = Callable[..., Coroutine[Any, Any, None]]
 @dataclass(frozen=True)
 class DomainEvent:
     """Base class for all domain events."""
+
     occurred_at: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -68,10 +70,14 @@ class EventBus:
 
     def subscribe(self, event_type: type) -> Callable[[Handler], Handler]:
         """Decorator to register a handler for an event type."""
+
         def decorator(handler: Handler) -> Handler:
             self._handlers[event_type].append(handler)
-            log.debug("event_handler_registered", event=event_type.__name__, handler=handler.__name__)
+            log.debug(
+                "event_handler_registered", event=event_type.__name__, handler=handler.__name__
+            )
             return handler
+
         return decorator
 
     async def emit(self, event: DomainEvent) -> None:

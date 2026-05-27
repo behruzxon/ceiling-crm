@@ -32,6 +32,7 @@ Safety notes
 - Sends at most once per user per day.
 - Skips non-CLIENT roles via DB lookup (rare; most users are clients).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -53,9 +54,9 @@ log = get_logger(__name__)
 
 _task: Task | None = None  # type: ignore[type-arg]
 
-_CHECK_INTERVAL_SEC = 60       # how often the task wakes up
-_INACTIVE_MIN_SEC   = 300      # 5 min — minimum inactivity before CTA
-_INACTIVE_MAX_SEC   = 600      # 10 min — maximum inactivity window to scan
+_CHECK_INTERVAL_SEC = 60  # how often the task wakes up
+_INACTIVE_MIN_SEC = 300  # 5 min — minimum inactivity before CTA
+_INACTIVE_MAX_SEC = 600  # 10 min — maximum inactivity window to scan
 
 
 # ── Core loop ──────────────────────────────────────────────────────────────────

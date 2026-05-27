@@ -15,6 +15,7 @@ Handlers:
   Message(PipelineStates.waiting_lost_reason)
                                  — collect custom LOST reason text
 """
+
 from __future__ import annotations
 
 from zoneinfo import ZoneInfo
@@ -62,16 +63,16 @@ _LINEAR_ORDER: list[PipelineStage] = [
 
 # Preset LOST reasons
 _LOST_REASONS: list[tuple[str, str]] = [
-    ("no_budget",   "💸 Byudjet yo'q"),
-    ("competitor",  "🏪 Raqobatchi tanladi"),
-    ("no_answer",   "📵 Javob yo'q"),
-    ("postponed",   "⏳ Kechiktirildi"),
+    ("no_budget", "💸 Byudjet yo'q"),
+    ("competitor", "🏪 Raqobatchi tanladi"),
+    ("no_answer", "📵 Javob yo'q"),
+    ("postponed", "⏳ Kechiktirildi"),
 ]
 _LOST_REASON_TEXT: dict[str, str] = {
-    "no_budget":  "Byudjet yo'q",
+    "no_budget": "Byudjet yo'q",
     "competitor": "Raqobatchi tanladi",
-    "no_answer":  "Javob yo'q",
-    "postponed":  "Kechiktirildi",
+    "no_answer": "Javob yo'q",
+    "postponed": "Kechiktirildi",
 }
 
 
@@ -108,6 +109,7 @@ async def _log_stage_action(
 
 # ── Legacy: show menu of valid next stages ────────────────────────────────────
 
+
 @router.callback_query(F.data.startswith("pipeline:advance:"))
 async def cb_advance_stage(callback: CallbackQuery, **data: object) -> None:
     """Show valid next stages for the lead (legacy menu approach)."""
@@ -133,10 +135,12 @@ async def cb_advance_stage(callback: CallbackQuery, **data: object) -> None:
             return
 
         buttons = [
-            [InlineKeyboardButton(
-                text=f"{STAGE_EMOJI.get(stage, '▪️')} {stage.value}",
-                callback_data=f"pipeline:do_advance:{lead_id}:{stage.value}",
-            )]
+            [
+                InlineKeyboardButton(
+                    text=f"{STAGE_EMOJI.get(stage, '▪️')} {stage.value}",
+                    callback_data=f"pipeline:do_advance:{lead_id}:{stage.value}",
+                )
+            ]
             for stage in valid_next
             if stage != PipelineStage.LOST
         ]
@@ -171,8 +175,7 @@ async def cb_do_advance(callback: CallbackQuery, **data: object) -> None:
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
-                f"✅ Lid #{lead_id} → {bold(new_stage.value)}\n"
-                f"/lead_{lead_id} — karta ko'rish"
+                f"✅ Lid #{lead_id} → {bold(new_stage.value)}\n" f"/lead_{lead_id} — karta ko'rish"
             )
             await callback.answer("Bosqich o'zgartirildi!")
         except InvalidStageTransitionError as e:
@@ -186,6 +189,7 @@ async def cb_do_advance(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── Next natural stage ────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("pipeline:next:"))
 async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
@@ -236,6 +240,7 @@ async def cb_next_stage(callback: CallbackQuery, **data: object) -> None:
 
 # ── Prev natural stage ────────────────────────────────────────────────────────
 
+
 @router.callback_query(F.data.startswith("pipeline:prev:"))
 async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
     """Go back one step in the natural pipeline order (undo / correction)."""
@@ -272,11 +277,17 @@ async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
         try:
             crm = get_crm_service(session)
             await crm.advance_stage(
-                lead_id, prev_stage, actor_id,
+                lead_id,
+                prev_stage,
+                actor_id,
                 note=f"Qaytarildi ({current.value} → {prev_stage.value})",
             )
             await _log_stage_action(
-                session, lead_id, actor_id, current, prev_stage,
+                session,
+                lead_id,
+                actor_id,
+                current,
+                prev_stage,
                 extra={"reason": "undo"},
             )
             await session.commit()
@@ -298,22 +309,29 @@ async def cb_prev_stage(callback: CallbackQuery, **data: object) -> None:
 
 # ── LOST: show reason picker ──────────────────────────────────────────────────
 
+
 @router.callback_query(F.data.regexp(r"^pipeline:lost:\d+$"))
 async def cb_mark_lost(callback: CallbackQuery, **data: object) -> None:
     """Show the LOST reason selection keyboard."""
     lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
 
     buttons = [
-        [InlineKeyboardButton(
-            text=label,
-            callback_data=f"pipeline:lost_confirm:{lead_id}:{slug}",
-        )]
+        [
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"pipeline:lost_confirm:{lead_id}:{slug}",
+            )
+        ]
         for slug, label in _LOST_REASONS
     ]
-    buttons.append([InlineKeyboardButton(
-        text="✏️ Boshqa...",
-        callback_data=f"pipeline:lost_other:{lead_id}",
-    )])
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text="✏️ Boshqa...",
+                callback_data=f"pipeline:lost_other:{lead_id}",
+            )
+        ]
+    )
 
     await callback.message.edit_text(  # type: ignore[union-attr]
         f"❌ Lid #{lead_id} — Yo'qotish sababini tanlang:",
@@ -323,6 +341,7 @@ async def cb_mark_lost(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── LOST: preset reason confirmed ────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("pipeline:lost_confirm:"))
 async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
@@ -337,11 +356,11 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
     async with factory() as session:
         try:
             crm = get_crm_service(session)
-            await crm.advance_stage(
-                lead_id, PipelineStage.LOST, actor_id, note=reason_text
-            )
+            await crm.advance_stage(lead_id, PipelineStage.LOST, actor_id, note=reason_text)
             await get_lead_action_repo(session).insert(
-                lead_id, actor_id, "status_changed",
+                lead_id,
+                actor_id,
+                "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
             # Persist lost_reason on the lead row for analytics
@@ -350,8 +369,7 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
             await session.commit()
 
             await callback.message.edit_text(  # type: ignore[union-attr]
-                f"❌ Lid #{lead_id} yo'qotildi\n"
-                f"Sabab: {bold(reason_text)}"
+                f"❌ Lid #{lead_id} yo'qotildi\n" f"Sabab: {bold(reason_text)}"
             )
             await callback.answer("Lid yo'qotildi deb belgilandi")
         except InvalidStageTransitionError as e:
@@ -365,6 +383,7 @@ async def cb_lost_confirm(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── LOST: other (free-text) — enter FSM ──────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("pipeline:lost_other:"))
 async def cb_lost_other(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
@@ -409,11 +428,11 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
     async with factory() as session:
         try:
             crm = get_crm_service(session)
-            await crm.advance_stage(
-                lead_id, PipelineStage.LOST, actor_id, note=reason_text
-            )
+            await crm.advance_stage(lead_id, PipelineStage.LOST, actor_id, note=reason_text)
             await get_lead_action_repo(session).insert(
-                lead_id, actor_id, "status_changed",
+                lead_id,
+                actor_id,
+                "status_changed",
                 payload={"new": PipelineStage.LOST.value, "reason": reason_text},
             )
             # Persist lost_reason on the lead row for analytics
@@ -422,10 +441,7 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
             await session.commit()
             await state.clear()
 
-            await message.answer(
-                f"❌ Lid #{lead_id} yo'qotildi\n"
-                f"Sabab: {bold(reason_text)}"
-            )
+            await message.answer(f"❌ Lid #{lead_id} yo'qotildi\n" f"Sabab: {bold(reason_text)}")
         except (InvalidStageTransitionError, MissingLostReasonError) as e:
             await state.clear()
             await message.answer(f"Bosqich o'zgartirib bo'lmaydi: {e}")
@@ -440,6 +456,7 @@ async def handle_lost_reason_text(message: Message, state: FSMContext, **data: o
 
 
 # ── Timeline callback ─────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("timeline:"))
 async def cb_timeline(callback: CallbackQuery, **data: object) -> None:
@@ -469,9 +486,7 @@ async def cb_timeline(callback: CallbackQuery, **data: object) -> None:
         payload_str = ""
         if act.get("payload"):
             payload_str = f" — {_summarize_payload(act['payload'])}"
-        lines.append(
-            f"{emoji} [{dt}] {act['action_type']} — {actor_str}{payload_str}"
-        )
+        lines.append(f"{emoji} [{dt}] {act['action_type']} — {actor_str}{payload_str}")
 
     text = "\n".join(lines)
     if len(text) > 4000:
@@ -483,6 +498,7 @@ async def cb_timeline(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── Stage pagination callback ─────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("stage_page:"))
 async def cb_stage_page(callback: CallbackQuery, **data: object) -> None:
@@ -526,15 +542,19 @@ async def cb_stage_page(callback: CallbackQuery, **data: object) -> None:
 
     row = []
     if page > 0:
-        row.append(InlineKeyboardButton(
-            text="◀️ Oldingi",
-            callback_data=f"stage_page:{stage.value}:{page - 1}",
-        ))
+        row.append(
+            InlineKeyboardButton(
+                text="◀️ Oldingi",
+                callback_data=f"stage_page:{stage.value}:{page - 1}",
+            )
+        )
     if has_more:
-        row.append(InlineKeyboardButton(
-            text="▶️ Keyingi",
-            callback_data=f"stage_page:{stage.value}:{page + 1}",
-        ))
+        row.append(
+            InlineKeyboardButton(
+                text="▶️ Keyingi",
+                callback_data=f"stage_page:{stage.value}:{page + 1}",
+            )
+        )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[row]) if row else None
 
     await callback.message.edit_text(  # type: ignore[union-attr]

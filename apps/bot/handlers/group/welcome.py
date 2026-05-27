@@ -13,6 +13,7 @@ Behaviour
   If the bot lacks delete permission the deletion silently fails (logged).
 - If logs_enabled=True, sends a DM log to BOT_ADMIN_USER_ID.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -91,9 +92,7 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     keyboard = group_menu_kb_full()
 
     try:
-        msg = await bot.send_message(
-            chat_id, text, parse_mode="HTML", reply_markup=keyboard
-        )
+        msg = await bot.send_message(chat_id, text, parse_mode="HTML", reply_markup=keyboard)
     except Exception as exc:
         log.warning("welcome_send_failed", chat_id=chat_id, error=str(exc))
         return
@@ -101,14 +100,16 @@ async def on_user_joined(event: ChatMemberUpdated, bot: Bot, **data: object) -> 
     log.info("welcome_sent", chat_id=chat_id, user_id=joined.id)
 
     if settings.logs_enabled:
-        asyncio.create_task(dm_log(
-            bot,
-            f"👤 Yangi a'zo: {mention} → <b>{chat_title}</b> "
-            f"(<code>{chat_id}</code>)",
-        ))
+        asyncio.create_task(
+            dm_log(
+                bot,
+                f"👤 Yangi a'zo: {mention} → <b>{chat_title}</b> " f"(<code>{chat_id}</code>)",
+            )
+        )
 
     delete_after = settings.welcome_autodelete_seconds
     if delete_after > 0 and chat_id != _main_gid:
+
         async def _auto_delete() -> None:
             await asyncio.sleep(delete_after)
             await try_delete(msg)

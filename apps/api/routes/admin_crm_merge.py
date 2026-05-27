@@ -2,6 +2,7 @@
 CRM Data Quality & Duplicate Contact Merge API endpoints.
 Detection enabled by default, merge gated by CRM_CONTACT_MERGE_ENABLED.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
@@ -26,6 +27,7 @@ async def data_quality_summary() -> dict:
     from dataclasses import asdict
 
     from core.services.crm_contact_merge_service import CRMContactMergeService
+
     summary = CRMContactMergeService.build_data_quality_summary([])
     return asdict(summary)
 
@@ -55,6 +57,7 @@ async def get_contact_duplicates(contact_id: int) -> dict:
 @router.post("/contacts/merge/preview")
 async def merge_preview(body: MergePreviewBody) -> dict:
     from core.services.crm_contact_merge_service import CRMContactMergeService
+
     source = {"id": body.source_contact_id}
     target = {"id": body.target_contact_id}
     preview = CRMContactMergeService.build_merge_preview(source, target, merge_enabled=False)
@@ -73,6 +76,7 @@ async def merge_preview(body: MergePreviewBody) -> dict:
 @router.post("/contacts/merge")
 async def merge_contacts(body: MergeBody) -> dict:
     from core.services.crm_contact_merge_service import CRMContactMergeService
+
     result = CRMContactMergeService.validate_merge(
         {"id": body.source_contact_id},
         {"id": body.target_contact_id},

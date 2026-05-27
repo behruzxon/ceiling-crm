@@ -24,6 +24,7 @@ Usage::
     )
     dp = evaluate_deal_probability(signal_vector=sv)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -248,7 +249,8 @@ def build_signal_vector(
     else:
         _sev_map = {"low": -0.3, "medium": -0.6, "high": -1.0}
         obj_score = _sev_map.get(
-            (last_objection_severity or "low").lower(), -0.3,
+            (last_objection_severity or "low").lower(),
+            -0.3,
         )
 
     # ── 9. Intent strength ────────────────────────────────────────────
@@ -277,6 +279,7 @@ def build_signal_vector(
         from shared.utils.business_hours import (
             is_business_hours as _is_bh,
         )
+
         _time_bucket = get_time_of_day_bucket()
         _bh = _is_bh()
     except Exception:
@@ -336,7 +339,8 @@ def build_signal_vector(
 
 
 def with_deal_probability(
-    sv: SignalVector, dp_percent: int,
+    sv: SignalVector,
+    dp_percent: int,
 ) -> SignalVector:
     """Return a copy of *sv* with deal_probability_percent set.
 

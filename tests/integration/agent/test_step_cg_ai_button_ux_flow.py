@@ -1,4 +1,5 @@
 """Tests for Step CG — AI Button UX Flow Integration."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -96,8 +97,12 @@ class TestNoRealCalls:
 class TestNoTokenLeak:
     def test_no_token_in_any_text(self):
         for text in [
-            _AI_HELP_TEXT, _AI_MODE_STATUS, _AI_RESET_SUCCESS,
-            _AI_PRICE_PROMPT, _AI_OPERATOR_PROMPT, _AI_UNAVAILABLE_TEXT,
+            _AI_HELP_TEXT,
+            _AI_MODE_STATUS,
+            _AI_RESET_SUCCESS,
+            _AI_PRICE_PROMPT,
+            _AI_OPERATOR_PROMPT,
+            _AI_UNAVAILABLE_TEXT,
         ]:
             assert "sk-" not in text
             assert "BOT_TOKEN" not in text
@@ -106,12 +111,15 @@ class TestNoTokenLeak:
 class TestPriorStepsStillPass:
     def test_ai_support_import(self):
         from apps.bot.handlers.private import ai_support
+
         assert ai_support is not None
 
     def test_dispatcher_builds(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_scheduler_imports(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

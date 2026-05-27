@@ -1,4 +1,5 @@
 """Tests for Step CF — AI FSM / Conversation Flow."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_detection import (

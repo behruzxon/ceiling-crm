@@ -22,6 +22,7 @@ Closing actions (picked based on funnel state):
   - "call"        — phone call with manager    (phone captured)
   - "catalog"     — send detailed catalog      (fallback)
 """
+
 from __future__ import annotations
 
 import time
@@ -91,9 +92,7 @@ def pick_closing_action(
 
     Returns ``"measurement"`` | ``"call"`` | ``"catalog"``.
     """
-    has_area = (
-        memory.get("area_m2") is not None or fsm_data.get("price_area") is not None
-    )
+    has_area = memory.get("area_m2") is not None or fsm_data.get("price_area") is not None
     has_district = bool(memory.get("district") or fsm_data.get("price_district"))
     has_phone = bool(memory.get("phone_captured"))
 
@@ -120,9 +119,7 @@ _CALL_TEXT = (
     "Telefon raqamingizni yuboring — tez orada qo'ng'iroq qilamiz."
 )
 
-_CATALOG_TEXT = (
-    "Katalogimizda turli dizaynlar bor — xonangizga mos variantni tanlab beramiz."
-)
+_CATALOG_TEXT = "Katalogimizda turli dizaynlar bor — xonangizga mos variantni tanlab beramiz."
 
 
 def build_closing_message(
@@ -135,38 +132,44 @@ def build_closing_message(
     """
     if action == "measurement":
         text = _MEASUREMENT_TEXT
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Bugun", callback_data="closer:book:today"),
-                InlineKeyboardButton(text="Ertaga", callback_data="closer:book:tomorrow"),
-                InlineKeyboardButton(text="Keyinroq", callback_data="closer:later"),
-            ],
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="Bugun", callback_data="closer:book:today"),
+                    InlineKeyboardButton(text="Ertaga", callback_data="closer:book:tomorrow"),
+                    InlineKeyboardButton(text="Keyinroq", callback_data="closer:later"),
+                ],
+            ]
+        )
     elif action == "call":
         text = _CALL_TEXT
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Ha, raqam yuboraman",
-                    callback_data="closer:call",
-                ),
-                InlineKeyboardButton(text="Keyinroq", callback_data="closer:later"),
-            ],
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Ha, raqam yuboraman",
+                        callback_data="closer:call",
+                    ),
+                    InlineKeyboardButton(text="Keyinroq", callback_data="closer:later"),
+                ],
+            ]
+        )
     else:  # catalog
         text = _CATALOG_TEXT
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Katalogni ko'rish",
-                    callback_data="closer:catalog",
-                ),
-                InlineKeyboardButton(
-                    text="Narx hisoblash",
-                    callback_data="closer:price",
-                ),
-            ],
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Katalogni ko'rish",
+                        callback_data="closer:catalog",
+                    ),
+                    InlineKeyboardButton(
+                        text="Narx hisoblash",
+                        callback_data="closer:price",
+                    ),
+                ],
+            ]
+        )
 
     # Personalise with name
     if name:
@@ -232,9 +235,8 @@ async def attempt_close(
             try:
                 from infrastructure.cache.client import get_redis
                 from infrastructure.cache.keys import CacheKeys
-                fu_state_raw = await get_redis().get_json(
-                    CacheKeys.ai_followup_state(user_id)
-                )
+
+                fu_state_raw = await get_redis().get_json(CacheKeys.ai_followup_state(user_id))
             except Exception:
                 pass
             if fu_state_raw and fu_state_raw.get("lead_created"):
@@ -272,14 +274,17 @@ async def attempt_close(
         import asyncio
 
         from core.services.tactic_outcome_logger import log_tactic_outcome
+
         _temp = "hot" if score >= 60 else ("warm" if score >= 30 else "cold")
-        asyncio.create_task(log_tactic_outcome(
-            event_type="closer",
-            tactic_name=action,
-            user_id=user_id,
-            lead_score_at_time=score,
-            lead_temperature_at_time=_temp,
-        ))
+        asyncio.create_task(
+            log_tactic_outcome(
+                event_type="closer",
+                tactic_name=action,
+                user_id=user_id,
+                lead_score_at_time=score,
+                lead_temperature_at_time=_temp,
+            )
+        )
 
         log.info(
             "sales_closer_sent",

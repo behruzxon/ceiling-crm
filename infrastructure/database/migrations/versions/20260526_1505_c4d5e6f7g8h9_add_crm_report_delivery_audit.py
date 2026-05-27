@@ -2,6 +2,7 @@
 Revision ID: c4d5e6f7g8h9
 Revises: b3c4d5e6f7g8
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -9,6 +10,7 @@ revision = "c4d5e6f7g8h9"
 down_revision = "b3c4d5e6f7g8"
 branch_labels = None
 depends_on = None
+
 
 def upgrade() -> None:
     op.create_table(
@@ -28,8 +30,13 @@ def upgrade() -> None:
         sa.Column("sent_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("failed_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
-    op.create_index("ix_delivery_audit_report", "crm_report_delivery_audit", ["report_id", "created_at"])
-    op.create_index("ix_delivery_audit_status", "crm_report_delivery_audit", ["status", "created_at"])
+    op.create_index(
+        "ix_delivery_audit_report", "crm_report_delivery_audit", ["report_id", "created_at"]
+    )
+    op.create_index(
+        "ix_delivery_audit_status", "crm_report_delivery_audit", ["status", "created_at"]
+    )
+
 
 def downgrade() -> None:
     op.drop_index("ix_delivery_audit_status", table_name="crm_report_delivery_audit")

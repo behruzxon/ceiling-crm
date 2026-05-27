@@ -1,4 +1,5 @@
 """Tests for Step CF — AI Pricing Intelligence."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_detection import (
@@ -47,23 +48,27 @@ class TestPriceQueryDetection:
 class TestAreaParsing:
     def test_parse_area_5x4(self):
         from shared.utils.area_parser import parse_area
+
         result = parse_area("5x4 xona")
         assert result is not None
         assert abs(result - 20.0) < 0.01
 
     def test_parse_area_20(self):
         from shared.utils.area_parser import parse_area
+
         result = parse_area("20 m2 xona")
         assert result is not None
         assert abs(result - 20.0) < 0.01
 
     def test_parse_area_invalid(self):
         from shared.utils.area_parser import parse_area
+
         result = parse_area("salom dunyo")
         assert result is None or result == 0
 
     def test_parse_area_decimal(self):
         from shared.utils.area_parser import parse_area
+
         result = parse_area("5.5x4 mehmonxona")
         assert result is not None
         assert abs(result - 22.0) < 0.01

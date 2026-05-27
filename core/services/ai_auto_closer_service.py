@@ -8,6 +8,7 @@ and generates a single recommended Uzbek reply text.
 
 Pure function — no I/O, no DB, no Redis. Fully deterministic.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -27,16 +28,12 @@ STRATEGY_LABELS: dict[str, str] = {
 _STRATEGY_REPLIES: dict[str, tuple[str, str]] = {
     # (template_with_name, template_without_name)
     "budget_option": (
-        "{name}, byudjetga mos variantlar ham bor.\n"
-        "Xohlasangiz yuborib beray?",
-        "Byudjetga mos variantlar ham bor.\n"
-        "Xohlasangiz yuborib beray?",
+        "{name}, byudjetga mos variantlar ham bor.\n" "Xohlasangiz yuborib beray?",
+        "Byudjetga mos variantlar ham bor.\n" "Xohlasangiz yuborib beray?",
     ),
     "premium_design": (
-        "{name}, premium dizaynlarimiz juda chiroyli chiqadi.\n"
-        "Katalogdan ko'rsatib beraymi?",
-        "Premium dizaynlarimiz juda chiroyli chiqadi.\n"
-        "Katalogdan ko'rsatib beraymi?",
+        "{name}, premium dizaynlarimiz juda chiroyli chiqadi.\n" "Katalogdan ko'rsatib beraymi?",
+        "Premium dizaynlarimiz juda chiroyli chiqadi.\n" "Katalogdan ko'rsatib beraymi?",
     ),
     "measurement_push": (
         "{name}, bepul o'lchov xizmati bor.\n"
@@ -47,16 +44,12 @@ _STRATEGY_REPLIES: dict[str, tuple[str, str]] = {
         "Qachon qulay bo'ladi?",
     ),
     "direct_close": (
-        "{name}, hamma narsa tayyor.\n"
-        "Bugun yoki ertaga usta yuboramizmi?",
-        "Hamma narsa tayyor.\n"
-        "Bugun yoki ertaga usta yuboramizmi?",
+        "{name}, hamma narsa tayyor.\n" "Bugun yoki ertaga usta yuboramizmi?",
+        "Hamma narsa tayyor.\n" "Bugun yoki ertaga usta yuboramizmi?",
     ),
     "soft_followup": (
-        "{name}, qiziqsangiz yordamlashaman.\n"
-        "Savollaringiz bo'lsa yozing 😊",
-        "Qiziqsangiz yordamlashaman.\n"
-        "Savollaringiz bo'lsa yozing 😊",
+        "{name}, qiziqsangiz yordamlashaman.\n" "Savollaringiz bo'lsa yozing 😊",
+        "Qiziqsangiz yordamlashaman.\n" "Savollaringiz bo'lsa yozing 😊",
     ),
 }
 

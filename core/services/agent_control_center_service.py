@@ -5,6 +5,7 @@ Read-only control center for the agent system.
 Detects rollout stage, runs preflight checks, and builds status snapshots.
 No mutations, no sends. Pure functions where possible.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -49,6 +50,7 @@ class AgentControlCenterService:
         if settings is None:
             try:
                 from shared.config import get_settings
+
                 settings = get_settings()
             except Exception:
                 return AgentControlCenterSnapshot()
@@ -74,12 +76,14 @@ class AgentControlCenterService:
         flags: list[AgentFeatureFlagStatus] = []
         for attr, stage, risk in _FLAG_DEFS:
             val = getattr(biz, attr, False)
-            flags.append(AgentFeatureFlagStatus(
-                name=attr,
-                enabled=bool(val),
-                stage=stage,
-                risk=risk,
-            ))
+            flags.append(
+                AgentFeatureFlagStatus(
+                    name=attr,
+                    enabled=bool(val),
+                    stage=stage,
+                    risk=risk,
+                )
+            )
         return flags
 
     @staticmethod
@@ -94,41 +98,49 @@ class AgentControlCenterService:
 
         if live_sender and auto_exec:
             return AgentRolloutStageStatus(
-                stage="approved_live_send", label="APPROVED LIVE SEND",
+                stage="approved_live_send",
+                label="APPROVED LIVE SEND",
                 description="Admin approved payloads are sent automatically",
             )
         if queue and mode == "approval_required":
             return AgentRolloutStageStatus(
-                stage="approval_required", label="APPROVAL REQUIRED",
+                stage="approval_required",
+                label="APPROVAL REQUIRED",
                 description="Executions require admin approval",
             )
         if sandbox and mode == "canary":
             return AgentRolloutStageStatus(
-                stage="canary", label="CANARY",
+                stage="canary",
+                label="CANARY",
                 description="Only canary users affected",
             )
         if sandbox and mode == "dry_run":
             return AgentRolloutStageStatus(
-                stage="dry_run", label="DRY RUN",
+                stage="dry_run",
+                label="DRY RUN",
                 description="Full validation, no real sends",
             )
         if orch and orch_log:
             return AgentRolloutStageStatus(
-                stage="log_only", label="LOG ONLY",
+                stage="log_only",
+                label="LOG ONLY",
                 description="Traces written, no user impact",
             )
         if orch and not orch_log:
             return AgentRolloutStageStatus(
-                stage="custom", label="CUSTOM",
+                stage="custom",
+                label="CUSTOM",
                 description="Orchestrator active, non-standard config",
             )
         if not orch and not sandbox:
             return AgentRolloutStageStatus(
-                stage="off", label="OFF",
+                stage="off",
+                label="OFF",
                 description="All agent features disabled",
             )
         return AgentRolloutStageStatus(
-            stage="mixed", label="MIXED",
+            stage="mixed",
+            label="MIXED",
             description="Non-standard flag combination",
         )
 
@@ -181,8 +193,12 @@ class AgentControlCenterService:
         )
 
     _STAGE_ORDER = [
-        "off", "log_only", "dry_run", "canary",
-        "approval_required", "approved_live_send",
+        "off",
+        "log_only",
+        "dry_run",
+        "canary",
+        "approval_required",
+        "approved_live_send",
     ]
 
     @staticmethod

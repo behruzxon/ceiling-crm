@@ -1,4 +1,5 @@
 """Tests for Step BL — AdminSecurityActionService."""
+
 from __future__ import annotations
 
 from core.services.admin_security_action_service import AdminSecurityActionService
@@ -92,7 +93,9 @@ class TestValidateRevokeSession:
         assert r.action == "session.revoke"
 
     def test_no_session_hash_in_result(self):
-        r = svc.validate_revoke_session({"status": "active", "session_id_hash": "abc"}, confirm=True, actions_enabled=True)
+        r = svc.validate_revoke_session(
+            {"status": "active", "session_id_hash": "abc"}, confirm=True, actions_enabled=True
+        )
         assert "session_id_hash" not in str(r)
 
 
@@ -120,7 +123,9 @@ class TestValidateDisableAdmin:
         assert not r.ok
 
     def test_no_confirm(self):
-        r = svc.validate_disable_admin({"admin_id": "u1", "is_active": True}, confirm=False, actions_enabled=True)
+        r = svc.validate_disable_admin(
+            {"admin_id": "u1", "is_active": True}, confirm=False, actions_enabled=True
+        )
         assert not r.ok
 
     def test_not_found(self):
@@ -131,7 +136,10 @@ class TestValidateDisableAdmin:
     def test_self_lockout(self):
         r = svc.validate_disable_admin(
             {"admin_id": "u1", "is_active": True, "role": "admin", "is_super_owner": False},
-            actor_admin_id="u1", confirm=True, actions_enabled=True, active_owner_count=2,
+            actor_admin_id="u1",
+            confirm=True,
+            actions_enabled=True,
+            active_owner_count=2,
         )
         assert not r.ok
         assert "self" in r.error
@@ -139,7 +147,9 @@ class TestValidateDisableAdmin:
     def test_already_disabled(self):
         r = svc.validate_disable_admin(
             {"admin_id": "u2", "is_active": False, "role": "admin", "is_super_owner": False},
-            actor_admin_id="u1", confirm=True, actions_enabled=True,
+            actor_admin_id="u1",
+            confirm=True,
+            actions_enabled=True,
         )
         assert not r.ok
         assert "already_disabled" in r.error
@@ -147,7 +157,10 @@ class TestValidateDisableAdmin:
     def test_last_owner(self):
         r = svc.validate_disable_admin(
             {"admin_id": "u2", "is_active": True, "role": "owner", "is_super_owner": False},
-            actor_admin_id="u1", confirm=True, actions_enabled=True, active_owner_count=1,
+            actor_admin_id="u1",
+            confirm=True,
+            actions_enabled=True,
+            active_owner_count=1,
         )
         assert not r.ok
         assert "last_owner" in r.error
@@ -155,7 +168,10 @@ class TestValidateDisableAdmin:
     def test_super_owner(self):
         r = svc.validate_disable_admin(
             {"admin_id": "u2", "is_active": True, "role": "owner", "is_super_owner": True},
-            actor_admin_id="u1", confirm=True, actions_enabled=True, active_owner_count=2,
+            actor_admin_id="u1",
+            confirm=True,
+            actions_enabled=True,
+            active_owner_count=2,
         )
         assert not r.ok
         assert "super_owner" in r.error
@@ -163,7 +179,10 @@ class TestValidateDisableAdmin:
     def test_success(self):
         r = svc.validate_disable_admin(
             {"admin_id": "u2", "is_active": True, "role": "admin", "is_super_owner": False},
-            actor_admin_id="u1", confirm=True, actions_enabled=True, active_owner_count=2,
+            actor_admin_id="u1",
+            confirm=True,
+            actions_enabled=True,
+            active_owner_count=2,
         )
         assert r.ok
 
@@ -346,6 +365,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_action_service import SecurityActionResult
+
         r = SecurityActionResult(ok=True)
         with pytest.raises(AttributeError):
             r.ok = False  # type: ignore[misc]
@@ -354,6 +374,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_action_service import IPEvaluationResult
+
         r = IPEvaluationResult()
         with pytest.raises(AttributeError):
             r.decision = "x"  # type: ignore[misc]

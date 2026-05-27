@@ -1,4 +1,5 @@
 """Tests for Step BO — Realtime Inbox UI."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -122,5 +123,6 @@ class TestSecurity:
 class TestWebRoute:
     def test_crm_route_exists(self):
         from apps.web.main import app
+
         paths = [r.path for r in app.routes]
         assert "/crm" in paths or any("/crm" in str(p) for p in paths)

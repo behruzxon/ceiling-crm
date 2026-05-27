@@ -12,6 +12,7 @@ Usage (from any handler / service):
 
 Opens its own session, inserts one row, commits. Never raises.
 """
+
 from __future__ import annotations
 
 from shared.logging import get_logger

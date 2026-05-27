@@ -1,4 +1,5 @@
 """Tests for Step BI — AdminUserService."""
+
 from __future__ import annotations
 
 from core.services.admin_user_service import AdminUserService
@@ -241,6 +242,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_user_service import AdminUserResult
+
         r = AdminUserResult(ok=True)
         with pytest.raises(AttributeError):
             r.ok = False  # type: ignore[misc]

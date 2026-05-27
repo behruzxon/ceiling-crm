@@ -13,6 +13,7 @@ Public API
 The caller (callback handler) owns the OpenAI call and rate-limiting.
 This module is pure logic — no I/O, no Redis, no DB.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ log = get_logger(__name__)
 
 
 # ── Result dataclass ─────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class DealCloserResult:
@@ -38,7 +40,7 @@ class DealCloserResult:
     recommended_reply_uz: str = ""
     follow_up_text_uz: str = ""
     closing_probability: float = 0.0  # 0.0-1.0
-    confidence: float = 0.0           # 0.0-1.0
+    confidence: float = 0.0  # 0.0-1.0
 
 
 # ── System prompt for Deal Closer ────────────────────────────────────────────
@@ -91,6 +93,7 @@ URGENCY BAHOLASH:
 
 
 # ── Prompt builder ───────────────────────────────────────────────────────────
+
 
 def build_deal_closer_prompt(
     *,
@@ -156,11 +159,13 @@ def build_deal_closer_prompt(
         recent = conversation_messages[-10:]
         for msg in recent:
             role = "Mijoz" if msg.get("role") == "user" else "Bot"
-            raw_text = (msg.get("text") or "")
+            raw_text = msg.get("text") or ""
             # Only sanitize user messages — bot messages are system-generated
             if msg.get("role") == "user":
                 text = sanitize_user_text_for_prompt(
-                    raw_text, max_length=300, placeholder=_BLOCKED,
+                    raw_text,
+                    max_length=300,
+                    placeholder=_BLOCKED,
                 )
                 if text == _BLOCKED:
                     log.warning(
@@ -182,7 +187,9 @@ def build_deal_closer_prompt(
 
     if conversation_summary:
         safe_summary = sanitize_user_text_for_prompt(
-            conversation_summary, max_length=500, placeholder=_BLOCKED,
+            conversation_summary,
+            max_length=500,
+            placeholder=_BLOCKED,
         )
         if safe_summary == _BLOCKED:
             log.warning(
@@ -199,9 +206,7 @@ def build_deal_closer_prompt(
     else:
         user_parts.append("\n(suhbat tarixi mavjud emas)")
 
-    user_parts.append(
-        "\nYuqoridagi ma'lumotlarni tahlil qilib, JSON formatda maslahat ber."
-    )
+    user_parts.append("\nYuqoridagi ma'lumotlarni tahlil qilib, JSON formatda maslahat ber.")
 
     return [
         {"role": "system", "content": _CLOSER_SYSTEM},
@@ -259,9 +264,12 @@ def parse_deal_closer_response(raw: str) -> DealCloserResult:
             objections=[str(o)[:200] for o in (data.get("objections") or [])[:3]],
             buying_signals=[str(s)[:200] for s in (data.get("buying_signals") or [])[:3]],
             urgency=urgency,
-            recommended_action=str(data.get("recommended_action", ""))[:500] or _FALLBACK.recommended_action,
-            recommended_reply_uz=str(data.get("recommended_reply_uz", ""))[:1000] or _FALLBACK.recommended_reply_uz,
-            follow_up_text_uz=str(data.get("follow_up_text_uz", ""))[:500] or _FALLBACK.follow_up_text_uz,
+            recommended_action=str(data.get("recommended_action", ""))[:500]
+            or _FALLBACK.recommended_action,
+            recommended_reply_uz=str(data.get("recommended_reply_uz", ""))[:1000]
+            or _FALLBACK.recommended_reply_uz,
+            follow_up_text_uz=str(data.get("follow_up_text_uz", ""))[:500]
+            or _FALLBACK.follow_up_text_uz,
             closing_probability=round(cp, 2),
             confidence=round(conf, 2),
         )

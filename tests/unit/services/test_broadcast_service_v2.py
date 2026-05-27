@@ -3,6 +3,7 @@
 Tests focus on the service layer only — repo is mocked via AsyncMock.
 Counter delegation, status changes, and reach estimation are covered.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

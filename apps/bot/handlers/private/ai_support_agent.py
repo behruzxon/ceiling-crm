@@ -2,6 +2,7 @@
 Agent pipeline helpers extracted from ai_support.py.
 Fire-and-forget lead signal extraction and orchestrator calls.
 """
+
 from __future__ import annotations
 
 from infrastructure.database.session import get_session_factory
@@ -28,6 +29,7 @@ async def _run_orchestrator(user_id: int, text: str) -> None:
             factory = get_session_factory()
             async with factory() as session:
                 from core.services.agent_memory_service import AgentMemoryService
+
                 svc = AgentMemoryService(session)
                 db_mem = await svc.get_or_create(user_id)
                 mem = {
@@ -43,7 +45,8 @@ async def _run_orchestrator(user_id: int, text: str) -> None:
             pass
 
         payload = AgentResponseOrchestrator.run_pipeline(
-            memory=mem, text=text,
+            memory=mem,
+            text=text,
         )
 
         if biz.agent_response_orchestrator_trace_enabled:
@@ -51,6 +54,7 @@ async def _run_orchestrator(user_id: int, text: str) -> None:
                 factory = get_session_factory()
                 async with factory() as session:
                     from core.services.agent_memory_service import AgentMemoryService
+
                     svc = AgentMemoryService(session)
                     db_mem = await svc.get_or_create(user_id)
                     md = dict(db_mem.memory_data or {})
@@ -95,6 +99,7 @@ async def _process_lead_signal(user_id: int, text: str) -> None:
                 mem.followup_enabled = False
                 mem.stop_reason = "user_stop_signal"
                 from core.services.followup_scheduler_service import FollowupSchedulerService
+
                 fu_svc = FollowupSchedulerService(session)
                 await fu_svc.cancel_all_pending(user_id, "user_stop_signal")
 

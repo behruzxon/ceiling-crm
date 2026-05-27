@@ -4,6 +4,7 @@ core.services.stage3_canary_report_service
 Read-only CANARY observation report. Tracks canary vs non-canary sends.
 No mutations, no sends.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -28,7 +29,10 @@ class Stage3CanaryReportService:
         self._session = session
 
     async def build_report(
-        self, since: datetime, until: datetime, environment: str = "unknown",
+        self,
+        since: datetime,
+        until: datetime,
+        environment: str = "unknown",
     ) -> Stage3CanaryReport:
         now = datetime.now(UTC)
         duration = int((until - since).total_seconds() / 60)
@@ -37,16 +41,22 @@ class Stage3CanaryReportService:
         health = await self._get_health()
 
         report = Stage3CanaryReport(
-            generated_at=now.isoformat(), since=since.isoformat(),
-            until=until.isoformat(), environment=environment,
-            duration_minutes=duration, **metrics,
-            public_safety=public, health_status=health,
+            generated_at=now.isoformat(),
+            since=since.isoformat(),
+            until=until.isoformat(),
+            environment=environment,
+            duration_minutes=duration,
+            **metrics,
+            public_safety=public,
+            health_status=health,
         )
         pf = self.evaluate_pass_fail(report)
         recs = self.build_recommendations(report, pf)
         return Stage3CanaryReport(
-            generated_at=report.generated_at, since=report.since,
-            until=report.until, environment=report.environment,
+            generated_at=report.generated_at,
+            since=report.since,
+            until=report.until,
+            environment=report.environment,
             duration_minutes=report.duration_minutes,
             canary_user_count=report.canary_user_count,
             canary_payload_count=report.canary_payload_count,
@@ -58,7 +68,8 @@ class Stage3CanaryReportService:
             risk_counts=report.risk_counts,
             public_safety=report.public_safety,
             health_status=report.health_status,
-            pass_fail=pf, recommendations=recs,
+            pass_fail=pf,
+            recommendations=recs,
         )
 
     @staticmethod
@@ -83,12 +94,15 @@ class Stage3CanaryReportService:
         if report.canary_payload_count == 0:
             warnings.append("no_canary_sends")
         return Stage3PassFailResult(
-            passed=len(failures) == 0, failures=failures, warnings=warnings,
+            passed=len(failures) == 0,
+            failures=failures,
+            warnings=warnings,
         )
 
     @staticmethod
     def build_recommendations(
-        report: Stage3CanaryReport, pf: Stage3PassFailResult,
+        report: Stage3CanaryReport,
+        pf: Stage3PassFailResult,
     ) -> list[str]:
         if not pf.passed:
             if any("public" in f or "non_canary" in f for f in pf.failures):
@@ -105,14 +119,25 @@ class Stage3CanaryReportService:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
-            mode_q = sa.select(sa.func.count()).select_from(M).where(
-                M.created_at.between(since, until), M.mode == "canary",
+
+            mode_q = (
+                sa.select(sa.func.count())
+                .select_from(M)
+                .where(
+                    M.created_at.between(since, until),
+                    M.mode == "canary",
+                )
             )
             total = (await self._session.execute(mode_q)).scalar() or 0
 
-            blocked_q = sa.select(sa.func.count()).select_from(M).where(
-                M.created_at.between(since, until), M.mode == "canary",
-                M.status == "blocked",
+            blocked_q = (
+                sa.select(sa.func.count())
+                .select_from(M)
+                .where(
+                    M.created_at.between(since, until),
+                    M.mode == "canary",
+                    M.status == "blocked",
+                )
             )
             blocked = (await self._session.execute(blocked_q)).scalar() or 0
 
@@ -128,22 +153,31 @@ class Stage3CanaryReportService:
             }
         except Exception:
             return {
-                "canary_payload_count": 0, "canary_allowed_count": 0,
-                "canary_blocked_count": 0, "canary_user_count": 0,
-                "non_canary_attempts": 0, "non_canary_blocked": 0,
-                "block_reason_counts": {}, "risk_counts": {},
+                "canary_payload_count": 0,
+                "canary_allowed_count": 0,
+                "canary_blocked_count": 0,
+                "canary_user_count": 0,
+                "non_canary_attempts": 0,
+                "non_canary_blocked": 0,
+                "block_reason_counts": {},
+                "risk_counts": {},
             }
 
     async def _collect_public_safety(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> Stage3PublicSafetyMetrics:
         executed = 0
         try:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(M).where(
+                sa.select(sa.func.count())
+                .select_from(M)
+                .where(
                     M.executed_at.between(since, until),
                 ),
             )
@@ -157,6 +191,7 @@ class Stage3CanaryReportService:
     async def _get_health(self) -> str:
         try:
             from core.services.agent_metrics_service import AgentMetricsService
+
             o = await AgentMetricsService(self._session).get_overview()
             return o.health.status
         except Exception:

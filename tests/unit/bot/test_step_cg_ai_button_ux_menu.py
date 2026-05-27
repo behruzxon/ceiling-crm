@@ -1,4 +1,5 @@
 """Tests for Step CG — AI Button UX + Menu Polish."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_states import (

@@ -4,6 +4,7 @@ core.services.agent_rollout_preset_service
 Staged rollout preset definitions and safe preview/apply logic.
 Pure functions — no I/O.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +19,9 @@ from core.schemas.agent_rollout_preset import (
 
 _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
     "off": AgentRolloutPresetDefinition(
-        name="off", label="OFF", description="Barcha agent flaglar o'chiq",
+        name="off",
+        label="OFF",
+        description="Barcha agent flaglar o'chiq",
         risk_level="low",
         settings={
             "agent_followups_enabled": False,
@@ -43,7 +46,8 @@ _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
         },
     ),
     "log_only": AgentRolloutPresetDefinition(
-        name="log_only", label="LOG ONLY",
+        name="log_only",
+        label="LOG ONLY",
         description="Agent kuzatadi, trace yozadi, user behavior o'zgarmaydi",
         risk_level="medium",
         settings={
@@ -63,7 +67,8 @@ _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
         },
     ),
     "dry_run": AgentRolloutPresetDefinition(
-        name="dry_run", label="DRY RUN",
+        name="dry_run",
+        label="DRY RUN",
         description="Payloadlar validate qilinadi, real send yo'q",
         risk_level="medium",
         settings={
@@ -83,7 +88,8 @@ _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
         },
     ),
     "canary": AgentRolloutPresetDefinition(
-        name="canary", label="CANARY",
+        name="canary",
+        label="CANARY",
         description="Faqat canary userlar uchun",
         risk_level="high",
         settings={
@@ -106,7 +112,8 @@ _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
         },
     ),
     "approval_required": AgentRolloutPresetDefinition(
-        name="approval_required", label="APPROVAL REQUIRED",
+        name="approval_required",
+        label="APPROVAL REQUIRED",
         description="Agent proposal yaratadi, admin approve/reject qiladi",
         risk_level="high",
         settings={
@@ -126,7 +133,8 @@ _PRESETS: dict[str, AgentRolloutPresetDefinition] = {
         },
     ),
     "approved_live_send": AgentRolloutPresetDefinition(
-        name="approved_live_send", label="APPROVED LIVE SEND",
+        name="approved_live_send",
+        label="APPROVED LIVE SEND",
         description="Faqat admin approved payloadlar yuboriladi",
         risk_level="critical",
         settings={
@@ -172,17 +180,20 @@ class AgentRolloutPresetService:
         target: dict[str, Any],
     ) -> list[AgentRolloutPresetDiff]:
         from core.services.agent_settings_service import AgentSettingsService
+
         diffs: list[AgentRolloutPresetDiff] = []
         for key, target_val in sorted(target.items()):
             current_val = current.get(key)
             if current_val != target_val:
                 risk = AgentSettingsService.calculate_risk(key, target_val)
-                diffs.append(AgentRolloutPresetDiff(
-                    key=key,
-                    current_value=current_val,
-                    target_value=target_val,
-                    risk_level=risk,
-                ))
+                diffs.append(
+                    AgentRolloutPresetDiff(
+                        key=key,
+                        current_value=current_val,
+                        target_value=target_val,
+                        risk_level=risk,
+                    )
+                )
         return diffs
 
     @staticmethod
@@ -221,14 +232,18 @@ class AgentRolloutPresetService:
         preset = _PRESETS.get(name.lower())
         if preset is None:
             return AgentRolloutPresetPreviewResponse(
-                preset=name, allowed=False, risk_level="none",
+                preset=name,
+                allowed=False,
+                risk_level="none",
                 blockers=[f"unknown_preset:{name}"],
             )
 
         cs = current_settings or {}
         target = dict(preset.settings)
         blockers = AgentRolloutPresetService.detect_blockers(
-            name, cs, allow_live_flags,
+            name,
+            cs,
+            allow_live_flags,
         )
         diff = AgentRolloutPresetService.diff_settings(cs, target)
         risk = preset.risk_level

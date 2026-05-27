@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for scheduled_followups table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,16 +19,21 @@ class ScheduledFollowupModel(Base):
     trigger_event_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     scheduled_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    cancelled_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
     status: Mapped[str] = mapped_column(sa.String(20), server_default="pending", nullable=False)
     attempt_count: Mapped[int] = mapped_column(sa.Integer, server_default="0", nullable=False)
     last_error: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     message_text: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
     )
 
     __table_args__ = (

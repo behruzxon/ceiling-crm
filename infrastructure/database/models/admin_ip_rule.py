@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for admin_ip_access_rules."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,7 +19,9 @@ class AdminIPAccessRuleModel(Base):
     is_active: Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text("true"))
     created_by: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     updated_by: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     disabled_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)

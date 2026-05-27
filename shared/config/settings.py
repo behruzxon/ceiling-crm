@@ -32,12 +32,21 @@ class BotSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BOT_", env_file=".env", extra="ignore")
 
     token: SecretStr = Field(..., description="Telegram Bot API token")
-    username: str = Field(default="vashpotolokbot", description="Bot @username without @ — used for deep links")
+    username: str = Field(
+        default="vashpotolokbot", description="Bot @username without @ — used for deep links"
+    )
     webhook_url: str | None = Field(default=None, description="Webhook URL (None = polling)")
     webhook_secret: SecretStr | None = Field(default=None)
-    admin_group_id: int = Field(..., description="Telegram chat_id of the admin group (for notifications)")
-    main_group_id: int | None = Field(default=None, description="Telegram chat_id of the main customer group (for join tracking via BOT_MAIN_GROUP_ID)")
-    admin_user_id: int | None = Field(default=None, description="Telegram user_id for DM operator alerts (ADMIN_USER_ID)")
+    admin_group_id: int = Field(
+        ..., description="Telegram chat_id of the admin group (for notifications)"
+    )
+    main_group_id: int | None = Field(
+        default=None,
+        description="Telegram chat_id of the main customer group (for join tracking via BOT_MAIN_GROUP_ID)",
+    )
+    admin_user_id: int | None = Field(
+        default=None, description="Telegram user_id for DM operator alerts (ADMIN_USER_ID)"
+    )
     support_chat_id: int | None = Field(default=None)
 
     # Telegram API limits
@@ -169,7 +178,9 @@ class PaymentSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="PAYMENT_", env_file=".env", extra="ignore")
 
-    card_number: str | None = Field(default=None, description="Card number digits, e.g. 8600123456781234")
+    card_number: str | None = Field(
+        default=None, description="Card number digits, e.g. 8600123456781234"
+    )
     card_holder: str | None = Field(default=None, description="Cardholder full name")
     bank_name: str | None = Field(default=None, description="Bank name shown in requisites")
 
@@ -191,7 +202,9 @@ class CTASettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="CTA_", env_file=".env", extra="ignore")
 
-    enabled: bool = Field(default=True, description="Master switch — set false to suppress all CTA messages")
+    enabled: bool = Field(
+        default=True, description="Master switch — set false to suppress all CTA messages"
+    )
     discount_text: str = Field(
         default="🔥 Chegirma aktiv! Bugun -10% (shartlar operator orqali)",
         description="Text sent with the discount CTA inline keyboard",
@@ -219,17 +232,33 @@ class BusinessSettings(BaseSettings):
     # CRM Operator Reply
     crm_operator_reply_enabled: bool = Field(default=False, alias="CRM_OPERATOR_REPLY_ENABLED")
     crm_operator_reply_max_length: int = Field(default=1000, alias="CRM_OPERATOR_REPLY_MAX_LENGTH")
-    crm_operator_reply_block_stopped: bool = Field(default=True, alias="CRM_OPERATOR_REPLY_BLOCK_STOPPED")
+    crm_operator_reply_block_stopped: bool = Field(
+        default=True, alias="CRM_OPERATOR_REPLY_BLOCK_STOPPED"
+    )
     crm_inbox_auto_refresh_seconds: int = Field(default=15, alias="CRM_INBOX_AUTO_REFRESH_SECONDS")
 
     # CRM Operator Handoff Queue
-    crm_operator_handoff_queue_enabled: bool = Field(default=True, alias="CRM_OPERATOR_HANDOFF_QUEUE_ENABLED")
-    crm_operator_handoff_require_phone: bool = Field(default=True, alias="CRM_OPERATOR_HANDOFF_REQUIRE_PHONE")
-    crm_operator_handoff_dedup_minutes: int = Field(default=30, alias="CRM_OPERATOR_HANDOFF_DEDUP_MINUTES")
-    crm_operator_handoff_expire_hours: int = Field(default=24, alias="CRM_OPERATOR_HANDOFF_EXPIRE_HOURS")
-    crm_operator_handoff_admin_notify_enabled: bool = Field(default=False, alias="CRM_OPERATOR_HANDOFF_ADMIN_NOTIFY_ENABLED")
-    crm_operator_handoff_default_priority: str = Field(default="normal", alias="CRM_OPERATOR_HANDOFF_DEFAULT_PRIORITY")
-    crm_operator_handoff_urgent_score_threshold: int = Field(default=80, alias="CRM_OPERATOR_HANDOFF_URGENT_SCORE_THRESHOLD")
+    crm_operator_handoff_queue_enabled: bool = Field(
+        default=True, alias="CRM_OPERATOR_HANDOFF_QUEUE_ENABLED"
+    )
+    crm_operator_handoff_require_phone: bool = Field(
+        default=True, alias="CRM_OPERATOR_HANDOFF_REQUIRE_PHONE"
+    )
+    crm_operator_handoff_dedup_minutes: int = Field(
+        default=30, alias="CRM_OPERATOR_HANDOFF_DEDUP_MINUTES"
+    )
+    crm_operator_handoff_expire_hours: int = Field(
+        default=24, alias="CRM_OPERATOR_HANDOFF_EXPIRE_HOURS"
+    )
+    crm_operator_handoff_admin_notify_enabled: bool = Field(
+        default=False, alias="CRM_OPERATOR_HANDOFF_ADMIN_NOTIFY_ENABLED"
+    )
+    crm_operator_handoff_default_priority: str = Field(
+        default="normal", alias="CRM_OPERATOR_HANDOFF_DEFAULT_PRIORITY"
+    )
+    crm_operator_handoff_urgent_score_threshold: int = Field(
+        default=80, alias="CRM_OPERATOR_HANDOFF_URGENT_SCORE_THRESHOLD"
+    )
     crm_sla_due_soon_minutes: int = Field(default=5, alias="CRM_SLA_DUE_SOON_MINUTES")
     crm_sla_overdue_minutes: int = Field(default=15, alias="CRM_SLA_OVERDUE_MINUTES")
     crm_sla_critical_minutes: int = Field(default=30, alias="CRM_SLA_CRITICAL_MINUTES")
@@ -239,66 +268,125 @@ class BusinessSettings(BaseSettings):
     # CRM Realtime Inbox
     crm_realtime_inbox_enabled: bool = Field(default=True, alias="CRM_REALTIME_INBOX_ENABLED")
     crm_realtime_inbox_mode: str = Field(default="polling", alias="CRM_REALTIME_INBOX_MODE")
-    crm_realtime_inbox_poll_seconds: int = Field(default=15, alias="CRM_REALTIME_INBOX_POLL_SECONDS", ge=5, le=120)
-    crm_realtime_inbox_max_alerts: int = Field(default=5, alias="CRM_REALTIME_INBOX_MAX_ALERTS", ge=1, le=20)
-    crm_realtime_inbox_critical_pulse: bool = Field(default=True, alias="CRM_REALTIME_INBOX_CRITICAL_PULSE")
-    crm_realtime_inbox_sse_enabled: bool = Field(default=False, alias="CRM_REALTIME_INBOX_SSE_ENABLED")
+    crm_realtime_inbox_poll_seconds: int = Field(
+        default=15, alias="CRM_REALTIME_INBOX_POLL_SECONDS", ge=5, le=120
+    )
+    crm_realtime_inbox_max_alerts: int = Field(
+        default=5, alias="CRM_REALTIME_INBOX_MAX_ALERTS", ge=1, le=20
+    )
+    crm_realtime_inbox_critical_pulse: bool = Field(
+        default=True, alias="CRM_REALTIME_INBOX_CRITICAL_PULSE"
+    )
+    crm_realtime_inbox_sse_enabled: bool = Field(
+        default=False, alias="CRM_REALTIME_INBOX_SSE_ENABLED"
+    )
 
     # CRM Browser/Sound Alerts
-    crm_browser_notifications_enabled: bool = Field(default=True, alias="CRM_BROWSER_NOTIFICATIONS_ENABLED")
-    crm_browser_notifications_default: bool = Field(default=False, alias="CRM_BROWSER_NOTIFICATIONS_DEFAULT")
+    crm_browser_notifications_enabled: bool = Field(
+        default=True, alias="CRM_BROWSER_NOTIFICATIONS_ENABLED"
+    )
+    crm_browser_notifications_default: bool = Field(
+        default=False, alias="CRM_BROWSER_NOTIFICATIONS_DEFAULT"
+    )
     crm_sound_alerts_enabled: bool = Field(default=True, alias="CRM_SOUND_ALERTS_ENABLED")
     crm_sound_alerts_default: bool = Field(default=False, alias="CRM_SOUND_ALERTS_DEFAULT")
-    crm_alert_notification_cooldown_seconds: int = Field(default=60, alias="CRM_ALERT_NOTIFICATION_COOLDOWN_SECONDS", ge=10, le=600)
-    crm_alert_sound_cooldown_seconds: int = Field(default=30, alias="CRM_ALERT_SOUND_COOLDOWN_SECONDS", ge=5, le=300)
-    crm_alert_notify_severities: str = Field(default="critical,danger", alias="CRM_ALERT_NOTIFY_SEVERITIES")
+    crm_alert_notification_cooldown_seconds: int = Field(
+        default=60, alias="CRM_ALERT_NOTIFICATION_COOLDOWN_SECONDS", ge=10, le=600
+    )
+    crm_alert_sound_cooldown_seconds: int = Field(
+        default=30, alias="CRM_ALERT_SOUND_COOLDOWN_SECONDS", ge=5, le=300
+    )
+    crm_alert_notify_severities: str = Field(
+        default="critical,danger", alias="CRM_ALERT_NOTIFY_SEVERITIES"
+    )
 
     # CRM Operator Workflow Polish
-    crm_operator_workflow_polish_enabled: bool = Field(default=True, alias="CRM_OPERATOR_WORKFLOW_POLISH_ENABLED")
-    crm_keyboard_shortcuts_enabled: bool = Field(default=True, alias="CRM_KEYBOARD_SHORTCUTS_ENABLED")
+    crm_operator_workflow_polish_enabled: bool = Field(
+        default=True, alias="CRM_OPERATOR_WORKFLOW_POLISH_ENABLED"
+    )
+    crm_keyboard_shortcuts_enabled: bool = Field(
+        default=True, alias="CRM_KEYBOARD_SHORTCUTS_ENABLED"
+    )
     crm_quick_actions_enabled: bool = Field(default=True, alias="CRM_QUICK_ACTIONS_ENABLED")
     crm_default_hide_stopped: bool = Field(default=True, alias="CRM_DEFAULT_HIDE_STOPPED")
-    crm_operator_next_contact_enabled: bool = Field(default=True, alias="CRM_OPERATOR_NEXT_CONTACT_ENABLED")
+    crm_operator_next_contact_enabled: bool = Field(
+        default=True, alias="CRM_OPERATOR_NEXT_CONTACT_ENABLED"
+    )
 
     # CRM Data Quality & Merge
-    crm_duplicate_detection_enabled: bool = Field(default=True, alias="CRM_DUPLICATE_DETECTION_ENABLED")
+    crm_duplicate_detection_enabled: bool = Field(
+        default=True, alias="CRM_DUPLICATE_DETECTION_ENABLED"
+    )
     crm_contact_merge_enabled: bool = Field(default=False, alias="CRM_CONTACT_MERGE_ENABLED")
-    crm_contact_merge_require_confirmation: bool = Field(default=True, alias="CRM_CONTACT_MERGE_REQUIRE_CONFIRMATION")
-    crm_contact_merge_min_confidence: int = Field(default=80, alias="CRM_CONTACT_MERGE_MIN_CONFIDENCE", ge=0, le=100)
-    crm_contact_merge_audit_enabled: bool = Field(default=True, alias="CRM_CONTACT_MERGE_AUDIT_ENABLED")
-    crm_contact_merge_max_batch: int = Field(default=50, alias="CRM_CONTACT_MERGE_MAX_BATCH", ge=1, le=200)
+    crm_contact_merge_require_confirmation: bool = Field(
+        default=True, alias="CRM_CONTACT_MERGE_REQUIRE_CONFIRMATION"
+    )
+    crm_contact_merge_min_confidence: int = Field(
+        default=80, alias="CRM_CONTACT_MERGE_MIN_CONFIDENCE", ge=0, le=100
+    )
+    crm_contact_merge_audit_enabled: bool = Field(
+        default=True, alias="CRM_CONTACT_MERGE_AUDIT_ENABLED"
+    )
+    crm_contact_merge_max_batch: int = Field(
+        default=50, alias="CRM_CONTACT_MERGE_MAX_BATCH", ge=1, le=200
+    )
 
     # CRM Campaigns
     crm_campaigns_enabled: bool = Field(default=True, alias="CRM_CAMPAIGNS_ENABLED")
     crm_campaign_send_enabled: bool = Field(default=False, alias="CRM_CAMPAIGN_SEND_ENABLED")
     crm_campaign_require_approval: bool = Field(default=True, alias="CRM_CAMPAIGN_REQUIRE_APPROVAL")
-    crm_campaign_max_recipient_preview: int = Field(default=50, alias="CRM_CAMPAIGN_MAX_RECIPIENT_PREVIEW", ge=1, le=200)
-    crm_campaign_max_message_length: int = Field(default=1000, alias="CRM_CAMPAIGN_MAX_MESSAGE_LENGTH", ge=50, le=4000)
+    crm_campaign_max_recipient_preview: int = Field(
+        default=50, alias="CRM_CAMPAIGN_MAX_RECIPIENT_PREVIEW", ge=1, le=200
+    )
+    crm_campaign_max_message_length: int = Field(
+        default=1000, alias="CRM_CAMPAIGN_MAX_MESSAGE_LENGTH", ge=50, le=4000
+    )
     crm_campaign_exclude_stopped: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_STOPPED")
-    crm_campaign_exclude_marketing_disabled: bool = Field(default=True, alias="CRM_CAMPAIGN_EXCLUDE_MARKETING_DISABLED")
+    crm_campaign_exclude_marketing_disabled: bool = Field(
+        default=True, alias="CRM_CAMPAIGN_EXCLUDE_MARKETING_DISABLED"
+    )
     crm_campaign_audit_enabled: bool = Field(default=True, alias="CRM_CAMPAIGN_AUDIT_ENABLED")
-    crm_campaign_canary_send_enabled: bool = Field(default=False, alias="CRM_CAMPAIGN_CANARY_SEND_ENABLED")
-    crm_campaign_send_require_confirmation: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_REQUIRE_CONFIRMATION")
-    crm_campaign_send_max_recipients: int = Field(default=10, alias="CRM_CAMPAIGN_SEND_MAX_RECIPIENTS", ge=1, le=500)
-    crm_campaign_send_batch_limit: int = Field(default=5, alias="CRM_CAMPAIGN_SEND_BATCH_LIMIT", ge=1, le=50)
-    crm_campaign_send_dry_run_only: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_DRY_RUN_ONLY")
-    crm_campaign_canary_contact_ids: str = Field(default="", alias="CRM_CAMPAIGN_CANARY_CONTACT_IDS")
-    crm_campaign_send_audit_enabled: bool = Field(default=True, alias="CRM_CAMPAIGN_SEND_AUDIT_ENABLED")
+    crm_campaign_canary_send_enabled: bool = Field(
+        default=False, alias="CRM_CAMPAIGN_CANARY_SEND_ENABLED"
+    )
+    crm_campaign_send_require_confirmation: bool = Field(
+        default=True, alias="CRM_CAMPAIGN_SEND_REQUIRE_CONFIRMATION"
+    )
+    crm_campaign_send_max_recipients: int = Field(
+        default=10, alias="CRM_CAMPAIGN_SEND_MAX_RECIPIENTS", ge=1, le=500
+    )
+    crm_campaign_send_batch_limit: int = Field(
+        default=5, alias="CRM_CAMPAIGN_SEND_BATCH_LIMIT", ge=1, le=50
+    )
+    crm_campaign_send_dry_run_only: bool = Field(
+        default=True, alias="CRM_CAMPAIGN_SEND_DRY_RUN_ONLY"
+    )
+    crm_campaign_canary_contact_ids: str = Field(
+        default="", alias="CRM_CAMPAIGN_CANARY_CONTACT_IDS"
+    )
+    crm_campaign_send_audit_enabled: bool = Field(
+        default=True, alias="CRM_CAMPAIGN_SEND_AUDIT_ENABLED"
+    )
     crm_daily_report_enabled: bool = Field(default=False, alias="CRM_DAILY_REPORT_ENABLED")
     crm_daily_report_delivery_mode: str = Field(
-        default="disabled", alias="CRM_DAILY_REPORT_DELIVERY_MODE",
+        default="disabled",
+        alias="CRM_DAILY_REPORT_DELIVERY_MODE",
     )
     crm_daily_report_delivery_enabled: bool = Field(
-        default=False, alias="CRM_DAILY_REPORT_DELIVERY_ENABLED",
+        default=False,
+        alias="CRM_DAILY_REPORT_DELIVERY_ENABLED",
     )
     crm_daily_report_delivery_require_approval: bool = Field(
-        default=True, alias="CRM_DAILY_REPORT_DELIVERY_REQUIRE_APPROVAL",
+        default=True,
+        alias="CRM_DAILY_REPORT_DELIVERY_REQUIRE_APPROVAL",
     )
     crm_daily_report_telegram_enabled: bool = Field(
-        default=False, alias="CRM_DAILY_REPORT_TELEGRAM_ENABLED",
+        default=False,
+        alias="CRM_DAILY_REPORT_TELEGRAM_ENABLED",
     )
     crm_daily_report_email_enabled: bool = Field(
-        default=False, alias="CRM_DAILY_REPORT_EMAIL_ENABLED",
+        default=False,
+        alias="CRM_DAILY_REPORT_EMAIL_ENABLED",
     )
 
     # Admin RBAC
@@ -314,35 +402,63 @@ class BusinessSettings(BaseSettings):
 
     # Admin Session Auth
     admin_session_auth_enabled: bool = Field(default=False, alias="ADMIN_SESSION_AUTH_ENABLED")
-    admin_session_cookie_name: str = Field(default="vp_admin_session", alias="ADMIN_SESSION_COOKIE_NAME")
+    admin_session_cookie_name: str = Field(
+        default="vp_admin_session", alias="ADMIN_SESSION_COOKIE_NAME"
+    )
     admin_session_ttl_hours: int = Field(default=12, alias="ADMIN_SESSION_TTL_HOURS", ge=1, le=168)
     admin_session_secure_cookie: bool = Field(default=True, alias="ADMIN_SESSION_SECURE_COOKIE")
     admin_session_httponly: bool = Field(default=True, alias="ADMIN_SESSION_HTTPONLY")
     admin_session_samesite: str = Field(default="lax", alias="ADMIN_SESSION_SAMESITE")
     admin_csrf_enabled: bool = Field(default=False, alias="ADMIN_CSRF_ENABLED")
     admin_login_max_attempts: int = Field(default=5, alias="ADMIN_LOGIN_MAX_ATTEMPTS", ge=1, le=50)
-    admin_login_window_minutes: int = Field(default=15, alias="ADMIN_LOGIN_WINDOW_MINUTES", ge=1, le=1440)
-    admin_login_block_minutes: int = Field(default=15, alias="ADMIN_LOGIN_BLOCK_MINUTES", ge=1, le=1440)
+    admin_login_window_minutes: int = Field(
+        default=15, alias="ADMIN_LOGIN_WINDOW_MINUTES", ge=1, le=1440
+    )
+    admin_login_block_minutes: int = Field(
+        default=15, alias="ADMIN_LOGIN_BLOCK_MINUTES", ge=1, le=1440
+    )
     admin_session_audit_enabled: bool = Field(default=True, alias="ADMIN_SESSION_AUDIT_ENABLED")
 
     # Admin Security Dashboard
-    admin_security_dashboard_enabled: bool = Field(default=True, alias="ADMIN_SECURITY_DASHBOARD_ENABLED")
-    admin_security_default_hours: int = Field(default=24, alias="ADMIN_SECURITY_DEFAULT_HOURS", ge=1, le=720)
-    admin_security_max_hours: int = Field(default=720, alias="ADMIN_SECURITY_MAX_HOURS", ge=24, le=8760)
+    admin_security_dashboard_enabled: bool = Field(
+        default=True, alias="ADMIN_SECURITY_DASHBOARD_ENABLED"
+    )
+    admin_security_default_hours: int = Field(
+        default=24, alias="ADMIN_SECURITY_DEFAULT_HOURS", ge=1, le=720
+    )
+    admin_security_max_hours: int = Field(
+        default=720, alias="ADMIN_SECURITY_MAX_HOURS", ge=24, le=8760
+    )
     admin_security_mask_ip: bool = Field(default=True, alias="ADMIN_SECURITY_MASK_IP")
-    admin_security_max_user_agent_length: int = Field(default=120, alias="ADMIN_SECURITY_MAX_USER_AGENT_LENGTH", ge=20, le=512)
-    admin_security_failed_login_alert_threshold: int = Field(default=5, alias="ADMIN_SECURITY_FAILED_LOGIN_ALERT_THRESHOLD", ge=1, le=100)
-    admin_security_permission_denied_alert_threshold: int = Field(default=10, alias="ADMIN_SECURITY_PERMISSION_DENIED_ALERT_THRESHOLD", ge=1, le=100)
-    admin_security_sensitive_export_threshold: int = Field(default=3, alias="ADMIN_SECURITY_SENSITIVE_EXPORT_THRESHOLD", ge=1, le=50)
+    admin_security_max_user_agent_length: int = Field(
+        default=120, alias="ADMIN_SECURITY_MAX_USER_AGENT_LENGTH", ge=20, le=512
+    )
+    admin_security_failed_login_alert_threshold: int = Field(
+        default=5, alias="ADMIN_SECURITY_FAILED_LOGIN_ALERT_THRESHOLD", ge=1, le=100
+    )
+    admin_security_permission_denied_alert_threshold: int = Field(
+        default=10, alias="ADMIN_SECURITY_PERMISSION_DENIED_ALERT_THRESHOLD", ge=1, le=100
+    )
+    admin_security_sensitive_export_threshold: int = Field(
+        default=3, alias="ADMIN_SECURITY_SENSITIVE_EXPORT_THRESHOLD", ge=1, le=50
+    )
 
     # Admin Security Actions
-    admin_security_actions_enabled: bool = Field(default=False, alias="ADMIN_SECURITY_ACTIONS_ENABLED")
+    admin_security_actions_enabled: bool = Field(
+        default=False, alias="ADMIN_SECURITY_ACTIONS_ENABLED"
+    )
     admin_session_revoke_enabled: bool = Field(default=True, alias="ADMIN_SESSION_REVOKE_ENABLED")
     admin_admin_disable_enabled: bool = Field(default=True, alias="ADMIN_ADMIN_DISABLE_ENABLED")
     admin_ip_rules_enabled: bool = Field(default=False, alias="ADMIN_IP_RULES_ENABLED")
-    admin_ip_block_enforcement_enabled: bool = Field(default=False, alias="ADMIN_IP_BLOCK_ENFORCEMENT_ENABLED")
-    admin_security_action_require_confirmation: bool = Field(default=True, alias="ADMIN_SECURITY_ACTION_REQUIRE_CONFIRMATION")
-    admin_security_action_audit_enabled: bool = Field(default=True, alias="ADMIN_SECURITY_ACTION_AUDIT_ENABLED")
+    admin_ip_block_enforcement_enabled: bool = Field(
+        default=False, alias="ADMIN_IP_BLOCK_ENFORCEMENT_ENABLED"
+    )
+    admin_security_action_require_confirmation: bool = Field(
+        default=True, alias="ADMIN_SECURITY_ACTION_REQUIRE_CONFIRMATION"
+    )
+    admin_security_action_audit_enabled: bool = Field(
+        default=True, alias="ADMIN_SECURITY_ACTION_AUDIT_ENABLED"
+    )
 
     # Business hours (Time-Aware Intelligence Layer)
     timezone: str = Field(default="Asia/Tashkent", alias="BUSINESS_TIMEZONE")
@@ -351,161 +467,248 @@ class BusinessSettings(BaseSettings):
 
     # Agent follow-up engine
     agent_followups_enabled: bool = Field(default=False, alias="AGENT_FOLLOWUPS_ENABLED")
-    agent_catalog_followup_enabled: bool = Field(default=False, alias="AGENT_CATALOG_FOLLOWUP_ENABLED")
+    agent_catalog_followup_enabled: bool = Field(
+        default=False, alias="AGENT_CATALOG_FOLLOWUP_ENABLED"
+    )
     agent_price_followup_enabled: bool = Field(default=False, alias="AGENT_PRICE_FOLLOWUP_ENABLED")
     agent_order_followup_enabled: bool = Field(default=False, alias="AGENT_ORDER_FOLLOWUP_ENABLED")
     agent_catalog_followup_delay_minutes: int = Field(
-        default=10, alias="AGENT_CATALOG_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+        default=10,
+        alias="AGENT_CATALOG_FOLLOWUP_DELAY_MINUTES",
+        ge=1,
+        le=1440,
     )
     agent_price_followup_delay_minutes: int = Field(
-        default=10, alias="AGENT_PRICE_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+        default=10,
+        alias="AGENT_PRICE_FOLLOWUP_DELAY_MINUTES",
+        ge=1,
+        le=1440,
     )
     agent_order_followup_delay_minutes: int = Field(
-        default=10, alias="AGENT_ORDER_FOLLOWUP_DELAY_MINUTES", ge=1, le=1440,
+        default=10,
+        alias="AGENT_ORDER_FOLLOWUP_DELAY_MINUTES",
+        ge=1,
+        le=1440,
     )
     agent_admin_escalation_enabled: bool = Field(
-        default=False, alias="AGENT_ADMIN_ESCALATION_ENABLED",
+        default=False,
+        alias="AGENT_ADMIN_ESCALATION_ENABLED",
     )
     agent_admin_escalation_after_followups: int = Field(
-        default=2, alias="AGENT_ADMIN_ESCALATION_AFTER_FOLLOWUPS", ge=1, le=10,
+        default=2,
+        alias="AGENT_ADMIN_ESCALATION_AFTER_FOLLOWUPS",
+        ge=1,
+        le=10,
     )
     agent_admin_escalation_cooldown_minutes: int = Field(
-        default=60, alias="AGENT_ADMIN_ESCALATION_COOLDOWN_MINUTES", ge=5, le=1440,
+        default=60,
+        alias="AGENT_ADMIN_ESCALATION_COOLDOWN_MINUTES",
+        ge=5,
+        le=1440,
     )
     agent_ai_composer_enabled: bool = Field(
-        default=False, alias="AGENT_AI_COMPOSER_ENABLED",
+        default=False,
+        alias="AGENT_AI_COMPOSER_ENABLED",
     )
     agent_ai_composer_model: str = Field(
-        default="gpt-4o-mini", alias="AGENT_AI_COMPOSER_MODEL",
+        default="gpt-4o-mini",
+        alias="AGENT_AI_COMPOSER_MODEL",
     )
     agent_ai_composer_timeout_seconds: int = Field(
-        default=8, alias="AGENT_AI_COMPOSER_TIMEOUT_SECONDS", ge=3, le=30,
+        default=8,
+        alias="AGENT_AI_COMPOSER_TIMEOUT_SECONDS",
+        ge=3,
+        le=30,
     )
     agent_ai_composer_max_tokens: int = Field(
-        default=180, alias="AGENT_AI_COMPOSER_MAX_TOKENS", ge=50, le=500,
+        default=180,
+        alias="AGENT_AI_COMPOSER_MAX_TOKENS",
+        ge=50,
+        le=500,
     )
     agent_decision_engine_enabled: bool = Field(
-        default=False, alias="AGENT_DECISION_ENGINE_ENABLED",
+        default=False,
+        alias="AGENT_DECISION_ENGINE_ENABLED",
     )
     agent_decision_log_only: bool = Field(
-        default=True, alias="AGENT_DECISION_LOG_ONLY",
+        default=True,
+        alias="AGENT_DECISION_LOG_ONLY",
     )
     agent_decision_min_confidence: int = Field(
-        default=60, alias="AGENT_DECISION_MIN_CONFIDENCE", ge=0, le=100,
+        default=60,
+        alias="AGENT_DECISION_MIN_CONFIDENCE",
+        ge=0,
+        le=100,
     )
     agent_lead_signal_enabled: bool = Field(
-        default=False, alias="AGENT_LEAD_SIGNAL_ENABLED",
+        default=False,
+        alias="AGENT_LEAD_SIGNAL_ENABLED",
     )
     agent_lead_signal_min_confidence: int = Field(
-        default=50, alias="AGENT_LEAD_SIGNAL_MIN_CONFIDENCE", ge=0, le=100,
+        default=50,
+        alias="AGENT_LEAD_SIGNAL_MIN_CONFIDENCE",
+        ge=0,
+        le=100,
     )
     agent_lead_scoring_enabled: bool = Field(
-        default=False, alias="AGENT_LEAD_SCORING_ENABLED",
+        default=False,
+        alias="AGENT_LEAD_SCORING_ENABLED",
     )
     agent_dynamic_offer_enabled: bool = Field(
-        default=False, alias="AGENT_DYNAMIC_OFFER_ENABLED",
+        default=False,
+        alias="AGENT_DYNAMIC_OFFER_ENABLED",
     )
     agent_dynamic_offer_min_confidence: int = Field(
-        default=60, alias="AGENT_DYNAMIC_OFFER_MIN_CONFIDENCE", ge=0, le=100,
+        default=60,
+        alias="AGENT_DYNAMIC_OFFER_MIN_CONFIDENCE",
+        ge=0,
+        le=100,
     )
     agent_dynamic_offer_log_only: bool = Field(
-        default=True, alias="AGENT_DYNAMIC_OFFER_LOG_ONLY",
+        default=True,
+        alias="AGENT_DYNAMIC_OFFER_LOG_ONLY",
     )
     agent_conversation_policy_enabled: bool = Field(
-        default=False, alias="AGENT_CONVERSATION_POLICY_ENABLED",
+        default=False,
+        alias="AGENT_CONVERSATION_POLICY_ENABLED",
     )
     agent_conversation_policy_log_only: bool = Field(
-        default=True, alias="AGENT_CONVERSATION_POLICY_LOG_ONLY",
+        default=True,
+        alias="AGENT_CONVERSATION_POLICY_LOG_ONLY",
     )
     agent_conversation_policy_min_confidence: int = Field(
-        default=60, alias="AGENT_CONVERSATION_POLICY_MIN_CONFIDENCE", ge=0, le=100,
+        default=60,
+        alias="AGENT_CONVERSATION_POLICY_MIN_CONFIDENCE",
+        ge=0,
+        le=100,
     )
     agent_runtime_settings_enabled: bool = Field(
-        default=False, alias="AGENT_RUNTIME_SETTINGS_ENABLED",
+        default=False,
+        alias="AGENT_RUNTIME_SETTINGS_ENABLED",
     )
     agent_runtime_settings_cache_ttl_seconds: int = Field(
-        default=30, alias="AGENT_RUNTIME_SETTINGS_CACHE_TTL_SECONDS", ge=5, le=300,
+        default=30,
+        alias="AGENT_RUNTIME_SETTINGS_CACHE_TTL_SECONDS",
+        ge=5,
+        le=300,
     )
     agent_runtime_settings_fail_open_to_env: bool = Field(
-        default=True, alias="AGENT_RUNTIME_SETTINGS_FAIL_OPEN_TO_ENV",
+        default=True,
+        alias="AGENT_RUNTIME_SETTINGS_FAIL_OPEN_TO_ENV",
     )
     agent_settings_mutation_enabled: bool = Field(
-        default=False, alias="AGENT_SETTINGS_MUTATION_ENABLED",
+        default=False,
+        alias="AGENT_SETTINGS_MUTATION_ENABLED",
     )
     agent_settings_require_confirmation: bool = Field(
-        default=True, alias="AGENT_SETTINGS_REQUIRE_CONFIRMATION",
+        default=True,
+        alias="AGENT_SETTINGS_REQUIRE_CONFIRMATION",
     )
     agent_settings_allow_live_flags: bool = Field(
-        default=False, alias="AGENT_SETTINGS_ALLOW_LIVE_FLAGS",
+        default=False,
+        alias="AGENT_SETTINGS_ALLOW_LIVE_FLAGS",
     )
     agent_execution_api_approval_enabled: bool = Field(
-        default=False, alias="AGENT_EXECUTION_API_APPROVAL_ENABLED",
+        default=False,
+        alias="AGENT_EXECUTION_API_APPROVAL_ENABLED",
     )
     agent_execution_live_sender_enabled: bool = Field(
-        default=False, alias="AGENT_EXECUTION_LIVE_SENDER_ENABLED",
+        default=False,
+        alias="AGENT_EXECUTION_LIVE_SENDER_ENABLED",
     )
     agent_execution_live_sender_batch_limit: int = Field(
-        default=10, alias="AGENT_EXECUTION_LIVE_SENDER_BATCH_LIMIT", ge=1, le=50,
+        default=10,
+        alias="AGENT_EXECUTION_LIVE_SENDER_BATCH_LIMIT",
+        ge=1,
+        le=50,
     )
     agent_execution_live_sender_revalidate: bool = Field(
-        default=True, alias="AGENT_EXECUTION_LIVE_SENDER_REVALIDATE",
+        default=True,
+        alias="AGENT_EXECUTION_LIVE_SENDER_REVALIDATE",
     )
     agent_execution_live_sender_mark_failed_on_error: bool = Field(
-        default=True, alias="AGENT_EXECUTION_LIVE_SENDER_MARK_FAILED_ON_ERROR",
+        default=True,
+        alias="AGENT_EXECUTION_LIVE_SENDER_MARK_FAILED_ON_ERROR",
     )
     agent_execution_queue_enabled: bool = Field(
-        default=False, alias="AGENT_EXECUTION_QUEUE_ENABLED",
+        default=False,
+        alias="AGENT_EXECUTION_QUEUE_ENABLED",
     )
     agent_execution_approval_ttl_minutes: int = Field(
-        default=30, alias="AGENT_EXECUTION_APPROVAL_TTL_MINUTES", ge=5, le=1440,
+        default=30,
+        alias="AGENT_EXECUTION_APPROVAL_TTL_MINUTES",
+        ge=5,
+        le=1440,
     )
     agent_execution_approval_admin_notify: bool = Field(
-        default=False, alias="AGENT_EXECUTION_APPROVAL_ADMIN_NOTIFY",
+        default=False,
+        alias="AGENT_EXECUTION_APPROVAL_ADMIN_NOTIFY",
     )
     agent_execution_auto_execute_approved: bool = Field(
-        default=False, alias="AGENT_EXECUTION_AUTO_EXECUTE_APPROVED",
+        default=False,
+        alias="AGENT_EXECUTION_AUTO_EXECUTE_APPROVED",
     )
     agent_execution_sandbox_enabled: bool = Field(
-        default=False, alias="AGENT_EXECUTION_SANDBOX_ENABLED",
+        default=False,
+        alias="AGENT_EXECUTION_SANDBOX_ENABLED",
     )
     agent_execution_mode: str = Field(
-        default="log_only", alias="AGENT_EXECUTION_MODE",
+        default="log_only",
+        alias="AGENT_EXECUTION_MODE",
     )
     agent_execution_canary_user_ids: str = Field(
-        default="", alias="AGENT_EXECUTION_CANARY_USER_IDS",
+        default="",
+        alias="AGENT_EXECUTION_CANARY_USER_IDS",
     )
     agent_execution_require_approval_user_dm: bool = Field(
-        default=True, alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_USER_DM",
+        default=True,
+        alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_USER_DM",
     )
     agent_execution_require_approval_admin_alert: bool = Field(
-        default=False, alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_ADMIN_ALERT",
+        default=False,
+        alias="AGENT_EXECUTION_REQUIRE_APPROVAL_FOR_ADMIN_ALERT",
     )
     agent_execution_max_daily_per_user: int = Field(
-        default=3, alias="AGENT_EXECUTION_MAX_DAILY_ACTIONS_PER_USER", ge=1, le=50,
+        default=3,
+        alias="AGENT_EXECUTION_MAX_DAILY_ACTIONS_PER_USER",
+        ge=1,
+        le=50,
     )
     agent_execution_trace_enabled: bool = Field(
-        default=True, alias="AGENT_EXECUTION_TRACE_ENABLED",
+        default=True,
+        alias="AGENT_EXECUTION_TRACE_ENABLED",
     )
     agent_text_normalization_enabled: bool = Field(
-        default=True, alias="AGENT_TEXT_NORMALIZATION_ENABLED",
+        default=True,
+        alias="AGENT_TEXT_NORMALIZATION_ENABLED",
     )
     agent_fuzzy_intent_enabled: bool = Field(
-        default=True, alias="AGENT_FUZZY_INTENT_ENABLED",
+        default=True,
+        alias="AGENT_FUZZY_INTENT_ENABLED",
     )
     agent_fuzzy_max_distance: int = Field(
-        default=1, alias="AGENT_FUZZY_MAX_DISTANCE", ge=1, le=3,
+        default=1,
+        alias="AGENT_FUZZY_MAX_DISTANCE",
+        ge=1,
+        le=3,
     )
     agent_response_orchestrator_enabled: bool = Field(
-        default=False, alias="AGENT_RESPONSE_ORCHESTRATOR_ENABLED",
+        default=False,
+        alias="AGENT_RESPONSE_ORCHESTRATOR_ENABLED",
     )
     agent_response_orchestrator_log_only: bool = Field(
-        default=True, alias="AGENT_RESPONSE_ORCHESTRATOR_LOG_ONLY",
+        default=True,
+        alias="AGENT_RESPONSE_ORCHESTRATOR_LOG_ONLY",
     )
     agent_response_orchestrator_min_confidence: int = Field(
-        default=60, alias="AGENT_RESPONSE_ORCHESTRATOR_MIN_CONFIDENCE", ge=0, le=100,
+        default=60,
+        alias="AGENT_RESPONSE_ORCHESTRATOR_MIN_CONFIDENCE",
+        ge=0,
+        le=100,
     )
     agent_response_orchestrator_trace_enabled: bool = Field(
-        default=True, alias="AGENT_RESPONSE_ORCHESTRATOR_TRACE_ENABLED",
+        default=True,
+        alias="AGENT_RESPONSE_ORCHESTRATOR_TRACE_ENABLED",
     )
 
 
@@ -562,7 +765,9 @@ class Settings(BaseSettings):
             if not self.bot.webhook_url:
                 raise ValueError("BOT_WEBHOOK_URL is required in production")
             if self.bot.webhook_url and not self.bot.webhook_secret:
-                raise ValueError("BOT_WEBHOOK_SECRET is required when webhook is enabled in production")
+                raise ValueError(
+                    "BOT_WEBHOOK_SECRET is required when webhook is enabled in production"
+                )
             if not self.sentry.dsn:
                 raise ValueError("SENTRY_DSN is required in production")
         return self

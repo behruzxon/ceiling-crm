@@ -1,4 +1,5 @@
 """Tests for Step BX — Design System Foundation."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,11 +8,14 @@ from pathlib import Path
 def _base():
     return Path("apps/web/templates/base.html").read_text(encoding="utf-8")
 
+
 def _login():
     return Path("apps/web/templates/login.html").read_text(encoding="utf-8")
 
+
 def _security():
     return Path("apps/web/templates/security.html").read_text(encoding="utf-8")
+
 
 def _campaigns():
     return Path("apps/web/templates/crm_campaigns.html").read_text(encoding="utf-8")
@@ -207,6 +211,7 @@ class TestCampaignsPage:
 
     def test_web_route_exists(self):
         from apps.web.main import app
+
         paths = [r.path for r in app.routes]
         assert "/crm/campaigns" in paths or any("campaigns" in str(p) for p in paths)
 
@@ -214,12 +219,15 @@ class TestCampaignsPage:
 class TestSmoke:
     def test_web_app(self):
         from apps.web.main import app
+
         assert app is not None
 
     def test_api_app(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

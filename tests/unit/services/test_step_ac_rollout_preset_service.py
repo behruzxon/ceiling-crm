@@ -1,4 +1,5 @@
 """Tests for Step AC — AgentRolloutPresetService."""
+
 from __future__ import annotations
 
 from core.services.agent_rollout_preset_service import AgentRolloutPresetService
@@ -137,9 +138,12 @@ class TestBlockers:
         assert "canary_requires_user_ids" in b
 
     def test_canary_with_ids_ok(self):
-        b = svc.detect_blockers("canary", {
-            "agent_execution_canary_user_ids": "123",
-        })
+        b = svc.detect_blockers(
+            "canary",
+            {
+                "agent_execution_canary_user_ids": "123",
+            },
+        )
         assert not b
 
     def test_live_send_no_allow(self):
@@ -184,9 +188,12 @@ class TestPreview:
         assert r.allowed is False
 
     def test_canary_with_ids_allowed(self):
-        r = svc.preview_preset("canary", {
-            "agent_execution_canary_user_ids": "123,456",
-        })
+        r = svc.preview_preset(
+            "canary",
+            {
+                "agent_execution_canary_user_ids": "123,456",
+            },
+        )
         assert r.allowed is True
 
     def test_live_send_blocked_default(self):
@@ -198,9 +205,12 @@ class TestPreview:
         assert r.allowed is True
 
     def test_off_diff(self):
-        r = svc.preview_preset("off", {
-            "agent_followups_enabled": True,
-        })
+        r = svc.preview_preset(
+            "off",
+            {
+                "agent_followups_enabled": True,
+            },
+        )
         keys = [d.key for d in r.diff]
         assert "agent_followups_enabled" in keys
 
@@ -218,6 +228,7 @@ class TestPreview:
 class TestImmutability:
     def test_preview_frozen(self):
         import pytest
+
         r = svc.preview_preset("off")
         with pytest.raises(AttributeError):
             r.allowed = False  # type: ignore[misc]
@@ -226,6 +237,7 @@ class TestImmutability:
         import pytest
 
         from core.schemas.agent_rollout_preset import AgentRolloutPresetDiff
+
         d = AgentRolloutPresetDiff(key="k", current_value=False, target_value=True)
         with pytest.raises(AttributeError):
             d.key = "other"  # type: ignore[misc]
@@ -234,15 +246,18 @@ class TestImmutability:
 class TestNonRegression:
     def test_signal_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         assert LeadSignalService.extract_signals("narxi qancha").intent == "wants_price"
 
     def test_settings_service_works(self):
         from core.services.agent_settings_service import AgentSettingsService
+
         r = AgentSettingsService.validate_change("agent_followups_enabled", True)
         assert r.allowed is True
 
     def test_effective_settings_works(self):
         from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
+
         s = AgentEffectiveSettingsService({})
         f = s.get_followup_settings()
         assert f.enabled is False

@@ -1,4 +1,5 @@
 """Frozen dataclasses for Stage 4 APPROVAL_REQUIRED observation report."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,11 +12,13 @@ class Stage4NoSendSafetyMetrics:
     auto_execute_count: int = 0
     user_dm_sent_count: int = 0
 
+
 @dataclass(frozen=True)
 class Stage4PassFailResult:
     passed: bool = True
     failures: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
 
 @dataclass(frozen=True)
 class Stage4ApprovalReport:

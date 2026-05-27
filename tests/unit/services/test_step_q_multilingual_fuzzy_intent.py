@@ -1,4 +1,5 @@
 """Tests for Step Q — Multilingual + Fuzzy intent detection via LeadSignalService."""
+
 from __future__ import annotations
 
 from core.services.lead_signal_service import LeadSignalService

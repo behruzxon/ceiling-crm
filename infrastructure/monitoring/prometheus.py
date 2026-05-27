@@ -1,4 +1,5 @@
 """Prometheus metrics exporter."""
+
 from __future__ import annotations
 
 from aiohttp import web
@@ -137,6 +138,7 @@ async def health_handler(request: web.Request) -> web.Response:
 def setup_prometheus(app: web.Application) -> None:
     """Register /metrics and /health routes on the aiohttp app."""
     from shared.config import get_settings
+
     if get_settings().prometheus_enabled:
         app.router.add_get("/metrics", metrics_handler)
     # Health endpoint is always available

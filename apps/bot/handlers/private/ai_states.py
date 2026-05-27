@@ -5,6 +5,7 @@ FSM states, keyboards, and UI text constants for the AI support module.
 
 No dependencies on other ``ai_*`` sibling modules — safe to import anywhere.
 """
+
 from __future__ import annotations
 
 from aiogram.fsm.state import State, StatesGroup
@@ -16,6 +17,7 @@ from aiogram.types import (
 )
 
 # ── FSM states ───────────────────────────────────────────────────────────────
+
 
 class AiSupportStates(StatesGroup):
     waiting_for_name = State()
@@ -36,6 +38,7 @@ _CANCEL_PHONE = "❌ Bekor qilish"
 
 
 # ── Keyboards ────────────────────────────────────────────────────────────────
+
 
 def _phone_request_keyboard() -> ReplyKeyboardMarkup:
     """Contact-share keyboard shown only during the phone collection step."""
@@ -68,32 +71,37 @@ BTN_AI_OPERATOR = "👨‍💼 Operator"
 BTN_AI_RESET = "🔄 Reset"
 BTN_AI_HELP = "❓ Yordam"
 
-_AI_QUICK_BUTTONS: frozenset[str] = frozenset({
-    BTN_AI_PRICE, BTN_AI_CATALOG, BTN_AI_OPERATOR,
-    BTN_AI_RESET, BTN_AI_HELP,
-})
+_AI_QUICK_BUTTONS: frozenset[str] = frozenset(
+    {
+        BTN_AI_PRICE,
+        BTN_AI_CATALOG,
+        BTN_AI_OPERATOR,
+        BTN_AI_RESET,
+        BTN_AI_HELP,
+    }
+)
 
 
 # ── Failsafe UI ──────────────────────────────────────────────────────────────
 
 _FAILSAFE_TEXT = (
-    "⚠️ Kechirasiz, texnik nosozlik yuz berdi.\n\n"
-    "Operatorga murojaat qilishingiz mumkin:"
+    "⚠️ Kechirasiz, texnik nosozlik yuz berdi.\n\n" "Operatorga murojaat qilishingiz mumkin:"
 )
 _FAILSAFE_KB = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(
-            text="📞 Operator bilan bog'lanish",
-            url="https://t.me/ceiling_manager",
-        )],
+        [
+            InlineKeyboardButton(
+                text="📞 Operator bilan bog'lanish",
+                url="https://t.me/ceiling_manager",
+            )
+        ],
     ]
 )
 
 # ── Text constants ───────────────────────────────────────────────────────────
 
 _NEUTRAL_REPLY = (
-    "Tushunarli 🙂\n\n"
-    "Narx hisoblaymizmi, katalog ko'ramizmi yoki bepul o'lchov kerakmi?"
+    "Tushunarli 🙂\n\n" "Narx hisoblaymizmi, katalog ko'ramizmi yoki bepul o'lchov kerakmi?"
 )
 
 _CATALOG_SOFT_CTA = (
@@ -103,10 +111,7 @@ _CATALOG_SOFT_CTA = (
 
 _CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 
-_PRICE_ASK_AREA_TEXT = (
-    "Xonangiz taxminan necha m²?\n"
-    "Masalan: 20 m² yoki 5x3"
-)
+_PRICE_ASK_AREA_TEXT = "Xonangiz taxminan necha m²?\n" "Masalan: 20 m² yoki 5x3"
 
 _PRICE_ASK_DESIGN_TEXT = (
     "Qaysi tur kerak?\n\n"
@@ -119,10 +124,7 @@ _PRICE_ASK_DESIGN_TEXT = (
     "• Gulli"
 )
 
-_UPSELL_SOFT_CTA = (
-    "Xohlasangiz ustamiz kelib bepul o'lchov qilib beradi 🙂\n\n"
-    "Qaysi tumandasiz?"
-)
+_UPSELL_SOFT_CTA = "Xohlasangiz ustamiz kelib bepul o'lchov qilib beradi 🙂\n\n" "Qaysi tumandasiz?"
 
 # ── AI mode entry / status ──────────────────────────────────────────────────
 
@@ -152,14 +154,10 @@ _AI_HELP_TEXT = (
     "⚠️ Aniq narx o'lchovdan keyin tasdiqlanadi."
 )
 
-_AI_RESET_SUCCESS = (
-    "✅ AI suhbat xotirasi tozalandi.\n"
-    "Yangi savol yozishingiz mumkin."
-)
+_AI_RESET_SUCCESS = "✅ AI suhbat xotirasi tozalandi.\n" "Yangi savol yozishingiz mumkin."
 
 _AI_PRICE_PROMPT = (
-    "💰 Narx hisoblash uchun xonangiz razmerini yozing.\n\n"
-    "Masalan: <b>5x4</b> yoki <b>20 kv</b>"
+    "💰 Narx hisoblash uchun xonangiz razmerini yozing.\n\n" "Masalan: <b>5x4</b> yoki <b>20 kv</b>"
 )
 
 _AI_OPERATOR_PROMPT = (

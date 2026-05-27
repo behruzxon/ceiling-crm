@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractPaymentRepository."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -79,9 +80,7 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         if expected_status is not None:
             # Lock the row and verify current status atomically.
             result = await self._session.execute(
-                sa.select(PaymentModel)
-                .where(PaymentModel.id == id)
-                .with_for_update()
+                sa.select(PaymentModel).where(PaymentModel.id == id).with_for_update()
             )
             model = result.scalar_one_or_none()
         else:
@@ -120,7 +119,5 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         return self._to_domain(model)
 
     async def delete(self, id: int) -> bool:
-        result = await self._session.execute(
-            sa.delete(PaymentModel).where(PaymentModel.id == id)
-        )
+        result = await self._session.execute(sa.delete(PaymentModel).where(PaymentModel.id == id))
         return result.rowcount > 0

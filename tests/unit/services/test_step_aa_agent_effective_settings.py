@@ -1,4 +1,5 @@
 """Tests for Step AA — AgentEffectiveSettingsService."""
+
 from __future__ import annotations
 
 import pytest
@@ -120,11 +121,13 @@ class TestFollowupSettings:
         assert f.enabled is False
 
     def test_runtime_override(self):
-        s = _svc({
-            "agent_followups_enabled": True,
-            "agent_catalog_followup_enabled": True,
-            "agent_catalog_followup_delay_minutes": 5,
-        })
+        s = _svc(
+            {
+                "agent_followups_enabled": True,
+                "agent_catalog_followup_enabled": True,
+                "agent_catalog_followup_delay_minutes": 5,
+            }
+        )
         f = s.get_followup_settings()
         assert f.enabled is True
         assert f.catalog_enabled is True
@@ -178,12 +181,14 @@ class TestDecisionSettings:
         assert d.min_confidence == 60
 
     def test_all_enabled(self):
-        s = _svc({
-            "agent_decision_engine_enabled": True,
-            "agent_lead_signal_enabled": True,
-            "agent_dynamic_offer_enabled": True,
-            "agent_conversation_policy_enabled": True,
-        })
+        s = _svc(
+            {
+                "agent_decision_engine_enabled": True,
+                "agent_lead_signal_enabled": True,
+                "agent_dynamic_offer_enabled": True,
+                "agent_conversation_policy_enabled": True,
+            }
+        )
         d = s.get_decision_settings()
         assert d.decision_enabled is True
         assert d.lead_signal_enabled is True
@@ -237,10 +242,12 @@ class TestOrchestratorSettings:
         assert o.log_only is True
 
     def test_override(self):
-        s = _svc({
-            "agent_response_orchestrator_enabled": True,
-            "agent_response_orchestrator_log_only": False,
-        })
+        s = _svc(
+            {
+                "agent_response_orchestrator_enabled": True,
+                "agent_response_orchestrator_log_only": False,
+            }
+        )
         o = s.get_orchestrator_settings()
         assert o.enabled is True
         assert o.log_only is False
@@ -260,10 +267,12 @@ class TestAdminEscalationSettings:
         assert a.cooldown_minutes == 60
 
     def test_override(self):
-        s = _svc({
-            "agent_admin_escalation_enabled": True,
-            "agent_admin_escalation_after_followups": 3,
-        })
+        s = _svc(
+            {
+                "agent_admin_escalation_enabled": True,
+                "agent_admin_escalation_after_followups": 3,
+            }
+        )
         a = s.get_admin_escalation_settings()
         assert a.enabled is True
         assert a.after_followups == 3
@@ -294,6 +303,7 @@ class TestFullSnapshot:
 
     def test_snapshot_no_secrets(self):
         from dataclasses import asdict
+
         s = _svc({"agent_followups_enabled": True})
         snap = s.get_agent_settings_snapshot()
         text = str(asdict(snap))
@@ -313,6 +323,7 @@ class TestCache:
     def test_cache_clears_without_error(self):
         AgentEffectiveSettingsService.clear_cache()
         from core.services.agent_effective_settings_service import _CACHE as c
+
         assert c == {}
 
 
@@ -365,10 +376,12 @@ class TestImmutability:
 class TestDI:
     def test_di_importable(self):
         from infrastructure.di import get_agent_effective_settings_service
+
         assert callable(get_agent_effective_settings_service)
 
     def test_service_returns_instance(self):
         from infrastructure.di import get_agent_effective_settings_service
+
         s = get_agent_effective_settings_service()
         assert isinstance(s, AgentEffectiveSettingsService)
 
@@ -381,21 +394,22 @@ class TestDI:
 class TestConfig:
     def test_runtime_default_false(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_runtime_settings_enabled"
-        ].default is False
+
+        assert BusinessSettings.model_fields["agent_runtime_settings_enabled"].default is False
 
     def test_cache_ttl_default(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_runtime_settings_cache_ttl_seconds"
-        ].default == 30
+
+        assert (
+            BusinessSettings.model_fields["agent_runtime_settings_cache_ttl_seconds"].default == 30
+        )
 
     def test_fail_open_default_true(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_runtime_settings_fail_open_to_env"
-        ].default is True
+
+        assert (
+            BusinessSettings.model_fields["agent_runtime_settings_fail_open_to_env"].default is True
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -406,6 +420,7 @@ class TestConfig:
 class TestNonRegression:
     def test_signal_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("narxi qancha")
         assert sig.intent == "wants_price"
 
@@ -413,13 +428,19 @@ class TestNonRegression:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"
 
     def test_settings_service_still_works(self):
         from core.services.agent_settings_service import AgentSettingsService
+
         r = AgentSettingsService.validate_change("agent_followups_enabled", True)
         assert r.allowed is True
 
@@ -427,6 +448,7 @@ class TestNonRegression:
         from core.services.agent_control_center_service import (
             AgentControlCenterService,
         )
+
         snap = AgentControlCenterService.build_control_center_snapshot(None)
         assert snap.rollout_stage.stage == "off"
 
@@ -434,12 +456,14 @@ class TestNonRegression:
         from core.services.agent_execution_sandbox_service import (
             AgentExecutionSandboxService,
         )
+
         assert AgentExecutionSandboxService is not None
 
     def test_db_loader_importable(self):
         from core.services.agent_effective_settings_service import (
             load_runtime_overrides_from_db,
         )
+
         assert callable(load_runtime_overrides_from_db)
 
 
@@ -492,21 +516,25 @@ class TestTypeCoercion:
 
 class TestFollowupEdge:
     def test_all_followups_enabled(self):
-        s = _svc({
-            "agent_followups_enabled": True,
-            "agent_catalog_followup_enabled": True,
-            "agent_price_followup_enabled": True,
-            "agent_order_followup_enabled": True,
-        })
+        s = _svc(
+            {
+                "agent_followups_enabled": True,
+                "agent_catalog_followup_enabled": True,
+                "agent_price_followup_enabled": True,
+                "agent_order_followup_enabled": True,
+            }
+        )
         f = s.get_followup_settings()
         assert f.enabled and f.catalog_enabled and f.price_enabled and f.order_enabled
 
     def test_delays_override(self):
-        s = _svc({
-            "agent_catalog_followup_delay_minutes": 1,
-            "agent_price_followup_delay_minutes": 2,
-            "agent_order_followup_delay_minutes": 3,
-        })
+        s = _svc(
+            {
+                "agent_catalog_followup_delay_minutes": 1,
+                "agent_price_followup_delay_minutes": 2,
+                "agent_order_followup_delay_minutes": 3,
+            }
+        )
         f = s.get_followup_settings()
         assert f.catalog_delay_minutes == 1
         assert f.price_delay_minutes == 2
@@ -515,12 +543,14 @@ class TestFollowupEdge:
 
 class TestAIComposerEdge:
     def test_all_overrides(self):
-        s = _svc({
-            "agent_ai_composer_enabled": True,
-            "agent_ai_composer_model": "gpt-4o",
-            "agent_ai_composer_timeout_seconds": 15,
-            "agent_ai_composer_max_tokens": 300,
-        })
+        s = _svc(
+            {
+                "agent_ai_composer_enabled": True,
+                "agent_ai_composer_model": "gpt-4o",
+                "agent_ai_composer_timeout_seconds": 15,
+                "agent_ai_composer_max_tokens": 300,
+            }
+        )
         a = s.get_ai_composer_settings()
         assert a.enabled is True
         assert a.model == "gpt-4o"
@@ -530,14 +560,16 @@ class TestAIComposerEdge:
 
 class TestExecutionEdge:
     def test_full_live_config(self):
-        s = _svc({
-            "agent_execution_sandbox_enabled": True,
-            "agent_execution_mode": "live",
-            "agent_execution_queue_enabled": True,
-            "agent_execution_live_sender_enabled": True,
-            "agent_execution_auto_execute_approved": True,
-            "agent_execution_live_sender_batch_limit": 20,
-        })
+        s = _svc(
+            {
+                "agent_execution_sandbox_enabled": True,
+                "agent_execution_mode": "live",
+                "agent_execution_queue_enabled": True,
+                "agent_execution_live_sender_enabled": True,
+                "agent_execution_auto_execute_approved": True,
+                "agent_execution_live_sender_batch_limit": 20,
+            }
+        )
         e = s.get_execution_settings()
         assert e.sandbox_enabled is True
         assert e.execution_mode == "live"
@@ -554,12 +586,14 @@ class TestExecutionEdge:
 
 class TestOrchestratorEdge:
     def test_full_config(self):
-        s = _svc({
-            "agent_response_orchestrator_enabled": True,
-            "agent_response_orchestrator_log_only": False,
-            "agent_response_orchestrator_min_confidence": 80,
-            "agent_response_orchestrator_trace_enabled": False,
-        })
+        s = _svc(
+            {
+                "agent_response_orchestrator_enabled": True,
+                "agent_response_orchestrator_log_only": False,
+                "agent_response_orchestrator_min_confidence": 80,
+                "agent_response_orchestrator_trace_enabled": False,
+            }
+        )
         o = s.get_orchestrator_settings()
         assert o.enabled is True
         assert o.log_only is False
@@ -569,11 +603,13 @@ class TestOrchestratorEdge:
 
 class TestEscalationEdge:
     def test_full_config(self):
-        s = _svc({
-            "agent_admin_escalation_enabled": True,
-            "agent_admin_escalation_after_followups": 5,
-            "agent_admin_escalation_cooldown_minutes": 120,
-        })
+        s = _svc(
+            {
+                "agent_admin_escalation_enabled": True,
+                "agent_admin_escalation_after_followups": 5,
+                "agent_admin_escalation_cooldown_minutes": 120,
+            }
+        )
         a = s.get_admin_escalation_settings()
         assert a.enabled is True
         assert a.after_followups == 5
@@ -644,6 +680,7 @@ class TestSchemaDefaults:
 
     def test_setting_source_defaults(self):
         from core.schemas.agent_effective_settings import SettingSource
+
         ss = SettingSource(key="test", value=True)
         assert ss.source == "default"
 

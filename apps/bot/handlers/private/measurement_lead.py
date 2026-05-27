@@ -19,6 +19,7 @@ Cancel path
 -----------
   BTN_CANCEL or /cancel at any state → clear state → main menu
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -53,6 +54,7 @@ _TIME_CHOICES = ["Bugun", "Ertaga", "Hafta oxiri", _BTN_SKIP_TIME]
 
 
 # ─── Keyboards ────────────────────────────────────────────────────────────────
+
 
 def _ml_phone_keyboard(is_private: bool = True) -> ReplyKeyboardMarkup:
     """Phone request keyboard.
@@ -94,6 +96,7 @@ def _time_keyboard() -> ReplyKeyboardMarkup:
 
 # ─── Shared entry helper ──────────────────────────────────────────────────────
 
+
 async def start_measurement_flow(message: Message, state: FSMContext) -> None:
     """
     Entry point callable from other handlers (e.g. ai_support.py).
@@ -102,13 +105,13 @@ async def start_measurement_flow(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(MeasurementLeadStates.waiting_for_name)
     await message.answer(
-        "📐 <b>Bepul o'lchov</b>\n\n"
-        "Ismingizni kiriting:",
+        "📐 <b>Bepul o'lchov</b>\n\n" "Ismingizni kiriting:",
         reply_markup=_cancel_keyboard(),
     )
 
 
 # ─── Step 1 : name ────────────────────────────────────────────────────────────
+
 
 @router.message(
     StateFilter(MeasurementLeadStates.waiting_for_name),
@@ -143,6 +146,7 @@ async def handle_ml_name(message: Message, state: FSMContext, **data: object) ->
 
 # ─── Step 2 : phone ───────────────────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(MeasurementLeadStates.waiting_for_phone),
     F.contact,
@@ -169,8 +173,7 @@ async def handle_ml_contact(message: Message, state: FSMContext, **data: object)
     await state.update_data(phone=phone)
     await state.set_state(MeasurementLeadStates.waiting_for_location)
     await message.answer(
-        "✅ Raqam qabul qilindi.\n\n"
-        "📍 Manzilingizni yozing (tuman, ko'cha yoki orientir):",
+        "✅ Raqam qabul qilindi.\n\n" "📍 Manzilingizni yozing (tuman, ko'cha yoki orientir):",
         reply_markup=_cancel_keyboard(),
     )
 
@@ -180,9 +183,7 @@ async def handle_ml_contact(message: Message, state: FSMContext, **data: object)
     F.chat.type.in_({"group", "supergroup"}),
     F.text == "📲 Nomerni yuborish",
 )
-async def handle_ml_phone_group_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ml_phone_group_btn(message: Message, state: FSMContext, **data: object) -> None:
     """User tapped the contact button in a group — guide them to DM."""
     settings = get_settings()
     url = f"https://t.me/{settings.bot.username}?start=share_phone"
@@ -212,8 +213,7 @@ async def handle_ml_phone(message: Message, state: FSMContext, **data: object) -
     phone = normalize_phone(text)
     if not phone or not is_valid_uz_phone(phone):
         await message.answer(
-            "Raqam noto'g'ri. O'zbekiston raqamini kiriting:\n"
-            "<i>Namuna: +998 90 123 45 67</i>",
+            "Raqam noto'g'ri. O'zbekiston raqamini kiriting:\n" "<i>Namuna: +998 90 123 45 67</i>",
             reply_markup=_ml_phone_keyboard(is_private=(message.chat.type == "private")),
         )
         return
@@ -221,13 +221,13 @@ async def handle_ml_phone(message: Message, state: FSMContext, **data: object) -
     await state.update_data(phone=phone)
     await state.set_state(MeasurementLeadStates.waiting_for_location)
     await message.answer(
-        "✅ Raqam qabul qilindi.\n\n"
-        "📍 Manzilingizni yozing (tuman, ko'cha yoki orientir):",
+        "✅ Raqam qabul qilindi.\n\n" "📍 Manzilingizni yozing (tuman, ko'cha yoki orientir):",
         reply_markup=_cancel_keyboard(),
     )
 
 
 # ─── Step 3 : location ────────────────────────────────────────────────────────
+
 
 @router.message(
     StateFilter(MeasurementLeadStates.waiting_for_location),
@@ -258,6 +258,7 @@ async def handle_ml_location(message: Message, state: FSMContext, **data: object
 
 
 # ─── Step 4 : time preference + lead creation ────────────────────────────────
+
 
 @router.message(
     StateFilter(MeasurementLeadStates.waiting_for_time),
@@ -332,9 +333,9 @@ async def _create_lead_and_notify(
         try:
             async with factory() as session:
                 conv = await session.get(AiConversationModel, user_id)
-                mem  = await session.get(AiMemoryModel, user_id)
+                mem = await session.get(AiMemoryModel, user_id)
                 if conv:
-                    lead_temperature   = conv.lead_temperature
+                    lead_temperature = conv.lead_temperature
                     closing_confidence = conv.closing_confidence
                 if mem and mem.profile:
                     dimensions = mem.profile.get("last_dimensions")
@@ -359,6 +360,7 @@ async def _create_lead_and_notify(
             try:
                 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
                 from shared.utils.lead_scoring import compute_next_followup
+
                 next_fu = compute_next_followup(lead_temperature, closing_confidence)
                 async with factory() as session:
                     await PostgresLeadRepository(session).update_ai_scoring(
@@ -398,6 +400,7 @@ async def _create_lead_and_notify(
 
 # ─── Cancel helper ────────────────────────────────────────────────────────────
 
+
 async def _cancel_flow(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
@@ -415,7 +418,5 @@ async def _cancel_flow(message: Message, state: FSMContext) -> None:
     ),
     Command("cancel"),
 )
-async def handle_ml_cancel_cmd(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ml_cancel_cmd(message: Message, state: FSMContext, **data: object) -> None:
     await _cancel_flow(message, state)

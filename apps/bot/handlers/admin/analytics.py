@@ -8,6 +8,7 @@ memory, runs ``build_sales_analytics``, and formats a compact admin card.
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -51,9 +52,7 @@ async def cmd_analytics(message: Message, **data: object) -> None:
             leads = await repo.get_leads_for_analytics(days=days, limit=500)
 
         if not leads:
-            await message.answer(
-                f"\U0001f4ca Oxirgi {days} kunda lidlar topilmadi."
-            )
+            await message.answer(f"\U0001f4ca Oxirgi {days} kunda lidlar topilmadi.")
             return
 
         # Build signal dicts with optional Redis enrichment
@@ -61,6 +60,7 @@ async def cmd_analytics(message: Message, **data: object) -> None:
 
         # Run analytics
         from core.services.sales_analytics_service import build_sales_analytics
+
         report = build_sales_analytics(leads_data)
 
         # Query outcome-based tactic performance (best-effort)
@@ -68,9 +68,11 @@ async def cmd_analytics(message: Message, **data: object) -> None:
         try:
             from core.services.tactic_performance_service import build_tactic_performance
             from infrastructure.di import get_tactic_outcome_repo
+
             async with factory() as session2:
                 tac_repo = get_tactic_outcome_repo(session2)
                 from datetime import datetime, timedelta
+
                 since = datetime.now(UTC) - timedelta(days=days)
                 resolved_stats = await tac_repo.get_resolved_stats(since=since, min_samples=3)
                 if resolved_stats:
@@ -129,6 +131,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
         mem: dict = {}
         try:
             from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
             mem = await _load_ai_memory(lead.user_id) or {}
             if mem:
                 ld["buyer_type"] = mem.get("buyer_type")
@@ -142,6 +145,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
         # Try revenue estimate (best-effort)
         try:
             from core.services.revenue_predictor_service import predict_lead_revenue
+
             rev = predict_lead_revenue(
                 area_m2=ld.get("room_area"),
                 buyer_type=ld.get("buyer_type"),
@@ -163,6 +167,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
             ai_score = int(score_raw) if score_raw else ld.get("score", 0)
 
             from datetime import datetime
+
             last_ts = mem.get("last_activity_ts") or mem.get("updated_at")
             if last_ts:
                 mins_inactive = max(
@@ -170,9 +175,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     (int(datetime.now(UTC).timestamp()) - int(last_ts)) // 60,
                 )
             else:
-                mins_inactive = int(
-                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-                )
+                mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
             ci = analyze_conversation(
                 score=ai_score,
@@ -203,9 +206,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
 
         # Shared variables for autopilot + closing enrichment
         _health = ld.get("conv_health_score", 50)
-        _obj_resolved = bool(
-            mem.get("last_objection") and mem.get("last_negotiation_tactic")
-        )
+        _obj_resolved = bool(mem.get("last_objection") and mem.get("last_negotiation_tactic"))
 
         # Build SignalVector once — used by all engines below
         try:
@@ -213,6 +214,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
                 build_signal_vector,
                 with_deal_probability,
             )
+
             sv = build_signal_vector(
                 lead_score=ai_score,
                 health_score=_health,
@@ -238,8 +240,11 @@ async def _build_leads_data(leads: list) -> list[dict]:
         # Try deal probability (best-effort, used by closing enrichment)
         try:
             from shared.utils.deal_probability import evaluate_deal_probability
-            _dp = evaluate_deal_probability(signal_vector=sv) if sv else \
-                evaluate_deal_probability(
+
+            _dp = (
+                evaluate_deal_probability(signal_vector=sv)
+                if sv
+                else evaluate_deal_probability(
                     score=ai_score,
                     closing_confidence=lead.closing_confidence,
                     phone_captured=bool(lead.phone),
@@ -248,6 +253,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     has_district=bool(lead.district),
                     follow_up_count=lead.follow_up_count or 0,
                 )
+            )
             ld["deal_probability_percent"] = _dp.deal_probability_percent
             if sv:
                 sv = with_deal_probability(sv, _dp.deal_probability_percent)
@@ -262,9 +268,13 @@ async def _build_leads_data(leads: list) -> list[dict]:
                 determine_next_best_action,
                 suggest_closing_tactic,
             )
-            nba = determine_next_best_action(signal_vector=sv) if sv else \
-                determine_next_best_action(
-                    score=ai_score, health_score=_health,
+
+            nba = (
+                determine_next_best_action(signal_vector=sv)
+                if sv
+                else determine_next_best_action(
+                    score=ai_score,
+                    health_score=_health,
                     last_objection=mem.get("last_objection"),
                     objection_resolved=_obj_resolved,
                     minutes_since_last_activity=mins_inactive,
@@ -278,10 +288,14 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     buyer_type=mem.get("buyer_type"),
                     closing_attempted=bool(mem.get("last_closing_attempt")),
                 )
+            )
             ld["nba_action"] = nba.action
-            opp = detect_opportunity(signal_vector=sv) if sv else \
-                detect_opportunity(
-                    score=ai_score, health_score=_health,
+            opp = (
+                detect_opportunity(signal_vector=sv)
+                if sv
+                else detect_opportunity(
+                    score=ai_score,
+                    health_score=_health,
                     last_objection=mem.get("last_objection"),
                     objection_resolved=_obj_resolved,
                     minutes_since_last_activity=mins_inactive,
@@ -289,10 +303,14 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     area_m2=float(lead.room_area) if lead.room_area else None,
                     closing_confidence=lead.closing_confidence,
                 )
+            )
             ld["opportunity_detected"] = opp.detected
-            risk = detect_at_risk(signal_vector=sv) if sv else \
-                detect_at_risk(
-                    score=ai_score, health_score=_health,
+            risk = (
+                detect_at_risk(signal_vector=sv)
+                if sv
+                else detect_at_risk(
+                    score=ai_score,
+                    health_score=_health,
                     last_objection=mem.get("last_objection"),
                     objection_resolved=_obj_resolved,
                     minutes_since_last_activity=mins_inactive,
@@ -301,10 +319,14 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     closing_confidence=lead.closing_confidence,
                     current_stage=ld["current_stage"],
                 )
+            )
             ld["at_risk_detected"] = risk.detected
-            closing = suggest_closing_tactic(signal_vector=sv) if sv else \
-                suggest_closing_tactic(
-                    score=ai_score, phone_captured=bool(lead.phone),
+            closing = (
+                suggest_closing_tactic(signal_vector=sv)
+                if sv
+                else suggest_closing_tactic(
+                    score=ai_score,
+                    phone_captured=bool(lead.phone),
                     area_m2=float(lead.room_area) if lead.room_area else None,
                     closing_confidence=lead.closing_confidence,
                     buyer_type=mem.get("buyer_type"),
@@ -312,6 +334,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     last_objection=mem.get("last_objection"),
                     closing_attempted=bool(mem.get("last_closing_attempt")),
                 )
+            )
             ld["closing_ready"] = closing.should_close
         except Exception:
             pass
@@ -341,8 +364,11 @@ async def _build_leads_data(leads: list) -> list[dict]:
                 evaluate_closing_readiness,
                 select_closing_tactic,
             )
-            cr = evaluate_closing_readiness(signal_vector=sv) if sv else \
-                evaluate_closing_readiness(
+
+            cr = (
+                evaluate_closing_readiness(signal_vector=sv)
+                if sv
+                else evaluate_closing_readiness(
                     score=ai_score,
                     health_score=_health,
                     last_objection=mem.get("last_objection"),
@@ -360,6 +386,7 @@ async def _build_leads_data(leads: list) -> list[dict]:
                     closing_attempted=bool(mem.get("last_closing_attempt")),
                     deal_probability_percent=ld.get("deal_probability_percent"),
                 )
+            )
             ld["closing_readiness_tier"] = cr.readiness_tier
             risk = detect_close_loss_risk(
                 readiness_tier=cr.readiness_tier,
@@ -398,9 +425,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
     lines: list[str] = []
 
     # ── Header ────────────────────────────────────────────────────────
-    lines.append(
-        f"\U0001f4ca <b>Sotuv tahlili — {days} kun</b>\n"
-    )
+    lines.append(f"\U0001f4ca <b>Sotuv tahlili — {days} kun</b>\n")
 
     # ── Total summary ─────────────────────────────────────────────────
     lines.append(
@@ -409,12 +434,8 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
         f"\u274c {report.lost_leads} | "
         f"\U0001f504 {report.active_leads}"
     )
-    lines.append(
-        f"\U0001f3af Konversiya: {report.conversion_rate:.1%}"
-    )
-    lines.append(
-        f"\U0001f4ca O'rtacha ball: {report.avg_score}"
-    )
+    lines.append(f"\U0001f3af Konversiya: {report.conversion_rate:.1%}")
+    lines.append(f"\U0001f4ca O'rtacha ball: {report.avg_score}")
 
     # Score distribution
     sd = report.score_distribution
@@ -427,12 +448,8 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
     # ── Revenue ───────────────────────────────────────────────────────
     if report.total_estimated_revenue > 0:
         lines.append("")
-        lines.append(
-            f"\U0001f4b0 Umumiy daromad: {report.total_estimated_revenue:,} UZS"
-        )
-        lines.append(
-            f"\U0001f4b5 Har bir lid: {report.avg_revenue_per_lead:,} UZS"
-        )
+        lines.append(f"\U0001f4b0 Umumiy daromad: {report.total_estimated_revenue:,} UZS")
+        lines.append(f"\U0001f4b5 Har bir lid: {report.avg_revenue_per_lead:,} UZS")
 
     # ── Sources ───────────────────────────────────────────────────────
     if report.top_sources:
@@ -454,9 +471,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             lines.append(f"  {stage_label}: {sc['count']} {bar}")
 
     if report.largest_dropoff_stage:
-        label = _STAGE_LABELS_SHORT.get(
-            report.largest_dropoff_stage, report.largest_dropoff_stage
-        )
+        label = _STAGE_LABELS_SHORT.get(report.largest_dropoff_stage, report.largest_dropoff_stage)
         lines.append(f"  \u26a0\ufe0f Eng katta tushish: {label}")
 
     # ── Objections ────────────────────────────────────────────────────
@@ -486,40 +501,39 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
     # ── Objection → Lost correlation ─────────────────────────────────
     if report.objection_lost_correlation:
         worst = [
-            o for o in report.objection_lost_correlation
+            o
+            for o in report.objection_lost_correlation
             if o["total"] >= 2 and o["lost_rate"] >= 0.3
         ]
         if worst:
             lines.append("")
             lines.append("<b>\u26a0\ufe0f E'tiroz \u2192 Yo'qotish:</b>")
             _olbl = {
-                "expensive": "Qimmat", "delay": "Keyinroq",
-                "trust": "Ishonch", "compare": "Taqqoslash", "angry": "Norozilik",
+                "expensive": "Qimmat",
+                "delay": "Keyinroq",
+                "trust": "Ishonch",
+                "compare": "Taqqoslash",
+                "angry": "Norozilik",
             }
             for o in worst[:3]:
                 label = _olbl.get(o["type"], o["type"])
-                lines.append(
-                    f"  {label}: {o['lost']}/{o['total']} ({o['lost_rate']:.0%} lost)"
-                )
+                lines.append(f"  {label}: {o['lost']}/{o['total']} ({o['lost_rate']:.0%} lost)")
 
     # ── Tactic effectiveness ─────────────────────────────────────────
     if report.tactic_stats:
         lines.append("")
         lines.append("<b>\U0001f3af Taktikalar:</b>")
         from core.services.negotiation_engine_service import TACTIC_LABELS
+
         for ts in report.tactic_stats[:4]:
             label = TACTIC_LABELS.get(ts["tactic"], ts["tactic"])
-            lines.append(
-                f"  {label}: {ts['count']} | "
-                f"\u2705{ts['won']} ({ts['rate']:.0%})"
-            )
+            lines.append(f"  {label}: {ts['count']} | " f"\u2705{ts['won']} ({ts['rate']:.0%})")
         if report.best_tactic:
             best_label = TACTIC_LABELS.get(
                 report.best_tactic["tactic"], report.best_tactic["tactic"]
             )
             lines.append(
-                f"  \U0001f3c6 Eng yaxshi: {best_label} "
-                f"({report.best_tactic['won_rate']:.0%})"
+                f"  \U0001f3c6 Eng yaxshi: {best_label} " f"({report.best_tactic['won_rate']:.0%})"
             )
 
     # ── Buyer types ───────────────────────────────────────────────────
@@ -534,38 +548,29 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
         }
         for bt in report.buyer_type_stats[:4]:
             label = _bt_labels.get(bt["type"], bt["type"])
-            lines.append(
-                f"  {label}: {bt['count']} | "
-                f"\u2705{bt['won']} ({bt['rate']:.0%})"
-            )
+            lines.append(f"  {label}: {bt['count']} | " f"\u2705{bt['won']} ({bt['rate']:.0%})")
 
     # ── Follow-up ─────────────────────────────────────────────────────
     fu = report.followup_stats
     if fu.get("with_followup_pct", 0) > 0:
         lines.append("")
         lines.append("<b>\U0001f501 Follow-up:</b>")
+        lines.append(f"  Qamrov: {fu['with_followup_pct']:.0%} lidlar")
         lines.append(
-            f"  Qamrov: {fu['with_followup_pct']:.0%} lidlar"
-        )
-        lines.append(
-            f"  O'rtacha (won): {fu['avg_followups_won']} | "
-            f"(lost): {fu['avg_followups_lost']}"
+            f"  O'rtacha (won): {fu['avg_followups_won']} | " f"(lost): {fu['avg_followups_lost']}"
         )
         if report.best_followup_type:
             from core.services.followup_brain_service import FU_TYPE_LABELS
+
             best = report.best_followup_type
             fu_label = FU_TYPE_LABELS.get(best["type"], best["type"])
-            lines.append(
-                f"  \U0001f3c6 Eng yaxshi: {fu_label} ({best['rate']:.0%})"
-            )
+            lines.append(f"  \U0001f3c6 Eng yaxshi: {fu_label} ({best['rate']:.0%})")
 
     # ── Conversation health ─────────────────────────────────────────
     if report.avg_health_score > 0:
         lines.append("")
         lines.append("<b>\U0001f3e5 Suhbat salomatligi:</b>")
-        lines.append(
-            f"  O'rtacha: {report.avg_health_score}/100"
-        )
+        lines.append(f"  O'rtacha: {report.avg_health_score}/100")
         hd = report.health_distribution
         lines.append(
             f"  \U0001f7e2 Sog'lom: {hd['healthy']} | "
@@ -573,11 +578,10 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             f"\U0001f534 Kritik: {hd['critical']}"
         )
         if report.cooling_count:
-            lines.append(
-                f"  \u2744\ufe0f Sovumoqda: {report.cooling_count} lid"
-            )
+            lines.append(f"  \u2744\ufe0f Sovumoqda: {report.cooling_count} lid")
         if report.top_signals:
             from core.services.conversation_intelligence_service import SIGNAL_LABELS
+
             sig_parts = []
             for s in report.top_signals[:4]:
                 label = SIGNAL_LABELS.get(s["signal"], s["signal"])
@@ -586,8 +590,10 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
 
     # ── Autopilot metrics ───────────────────────────────────────────
     has_autopilot = (
-        report.opportunity_count or report.at_risk_count
-        or report.closing_ready_count or report.autopilot_action_distribution
+        report.opportunity_count
+        or report.at_risk_count
+        or report.closing_ready_count
+        or report.autopilot_action_distribution
     )
     if has_autopilot:
         lines.append("")
@@ -599,6 +605,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
         )
         if report.autopilot_action_distribution:
             from core.services.next_best_action_service import ACTION_LABELS
+
             act_parts = []
             for ad in report.autopilot_action_distribution[:4]:
                 label = ACTION_LABELS.get(ad["action"], ad["action"])
@@ -607,7 +614,8 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
 
     # ── Closing readiness ────────────────────────────────────────────
     has_closing = (
-        report.close_opportunity_count or report.close_loss_risk_count
+        report.close_opportunity_count
+        or report.close_loss_risk_count
         or any(v > 0 for v in report.closing_readiness_distribution.values())
     )
     if has_closing:
@@ -620,11 +628,10 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             f"\u26aa Tayyor emas: {crd.get('NOT_READY', 0)}"
         )
         if report.close_loss_risk_count:
-            lines.append(
-                f"  \u26a0\ufe0f Yo'qotish xavfi: {report.close_loss_risk_count} lid"
-            )
+            lines.append(f"  \u26a0\ufe0f Yo'qotish xavfi: {report.close_loss_risk_count} lid")
         if report.closing_tactic_distribution:
             from core.services.closing_readiness_service import TACTIC_LABELS
+
             tactic_parts = []
             for td in report.closing_tactic_distribution[:4]:
                 label = TACTIC_LABELS.get(td["tactic"], td["tactic"])
@@ -641,9 +648,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             f"\U0001f6a8 Escalation: {report.auto_escalation_count}"
         )
         if report.auto_reply_confidence_avg > 0:
-            lines.append(
-                f"  \U0001f3af Ishonch: {report.auto_reply_confidence_avg:.0%}"
-            )
+            lines.append(f"  \U0001f3af Ishonch: {report.auto_reply_confidence_avg:.0%}")
 
     # ── AI Tactic Outcomes (outcome-based learning) ──────────────────
     if tactic_perf_report and tactic_perf_report.total_resolved > 0:
@@ -655,6 +660,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
         )
         if tactic_perf_report.best_negotiation_tactic:
             from core.services.negotiation_engine_service import TACTIC_LABELS as _NTL
+
             label = _NTL.get(
                 tactic_perf_report.best_negotiation_tactic,
                 tactic_perf_report.best_negotiation_tactic,
@@ -662,6 +668,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             lines.append(f"  \U0001f3c6 Muzokara: {label}")
         if tactic_perf_report.worst_negotiation_tactic:
             from core.services.negotiation_engine_service import TACTIC_LABELS as _NTL2
+
             label = _NTL2.get(
                 tactic_perf_report.worst_negotiation_tactic,
                 tactic_perf_report.worst_negotiation_tactic,
@@ -671,6 +678,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             lines.append(f"  \U0001f3af Closer: {tactic_perf_report.best_closer_action}")
         if tactic_perf_report.best_followup_type:
             from core.services.followup_brain_service import FU_TYPE_LABELS as _FTL
+
             label = _FTL.get(
                 tactic_perf_report.best_followup_type,
                 tactic_perf_report.best_followup_type,
@@ -678,10 +686,7 @@ def _format_report(report, days: int, *, tactic_perf_report=None) -> str:
             lines.append(f"  \U0001f501 Follow-up: {label}")
         # Top 3 tactics by success rate
         for t in tactic_perf_report.tactics[:3]:
-            lines.append(
-                f"  {t.tactic_name}: {t.success_rate:.0%} "
-                f"({t.total_samples} ta)"
-            )
+            lines.append(f"  {t.tactic_name}: {t.success_rate:.0%} " f"({t.total_samples} ta)")
 
     # ── Recommendations ───────────────────────────────────────────────
     if report.recommendations:

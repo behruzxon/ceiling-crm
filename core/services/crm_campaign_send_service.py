@@ -4,6 +4,7 @@ core.services.crm_campaign_send_service
 Campaign send validation, dry-run, limited send with canary. Pure functions.
 No real Telegram calls — uses mockable sender protocol.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -111,7 +112,9 @@ class CRMCampaignSendService:
         if contact.get("merge_status") == "merged":
             return RecipientCheck(eligible=False, blocked_reason="merged")
         if contact.get("lead_status") in _EXCLUDED_STATUSES:
-            return RecipientCheck(eligible=False, blocked_reason=f"status_{contact.get('lead_status')}")
+            return RecipientCheck(
+                eligible=False, blocked_reason=f"status_{contact.get('lead_status')}"
+            )
         if contact.get("marketing_allowed") is False:
             return RecipientCheck(eligible=False, blocked_reason="marketing_disabled")
         if contact.get("followup_allowed") is False:
@@ -171,9 +174,11 @@ class CRMCampaignSendService:
         blockers_by_reason: dict[str, int] = {}
         sample_messages: list[str] = []
         msg_template = campaign.get("message_text", "")
-        for c in contacts[:max_recipients * 3]:
+        for c in contacts[: max_recipients * 3]:
             check = CRMCampaignSendService.validate_recipient(
-                c, canary_enabled=canary_enabled, canary_ids=canary_ids,
+                c,
+                canary_enabled=canary_enabled,
+                canary_ids=canary_ids,
             )
             if not check.eligible:
                 blocked += 1
@@ -218,7 +223,9 @@ class CRMCampaignSendService:
             "status": status,
             "message_preview": message_preview[:200] if message_preview else "",
             "blocked_reason": blocked_reason[:200] if blocked_reason else "",
-            "message_hash": hashlib.sha256(message_preview.encode()).hexdigest()[:16] if message_preview else "",
+            "message_hash": (
+                hashlib.sha256(message_preview.encode()).hexdigest()[:16] if message_preview else ""
+            ),
             "batch_id": batch_id,
             "created_at": datetime.now(UTC).isoformat(),
         }

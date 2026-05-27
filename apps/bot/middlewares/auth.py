@@ -3,6 +3,7 @@ Auth middleware.
 Injects db_user and role into handler data for every update.
 Creates user record if first interaction.
 """
+
 from __future__ import annotations
 
 import time

@@ -9,6 +9,7 @@ propagation-stop problem (once a handler fires, the update is consumed).
 Link and flood logic live in separate modules (link_guard.py,
 flood_guard.py) and are imported here.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -70,22 +71,29 @@ async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
             action = "muted_10min" if muted else "deleted"
             log.info(
                 "link_violation_escalated",
-                chat_id=chat_id, user_id=user_id, count=count, action=action,
+                chat_id=chat_id,
+                user_id=user_id,
+                count=count,
+                action=action,
             )
             if settings.logs_enabled:
-                asyncio.create_task(dm_log(
-                    bot,
-                    f"🔇 Link+mute: <b>{user_name}</b> (#{user_id}) "
-                    f"→ <b>{chat_title}</b> (violation #{count})",
-                ))
+                asyncio.create_task(
+                    dm_log(
+                        bot,
+                        f"🔇 Link+mute: <b>{user_name}</b> (#{user_id}) "
+                        f"→ <b>{chat_title}</b> (violation #{count})",
+                    )
+                )
         else:
             log.info("link_blocked", chat_id=chat_id, user_id=user_id)
             if settings.logs_enabled:
-                asyncio.create_task(dm_log(
-                    bot,
-                    f"🔗 Link blocked: <b>{user_name}</b> (#{user_id}) "
-                    f"→ <b>{chat_title}</b>",
-                ))
+                asyncio.create_task(
+                    dm_log(
+                        bot,
+                        f"🔗 Link blocked: <b>{user_name}</b> (#{user_id}) "
+                        f"→ <b>{chat_title}</b>",
+                    )
+                )
         return  # message already handled — skip flood check
 
     # ── C3-4: Flood control ───────────────────────────────────────────────
@@ -93,8 +101,10 @@ async def on_group_message(message: Message, bot: Bot, **data: object) -> None:
         muted = await mute_user(bot, chat_id, user_id, seconds=120)
         log.info("flood_muted", chat_id=chat_id, user_id=user_id, muted=muted)
         if settings.logs_enabled:
-            asyncio.create_task(dm_log(
-                bot,
-                f"⚡ Flood mute 2 min: <b>{user_name}</b> (#{user_id}) "
-                f"→ <b>{chat_title}</b>",
-            ))
+            asyncio.create_task(
+                dm_log(
+                    bot,
+                    f"⚡ Flood mute 2 min: <b>{user_name}</b> (#{user_id}) "
+                    f"→ <b>{chat_title}</b>",
+                )
+            )

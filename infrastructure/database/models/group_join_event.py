@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for group_join_events table."""
+
 from __future__ import annotations
 
 from datetime import datetime

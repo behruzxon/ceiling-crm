@@ -20,6 +20,7 @@ Behavior:
 - **Production** with no token configured: rejects all requests (fail-closed).
 - Valid ``Authorization: Bearer <token>`` header required when token is set.
 """
+
 from __future__ import annotations
 
 import secrets

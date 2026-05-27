@@ -1,4 +1,5 @@
 """Tests for Step O — AgentResponseOrchestrator."""
+
 from __future__ import annotations
 
 import pytest
@@ -229,7 +230,8 @@ class TestApplySafety:
             reason="test",
         )
         result = orch.apply_safety(
-            payload, {"allowed": True, "risk_level": "high"},
+            payload,
+            {"allowed": True, "risk_level": "high"},
         )
         assert result.allowed is False
         assert "high_risk_blocked" in result.safety_flags
@@ -243,7 +245,8 @@ class TestApplySafety:
             debug_trace={"signal": {"intent": "stop_request"}},
         )
         result = orch.apply_safety(
-            payload, {"allowed": False, "risk_level": "high"},
+            payload,
+            {"allowed": False, "risk_level": "high"},
         )
         assert result.action == "disable_agent"
         assert result.allowed is True
@@ -274,7 +277,9 @@ class TestReplyText:
 
     def test_price_no_area_text(self):
         t = orch._build_reply_text(
-            "send_user_reply", {}, {"offer_type": "price_calculation"},
+            "send_user_reply",
+            {},
+            {"offer_type": "price_calculation"},
         )
         assert "kvadrat" in (t or "").lower()
 
@@ -288,19 +293,25 @@ class TestReplyText:
 
     def test_cheaper_option_text(self):
         t = orch._build_reply_text(
-            "send_user_reply", {}, {"offer_type": "cheaper_option"},
+            "send_user_reply",
+            {},
+            {"offer_type": "cheaper_option"},
         )
         assert "arzon" in (t or "").lower()
 
     def test_warranty_text(self):
         t = orch._build_reply_text(
-            "send_user_reply", {}, {"offer_type": "warranty_trust"},
+            "send_user_reply",
+            {},
+            {"offer_type": "warranty_trust"},
         )
         assert "kafolat" in (t or "").lower()
 
     def test_design_help_text(self):
         t = orch._build_reply_text(
-            "send_user_reply", {}, {"offer_type": "design_help"},
+            "send_user_reply",
+            {},
+            {"offer_type": "design_help"},
         )
         assert "katalog" in (t or "").lower()
 
@@ -314,14 +325,17 @@ class TestReplyText:
 
     def test_fallback_hint(self):
         t = orch._build_reply_text(
-            "send_user_reply", {},
+            "send_user_reply",
+            {},
             {"offer_type": "unknown", "message_hint": "Custom hint"},
         )
         assert t == "Custom hint"
 
     def test_no_offer_no_hint_none(self):
         t = orch._build_reply_text(
-            "send_user_reply", {}, {"offer_type": "no_offer"},
+            "send_user_reply",
+            {},
+            {"offer_type": "no_offer"},
         )
         assert t is None
 
@@ -331,9 +345,11 @@ class TestReplyText:
 
 class TestButtons:
     def test_offer_buttons_passed(self):
-        btns = orch._build_buttons({
-            "recommended_buttons": [("Btn", "cb:data")],
-        })
+        btns = orch._build_buttons(
+            {
+                "recommended_buttons": [("Btn", "cb:data")],
+            }
+        )
         assert btns == [("Btn", "cb:data")]
 
     def test_empty_buttons_none(self):
@@ -354,8 +370,12 @@ class TestTrace:
             signal={"intent": "wants_price"},
             decision={"customer_state": "price_checking", "action_type": "wait"},
             offer={"offer_type": "price_calculation", "cta": "ask_area"},
-            policy={"policy_action": "reply_now", "channel": "user_dm",
-                    "allowed": True, "risk_level": "low"},
+            policy={
+                "policy_action": "reply_now",
+                "channel": "user_dm",
+                "allowed": True,
+                "risk_level": "low",
+            },
             action="send_user_reply",
             source="user_message",
         )
@@ -463,7 +483,8 @@ class TestSafetyEdgeCases:
 
     def test_no_bugun_qilamiz(self):
         p = orch.run_pipeline(
-            _mem(urgency="high", temp="warm"), text="bugun kerak",
+            _mem(urgency="high", temp="warm"),
+            text="bugun kerak",
         )
         if p.user_message_text:
             assert "bugun qilamiz" not in p.user_message_text.lower()
@@ -543,6 +564,8 @@ class TestSourcePropagation:
 
     def test_journey_event_source(self):
         p = orch.run_pipeline(
-            _mem(), source="journey_event", event_type="opened_catalog",
+            _mem(),
+            source="journey_event",
+            event_type="opened_catalog",
         )
         assert p.source == "journey_event"

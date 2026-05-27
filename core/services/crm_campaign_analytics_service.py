@@ -3,6 +3,7 @@ core.services.crm_campaign_analytics_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Campaign delivery analytics. Pure functions — read-only, no mutations.
 """
+
 from __future__ import annotations
 
 import re
@@ -101,10 +102,17 @@ class CRMCampaignAnalyticsService:
         fr = failed / total if total > 0 else 0.0
         br = blocked / total if total > 0 else 0.0
         return DeliveryMetrics(
-            total_attempts=total, proposed=proposed, sent=sent, failed=failed,
-            blocked=blocked, skipped=skipped,
-            success_rate=round(sr, 3), failure_rate=round(fr, 3), blocked_rate=round(br, 3),
-            unique_contacts=len(contacts), duplicate_blocked=dup_blocked,
+            total_attempts=total,
+            proposed=proposed,
+            sent=sent,
+            failed=failed,
+            blocked=blocked,
+            skipped=skipped,
+            success_rate=round(sr, 3),
+            failure_rate=round(fr, 3),
+            blocked_rate=round(br, 3),
+            unique_contacts=len(contacts),
+            duplicate_blocked=dup_blocked,
         )
 
     @staticmethod
@@ -128,10 +136,20 @@ class CRMCampaignAnalyticsService:
 
     @staticmethod
     def get_canary_metrics(attempts: list[dict[str, Any]]) -> CanaryMetrics:
-        canary_sent = sum(1 for a in attempts if a.get("status") == "sent" and a.get("metadata_json", {}).get("is_canary"))
-        canary_failed = sum(1 for a in attempts if a.get("status") == "failed" and a.get("metadata_json", {}).get("is_canary"))
+        canary_sent = sum(
+            1
+            for a in attempts
+            if a.get("status") == "sent" and a.get("metadata_json", {}).get("is_canary")
+        )
+        canary_failed = sum(
+            1
+            for a in attempts
+            if a.get("status") == "failed" and a.get("metadata_json", {}).get("is_canary")
+        )
         non_canary_skip = sum(1 for a in attempts if a.get("blocked_reason") == "not_in_canary")
-        return CanaryMetrics(canary_sent=canary_sent, canary_failed=canary_failed, non_canary_skipped=non_canary_skip)
+        return CanaryMetrics(
+            canary_sent=canary_sent, canary_failed=canary_failed, non_canary_skipped=non_canary_skip
+        )
 
     @staticmethod
     def get_reply_metrics(
@@ -164,8 +182,10 @@ class CRMCampaignAnalyticsService:
         rate = reply_count / total_sent if total_sent > 0 else 0.0
         avg_min = sum(reply_minutes) / len(reply_minutes) if reply_minutes else 0.0
         return ReplyMetrics(
-            reply_count=reply_count, reply_rate=round(rate, 3),
-            contacts_replied=reply_count, first_reply_avg_minutes=round(avg_min, 1),
+            reply_count=reply_count,
+            reply_rate=round(rate, 3),
+            contacts_replied=reply_count,
+            first_reply_avg_minutes=round(avg_min, 1),
             hot_replies=hot_count,
         )
 
@@ -188,7 +208,8 @@ class CRMCampaignAnalyticsService:
         total_changes = len(changes)
         rate = total_changes / total_sent if total_sent > 0 else 0.0
         return StatusChangeMetrics(
-            status_changes=total_changes, status_change_rate=round(rate, 3),
+            status_changes=total_changes,
+            status_change_rate=round(rate, 3),
             by_status=sorted(by_status.items(), key=lambda x: x[1], reverse=True),
         )
 
@@ -202,40 +223,61 @@ class CRMCampaignAnalyticsService:
         recs: list[CampaignRecommendation] = []
         blocked_dict = dict(blocked_reasons)
         if blocked_dict.get("no_telegram_id", 0) > 3:
-            recs.append(CampaignRecommendation(
-                priority="medium", title="Contact data quality",
-                description="Ko'p contact telegram ID yo'q — data quality yaxshilang",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="medium",
+                    title="Contact data quality",
+                    description="Ko'p contact telegram ID yo'q — data quality yaxshilang",
+                )
+            )
         if blocked_dict.get("marketing_disabled", 0) > 5:
-            recs.append(CampaignRecommendation(
-                priority="medium", title="Marketing opt-out ko'p",
-                description="Opt-out segmentlarni tekshiring",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="medium",
+                    title="Marketing opt-out ko'p",
+                    description="Opt-out segmentlarni tekshiring",
+                )
+            )
         if canary.canary_failed > 0:
-            recs.append(CampaignRecommendation(
-                priority="high", title="Canary failure mavjud",
-                description="Live sendni yoqmang — canary xatolik bor",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="high",
+                    title="Canary failure mavjud",
+                    description="Live sendni yoqmang — canary xatolik bor",
+                )
+            )
         if delivery.sent > 0 and replies.reply_rate < 0.05:
-            recs.append(CampaignRecommendation(
-                priority="medium", title="Reply rate past",
-                description="Message CTA yoki content yaxshilang",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="medium",
+                    title="Reply rate past",
+                    description="Message CTA yoki content yaxshilang",
+                )
+            )
         if blocked_dict.get("duplicate_send", 0) > 2:
-            recs.append(CampaignRecommendation(
-                priority="low", title="Duplicate dedup ishlayapti",
-                description="Takroriy send blocker to'g'ri ishlayapti",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="low",
+                    title="Duplicate dedup ishlayapti",
+                    description="Takroriy send blocker to'g'ri ishlayapti",
+                )
+            )
         if delivery.failure_rate > 0.2 and delivery.sent > 0:
-            recs.append(CampaignRecommendation(
-                priority="high", title="Yuqori failure rate",
-                description="Telegram API xatoliklarini tekshiring",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="high",
+                    title="Yuqori failure rate",
+                    description="Telegram API xatoliklarini tekshiring",
+                )
+            )
         if not recs:
-            recs.append(CampaignRecommendation(
-                priority="low", title="Holat yaxshi",
-                description="Hozircha muammo aniqlanmadi",
-            ))
+            recs.append(
+                CampaignRecommendation(
+                    priority="low",
+                    title="Holat yaxshi",
+                    description="Hozircha muammo aniqlanmadi",
+                )
+            )
         return recs
 
     @staticmethod
@@ -251,14 +293,23 @@ class CRMCampaignAnalyticsService:
         failures = CRMCampaignAnalyticsService.get_failure_reason_metrics(attempts)
         canary = CRMCampaignAnalyticsService.get_canary_metrics(attempts)
         sent_attempts = [a for a in attempts if a.get("status") == "sent"]
-        replies = CRMCampaignAnalyticsService.get_reply_metrics(sent_attempts, inbound_messages or [])
-        sc = CRMCampaignAnalyticsService.get_status_change_metrics(sent_attempts, status_changes or [])
+        replies = CRMCampaignAnalyticsService.get_reply_metrics(
+            sent_attempts, inbound_messages or []
+        )
+        sc = CRMCampaignAnalyticsService.get_status_change_metrics(
+            sent_attempts, status_changes or []
+        )
         recs = CRMCampaignAnalyticsService.build_recommendations(delivery, blocked, canary, replies)
         return CampaignAnalytics(
             campaign_id=campaign_id,
-            delivery=delivery, blocked_reasons=blocked, failure_reasons=failures,
-            canary=canary, replies=replies, status_changes=sc,
-            recommendations=recs, generated_at=now.isoformat(),
+            delivery=delivery,
+            blocked_reasons=blocked,
+            failure_reasons=failures,
+            canary=canary,
+            replies=replies,
+            status_changes=sc,
+            recommendations=recs,
+            generated_at=now.isoformat(),
         )
 
     @staticmethod
@@ -279,7 +330,9 @@ class CRMCampaignAnalyticsService:
             seg_counts[seg] = seg_counts.get(seg, 0) + 1
         return DashboardSummary(
             total_campaigns=len(campaigns),
-            total_sent=total_sent, total_failed=total_failed, total_blocked=total_blocked,
+            total_sent=total_sent,
+            total_failed=total_failed,
+            total_blocked=total_blocked,
             overall_success_rate=round(sr, 3),
             top_segments=sorted(seg_counts.items(), key=lambda x: x[1], reverse=True)[:10],
         )

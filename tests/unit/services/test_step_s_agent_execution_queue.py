@@ -1,4 +1,5 @@
 """Tests for Step S — AgentExecutionQueueService."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -144,8 +145,13 @@ class TestCreateRecord:
 
     async def test_create_applies_ttl(self, session):
         svc = AgentExecutionQueueService(session)
-        payload = {"execution_id": "ttl-001", "target_user_id": 1, "action": "x",
-                   "mode": "live", "risk_level": "none"}
+        payload = {
+            "execution_id": "ttl-001",
+            "target_user_id": 1,
+            "action": "x",
+            "mode": "live",
+            "risk_level": "none",
+        }
         record = await svc.create_record(payload, ttl_minutes=60)
         assert (record.expires_at - record.created_at).total_seconds() == pytest.approx(3600, abs=5)
 
@@ -164,8 +170,14 @@ class TestCreateRecord:
 
     async def test_create_hashes_message(self, session):
         svc = AgentExecutionQueueService(session)
-        payload = {"execution_id": "hash-001", "target_user_id": 1, "action": "x",
-                   "mode": "live", "risk_level": "none", "message_text": "test msg"}
+        payload = {
+            "execution_id": "hash-001",
+            "target_user_id": 1,
+            "action": "x",
+            "mode": "live",
+            "risk_level": "none",
+            "message_text": "test msg",
+        }
         record = await svc.create_record(payload)
         assert record.message_text_hash is not None
         assert len(record.message_text_hash) == 16
@@ -364,26 +376,32 @@ class TestListPending:
 class TestStatusLifecycle:
     def test_proposed_is_not_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "proposed" not in _FINAL_STATUSES
 
     def test_approved_is_not_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "approved" not in _FINAL_STATUSES
 
     def test_executed_is_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "executed" in _FINAL_STATUSES
 
     def test_rejected_is_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "rejected" in _FINAL_STATUSES
 
     def test_expired_is_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "expired" in _FINAL_STATUSES
 
     def test_failed_is_final(self):
         from core.services.agent_execution_queue_service import _FINAL_STATUSES
+
         assert "failed" in _FINAL_STATUSES
 
 
@@ -393,12 +411,14 @@ class TestStatusLifecycle:
 class TestCallbackImports:
     def test_callback_router_importable(self):
         from apps.bot.handlers.callbacks.agent_execution_callbacks import router
+
         assert router.name == "callbacks:agent_execution"
 
     def test_scheduler_job_importable(self):
         from apps.scheduler.jobs.agent_execution_jobs import (
             expire_pending_executions,
         )
+
         assert callable(expire_pending_executions)
 
 
@@ -408,6 +428,7 @@ class TestCallbackImports:
 class TestDI:
     def test_di_importable(self):
         from infrastructure.di import get_agent_execution_queue_service
+
         assert callable(get_agent_execution_queue_service)
 
 
@@ -417,6 +438,7 @@ class TestDI:
 class TestMigration:
     def test_migration_importable(self):
         import importlib
+
         mod = importlib.import_module(
             "infrastructure.database.migrations.versions."
             "20260526_0500_w8x9y0z1a2b3_add_agent_execution_records"
@@ -433,14 +455,17 @@ class TestModel:
         from infrastructure.database.models.agent_execution_record import (
             AgentExecutionRecordModel,
         )
+
         assert AgentExecutionRecordModel.__tablename__ == "agent_execution_records"
 
     def test_model_has_indexes(self):
         from infrastructure.database.models.agent_execution_record import (
             AgentExecutionRecordModel,
         )
-        idx_names = [idx.name for idx in AgentExecutionRecordModel.__table_args__
-                     if hasattr(idx, "name")]
+
+        idx_names = [
+            idx.name for idx in AgentExecutionRecordModel.__table_args__ if hasattr(idx, "name")
+        ]
         assert "ix_exec_user_created" in idx_names
         assert "ix_exec_status_expires" in idx_names
         assert "ix_exec_mode_status" in idx_names
@@ -612,6 +637,7 @@ class TestEdgeCases:
 class TestSettings:
     def test_queue_settings_exist(self):
         from shared.config.settings import BusinessSettings
+
         fields = BusinessSettings.model_fields
         assert "agent_execution_queue_enabled" in fields
         assert "agent_execution_approval_ttl_minutes" in fields
@@ -620,21 +646,25 @@ class TestSettings:
 
     def test_queue_default_false(self):
         from shared.config.settings import BusinessSettings
+
         default = BusinessSettings.model_fields["agent_execution_queue_enabled"].default
         assert default is False
 
     def test_ttl_default_30(self):
         from shared.config.settings import BusinessSettings
+
         default = BusinessSettings.model_fields["agent_execution_approval_ttl_minutes"].default
         assert default == 30
 
     def test_auto_execute_default_false(self):
         from shared.config.settings import BusinessSettings
+
         default = BusinessSettings.model_fields["agent_execution_auto_execute_approved"].default
         assert default is False
 
     def test_admin_notify_default_false(self):
         from shared.config.settings import BusinessSettings
+
         default = BusinessSettings.model_fields["agent_execution_approval_admin_notify"].default
         assert default is False
 
@@ -647,16 +677,30 @@ class TestNonRegression:
         from core.services.agent_execution_sandbox_service import (
             AgentExecutionSandboxService,
         )
+
         ex = AgentExecutionSandboxService.prepare_execution(
-            {"action": "send_user_reply", "channel": "user_dm",
-             "user_message_text": "Salom", "target_user_id": 123},
-            {"followup_enabled": True, "lead_temperature": "warm",
-             "followup_count": 0, "memory_data": {}},
+            {
+                "action": "send_user_reply",
+                "channel": "user_dm",
+                "user_message_text": "Salom",
+                "target_user_id": 123,
+            },
+            {
+                "followup_enabled": True,
+                "lead_temperature": "warm",
+                "followup_count": 0,
+                "memory_data": {},
+            },
             "live",
         )
         r = AgentExecutionSandboxService.validate_execution(
-            ex, {"followup_enabled": True, "lead_temperature": "warm",
-                 "followup_count": 0, "memory_data": {}},
+            ex,
+            {
+                "followup_enabled": True,
+                "lead_temperature": "warm",
+                "followup_count": 0,
+                "memory_data": {},
+            },
         )
         assert r.would_execute is True
 
@@ -664,13 +708,19 @@ class TestNonRegression:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"
 
     def test_simulation_import(self):
         from tests.simulation.agent.simulation_runner import build_memory, run_scenario
+
         r = run_scenario("salom", build_memory())
         assert r.signal_intent == "unclear"
 
@@ -679,6 +729,7 @@ class TestNonRegression:
             AgentExecutionMode,
             AgentExecutionRisk,
         )
+
         assert AgentExecutionMode.LIVE.value == "live"
         assert AgentExecutionStatus.PROPOSED.value == "proposed"
         assert AgentExecutionRisk.HIGH.value == "high"

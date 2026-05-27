@@ -1,4 +1,5 @@
 """Frozen dataclasses for Stage 3 CANARY observation report."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

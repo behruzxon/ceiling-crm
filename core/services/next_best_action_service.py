@@ -21,6 +21,7 @@ Usage::
     # nba.action == "schedule_measurement"
     # nba.priority == "high"
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -121,30 +122,14 @@ ACTION_LABELS: dict[str, str] = {
 }
 
 _SUGGESTED_MESSAGES: dict[str, str] = {
-    "schedule_measurement": (
-        "Ustamiz bepul o'lchov qilib bera oladi. Qaysi vaqt sizga qulay?"
-    ),
-    "send_discount_offer": (
-        "Sizga maxsus chegirma taklif qilamiz! Tafsilotlar uchun yozing."
-    ),
-    "propose_cheaper_option": (
-        "Byudjetga mos variant bor \u2014 ko'rsatib beraymi?"
-    ),
-    "escalate_to_manager": (
-        "Menejer siz bilan bog'lanadi."
-    ),
-    "send_followup_question": (
-        "Potolok haqida savolingiz bormi? Yordam berishga tayyorman!"
-    ),
-    "close_deal_attempt": (
-        "Buyurtma berish uchun tayyor bo'lsangiz, hoziroq rasmiylashtiramiz!"
-    ),
-    "send_catalog": (
-        "Katalogimizni ko'rib chiqing \u2014 qaysi dizayn yoqdi?"
-    ),
-    "reactivation": (
-        "Salom! Potolok haqida o'yladingizmi? Yangi dizaynlar qo'shildi \U0001f60a"
-    ),
+    "schedule_measurement": ("Ustamiz bepul o'lchov qilib bera oladi. Qaysi vaqt sizga qulay?"),
+    "send_discount_offer": ("Sizga maxsus chegirma taklif qilamiz! Tafsilotlar uchun yozing."),
+    "propose_cheaper_option": ("Byudjetga mos variant bor \u2014 ko'rsatib beraymi?"),
+    "escalate_to_manager": ("Menejer siz bilan bog'lanadi."),
+    "send_followup_question": ("Potolok haqida savolingiz bormi? Yordam berishga tayyorman!"),
+    "close_deal_attempt": ("Buyurtma berish uchun tayyor bo'lsangiz, hoziroq rasmiylashtiramiz!"),
+    "send_catalog": ("Katalogimizni ko'rib chiqing \u2014 qaysi dizayn yoqdi?"),
+    "reactivation": ("Salom! Potolok haqida o'yladingizmi? Yangi dizaynlar qo'shildi \U0001f60a"),
     "wait": "",
 }
 
@@ -152,9 +137,7 @@ _SUGGESTED_MESSAGES: dict[str, str] = {
 _CLOSING_MESSAGES: dict[str, str] = {
     "urgency_close": "Bu oy oxirigacha maxsus narx amal qiladi!",
     "bonus_installation": "Buyurtma qilsangiz, bepul o'rnatish xizmati!",
-    "quick_scheduling": (
-        "Ertaga ustamiz bepul o'lchab berishi mumkin \u2014 qulayimi?"
-    ),
+    "quick_scheduling": ("Ertaga ustamiz bepul o'lchab berishi mumkin \u2014 qulayimi?"),
     "limited_offer": "Faqat bugun \u2014 10% chegirma! O'tkazib yubormang!",
 }
 
@@ -167,9 +150,14 @@ CLOSING_TACTIC_LABELS: dict[str, str] = {
 
 # Pipeline stage order for bottleneck analysis
 _STAGE_ORDER = [
-    "NEW", "PACKAGE_SELECTED", "CONTACTED",
-    "MEASUREMENT", "QUOTE", "DEAL",
-    "INSTALLATION", "COMPLETED",
+    "NEW",
+    "PACKAGE_SELECTED",
+    "CONTACTED",
+    "MEASUREMENT",
+    "QUOTE",
+    "DEAL",
+    "INSTALLATION",
+    "COMPLETED",
 ]
 
 _STAGE_LABELS: dict[str, str] = {
@@ -328,8 +316,7 @@ def determine_next_best_action(
             reason="engaged but missing area data",
             reason_uz="Faol lid \u2014 maydon haqida so'rang",
             suggested_message_uz=(
-                "Xonangiz taxminan nechchi m\u00b2? "
-                "Aniq narx hisoblab berishimiz uchun kerak."
+                "Xonangiz taxminan nechchi m\u00b2? " "Aniq narx hisoblab berishimiz uchun kerak."
             ),
             confidence=0.55,
         )
@@ -756,11 +743,13 @@ def analyze_pipeline_bottlenecks(
                     stage,
                     f"{_STAGE_LABELS.get(stage, stage)} bosqichini tezlashtiring",
                 )
-                insights.append(PipelineInsight(
-                    bottleneck_stage=stage,
-                    leads_stuck=count,
-                    recommendation_uz=advice,
-                ))
+                insights.append(
+                    PipelineInsight(
+                        bottleneck_stage=stage,
+                        leads_stuck=count,
+                        recommendation_uz=advice,
+                    )
+                )
 
     # Also flag any stage with >30% of all leads
     for stage in _STAGE_ORDER:
@@ -772,11 +761,13 @@ def analyze_pipeline_bottlenecks(
                     stage,
                     f"{_STAGE_LABELS.get(stage, stage)} bosqichida lid to'planmoqda",
                 )
-                insights.append(PipelineInsight(
-                    bottleneck_stage=stage,
-                    leads_stuck=count,
-                    recommendation_uz=advice,
-                ))
+                insights.append(
+                    PipelineInsight(
+                        bottleneck_stage=stage,
+                        leads_stuck=count,
+                        recommendation_uz=advice,
+                    )
+                )
 
     insights.sort(key=lambda x: x.leads_stuck, reverse=True)
     return insights[:3]
@@ -882,9 +873,7 @@ def build_pipeline_insight_text(
     lines = ["\U0001f4ca <b>Pipeline Insight</b>\n"]
     for ins in insights:
         label = _STAGE_LABELS.get(ins.bottleneck_stage, ins.bottleneck_stage)
-        lines.append(
-            f"\u26a0\ufe0f <b>{label}</b>: {ins.leads_stuck} lid to'planmoqda"
-        )
+        lines.append(f"\u26a0\ufe0f <b>{label}</b>: {ins.leads_stuck} lid to'planmoqda")
         lines.append(f"   \U0001f4a1 {ins.recommendation_uz}")
     return "\n".join(lines)
 
@@ -916,10 +905,7 @@ def compute_autopilot_metrics(
         if ld.get("closing_ready"):
             closing_ready_count += 1
 
-    action_distribution = [
-        {"action": a, "count": c}
-        for a, c in action_counter.most_common(6)
-    ]
+    action_distribution = [{"action": a, "count": c} for a, c in action_counter.most_common(6)]
 
     return {
         "action_distribution": action_distribution,

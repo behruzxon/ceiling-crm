@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_campaign_send_attempts."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,7 +27,9 @@ class CRMCampaignSendAttemptModel(Base):
     batch_id: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     failed_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     __table_args__ = (
         sa.Index("ix_send_campaign_created", "campaign_id", "created_at"),

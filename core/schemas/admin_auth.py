@@ -1,4 +1,5 @@
 """Frozen dataclasses for admin authentication and session schemas."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,4 +1,5 @@
 """Tests for Step BY — Base Layout + Sidebar/Header Premium Redesign."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,6 +7,7 @@ from pathlib import Path
 
 def _base():
     return Path("apps/web/templates/base.html").read_text(encoding="utf-8")
+
 
 def _login():
     return Path("apps/web/templates/login.html").read_text(encoding="utf-8")
@@ -235,8 +237,10 @@ class TestSafety:
 class TestSmoke:
     def test_web_app(self):
         from apps.web.main import app
+
         assert app is not None
 
     def test_api_app(self):
         from apps.api.main import app
+
         assert app is not None

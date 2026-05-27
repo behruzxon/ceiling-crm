@@ -11,6 +11,7 @@ FSM flow
 AI is NOT involved: handle_ai_message uses StateFilter(default_state) so it
 never fires while waiting_for_design is active.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -39,6 +40,7 @@ _CATALOG_BY_TITLE = {s.title: s for s in CATALOG}
 
 # ── Entry ─────────────────────────────────────────────────────────────────────
 
+
 @router.message(F.chat.type.in_(_CHAT_TYPES), F.text == BTN_CATALOG)
 @router.message(F.chat.type.in_(_CHAT_TYPES), Command("catalog"))
 async def cmd_catalog(message: Message, state: FSMContext, **data: object) -> None:
@@ -48,14 +50,17 @@ async def cmd_catalog(message: Message, state: FSMContext, **data: object) -> No
         "📂 <b>Katalog</b>\n\nDizaynni tanlang:",
         reply_markup=catalog_design_keyboard(),
     )
-    asyncio.create_task(emit_journey_event(
-        user_id=getattr(message.from_user, "id", 0),
-        event_type=JourneyEventType.OPENED_CATALOG,
-        source_handler="catalog:cmd_catalog",
-    ))
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=getattr(message.from_user, "id", 0),
+            event_type=JourneyEventType.OPENED_CATALOG,
+            source_handler="catalog:cmd_catalog",
+        )
+    )
 
 
 # ── Back button ───────────────────────────────────────────────────────────────
+
 
 @router.message(
     StateFilter(CatalogStates.waiting_for_design),
@@ -68,15 +73,14 @@ async def handle_catalog_back(message: Message, state: FSMContext, **data: objec
 
 # ── Design selection ──────────────────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(CatalogStates.waiting_for_design),
     F.text,
-    ~F.text.in_(MAIN_MENU_BUTTONS),   # let main-menu taps fall through
+    ~F.text.in_(MAIN_MENU_BUTTONS),  # let main-menu taps fall through
     ~F.text.startswith("/"),
 )
-async def handle_design_choice(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_design_choice(message: Message, state: FSMContext, **data: object) -> None:
     text = (message.text or "").strip()
 
     if text == BTN_CATALOG_BACK:
@@ -91,15 +95,21 @@ async def handle_design_choice(
         return
 
     # Send inline button link; the persistent ReplyKeyboard from cmd_catalog remains visible.
-    link_kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📎 Katalogda ko'rish", url=section.group_url),
-    ]])
+    link_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📎 Katalogda ko'rish", url=section.group_url),
+            ]
+        ]
+    )
     await message.answer(f"<b>{section.title}</b>", reply_markup=link_kb)
     uid = getattr(message.from_user, "id", 0)
     log.info("catalog_design_viewed", key=section.key, user_id=uid)
-    asyncio.create_task(emit_journey_event(
-        user_id=uid,
-        event_type=JourneyEventType.VIEWED_CATALOG_ITEM,
-        event_data={"design": section.key},
-        source_handler="catalog:handle_design_choice",
-    ))
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=uid,
+            event_type=JourneyEventType.VIEWED_CATALOG_ITEM,
+            event_data={"design": section.key},
+            source_handler="catalog:handle_design_choice",
+        )
+    )

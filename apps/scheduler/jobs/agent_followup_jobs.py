@@ -1,4 +1,5 @@
 """APScheduler job: process due agent follow-ups every 60 seconds."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -61,7 +62,8 @@ async def _redis_post_send(user_id: int, fu_type: str) -> None:
         redis = get_redis()
 
         await redis.set(
-            CacheKeys.agent_fu_last(user_id), "1",
+            CacheKeys.agent_fu_last(user_id),
+            "1",
             ttl=CacheTTL.AGENT_FU_LAST_SENT,
         )
 
@@ -72,8 +74,10 @@ async def _redis_post_send(user_id: int, fu_type: str) -> None:
         }
         dedup_ttl = ttl_map.get(fu_type, CacheTTL.AGENT_FU_CATALOG)
         await redis.set(
-            CacheKeys.agent_fu_dedup(user_id, fu_type), "1",
-            ttl=dedup_ttl, nx=True,
+            CacheKeys.agent_fu_dedup(user_id, fu_type),
+            "1",
+            ttl=dedup_ttl,
+            nx=True,
         )
 
         daily_key = CacheKeys.agent_fu_daily(user_id)
@@ -134,7 +138,8 @@ async def process_agent_followups() -> None:
 
                         # Redis anti-spam layer
                         redis_ok, redis_reason = await _redis_pre_check(
-                            fu.telegram_user_id, fu.followup_type,
+                            fu.telegram_user_id,
+                            fu.followup_type,
                         )
                         if not redis_ok:
                             await fu_svc.mark_skipped(fu.id, redis_reason)
@@ -150,7 +155,8 @@ async def process_agent_followups() -> None:
                             "district": mem.district,
                         }
                         text, buttons = await FollowupSchedulerService.build_message_ai(
-                            fu.followup_type, memory_data=mem_dict,
+                            fu.followup_type,
+                            memory_data=mem_dict,
                         )
                         if not text:
                             await fu_svc.mark_skipped(fu.id, "no_template")
@@ -180,7 +186,8 @@ async def process_agent_followups() -> None:
                         if "Forbidden" in exc_name:
                             await fu_svc.mark_failed(fu.id, "user_blocked")
                             await mem_svc.disable_followup(
-                                fu.telegram_user_id, "blocked",
+                                fu.telegram_user_id,
+                                "blocked",
                             )
                         elif "RetryAfter" in exc_name:
                             log.warning(

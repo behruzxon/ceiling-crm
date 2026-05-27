@@ -6,6 +6,7 @@ Async HTTP client for server-side calls to the CeilingCRM REST API.
 All API calls go through this module so the Bearer token stays server-side.
 The browser never sees the token — only rendered HTML is returned.
 """
+
 from __future__ import annotations
 
 from typing import Any

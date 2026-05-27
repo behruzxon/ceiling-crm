@@ -3,6 +3,7 @@ core.services.admin_user_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Admin user CRUD with owner lockout protection. Pure validation + session ops.
 """
+
 from __future__ import annotations
 
 import re
@@ -131,7 +132,10 @@ class AdminUserService:
         permissions_override: dict | None = None,
         updated_by: str = "",
     ) -> dict[str, Any]:
-        updates: dict[str, Any] = {"updated_by": updated_by, "updated_at": datetime.now(UTC).isoformat()}
+        updates: dict[str, Any] = {
+            "updated_by": updated_by,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
         if display_name is not None:
             updates["display_name"] = display_name[:128]
         if role is not None:

@@ -6,6 +6,7 @@ Redis-backed per-user AI memory and daily stats counters.
 Cross-module dependencies are lazy-imported inside functions to avoid
 circular imports with ``ai_scoring`` and ``ai_detection``.
 """
+
 from __future__ import annotations
 
 import time
@@ -18,11 +19,13 @@ log = get_logger(__name__)
 
 # ── Redis AI memory (30-day per-user context) ────────────────────────────────
 
+
 async def _load_ai_memory(user_id: int) -> dict[str, Any]:
     """Load per-user AI memory from Redis. Returns {} on any error."""
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         return (await get_redis().get_json(CacheKeys.ai_memory(user_id))) or {}
     except Exception:
         return {}
@@ -33,6 +36,7 @@ async def _save_ai_memory(user_id: int, memory: dict[str, Any]) -> None:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
+
         now = int(time.time())
         if "created_at" not in memory:
             memory["created_at"] = now
@@ -49,14 +53,10 @@ def _build_greeting_from_memory(memory: dict[str, Any]) -> str:
     area = memory.get("area_m2")
     phone_captured = memory.get("phone_captured", False)
     if phone_captured:
-        return (
-            f"Salom yana {name} 🙂\n\n"
-            "Zakazingiz bo'yicha yoki boshqa savol bormi?"
-        )
+        return f"Salom yana {name} 🙂\n\n" "Zakazingiz bo'yicha yoki boshqa savol bormi?"
     if district and area:
         return (
-            f"Salom {name} 🙂\n\n"
-            f"{district}dagi {area:g} m² potolok bo'yicha savolingiz bormi?"
+            f"Salom {name} 🙂\n\n" f"{district}dagi {area:g} m² potolok bo'yicha savolingiz bormi?"
         )
     if district:
         return f"Salom {name} 🙂\n\n{district}dagi xonadoningiz uchun nima kerak?"
@@ -116,19 +116,27 @@ async def _update_ai_memory_from_interaction(
 
 # ── Daily AI stats counters (Redis INCR, date-keyed) ────────────────────────
 
-_AI_STATS_FIELDS = frozenset({
-    "users_started", "messages_total",
-    "lead_hot", "lead_warm", "lead_cold",
-    "phones_received", "orders_started",
-})
+_AI_STATS_FIELDS = frozenset(
+    {
+        "users_started",
+        "messages_total",
+        "lead_hot",
+        "lead_warm",
+        "lead_cold",
+        "phones_received",
+        "orders_started",
+    }
+)
 
 
 async def _ai_stats_incr(field: str) -> None:
     """Increment today's AI stats counter by 1. Non-fatal, fire-and-forget."""
     import datetime
+
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
+
         date_str = datetime.date.today().isoformat()
         redis = get_redis()
         key = CacheKeys.ai_stats_field(date_str, field)
@@ -141,9 +149,11 @@ async def _ai_stats_incr(field: str) -> None:
 async def _ai_stats_count_user(user_id: int) -> None:
     """Increment users_started once per user per calendar day (NX dedup). Non-fatal."""
     import datetime
+
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
+
         date_str = datetime.date.today().isoformat()
         redis = get_redis()
         acquired = await redis.set(

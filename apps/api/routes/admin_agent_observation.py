@@ -3,6 +3,7 @@ apps.api.routes.admin_agent_observation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Read-only Stage 1 observation report endpoint.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -136,6 +137,7 @@ async def get_stage4_approval_report(
     from core.services.stage4_approval_report_service import (
         Stage4ApprovalReportService,
     )
+
     now = datetime.now(UTC)
     since = now - timedelta(hours=hours)
     svc = Stage4ApprovalReportService(db)
@@ -154,6 +156,7 @@ async def get_live_send_gate(
     from core.services.stage5_live_send_readiness_service import (
         Stage5LiveSendReadinessService,
     )
+
     now = datetime.now(UTC)
     since = now - timedelta(hours=hours)
     report = await S4Svc(db).build_report(since, now)

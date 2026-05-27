@@ -3,6 +3,7 @@
 Tracks Telegram groups where the bot has been added as an admin.
 Used as the recipient list for ADMIN_GROUPS broadcasts.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

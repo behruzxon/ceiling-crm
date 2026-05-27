@@ -9,6 +9,7 @@ Formula per tactic:
     delta = (tactic_rate - avg_rate) / max(avg_rate, 0.01)
     weight = 1.0 + clamp(delta * MAX_BOOST, -MAX_BOOST, +MAX_BOOST)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

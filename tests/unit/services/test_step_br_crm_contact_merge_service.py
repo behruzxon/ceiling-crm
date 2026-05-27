@@ -1,4 +1,5 @@
 """Tests for Step BR — CRMContactMergeService."""
+
 from __future__ import annotations
 
 from core.services.crm_contact_merge_service import CRMContactMergeService
@@ -7,35 +8,79 @@ svc = CRMContactMergeService
 
 
 def _c(**kw):
-    base = {"id": 1, "telegram_user_id": None, "telegram_chat_id": None,
-            "phone": None, "username": None, "first_name": None,
-            "lead_status": "new", "lead_score": 0, "temperature": None,
-            "merge_status": "active", "metadata_json": None, "data_quality_score": 0}
+    base = {
+        "id": 1,
+        "telegram_user_id": None,
+        "telegram_chat_id": None,
+        "phone": None,
+        "username": None,
+        "first_name": None,
+        "lead_status": "new",
+        "lead_score": 0,
+        "temperature": None,
+        "merge_status": "active",
+        "metadata_json": None,
+        "data_quality_score": 0,
+    }
     base.update(kw)
     return base
 
 
 class TestConfidence:
     def test_same_telegram_id_100(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, telegram_user_id=123), _c(id=2, telegram_user_id=123)) == 100
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, telegram_user_id=123), _c(id=2, telegram_user_id=123)
+            )
+            == 100
+        )
 
     def test_same_chat_id_95(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, telegram_chat_id=456), _c(id=2, telegram_chat_id=456)) == 95
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, telegram_chat_id=456), _c(id=2, telegram_chat_id=456)
+            )
+            == 95
+        )
 
     def test_same_phone_95(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, phone="+998901234567"), _c(id=2, phone="+998901234567")) == 95
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, phone="+998901234567"), _c(id=2, phone="+998901234567")
+            )
+            == 95
+        )
 
     def test_phone_last_9_85(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, phone="+998901234567"), _c(id=2, phone="901234567")) == 85
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, phone="+998901234567"), _c(id=2, phone="901234567")
+            )
+            == 85
+        )
 
     def test_username_and_name_80(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, username="ali", first_name="Ali"), _c(id=2, username="ali", first_name="Ali")) == 80
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, username="ali", first_name="Ali"),
+                _c(id=2, username="ali", first_name="Ali"),
+            )
+            == 80
+        )
 
     def test_username_only_60(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, username="ali"), _c(id=2, username="ali")) == 60
+        assert (
+            svc.calculate_duplicate_confidence(_c(id=1, username="ali"), _c(id=2, username="ali"))
+            == 60
+        )
 
     def test_name_only_weak_30(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, first_name="Ali"), _c(id=2, first_name="Ali")) == 30
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, first_name="Ali"), _c(id=2, first_name="Ali")
+            )
+            == 30
+        )
 
     def test_no_match_0(self):
         assert svc.calculate_duplicate_confidence(_c(id=1), _c(id=2)) == 0
@@ -44,7 +89,12 @@ class TestConfidence:
         assert svc.calculate_duplicate_confidence(_c(id=1), _c(id=1)) == 0
 
     def test_merged_excluded_0(self):
-        assert svc.calculate_duplicate_confidence(_c(id=1, merge_status="merged"), _c(id=2, telegram_user_id=123)) == 0
+        assert (
+            svc.calculate_duplicate_confidence(
+                _c(id=1, merge_status="merged"), _c(id=2, telegram_user_id=123)
+            )
+            == 0
+        )
 
 
 class TestReasons:
@@ -80,7 +130,10 @@ class TestFindCandidates:
         assert result[0].confidence == 95
 
     def test_merged_excluded(self):
-        contacts = [_c(id=1, phone="+998901234567"), _c(id=2, phone="+998901234567", merge_status="merged")]
+        contacts = [
+            _c(id=1, phone="+998901234567"),
+            _c(id=2, phone="+998901234567", merge_status="merged"),
+        ]
         assert svc.find_duplicate_candidates(contacts) == []
 
     def test_limit(self):
@@ -147,7 +200,9 @@ class TestMergePreview:
         assert "different_telegram_user_ids" in p.blockers
 
     def test_different_phones_blocked(self):
-        p = svc.build_merge_preview(_c(id=1, phone="+998111111111"), _c(id=2, phone="+998222222222"))
+        p = svc.build_merge_preview(
+            _c(id=1, phone="+998111111111"), _c(id=2, phone="+998222222222")
+        )
         assert any("different_phones" in b for b in p.blockers)
 
     def test_low_confidence_blocked(self):
@@ -156,18 +211,23 @@ class TestMergePreview:
 
     def test_allowed_with_phone_match(self):
         p = svc.build_merge_preview(
-            _c(id=1, phone="+998901234567"), _c(id=2, phone="+998901234567"),
+            _c(id=1, phone="+998901234567"),
+            _c(id=2, phone="+998901234567"),
             merge_enabled=True,
         )
         assert p.allowed
         assert p.confidence == 95
 
     def test_merge_disabled_warning(self):
-        p = svc.build_merge_preview(_c(id=1, telegram_user_id=1), _c(id=2, telegram_user_id=1), merge_enabled=False)
+        p = svc.build_merge_preview(
+            _c(id=1, telegram_user_id=1), _c(id=2, telegram_user_id=1), merge_enabled=False
+        )
         assert "merge_disabled_preview_only" in p.warnings
 
     def test_terminal_status_warning(self):
-        p = svc.build_merge_preview(_c(id=1, telegram_user_id=1, lead_status="stopped"), _c(id=2, telegram_user_id=1))
+        p = svc.build_merge_preview(
+            _c(id=1, telegram_user_id=1, lead_status="stopped"), _c(id=2, telegram_user_id=1)
+        )
         assert any("terminal" in w for w in p.warnings)
 
 
@@ -184,8 +244,10 @@ class TestValidateMerge:
 
     def test_success(self):
         r = svc.validate_merge(
-            _c(id=1, phone="+998901234567"), _c(id=2, phone="+998901234567"),
-            merge_enabled=True, confirm=True,
+            _c(id=1, phone="+998901234567"),
+            _c(id=2, phone="+998901234567"),
+            merge_enabled=True,
+            confirm=True,
         )
         assert r.ok
 
@@ -219,7 +281,10 @@ class TestDataQualitySummary:
         assert s.total_contacts == 0
 
     def test_counts(self):
-        contacts = [_c(id=1, phone="+998901234567", first_name="Ali"), _c(id=2, phone=None, first_name=None)]
+        contacts = [
+            _c(id=1, phone="+998901234567", first_name="Ali"),
+            _c(id=2, phone=None, first_name=None),
+        ]
         s = svc.build_data_quality_summary(contacts)
         assert s.total_contacts == 2
         assert s.missing_phone == 1
@@ -254,6 +319,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_contact_merge_service import DuplicateCandidate
+
         c = DuplicateCandidate()
         with pytest.raises(AttributeError):
             c.confidence = 5  # type: ignore[misc]
@@ -262,6 +328,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_contact_merge_service import MergePreview
+
         p = MergePreview()
         with pytest.raises(AttributeError):
             p.allowed = True  # type: ignore[misc]
@@ -270,6 +337,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_contact_merge_service import MergeResult
+
         r = MergeResult()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]
@@ -278,6 +346,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_contact_merge_service import DataQualitySummary
+
         s = DataQualitySummary()
         with pytest.raises(AttributeError):
             s.total_contacts = 5  # type: ignore[misc]

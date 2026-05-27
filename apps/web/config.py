@@ -5,6 +5,7 @@ Web dashboard configuration — reads from environment variables.
 
 Keeps API_INTERNAL_TOKEN on the server side only (never sent to browser).
 """
+
 from __future__ import annotations
 
 import os

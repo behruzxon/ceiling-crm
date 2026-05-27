@@ -4,6 +4,7 @@ core.services.agent_execution_queue_service
 Persistent DB-backed execution approval queue.  Manages lifecycle:
 proposed → approved/rejected/expired → executed/failed.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,13 +26,15 @@ log = get_logger(__name__)
 _PHONE_RE = re.compile(r"\+?\d{9,15}")
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
 
-_FINAL_STATUSES: frozenset[str] = frozenset({
-    AgentExecutionStatus.EXECUTED.value,
-    AgentExecutionStatus.REJECTED.value,
-    AgentExecutionStatus.EXPIRED.value,
-    AgentExecutionStatus.FAILED.value,
-    AgentExecutionStatus.ROLLED_BACK.value,
-})
+_FINAL_STATUSES: frozenset[str] = frozenset(
+    {
+        AgentExecutionStatus.EXECUTED.value,
+        AgentExecutionStatus.REJECTED.value,
+        AgentExecutionStatus.EXPIRED.value,
+        AgentExecutionStatus.FAILED.value,
+        AgentExecutionStatus.ROLLED_BACK.value,
+    }
+)
 
 
 class AgentExecutionQueueService:
@@ -180,10 +183,12 @@ class AgentExecutionQueueService:
         stmt = (
             sa.update(AgentExecutionRecordModel)
             .where(
-                AgentExecutionRecordModel.status.in_([
-                    AgentExecutionStatus.PROPOSED.value,
-                    AgentExecutionStatus.APPROVED.value,
-                ]),
+                AgentExecutionRecordModel.status.in_(
+                    [
+                        AgentExecutionStatus.PROPOSED.value,
+                        AgentExecutionStatus.APPROVED.value,
+                    ]
+                ),
                 AgentExecutionRecordModel.expires_at < now,
             )
             .values(status=AgentExecutionStatus.EXPIRED.value)
@@ -203,7 +208,8 @@ class AgentExecutionQueueService:
         return list(result.scalars().all())
 
     async def list_approved_pending(
-        self, limit: int = 20,
+        self,
+        limit: int = 20,
     ) -> list[AgentExecutionRecordModel]:
         now = datetime.now(UTC)
         stmt = (
@@ -291,11 +297,13 @@ class AgentExecutionQueueService:
         record: AgentExecutionRecordModel,
     ) -> list[list[tuple[str, str]]]:
         eid = record.execution_id
-        return [[
-            ("✅ Approve", f"agentexec:approve:{eid}"),
-            ("❌ Reject", f"agentexec:reject:{eid}"),
-            ("👁 View", f"agentexec:view:{eid}"),
-        ]]
+        return [
+            [
+                ("✅ Approve", f"agentexec:approve:{eid}"),
+                ("❌ Reject", f"agentexec:reject:{eid}"),
+                ("👁 View", f"agentexec:view:{eid}"),
+            ]
+        ]
 
     # ── Private helpers ───────────────────────────────────────────────────
 

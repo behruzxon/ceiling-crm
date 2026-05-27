@@ -2,6 +2,7 @@
 Lead capture FSM handler.
 Collects name, phone, district from interested client.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -56,10 +57,7 @@ async def handle_phone(message: Message, state: FSMContext, **data: object) -> N
     phone = normalize_phone(raw_phone)
 
     if phone is None or not is_valid_uz_phone(phone):
-        await message.answer(
-            "❌ Noto'g'ri telefon raqami.\n"
-            "Masalan: <code>+998901234567</code>"
-        )
+        await message.answer("❌ Noto'g'ri telefon raqami.\n" "Masalan: <code>+998901234567</code>")
         return
 
     await state.update_data(phone=phone)
@@ -68,12 +66,14 @@ async def handle_phone(message: Message, state: FSMContext, **data: object) -> N
         f"Telefon: <b>{phone}</b> ✅\n\n"
         "📍 Tumaningizni kiriting (masalan: Yunusobod, Chilonzor):"
     )
-    asyncio.create_task(emit_journey_event(
-        user_id=message.from_user.id if message.from_user else 0,
-        event_type=JourneyEventType.PHONE_SHARED,
-        event_data={"phone": phone, "method": "text_input"},
-        source_handler="lead_capture:handle_phone",
-    ))
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=message.from_user.id if message.from_user else 0,
+            event_type=JourneyEventType.PHONE_SHARED,
+            event_data={"phone": phone, "method": "text_input"},
+            source_handler="lead_capture:handle_phone",
+        )
+    )
 
 
 @router.message(StateFilter(LeadCaptureStates.waiting_for_district))
@@ -120,9 +120,7 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
             try:
                 log_factory = get_session_factory()
                 async with log_factory() as log_session:
-                    await get_lead_action_repo(log_session).insert(
-                        lead.id, user_id, "lead_created"
-                    )
+                    await get_lead_action_repo(log_session).insert(lead.id, user_id, "lead_created")
                     await log_session.commit()
             except Exception:
                 log.exception("lead_created_action_log_error", lead_id=lead.id)
@@ -130,6 +128,7 @@ async def handle_district(message: Message, state: FSMContext, **data: object) -
             # Notify admins about new lead (fire-and-forget)
             try:
                 from infrastructure.di import get_lead_notification_service
+
                 await get_lead_notification_service().notify_new_lead(lead)
             except Exception:
                 log.exception("notify_new_lead_error", lead_id=lead.id)

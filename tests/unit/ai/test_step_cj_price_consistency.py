@@ -1,4 +1,5 @@
 """Tests for Step CJ — Price Consistency Across Sources."""
+
 from __future__ import annotations
 
 from pathlib import Path

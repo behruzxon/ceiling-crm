@@ -18,6 +18,7 @@ Or as a decorator:
     async def flaky_call():
         ...
 """
+
 from __future__ import annotations
 
 import asyncio

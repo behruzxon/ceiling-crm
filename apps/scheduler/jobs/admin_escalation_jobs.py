@@ -1,4 +1,5 @@
 """APScheduler job: send admin alerts for leads ignoring follow-ups."""
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -49,7 +50,9 @@ async def process_admin_escalations() -> None:
         async with factory() as session:
             esc_svc = AdminEscalationService(session)
             candidates = await esc_svc.get_escalation_candidates(
-                threshold=threshold, cooldown_minutes=cooldown, limit=20,
+                threshold=threshold,
+                cooldown_minutes=cooldown,
+                limit=20,
             )
             if not candidates:
                 return
@@ -77,7 +80,9 @@ async def process_admin_escalations() -> None:
                         kb = InlineKeyboardMarkup(inline_keyboard=rows)
 
                         await bot.send_message(
-                            chat_id=admin_group_id, text=text, reply_markup=kb,
+                            chat_id=admin_group_id,
+                            text=text,
+                            reply_markup=kb,
                         )
                         await esc_svc.mark_escalated(
                             mem.telegram_user_id,

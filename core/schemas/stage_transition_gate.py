@@ -1,4 +1,5 @@
 """Frozen dataclasses for stage transition gate results."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

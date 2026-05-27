@@ -1,4 +1,5 @@
 """Auto-sales monitoring jobs — stalled conversations, pending escalations."""
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -96,9 +97,7 @@ async def run_auto_sales_monitor() -> None:
             if last_ts:
                 mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
             else:
-                mins_inactive = int(
-                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-                )
+                mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
             stage_str = (
                 lead.current_stage.value
@@ -152,7 +151,8 @@ async def run_auto_sales_monitor() -> None:
                 # Escalations are critical — send anytime
                 dedup_key = CacheKeys.auto_sales_escalation(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTO_SALES_ESCALATION,
                     nx=True,
                 )
@@ -180,7 +180,8 @@ async def run_auto_sales_monitor() -> None:
                 # Auto-reply was sent but user hasn't responded in 60+ min
                 dedup_key = f"autosell:stalled:{lead.id}"
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTO_SALES_ESCALATION,
                     nx=True,
                 )
@@ -193,9 +194,7 @@ async def run_auto_sales_monitor() -> None:
                     # Get last auto-reply type from log
                     last_type = "general_followup"
                     try:
-                        log_raw = await redis.get(
-                            CacheKeys.auto_reply_log(lead.user_id)
-                        )
+                        log_raw = await redis.get(CacheKeys.auto_reply_log(lead.user_id))
                         if log_raw:
                             log_data = json.loads(log_raw)
                             last_type = log_data.get("reply_type", "general_followup")
@@ -236,6 +235,7 @@ def _classify_temp(score: int) -> str:
 async def _load_lead_memory(user_id: int) -> dict:
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         return await _load_ai_memory(user_id) or {}
     except Exception:
         return {}
@@ -245,6 +245,7 @@ async def _get_lead_score(user_id: int) -> int:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
         return int(raw) if raw else 0
     except Exception:

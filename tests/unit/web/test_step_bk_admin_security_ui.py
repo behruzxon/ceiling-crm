@@ -1,4 +1,5 @@
 """Tests for Step BK — Admin Security Dashboard UI."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -46,6 +47,7 @@ class TestTemplate:
 class TestWebRoute:
     def test_web_app_has_security_route(self):
         from apps.web.main import app
+
         paths = [r.path for r in app.routes]
         assert "/admin/security" in paths or any("/admin/security" in str(p) for p in paths)
 
@@ -53,6 +55,7 @@ class TestWebRoute:
 class TestSchemas:
     def test_dashboard_schema(self):
         from core.schemas.admin_security_audit import AdminSecurityDashboardSchema
+
         d = AdminSecurityDashboardSchema()
         assert d.period_hours == 24
 
@@ -60,12 +63,14 @@ class TestSchemas:
         import pytest
 
         from core.schemas.admin_security_audit import AdminSecurityDashboardSchema
+
         d = AdminSecurityDashboardSchema()
         with pytest.raises(AttributeError):
             d.period_hours = 48  # type: ignore[misc]
 
     def test_recent_event(self):
         from core.schemas.admin_security_audit import RecentSecurityEvent
+
         e = RecentSecurityEvent(action="test", status="success")
         assert e.action == "test"
 
@@ -73,6 +78,7 @@ class TestSchemas:
         import pytest
 
         from core.schemas.admin_security_audit import RecentSecurityEvent
+
         e = RecentSecurityEvent()
         with pytest.raises(AttributeError):
             e.action = "x"  # type: ignore[misc]

@@ -1,4 +1,5 @@
 """Outcome resolver + adaptive weights refresh scheduler jobs."""
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

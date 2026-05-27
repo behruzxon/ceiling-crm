@@ -9,6 +9,7 @@ POST /api/v1/admin/agent/settings/apply
 POST /api/v1/admin/agent/settings/rollback
 GET  /api/v1/admin/agent/settings/audit
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -30,6 +31,7 @@ router = APIRouter(
 
 def _check_mutation_enabled() -> None:
     from shared.config import get_settings
+
     if not get_settings().business.agent_settings_mutation_enabled:
         raise HTTPException(status_code=403, detail="Settings mutation disabled")
 
@@ -78,11 +80,15 @@ async def preview_change(body: PreviewRequest) -> dict:
 
     biz = get_settings().business
     from core.services.agent_settings_service import _ALLOWED_KEYS
+
     current = {k: getattr(biz, k, None) for k in _ALLOWED_KEYS}
     allow_live = getattr(biz, "agent_settings_allow_live_flags", False)
 
     result = AgentSettingsService.validate_change(
-        body.key, body.value, current, allow_live_flags=allow_live,
+        body.key,
+        body.value,
+        current,
+        allow_live_flags=allow_live,
     )
     return asdict(result)
 
@@ -98,11 +104,15 @@ async def apply_change(
 
     biz = get_settings().business
     from core.services.agent_settings_service import _ALLOWED_KEYS
+
     current = {k: getattr(biz, k, None) for k in _ALLOWED_KEYS}
     allow_live = getattr(biz, "agent_settings_allow_live_flags", False)
 
     validation = AgentSettingsService.validate_change(
-        body.key, body.value, current, allow_live_flags=allow_live,
+        body.key,
+        body.value,
+        current,
+        allow_live_flags=allow_live,
     )
     if not validation.allowed:
         raise HTTPException(status_code=400, detail=validation.blockers)
@@ -113,11 +123,8 @@ async def apply_change(
             detail="confirmation_token_required",
         )
 
-    if (
-        validation.requires_confirmation
-        and not AgentSettingsService.verify_confirmation_token(
-            body.confirmation_token,
-        )
+    if validation.requires_confirmation and not AgentSettingsService.verify_confirmation_token(
+        body.confirmation_token,
     ):
         raise HTTPException(status_code=400, detail="invalid_token")
 
@@ -145,8 +152,10 @@ async def apply_change(
         existing.updated_at = now
         existing.risk_level = validation.risk_level
     else:
-        vtype = "bool" if isinstance(body.value, bool) else (
-            "int" if isinstance(body.value, int) else "string"
+        vtype = (
+            "bool"
+            if isinstance(body.value, bool)
+            else ("int" if isinstance(body.value, int) else "string")
         )
         record = AgentRuntimeSettingModel(
             key=body.key,
@@ -161,7 +170,8 @@ async def apply_change(
     snapshot = AgentSettingsService.build_rollback_snapshot(current)
     token_hash = (
         hashlib.sha256(body.confirmation_token.encode()).hexdigest()[:16]
-        if body.confirmation_token else None
+        if body.confirmation_token
+        else None
     )
 
     audit = AgentSettingAuditLogModel(
@@ -180,6 +190,7 @@ async def apply_change(
     await db.commit()
 
     from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
+
     AgentEffectiveSettingsService.clear_cache()
 
     return {"status": "applied", "key": body.key, "risk_level": validation.risk_level}
@@ -226,6 +237,7 @@ async def rollback_setting(
     await db.commit()
 
     from core.services.agent_effective_settings_service import AgentEffectiveSettingsService
+
     AgentEffectiveSettingsService.clear_cache()
 
     return {"status": "rolled_back", "key": body.setting_key}
@@ -252,15 +264,17 @@ async def get_audit_log(
 
     items = []
     for r in rows:
-        items.append({
-            "id": r.id,
-            "setting_key": r.setting_key,
-            "action": r.action,
-            "risk_level": r.risk_level,
-            "reason": r.reason,
-            "changed_by": r.changed_by,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-        })
+        items.append(
+            {
+                "id": r.id,
+                "setting_key": r.setting_key,
+                "action": r.action,
+                "risk_level": r.risk_level,
+                "reason": r.reason,
+                "changed_by": r.changed_by,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+        )
 
     return {"items": items, "count": len(items)}
 
@@ -278,6 +292,7 @@ async def list_presets() -> dict:
     from core.services.agent_rollout_preset_service import (
         AgentRolloutPresetService,
     )
+
     presets = AgentRolloutPresetService.list_presets()
     return {
         "presets": [
@@ -301,11 +316,14 @@ async def preview_preset(preset: str) -> dict:
 
     biz = get_settings().business
     from core.services.agent_settings_service import _ALLOWED_KEYS
+
     current = {k: getattr(biz, k, None) for k in _ALLOWED_KEYS}
     allow_live = getattr(biz, "agent_settings_allow_live_flags", False)
 
     result = AgentRolloutPresetService.preview_preset(
-        preset, current, allow_live,
+        preset,
+        current,
+        allow_live,
     )
     return {
         "preset": result.preset,
@@ -314,8 +332,12 @@ async def preview_preset(preset: str) -> dict:
         "blockers": result.blockers,
         "warnings": result.warnings,
         "diff": [
-            {"key": d.key, "current": d.current_value,
-             "target": d.target_value, "risk": d.risk_level}
+            {
+                "key": d.key,
+                "current": d.current_value,
+                "target": d.target_value,
+                "risk": d.risk_level,
+            }
             for d in result.diff
         ],
         "requires_confirmation": result.requires_confirmation,
@@ -342,11 +364,14 @@ async def apply_preset(
 
     biz = get_settings().business
     from core.services.agent_settings_service import _ALLOWED_KEYS
+
     current = {k: getattr(biz, k, None) for k in _ALLOWED_KEYS}
     allow_live = getattr(biz, "agent_settings_allow_live_flags", False)
 
     preview = AgentRolloutPresetService.preview_preset(
-        preset, current, allow_live,
+        preset,
+        current,
+        allow_live,
     )
     if not preview.allowed:
         raise HTTPException(status_code=400, detail=preview.blockers)
@@ -375,18 +400,21 @@ async def apply_preset(
             AgentRuntimeSettingModel.key == key,
         )
         existing = (await db.execute(stmt)).scalar_one_or_none()
-        vtype = "bool" if isinstance(val, bool) else (
-            "int" if isinstance(val, int) else "string"
-        )
+        vtype = "bool" if isinstance(val, bool) else ("int" if isinstance(val, int) else "string")
         if existing:
             existing.value_json = {"value": val}
             existing.updated_at = now
             existing.is_active = True
         else:
-            db.add(AgentRuntimeSettingModel(
-                key=key, value_json={"value": val}, value_type=vtype,
-                risk_level=preview.risk_level, updated_at=now,
-            ))
+            db.add(
+                AgentRuntimeSettingModel(
+                    key=key,
+                    value_json={"value": val},
+                    value_type=vtype,
+                    risk_level=preview.risk_level,
+                    updated_at=now,
+                )
+            )
 
     audit = AgentSettingAuditLogModel(
         setting_key=f"preset:{preset}",
@@ -404,7 +432,7 @@ async def apply_preset(
     from core.services.agent_effective_settings_service import (
         AgentEffectiveSettingsService,
     )
+
     AgentEffectiveSettingsService.clear_cache()
 
     return {"status": "applied", "preset": preset, "risk_level": preview.risk_level}
-

@@ -4,6 +4,7 @@ core.services.crm_export_service
 CRM data export: CSV, summary data. Pure functions — no I/O.
 CSV injection guard, phone redaction, token removal.
 """
+
 from __future__ import annotations
 
 import csv
@@ -17,8 +18,15 @@ _BOT_TOKEN_RE = re.compile(r"\d{8,10}:[A-Za-z0-9_-]{30,50}")
 _CSV_INJECTION_CHARS = frozenset({"=", "+", "-", "@"})
 
 _CONTACT_COLUMNS = [
-    "contact_id", "username", "first_name", "last_name",
-    "lead_status", "temperature", "lead_score", "source", "created_at",
+    "contact_id",
+    "username",
+    "first_name",
+    "last_name",
+    "lead_status",
+    "temperature",
+    "lead_score",
+    "source",
+    "created_at",
 ]
 _CONTACT_COLUMNS_WITH_PHONE = _CONTACT_COLUMNS + ["phone"]
 
@@ -42,8 +50,16 @@ class CRMExportService:
         include_phone: bool = False,
         max_rows: int = 5000,
     ) -> str:
-        cols = ["contact_id", "first_name", "lead_score", "temperature",
-                "last_intent", "objection_type", "area_m2", "district"]
+        cols = [
+            "contact_id",
+            "first_name",
+            "lead_score",
+            "temperature",
+            "last_intent",
+            "objection_type",
+            "area_m2",
+            "district",
+        ]
         if include_phone:
             cols.append("phone")
         hot = [c for c in contacts if c.get("temperature") == "hot"][:max_rows]
@@ -56,8 +72,18 @@ class CRMExportService:
 
     @staticmethod
     def export_tasks_csv(tasks: list[dict[str, Any]], max_rows: int = 5000) -> str:
-        cols = ["task_id", "contact_id", "title", "task_type", "status",
-                "priority", "due_at", "completed_at", "assigned_to", "source"]
+        cols = [
+            "task_id",
+            "contact_id",
+            "title",
+            "task_type",
+            "status",
+            "priority",
+            "due_at",
+            "completed_at",
+            "assigned_to",
+            "source",
+        ]
         return CRMExportService._build_csv(cols, tasks[:max_rows])
 
     @staticmethod
@@ -89,7 +115,8 @@ class CRMExportService:
 
     @staticmethod
     def redact_row(
-        row: dict[str, Any], include_phone: bool = False,
+        row: dict[str, Any],
+        include_phone: bool = False,
     ) -> dict[str, Any]:
         safe = dict(row)
         if not include_phone and "phone" in safe:
@@ -102,7 +129,8 @@ class CRMExportService:
 
     @staticmethod
     def build_filename(
-        report_type: str, ext: str = "csv",
+        report_type: str,
+        ext: str = "csv",
     ) -> str:
         ts = datetime.utcnow().strftime("%Y%m%d_%H%M")
         safe_type = re.sub(r"[^a-zA-Z0-9_-]", "", report_type)
@@ -117,8 +145,5 @@ class CRMExportService:
         writer = csv.writer(output)
         writer.writerow(columns)
         for row in rows:
-            writer.writerow([
-                CRMExportService.sanitize_csv_value(row.get(col))
-                for col in columns
-            ])
+            writer.writerow([CRMExportService.sanitize_csv_value(row.get(col)) for col in columns])
         return output.getvalue()

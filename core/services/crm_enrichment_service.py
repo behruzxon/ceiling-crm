@@ -3,6 +3,7 @@ core.services.crm_enrichment_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Deterministic customer data extraction from text. Pure functions.
 """
+
 from __future__ import annotations
 
 import re
@@ -14,17 +15,39 @@ _PHONE_RE = re.compile(r"(?:\+?998|0)?(\d{9})")
 _BUDGET_RE = re.compile(r"(\d+)\s*(?:mln|million|млн|ming|тыс|минг)", re.IGNORECASE)
 
 _CEILING_TYPES: dict[str, str] = {
-    "gulli": "gulli", "pechat": "pechat", "matoviy": "matoviy",
-    "glossy": "glossy", "led": "led", "yulduz": "yulduzli",
-    "mramor": "mramor", "oddiy": "oddiy", "satin": "satin",
-    "hi-tech": "hi_tech", "osmon": "osmon", "kosmos": "kosmos",
+    "gulli": "gulli",
+    "pechat": "pechat",
+    "matoviy": "matoviy",
+    "glossy": "glossy",
+    "led": "led",
+    "yulduz": "yulduzli",
+    "mramor": "mramor",
+    "oddiy": "oddiy",
+    "satin": "satin",
+    "hi-tech": "hi_tech",
+    "osmon": "osmon",
+    "kosmos": "kosmos",
 }
 
 _LOCATIONS: tuple[str, ...] = (
-    "qarshi", "shahrisabz", "yakkabog'", "kitob", "qamashi",
-    "kasbi", "muborak", "g'uzor", "nishon", "koson",
-    "chiroqchi", "dehqonobod", "mirishkor",
-    "toshkent", "samarqand", "buxoro", "navoiy", "urganch",
+    "qarshi",
+    "shahrisabz",
+    "yakkabog'",
+    "kitob",
+    "qamashi",
+    "kasbi",
+    "muborak",
+    "g'uzor",
+    "nishon",
+    "koson",
+    "chiroqchi",
+    "dehqonobod",
+    "mirishkor",
+    "toshkent",
+    "samarqand",
+    "buxoro",
+    "navoiy",
+    "urganch",
 )
 
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)

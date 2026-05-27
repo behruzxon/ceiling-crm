@@ -3,6 +3,7 @@ core.services.admin_audit_log_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Admin audit log recording — actions, denials, failures. Pure functions.
 """
+
 from __future__ import annotations
 
 import re
@@ -16,15 +17,28 @@ _PHONE_RE = re.compile(r"\+?\d{9,15}")
 
 _VALID_STATUSES = ("success", "denied", "failed", "warning")
 _VALID_ACTIONS = (
-    "admin_user.create", "admin_user.update", "admin_user.disable",
-    "admin_user.enable", "admin_user.change_role", "admin_user.delete",
-    "admin_user.login", "admin_user.permissions_override",
-    "rbac.check", "rbac.denied",
-    "settings.view", "settings.mutate",
-    "agent.rollout.apply", "agent.execution.approve", "agent.execution.reject",
-    "crm.reply.send", "crm.export",
-    "report.generate", "report.delivery.approve", "report.delivery.send",
-    "system.health_check", "system.audit_view",
+    "admin_user.create",
+    "admin_user.update",
+    "admin_user.disable",
+    "admin_user.enable",
+    "admin_user.change_role",
+    "admin_user.delete",
+    "admin_user.login",
+    "admin_user.permissions_override",
+    "rbac.check",
+    "rbac.denied",
+    "settings.view",
+    "settings.mutate",
+    "agent.rollout.apply",
+    "agent.execution.approve",
+    "agent.execution.reject",
+    "crm.reply.send",
+    "crm.export",
+    "report.generate",
+    "report.delivery.approve",
+    "report.delivery.send",
+    "system.health_check",
+    "system.audit_view",
 )
 
 

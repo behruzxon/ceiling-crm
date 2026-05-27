@@ -3,6 +3,7 @@ core.services.crm_inbox_alert_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Computed inbox alerts from contact SLA/status. Pure functions — no I/O.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,7 +34,8 @@ class CRMInboxAlertService:
 
     @staticmethod
     def build_contact_alert(
-        contact: dict[str, Any], now: datetime,
+        contact: dict[str, Any],
+        now: datetime,
     ) -> InboxAlert | None:
         status = contact.get("lead_status", "")
         if status in _NO_ALERT_STATUSES:
@@ -47,7 +49,9 @@ class CRMInboxAlertService:
         name = contact.get("first_name") or contact.get("username") or "?"
         cid = contact.get("id", 0)
         temp = contact.get("temperature")
-        intent = contact.get("last_intent") or (contact.get("metadata_json") or {}).get("last_intent")
+        intent = contact.get("last_intent") or (contact.get("metadata_json") or {}).get(
+            "last_intent"
+        )
 
         if temp == "hot" and mins > 0:
             sev, atype, pri = "critical", "hot_unanswered", 2
@@ -70,15 +74,23 @@ class CRMInboxAlertService:
         msg = f"{mins} min javobsiz" if mins > 0 else ""
 
         return InboxAlert(
-            contact_id=cid, contact_name=name, alert_type=atype,
-            severity=sev, title=title, message=msg,
-            unanswered_minutes=mins, sla_status=sla, priority=pri,
+            contact_id=cid,
+            contact_name=name,
+            alert_type=atype,
+            severity=sev,
+            title=title,
+            message=msg,
+            unanswered_minutes=mins,
+            sla_status=sla,
+            priority=pri,
         )
 
     @staticmethod
     def build_alerts(
-        contacts: list[dict[str, Any]], now: datetime,
-        limit: int = 50, severity: str | None = None,
+        contacts: list[dict[str, Any]],
+        now: datetime,
+        limit: int = 50,
+        severity: str | None = None,
         alert_type: str | None = None,
     ) -> list[InboxAlert]:
         alerts: list[InboxAlert] = []
@@ -96,10 +108,18 @@ class CRMInboxAlertService:
 
     @staticmethod
     def get_alert_overview(
-        contacts: list[dict[str, Any]], now: datetime,
+        contacts: list[dict[str, Any]],
+        now: datetime,
     ) -> dict[str, int]:
-        counts = {"critical": 0, "danger": 0, "warning": 0, "info": 0,
-                  "total": 0, "hot_unanswered": 0, "operator_needed": 0}
+        counts = {
+            "critical": 0,
+            "danger": 0,
+            "warning": 0,
+            "info": 0,
+            "total": 0,
+            "hot_unanswered": 0,
+            "operator_needed": 0,
+        }
         for c in contacts:
             a = CRMInboxAlertService.build_contact_alert(c, now)
             if a is None:

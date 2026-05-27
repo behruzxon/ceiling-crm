@@ -1,4 +1,5 @@
 """Tests for Step CO — Price Calculator Bot Wiring."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,6 +33,7 @@ class TestWiringExists:
 class TestPriceButtonPrompt:
     def test_prompt_unchanged(self):
         from apps.bot.handlers.private.ai_states import _AI_PRICE_PROMPT
+
         assert "5x4" in _AI_PRICE_PROMPT
         assert "20 kv" in _AI_PRICE_PROMPT
 
@@ -117,16 +119,19 @@ class TestMemoryPayload:
 class TestExistingBehaviorPreserved:
     def test_ai_help_imports(self):
         from apps.bot.handlers.private.ai_states import _AI_HELP_TEXT
+
         assert "Narx" in _AI_HELP_TEXT
 
     def test_ai_keyboard(self):
         from apps.bot.handlers.private.ai_states import _ai_keyboard
+
         kb = _ai_keyboard()
         flat = [btn.text for row in kb.keyboard for btn in row]
         assert len(flat) == 6
 
     def test_dispatcher(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_lead_scoring_preserved(self):
@@ -136,7 +141,8 @@ class TestExistingBehaviorPreserved:
         c = _src()
         lines = c.splitlines()
         obj_line = next(
-            (i for i, ln in enumerate(lines) if "detect_objection" in ln), 0,
+            (i for i, ln in enumerate(lines) if "detect_objection" in ln),
+            0,
         )
         calc_line = next(
             (i for i, ln in enumerate(lines) if "_try_price_calculator" in ln and "def" not in ln),

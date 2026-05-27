@@ -1,4 +1,5 @@
 """Celery tasks for data export operations."""
+
 from __future__ import annotations
 
 from infrastructure.queue.app import celery_app

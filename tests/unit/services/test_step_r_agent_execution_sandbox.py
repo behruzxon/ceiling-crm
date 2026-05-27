@@ -1,4 +1,5 @@
 """Tests for Step R — AgentExecutionSandboxService."""
+
 from __future__ import annotations
 
 from core.schemas.agent_execution import AgentExecutionPayload
@@ -71,7 +72,9 @@ class TestDryRunMode:
 
     def test_dry_run_blocked(self):
         ex = svc.prepare_execution(
-            _payload(msg=""), _mem(), "dry_run",
+            _payload(msg=""),
+            _mem(),
+            "dry_run",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -116,7 +119,9 @@ class TestLiveMode:
 
     def test_live_blocked_by_safety(self):
         ex = svc.prepare_execution(
-            _payload(msg="sk-secret123token"), _mem(), "live",
+            _payload(msg="sk-secret123token"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -186,9 +191,13 @@ class TestSafetyBlocks:
         # user_id=0 is falsy
         blocked, reason = svc.should_block(
             AgentExecutionPayload(
-                execution_id="test", mode="live", status="proposed",
-                action="send_user_reply", target_user_id=None,
-                channel="user_dm", message_text="hi",
+                execution_id="test",
+                mode="live",
+                status="proposed",
+                action="send_user_reply",
+                target_user_id=None,
+                channel="user_dm",
+                message_text="hi",
             ),
             _mem(),
         )
@@ -197,7 +206,9 @@ class TestSafetyBlocks:
 
     def test_token_in_message(self):
         ex = svc.prepare_execution(
-            _payload(msg="Here is sk-abc123secret key"), _mem(), "live",
+            _payload(msg="Here is sk-abc123secret key"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -205,7 +216,9 @@ class TestSafetyBlocks:
 
     def test_raw_phone_in_message(self):
         ex = svc.prepare_execution(
-            _payload(msg="Call +998901234567"), _mem(), "live",
+            _payload(msg="Call +998901234567"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -213,7 +226,9 @@ class TestSafetyBlocks:
 
     def test_fake_discount(self):
         ex = svc.prepare_execution(
-            _payload(msg="Sizga 20% chegirma!"), _mem(), "live",
+            _payload(msg="Sizga 20% chegirma!"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -221,7 +236,9 @@ class TestSafetyBlocks:
 
     def test_same_day_promise(self):
         ex = svc.prepare_execution(
-            _payload(msg="Bugun qilamiz albatta"), _mem(), "live",
+            _payload(msg="Bugun qilamiz albatta"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -229,7 +246,9 @@ class TestSafetyBlocks:
 
     def test_eng_arzon_claim(self):
         ex = svc.prepare_execution(
-            _payload(msg="Eng arzon narxda beramiz"), _mem(), "live",
+            _payload(msg="Eng arzon narxda beramiz"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -267,19 +286,34 @@ class TestApproval:
         assert rejected.blocked_reason == "not safe"
 
     def test_requires_approval_user_dm(self):
-        assert svc.requires_approval(
-            "send_user_reply", "user_dm", "approval_required",
-        ) is True
+        assert (
+            svc.requires_approval(
+                "send_user_reply",
+                "user_dm",
+                "approval_required",
+            )
+            is True
+        )
 
     def test_no_approval_admin_alert(self):
-        assert svc.requires_approval(
-            "send_admin_alert", "admin_group", "approval_required",
-        ) is False
+        assert (
+            svc.requires_approval(
+                "send_admin_alert",
+                "admin_group",
+                "approval_required",
+            )
+            is False
+        )
 
     def test_no_approval_live_mode(self):
-        assert svc.requires_approval(
-            "send_user_reply", "user_dm", "live",
-        ) is False
+        assert (
+            svc.requires_approval(
+                "send_user_reply",
+                "user_dm",
+                "live",
+            )
+            is False
+        )
 
 
 # ─── 4. Rollback ────────────────────────────────────────────────────────────
@@ -328,7 +362,8 @@ class TestRiskAssessment:
     def test_admin_alert_none(self):
         ex = svc.prepare_execution(
             _payload(action="send_admin_alert", channel="admin_group"),
-            _mem(), "live",
+            _mem(),
+            "live",
         )
         assert ex.risk_level == "none"
 
@@ -388,8 +423,12 @@ class TestPrepareExecution:
 
 class TestAdminAlertSandbox:
     def test_admin_alert_not_blocked(self):
-        p = {"action": "send_admin_alert", "channel": "admin_group",
-             "admin_alert_text": "Alert!", "user_message_text": ""}
+        p = {
+            "action": "send_admin_alert",
+            "channel": "admin_group",
+            "admin_alert_text": "Alert!",
+            "user_message_text": "",
+        }
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
@@ -406,9 +445,13 @@ class TestAdminAlertSandbox:
 class TestEdgeCases:
     def test_unknown_mode_blocked(self):
         ex = AgentExecutionPayload(
-            execution_id="test", mode="unknown_mode", status="proposed",
-            action="send_user_reply", target_user_id=123,
-            channel="user_dm", message_text="hi",
+            execution_id="test",
+            mode="unknown_mode",
+            status="proposed",
+            action="send_user_reply",
+            target_user_id=123,
+            channel="user_dm",
+            message_text="hi",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
@@ -416,15 +459,16 @@ class TestEdgeCases:
 
     def test_safe_message_passes(self):
         ex = svc.prepare_execution(
-            _payload(msg="Salom, yordam kerakmi?"), _mem(), "live",
+            _payload(msg="Salom, yordam kerakmi?"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
         assert r.would_execute is True
 
     def test_disable_agent_action_ok(self):
-        p = {"action": "disable_agent", "channel": "none",
-             "user_message_text": "Tushunarli"}
+        p = {"action": "disable_agent", "channel": "none", "user_message_text": "Tushunarli"}
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
@@ -436,12 +480,14 @@ class TestEdgeCases:
 class TestImmutability:
     def test_payload_frozen(self):
         import pytest
+
         ex = svc.prepare_execution(_payload(), _mem(), "live")
         with pytest.raises(AttributeError):
             ex.mode = "other"  # type: ignore[misc]
 
     def test_result_frozen(self):
         import pytest
+
         ex = svc.prepare_execution(_payload(), _mem(), "dry_run")
         r = svc.validate_execution(ex, _mem())
         with pytest.raises(AttributeError):
@@ -454,21 +500,27 @@ class TestImmutability:
 class TestAdditionalSafety:
     def test_bearer_token_blocked(self):
         ex = svc.prepare_execution(
-            _payload(msg="Use Bearer abc123xyz for access"), _mem(), "live",
+            _payload(msg="Use Bearer abc123xyz for access"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
 
     def test_token_equals_blocked(self):
         ex = svc.prepare_execution(
-            _payload(msg="token=abc123"), _mem(), "live",
+            _payload(msg="token=abc123"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is True
 
     def test_safe_number_not_phone(self):
         ex = svc.prepare_execution(
-            _payload(msg="20 m2 narxi 5000000 so'm"), _mem(), "live",
+            _payload(msg="20 m2 narxi 5000000 so'm"),
+            _mem(),
+            "live",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
@@ -492,15 +544,13 @@ class TestAdditionalSafety:
         assert r.blocked is False
 
     def test_schedule_followup_not_blocked_by_empty_msg(self):
-        p = {"action": "schedule_followup", "channel": "user_dm",
-             "user_message_text": ""}
+        p = {"action": "schedule_followup", "channel": "user_dm", "user_message_text": ""}
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
 
     def test_cancel_followups_safe(self):
-        p = {"action": "cancel_followups", "channel": "none",
-             "user_message_text": ""}
+        p = {"action": "cancel_followups", "channel": "none", "user_message_text": ""}
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
@@ -518,7 +568,9 @@ class TestModeCombinations:
 
     def test_canary_with_blocked_message(self):
         ex = svc.prepare_execution(
-            _payload(msg="sk-secret", user_id=111), _mem(user_id=111), "canary",
+            _payload(msg="sk-secret", user_id=111),
+            _mem(user_id=111),
+            "canary",
         )
         r = svc.validate_execution(ex, _mem(user_id=111), canary_user_ids=[111])
         assert r.blocked is True
@@ -530,23 +582,31 @@ class TestModeCombinations:
         assert r.blocked is True
 
     def test_live_admin_alert_safe_msg(self):
-        p = {"action": "send_admin_alert", "channel": "admin_group",
-             "admin_alert_text": "New hot lead!"}
+        p = {
+            "action": "send_admin_alert",
+            "channel": "admin_group",
+            "admin_alert_text": "New hot lead!",
+        }
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.would_execute is True
 
     def test_dry_run_normal_safe(self):
         ex = svc.prepare_execution(
-            _payload(msg="Salom! Narx hisoblaymizmi?"), _mem(), "dry_run",
+            _payload(msg="Salom! Narx hisoblaymizmi?"),
+            _mem(),
+            "dry_run",
         )
         r = svc.validate_execution(ex, _mem())
         assert r.would_execute is True
         assert r.safe_to_execute is True
 
     def test_live_handoff_operator(self):
-        p = {"action": "handoff_operator", "channel": "user_dm",
-             "user_message_text": "Operatorga ulaymiz"}
+        p = {
+            "action": "handoff_operator",
+            "channel": "user_dm",
+            "user_message_text": "Operatorga ulaymiz",
+        }
         ex = svc.prepare_execution(p, _mem(), "live")
         r = svc.validate_execution(ex, _mem())
         assert r.blocked is False
@@ -623,6 +683,7 @@ class TestExecutionIds:
 class TestDefaultDisabled:
     def test_sandbox_service_importable(self):
         from infrastructure.di import get_agent_execution_sandbox_service
+
         s = get_agent_execution_sandbox_service()
         assert s is not None
 
@@ -630,7 +691,12 @@ class TestDefaultDisabled:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"

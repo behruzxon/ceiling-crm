@@ -5,6 +5,7 @@ Deterministic rule-based engine that selects the best offer/CTA for a
 customer based on their intent, objection, urgency, lead score, and
 journey state.  Pure functions — no I/O, no side effects.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -21,53 +22,36 @@ from shared.constants.enums import (
 
 # ── Terminal / blocked states ─────────────────────────────────────────────────
 
-_TERMINAL_STATES: frozenset[str] = frozenset({
-    "stopped", "lost", "closed",
-})
+_TERMINAL_STATES: frozenset[str] = frozenset(
+    {
+        "stopped",
+        "lost",
+        "closed",
+    }
+)
 
 # ── Message hints ─────────────────────────────────────────────────────────────
 
 _HINTS: dict[str, str] = {
-    OfferType.PRICE_CALCULATION.value + ":no_area": (
-        "Kvadratingizni yozsangiz, taxminiy narxni hisoblab beraman."
-    ),
-    OfferType.PRICE_CALCULATION.value + ":has_area": (
-        "Qaysi turini tanlaysiz: oddiy, gulli yoki premium?"
-    ),
+    OfferType.PRICE_CALCULATION.value
+    + ":no_area": ("Kvadratingizni yozsangiz, taxminiy narxni hisoblab beraman."),
+    OfferType.PRICE_CALCULATION.value
+    + ":has_area": ("Qaysi turini tanlaysiz: oddiy, gulli yoki premium?"),
     OfferType.CHEAPER_OPTION.value: (
-        "Arzonroq variantdan ham hisoblab berish mumkin. "
-        "Operator bilan kelishiladi."
+        "Arzonroq variantdan ham hisoblab berish mumkin. " "Operator bilan kelishiladi."
     ),
-    OfferType.WARRANTY_TRUST.value: (
-        "Bajarilgan ishlar va kafolat bo'yicha ma'lumot berish."
-    ),
-    OfferType.PORTFOLIO_SOCIAL_PROOF.value: (
-        "Oldingi mijozlar ishlarini ko'rsatish."
-    ),
-    OfferType.DESIGN_HELP.value: (
-        "Shoshilmasdan katalogdan mos model tanlashga yordam berish."
-    ),
-    OfferType.FAST_INSTALLATION.value: (
-        "Tezkor o'lchov yoki operatorga ulash."
-    ),
-    OfferType.OPERATOR_CONSULTATION.value: (
-        "Operatorimiz sizga batafsil maslahat beradi."
-    ),
-    OfferType.ORDER_CONTINUE.value: (
-        "Buyurtmani davom ettiramizmi?"
-    ),
+    OfferType.WARRANTY_TRUST.value: ("Bajarilgan ishlar va kafolat bo'yicha ma'lumot berish."),
+    OfferType.PORTFOLIO_SOCIAL_PROOF.value: ("Oldingi mijozlar ishlarini ko'rsatish."),
+    OfferType.DESIGN_HELP.value: ("Shoshilmasdan katalogdan mos model tanlashga yordam berish."),
+    OfferType.FAST_INSTALLATION.value: ("Tezkor o'lchov yoki operatorga ulash."),
+    OfferType.OPERATOR_CONSULTATION.value: ("Operatorimiz sizga batafsil maslahat beradi."),
+    OfferType.ORDER_CONTINUE.value: ("Buyurtmani davom ettiramizmi?"),
     OfferType.CALLBACK_REQUEST.value: (
         "Telefon raqamingizni yuborsangiz, operatorimiz siz bilan bog'lanadi."
     ),
-    OfferType.DISCOUNT_DISCUSSION.value: (
-        "Chegirma bo'yicha operator bilan kelishiladi."
-    ),
-    OfferType.MEASUREMENT_VISIT.value: (
-        "Usta kelib bepul o'lchov qilib beradi."
-    ),
-    OfferType.PREMIUM_OPTION.value: (
-        "Premium variantda qo'shimcha imkoniyatlar mavjud."
-    ),
+    OfferType.DISCOUNT_DISCUSSION.value: ("Chegirma bo'yicha operator bilan kelishiladi."),
+    OfferType.MEASUREMENT_VISIT.value: ("Usta kelib bepul o'lchov qilib beradi."),
+    OfferType.PREMIUM_OPTION.value: ("Premium variantda qo'shimcha imkoniyatlar mavjud."),
 }
 
 # ── Recommended button sets ───────────────────────────────────────────────────
@@ -213,9 +197,7 @@ class DynamicOfferService:
         temp = memory.get("lead_temperature") or "cold"
         area = memory.get("area_m2") or md.get("area_m2")
         has_phone = bool(memory.get("phone_masked"))
-        has_image = any(
-            e.get("event_type") == "image_sent" for e in events
-        )
+        has_image = any(e.get("event_type") == "image_sent" for e in events)
         followup_enabled = memory.get("followup_enabled", True)
         state = memory.get("customer_state") or md.get("customer_state") or "new_visitor"
 
@@ -438,7 +420,8 @@ class DynamicOfferService:
         flags: list[str] = list(offer.safety_flags)
 
         if ctx.lead_temperature == "cold" and offer.priority in (
-            OfferPriority.HIGH.value, OfferPriority.URGENT.value,
+            OfferPriority.HIGH.value,
+            OfferPriority.URGENT.value,
         ):
             flags.append("cold_lead_priority_downgrade")
 

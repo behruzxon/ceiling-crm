@@ -1,4 +1,5 @@
 """Frozen dataclasses for CRM dashboard analytics."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ class CRMFunnelStage:
     conversion_from_previous: float = 0.0
     conversion_from_total: float = 0.0
 
+
 @dataclass(frozen=True)
 class CRMMissedLeadMetrics:
     missed_lead_count: int = 0
@@ -18,6 +20,7 @@ class CRMMissedLeadMetrics:
     missed_operator_requests: int = 0
     missed_phone_shared: int = 0
     missed_price_interested: int = 0
+
 
 @dataclass(frozen=True)
 class CRMDashboardAnalytics:

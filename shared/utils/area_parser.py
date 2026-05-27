@@ -18,6 +18,7 @@ Explicitly NOT matched:
   - "2/2"  (slash — ambiguous fraction)
   - "2 2 yil" (space pair requires whole-text match)
 """
+
 from __future__ import annotations
 
 import re
@@ -27,7 +28,7 @@ _MIN_AREA: float = 0.0
 _MAX_AREA: float = 10_000.0
 
 # Narrower bounds for ambiguous patterns (space-pair and bare number)
-_MIN_AREA_STRICT: float = 4.0    # effectively > 4 (rejects ambiguous small products like 2×2)
+_MIN_AREA_STRICT: float = 4.0  # effectively > 4 (rejects ambiguous small products like 2×2)
 _MAX_AREA_STRICT: float = 500.0
 
 # ── Number token ───────────────────────────────────────────────────────────────
@@ -54,18 +55,18 @@ _DIM_WORD_RE: re.Pattern[str] = re.compile(
 _UNIT_RE: re.Pattern[str] = re.compile(
     rf"(?<!-){_N}\s*"
     r"(?:"
-    r"metr\s+kvadrat"    # "30 metr kvadrat"
-    r"|kvadrat\s+metr"   # "30 kvadrat metr"
-    r"|kvadrat"          # "30 kvadrat"
-    r"|kvm"              # "30kvm"
-    r"|kv"               # "30kv" / "30 kv"
-    r"|m\s*2"            # "30m2" / "30 m 2" / "30 m2"
-    r"|m²"               # "30m²"
-    r"|м\s*2"            # "30м2" / "30 м2" (Cyrillic м)
-    r"|квадрат"          # "30 квадрат"
-    r"|кв\.м"            # "30 кв.м"
-    r"|квм"              # "30квм"
-    r"|кв"               # "30кв" / "30 кв"
+    r"metr\s+kvadrat"  # "30 metr kvadrat"
+    r"|kvadrat\s+metr"  # "30 kvadrat metr"
+    r"|kvadrat"  # "30 kvadrat"
+    r"|kvm"  # "30kvm"
+    r"|kv"  # "30kv" / "30 kv"
+    r"|m\s*2"  # "30m2" / "30 m 2" / "30 m2"
+    r"|m²"  # "30m²"
+    r"|м\s*2"  # "30м2" / "30 м2" (Cyrillic м)
+    r"|квадрат"  # "30 квадрат"
+    r"|кв\.м"  # "30 кв.м"
+    r"|квм"  # "30квм"
+    r"|кв"  # "30кв" / "30 кв"
     r")",
     re.IGNORECASE,
 )
@@ -88,6 +89,7 @@ _BARE_NUM_RE: re.Pattern[str] = re.compile(
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _to_float(s: str) -> float | None:
     """Convert a numeric token (comma or dot decimal) to float."""
@@ -112,6 +114,7 @@ def _bounded_strict(value: float) -> float | None:
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
+
 
 def parse_area(text: str) -> float | None:
     """Parse a square-metre area value from free-form user text.

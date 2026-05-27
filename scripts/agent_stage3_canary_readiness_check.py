@@ -4,6 +4,7 @@ Stage 3 CANARY Readiness Check
 Verifies environment is safe for CANARY (first real send to test users).
 Read-only — no mutations, no sends, no secret printing.
 """
+
 from __future__ import annotations
 
 import os

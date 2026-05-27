@@ -12,6 +12,7 @@ Engine lifetime
 Same pattern as broadcast_tasks: each asyncio.run() creates a new event
 loop, so a locally-created AsyncEngine (disposed in finally) is required.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -83,7 +84,10 @@ def check_package_followup(self, lead_id: int) -> None:
         log.error("pkg_followup_task_error", lead_id=lead_id, error=str(exc))
         try:
             from infrastructure.error_logger import log_system_error
-            asyncio.run(log_system_error("celery", exc, message=f"check_package_followup lead={lead_id}"))
+
+            asyncio.run(
+                log_system_error("celery", exc, message=f"check_package_followup lead={lead_id}")
+            )
         except Exception:
             pass
 

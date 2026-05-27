@@ -11,6 +11,7 @@ Submenu buttons
   🛠 Kafolat ma'lumoti     — warranty card for latest completed order
   ⬅️ Orqaga                — return to main menu
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -36,36 +37,36 @@ router = Router(name="private:my_orders")
 # ── Stage display strings ─────────────────────────────────────────────────────
 
 _STAGE_EMOJI: dict[PipelineStage, str] = {
-    PipelineStage.NEW:          "🟡",
-    PipelineStage.CONTACTED:    "⚪️",
-    PipelineStage.MEASUREMENT:  "🟠",
-    PipelineStage.QUOTE:        "🟣",
-    PipelineStage.DEAL:         "🔵",
+    PipelineStage.NEW: "🟡",
+    PipelineStage.CONTACTED: "⚪️",
+    PipelineStage.MEASUREMENT: "🟠",
+    PipelineStage.QUOTE: "🟣",
+    PipelineStage.DEAL: "🔵",
     PipelineStage.INSTALLATION: "🟢",
-    PipelineStage.COMPLETED:    "✅",
-    PipelineStage.LOST:         "🔴",
+    PipelineStage.COMPLETED: "✅",
+    PipelineStage.LOST: "🔴",
 }
 
 _STAGE_NAME: dict[PipelineStage, str] = {
-    PipelineStage.NEW:          "Yangi",
-    PipelineStage.CONTACTED:    "Bog'landi",
-    PipelineStage.MEASUREMENT:  "O'lchov",
-    PipelineStage.QUOTE:        "Taklif",
-    PipelineStage.DEAL:         "Buyurtma berildi",
+    PipelineStage.NEW: "Yangi",
+    PipelineStage.CONTACTED: "Bog'landi",
+    PipelineStage.MEASUREMENT: "O'lchov",
+    PipelineStage.QUOTE: "Taklif",
+    PipelineStage.DEAL: "Buyurtma berildi",
     PipelineStage.INSTALLATION: "O'rnatildi",
-    PipelineStage.COMPLETED:    "Yakunlandi",
-    PipelineStage.LOST:         "Bekor qilindi",
+    PipelineStage.COMPLETED: "Yakunlandi",
+    PipelineStage.LOST: "Bekor qilindi",
 }
 
 _STAGE_HINTS: dict[PipelineStage, str] = {
-    PipelineStage.NEW:          "Menejer tez orada bog'lanadi.",
-    PipelineStage.CONTACTED:    "O'lchov vaqti kelishiladi.",
-    PipelineStage.MEASUREMENT:  "O'lchov vaqti kelishiladi.",
-    PipelineStage.QUOTE:        "Narx tasdiqlansa, buyurtma boshlanadi.",
-    PipelineStage.DEAL:         "Montaj rejalashtirilmoqda.",
+    PipelineStage.NEW: "Menejer tez orada bog'lanadi.",
+    PipelineStage.CONTACTED: "O'lchov vaqti kelishiladi.",
+    PipelineStage.MEASUREMENT: "O'lchov vaqti kelishiladi.",
+    PipelineStage.QUOTE: "Narx tasdiqlansa, buyurtma boshlanadi.",
+    PipelineStage.DEAL: "Montaj rejalashtirilmoqda.",
     PipelineStage.INSTALLATION: "Tekshiruv va kafolat rasmiylashadi.",
-    PipelineStage.COMPLETED:    "Rahmat! Kafolat amal qiladi.",
-    PipelineStage.LOST:         "Bekor qilingan. Yangi buyurtma berishingiz mumkin.",
+    PipelineStage.COMPLETED: "Rahmat! Kafolat amal qiladi.",
+    PipelineStage.LOST: "Bekor qilingan. Yangi buyurtma berishingiz mumkin.",
 }
 
 
@@ -79,27 +80,27 @@ def _stage_badge(stage: PipelineStage) -> str:
 # ── Category display labels ───────────────────────────────────────────────────
 
 _CATEGORY_LABELS: dict[str, str] = {
-    "gulli":         "🌸 Gulli",
-    "odnotonny":     "🎨 Odnotonny",
-    "mramor":        "🪨 Mramor",
+    "gulli": "🌸 Gulli",
+    "odnotonny": "🎨 Odnotonny",
+    "mramor": "🪨 Mramor",
     "qora_naqsh_uf": "🖤 Qora naqsh (UF)",
-    "hi_tech":       "✨ Hi-tech",
-    "kosmos":        "🌌 Kosmos",
-    "osmon":         "☁️ Osmon",
-    "oshxona":       "🍳 Oshxona",
-    "naqsh_ramka":   "🖼 Naqsh ramka",
-    "naqsh_oq":      "💎 Naqsh oq",
+    "hi_tech": "✨ Hi-tech",
+    "kosmos": "🌌 Kosmos",
+    "osmon": "☁️ Osmon",
+    "oshxona": "🍳 Oshxona",
+    "naqsh_ramka": "🖼 Naqsh ramka",
+    "naqsh_oq": "💎 Naqsh oq",
 }
 
 _METHOD_LABELS: dict[PaymentMethod, str] = {
-    PaymentMethod.CASH:     "Naqd",
-    PaymentMethod.CARD:     "Karta",
+    PaymentMethod.CASH: "Naqd",
+    PaymentMethod.CARD: "Karta",
     PaymentMethod.TRANSFER: "O'tkazma",
 }
 
 _STATUS_LABELS: dict[PaymentStatus, str] = {
-    PaymentStatus.PENDING:  "Kutilmoqda",
-    PaymentStatus.PAID:     "To'landi ✅",
+    PaymentStatus.PENDING: "Kutilmoqda",
+    PaymentStatus.PAID: "To'landi ✅",
     PaymentStatus.CANCELED: "Bekor",
     PaymentStatus.REFUNDED: "Qaytarildi",
 }
@@ -108,6 +109,7 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 # ── Entry: show submenu ────────────────────────────────────────────────────────
+
 
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📦 Buyurtmalarim")
 async def cmd_my_orders(message: Message, **data: object) -> None:
@@ -119,7 +121,10 @@ async def cmd_my_orders(message: Message, **data: object) -> None:
 
 # ── 📊 Mening buyurtmalarim ───────────────────────────────────────────────────
 
-@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📊 Mening buyurtmalarim")
+
+@router.message(
+    F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📊 Mening buyurtmalarim"
+)
 async def cmd_orders_list(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -157,6 +162,7 @@ async def cmd_orders_list(message: Message, **data: object) -> None:
 
 # ── 📦 Buyurtma holati ────────────────────────────────────────────────────────
 
+
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "📦 Buyurtma holati")
 async def cmd_order_status(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
@@ -185,7 +191,10 @@ async def cmd_order_status(message: Message, **data: object) -> None:
 
 # ── 🧾 Hisob-kitob tarixi ─────────────────────────────────────────────────────
 
-@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🧾 Hisob-kitob tarixi")
+
+@router.message(
+    F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🧾 Hisob-kitob tarixi"
+)
 async def cmd_payment_history(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -227,8 +236,7 @@ async def cmd_payment_history(message: Message, **data: object) -> None:
         status = _STATUS_LABELS.get(p.status, p.status.value)
         amount_fmt = f"{p.amount:,}".replace(",", "\u00a0")
         lines.append(
-            f"• {date_str}  <b>{amount_fmt} so'm</b>\n"
-            f"  {method} | {status} | #{p.lead_id}"
+            f"• {date_str}  <b>{amount_fmt} so'm</b>\n" f"  {method} | {status} | #{p.lead_id}"
         )
 
     await message.answer("\n\n".join(lines), reply_markup=my_orders_keyboard())
@@ -236,7 +244,10 @@ async def cmd_payment_history(message: Message, **data: object) -> None:
 
 # ── 🛠 Kafolat ma'lumoti ──────────────────────────────────────────────────────
 
-@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🛠 Kafolat ma'lumoti")
+
+@router.message(
+    F.chat.type.in_({"private", "group", "supergroup"}), F.text == "🛠 Kafolat ma'lumoti"
+)
 async def cmd_warranty_info(message: Message, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
     db_session: AsyncSession = data["db_session"]  # type: ignore[assignment]
@@ -279,6 +290,7 @@ async def cmd_warranty_info(message: Message, **data: object) -> None:
 
 
 # ── ⬅️ Orqaga ─────────────────────────────────────────────────────────────────
+
 
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == "⬅️ Orqaga")
 async def cmd_back_to_main(message: Message, **data: object) -> None:

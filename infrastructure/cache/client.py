@@ -42,14 +42,14 @@ log = get_logger(__name__)
 _main_pool: ConnectionPool | None = None
 _sessions_pool: ConnectionPool | None = None
 
-APP_KEY_PREFIX = "ccrm:"     # global namespace prefix for all cache keys
+APP_KEY_PREFIX = "ccrm:"  # global namespace prefix for all cache keys
 
 
 def _build_pool(url: str, max_connections: int = 50) -> ConnectionPool:
     return aioredis.ConnectionPool.from_url(
         url,
         max_connections=max_connections,
-        decode_responses=True,     # always work with str, not bytes
+        decode_responses=True,  # always work with str, not bytes
         socket_keepalive=True,
         socket_connect_timeout=5,
         health_check_interval=30,
@@ -139,11 +139,9 @@ class CacheClient:
         key: str,
         value: str,
         ttl: int | None = None,
-        nx: bool = False,           # SET if Not eXists
+        nx: bool = False,  # SET if Not eXists
     ) -> bool:
-        result = await self._safe_exec(
-            self._redis.set, self._key(key), value, ex=ttl, nx=nx
-        )
+        result = await self._safe_exec(self._redis.set, self._key(key), value, ex=ttl, nx=nx)
         return bool(result)
 
     async def delete(self, *keys: str) -> int:
@@ -223,6 +221,7 @@ class CacheClient:
         key = self._key(f"rl:{identifier}")
         pipe = self._redis.pipeline()
         import time
+
         now = int(time.time())
         window_start = now - window_seconds
         pipe.zremrangebyscore(key, 0, window_start)
@@ -240,9 +239,7 @@ class CacheClient:
         """ZADD wrapper with automatic key prefixing."""
         return await self._safe_exec(self._redis.zadd, self._key(key), mapping)  # type: ignore[arg-type]
 
-    async def zrangebyscore(
-        self, key: str, min_score: float, max_score: float
-    ) -> list[str]:
+    async def zrangebyscore(self, key: str, min_score: float, max_score: float) -> list[str]:
         """Return members with scores in [min_score, max_score]."""
         result: list[str] = await self._safe_exec(
             self._redis.zrangebyscore, self._key(key), min_score, max_score

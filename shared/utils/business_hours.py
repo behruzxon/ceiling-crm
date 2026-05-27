@@ -22,6 +22,7 @@ Usage::
     if is_off_hours():
         next_send = defer_to_business_hours(scheduled_dt)
 """
+
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
@@ -44,12 +45,14 @@ def _get_tz() -> timezone | ZoneInfo:
     """Return the configured timezone, falling back to UTC+5 on any error."""
     try:
         from shared.config import get_settings
+
         tz_name = get_settings().business.timezone
     except Exception:
         tz_name = _DEFAULT_TIMEZONE
 
     try:
         from zoneinfo import ZoneInfo
+
         return ZoneInfo(tz_name)
     except Exception:
         return _FALLBACK_UTC_OFFSET
@@ -59,6 +62,7 @@ def _get_hours() -> tuple[int, int]:
     """Return (start_hour, end_hour) from settings or defaults."""
     try:
         from shared.config import get_settings
+
         s = get_settings().business
         return s.business_hours_start, s.business_hours_end
     except Exception:
@@ -196,8 +200,8 @@ TIME_BUCKETS = ("morning", "afternoon", "evening", "night")
 
 # Recommended CTA urgency per bucket
 BUCKET_CTA_URGENCY: dict[str, str] = {
-    "morning": "action",     # fresh start → action CTA
-    "afternoon": "action",   # peak hours → action CTA
-    "evening": "soft",       # winding down → softer CTA
-    "night": "minimal",      # off hours → minimal CTA
+    "morning": "action",  # fresh start → action CTA
+    "afternoon": "action",  # peak hours → action CTA
+    "evening": "soft",  # winding down → softer CTA
+    "night": "minimal",  # off hours → minimal CTA
 }

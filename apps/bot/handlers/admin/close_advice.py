@@ -6,6 +6,7 @@ recommended tactic, copyable message, and risk assessment.
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -41,8 +42,7 @@ async def cmd_close_advice(message: Message, **data: object) -> None:
 
     if lead_id is None:
         await message.answer(
-            "\u2753 Foydalanish: /close_advice &lt;lead_id&gt;\n"
-            "Masalan: /close_advice 145"
+            "\u2753 Foydalanish: /close_advice &lt;lead_id&gt;\n" "Masalan: /close_advice 145"
         )
         return
 
@@ -70,8 +70,11 @@ async def cmd_close_advice(message: Message, **data: object) -> None:
         )
 
         sv = signals.pop("_signal_vector", None)
-        readiness = evaluate_closing_readiness(signal_vector=sv) if sv else \
-            evaluate_closing_readiness(**signals)
+        readiness = (
+            evaluate_closing_readiness(signal_vector=sv)
+            if sv
+            else evaluate_closing_readiness(**signals)
+        )
 
         tactic = select_closing_tactic(
             readiness_tier=readiness.readiness_tier,
@@ -140,6 +143,7 @@ async def _build_closing_signals(lead: object) -> dict:
     mem: dict = {}
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         mem = await _load_ai_memory(lead.user_id) or {}
     except Exception:
         pass
@@ -149,6 +153,7 @@ async def _build_closing_signals(lead: object) -> dict:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(lead.user_id))
         if raw:
             ai_score = max(ai_score, int(raw))
@@ -161,9 +166,7 @@ async def _build_closing_signals(lead: object) -> dict:
     if last_ts:
         mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
     else:
-        mins_inactive = int(
-            (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-        )
+        mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
     # Health score via conversation intelligence
     health_score = 50
@@ -171,6 +174,7 @@ async def _build_closing_signals(lead: object) -> dict:
         from core.services.conversation_intelligence_service import (
             analyze_conversation,
         )
+
         stage_str = (
             lead.current_stage.value
             if hasattr(lead.current_stage, "value")
@@ -198,6 +202,7 @@ async def _build_closing_signals(lead: object) -> dict:
     dp_pct: int | None = None
     try:
         from shared.utils.deal_probability import evaluate_deal_probability
+
         dp = evaluate_deal_probability(
             score=ai_score,
             closing_confidence=lead.closing_confidence,
@@ -216,6 +221,7 @@ async def _build_closing_signals(lead: object) -> dict:
     if not buyer_type:
         try:
             from core.services.lead_intelligence_service import analyze_buyer_type
+
             bp = analyze_buyer_type(
                 score=ai_score,
                 closing_confidence=lead.closing_confidence,
@@ -234,9 +240,7 @@ async def _build_closing_signals(lead: object) -> dict:
         else str(lead.current_stage)
     )
 
-    objection_resolved = bool(
-        mem.get("last_objection") and mem.get("last_negotiation_tactic")
-    )
+    objection_resolved = bool(mem.get("last_objection") and mem.get("last_negotiation_tactic"))
 
     # Build SignalVector for closing_readiness
     _sv = None
@@ -245,6 +249,7 @@ async def _build_closing_signals(lead: object) -> dict:
             build_signal_vector,
             with_deal_probability,
         )
+
         _sv = build_signal_vector(
             lead_score=ai_score,
             health_score=health_score,

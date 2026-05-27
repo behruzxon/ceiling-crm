@@ -1,4 +1,5 @@
 """Tests for Step AB — Agent Settings UI template."""
+
 from __future__ import annotations
 
 from pathlib import Path

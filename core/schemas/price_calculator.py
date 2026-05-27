@@ -1,4 +1,5 @@
 """Price calculator schemas — frozen dataclasses for deterministic pricing."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

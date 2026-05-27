@@ -12,6 +12,7 @@ Provides
 - incr_link_violations — Redis link-violation counter with in-memory fallback.
 - is_flooding        — Sliding-window flood check via CacheClient.
 """
+
 from __future__ import annotations
 
 import time
@@ -34,10 +35,12 @@ log = get_logger(__name__)
 _admin_cache: dict[tuple[int, int], tuple[bool, float]] = {}
 _ADMIN_CACHE_TTL = 60.0  # seconds
 
-_ADMIN_STATUSES: frozenset[str] = frozenset({
-    ChatMemberStatus.ADMINISTRATOR,
-    ChatMemberStatus.CREATOR,
-})
+_ADMIN_STATUSES: frozenset[str] = frozenset(
+    {
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.CREATOR,
+    }
+)
 
 
 async def is_chat_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
@@ -138,8 +141,8 @@ async def incr_link_violations(chat_id: int, user_id: int) -> int:
 # ── Flood control (sliding window) ──────────────────────────────────────────
 # In-memory fallback: (chat_id, user_id) → [monotonic_timestamps]
 _flood_msgs: dict[tuple[int, int], list[float]] = {}
-_FLOOD_WINDOW = 10   # seconds
-_FLOOD_LIMIT  = 5    # max messages allowed inside the window
+_FLOOD_WINDOW = 10  # seconds
+_FLOOD_LIMIT = 5  # max messages allowed inside the window
 
 
 async def is_flooding(chat_id: int, user_id: int) -> bool:

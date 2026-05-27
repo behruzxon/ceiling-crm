@@ -6,6 +6,7 @@ Generates personalized follow-up messages via OpenAI.
 Falls back to deterministic templates on any failure (timeout, invalid
 output, API error). Never raises — always returns usable text.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -72,10 +73,7 @@ def _build_user_prompt(
 
     if followup_type == "catalog":
         designs = memory_data.get("interested_designs") or []
-        designs_ctx = (
-            f"Ko'rgan dizaynlar: {', '.join(designs[:3])}. "
-            if designs else ""
-        )
+        designs_ctx = f"Ko'rgan dizaynlar: {', '.join(designs[:3])}. " if designs else ""
         ctx = {"designs_ctx": designs_ctx}
     elif followup_type == "price":
         area = memory_data.get("area_m2")
@@ -144,11 +142,13 @@ async def compose_followup(
 ) -> str:
     try:
         from shared.config import get_settings
+
         biz = get_settings().business
         if not biz.agent_ai_composer_enabled:
             return fallback_text
 
         from infrastructure.ai.openai_client import get_openai_client
+
         client = get_openai_client()
         user_prompt = _build_user_prompt(followup_type, memory_data)
 

@@ -22,6 +22,7 @@ Changes
    ix_leads_package_type ON leads(package_type)  — segment queries
    ix_leads_lead_status  ON leads(lead_status)   — hot-lead dashboards
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -38,9 +39,7 @@ def upgrade() -> None:
     # ── 1. Add PACKAGE_SELECTED to the pipeline_stage enum ───────────────────
     # The pipeline_stage type was created in a previous transaction so
     # ADD VALUE is safe inside this transaction on PostgreSQL 12+.
-    op.execute(
-        sa.text("ALTER TYPE pipeline_stage ADD VALUE IF NOT EXISTS 'PACKAGE_SELECTED'")
-    )
+    op.execute(sa.text("ALTER TYPE pipeline_stage ADD VALUE IF NOT EXISTS 'PACKAGE_SELECTED'"))
 
     # ── 2. New columns on leads ───────────────────────────────────────────────
     op.add_column(

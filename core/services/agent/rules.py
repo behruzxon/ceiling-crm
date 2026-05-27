@@ -17,6 +17,7 @@ Import constraints
   - stdlib + ``core.services.agent.base`` types
   - NO imports from ``apps/`` or ``infrastructure/``
 """
+
 from __future__ import annotations
 
 import random
@@ -44,7 +45,9 @@ class AgentRule(ABC):
 
     @abstractmethod
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         """Return zero or more actions to execute.
 
@@ -61,10 +64,7 @@ class AgentRule(ABC):
 _CATALOG_FOLLOWUP_MESSAGES: tuple[str, ...] = (
     "Katalogni ko'rdingizmi? \U0001f642\n"
     "Xohlasangiz narxni hisoblab beraman yoki tanlashda yordam beraman.",
-
-    "Dizaynlarni ko'rib chiqdingizmi? \U0001f60a\n"
-    "Savollaringiz bo'lsa yozing — yordam beraman!",
-
+    "Dizaynlarni ko'rib chiqdingizmi? \U0001f60a\n" "Savollaringiz bo'lsa yozing — yordam beraman!",
     "Katalogdagi dizaynlar yoqdimi? \U0001f642\n"
     "Xona uchun qaysi biri to'g'ri kelishini maslahat bera olaman.",
 )
@@ -87,7 +87,9 @@ class CatalogFollowupRule(AgentRule):
         return trigger is AgentTrigger.CATALOG_OPEN
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         text = random.choice(_CATALOG_FOLLOWUP_MESSAGES)
         return [
@@ -112,13 +114,12 @@ class ObjectionRule(AgentRule):
     priority = 50
 
     def matches(self, trigger: AgentTrigger, context: AgentContext) -> bool:
-        return (
-            trigger is AgentTrigger.OBJECTION
-            and context.objection_type is not None
-        )
+        return trigger is AgentTrigger.OBJECTION and context.objection_type is not None
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -158,7 +159,9 @@ class ClosingWindowRule(AgentRule):
         return trigger is AgentTrigger.ATTEMPT_CLOSE
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         reason = self._evaluate(context)
         if reason is None:
@@ -204,7 +207,9 @@ class PhoneCapturedRule(AgentRule):
         return trigger is AgentTrigger.PHONE_CAPTURED
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -228,7 +233,9 @@ class LeadCreatedRule(AgentRule):
         return trigger is AgentTrigger.LEAD_CREATED
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -252,7 +259,9 @@ class OrderDropoffRule(AgentRule):
         return trigger is AgentTrigger.ORDER_DROPOFF
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -276,7 +285,9 @@ class StaleLeadRule(AgentRule):
         return trigger is AgentTrigger.STALE_LEAD
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -310,7 +321,9 @@ class FollowupDueRule(AgentRule):
         return trigger is AgentTrigger.FOLLOWUP_DUE
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         skip = self._check_skip(context)
         if skip is not None:
@@ -329,6 +342,7 @@ class FollowupDueRule(AgentRule):
 
         if ctx.last_activity_ts is not None:
             import time
+
             elapsed = time.time() - ctx.last_activity_ts
             if elapsed < self._RECENTLY_ACTIVE_SECONDS:
                 return "recently_active"
@@ -359,7 +373,9 @@ class InactivityRule(AgentRule):
         return trigger is AgentTrigger.INACTIVITY
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(
@@ -383,7 +399,9 @@ class DefaultLLMRule(AgentRule):
         return trigger is AgentTrigger.USER_MESSAGE
 
     async def decide(
-        self, trigger: AgentTrigger, context: AgentContext,
+        self,
+        trigger: AgentTrigger,
+        context: AgentContext,
     ) -> list[AgentAction]:
         return [
             AgentAction(

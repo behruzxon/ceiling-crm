@@ -1,4 +1,5 @@
 """Lead domain model."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +12,7 @@ from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
 
 class LeadAddons(BaseModel):
     """Add-on selections for a lead/quote."""
+
     led_strip: bool = False
     led_rgb: bool = False
     chandelier_holes: int = 0
@@ -22,6 +24,7 @@ class LeadAddons(BaseModel):
 
 class Lead(BaseModel):
     """Immutable domain representation of a sales lead."""
+
     model_config = {"frozen": True}
 
     id: int
@@ -44,12 +47,12 @@ class Lead(BaseModel):
 
     # Package / funnel fields (nullable for non-package leads)
     package_type: str | None = None
-    lead_status: str | None = None   # hot / warm / cold
+    lead_status: str | None = None  # hot / warm / cold
     last_action: str | None = None
     score: int = 0
 
     # AI scoring + follow-up scheduling
-    lead_temperature: str | None = None    # hot / warm / cold (from AI exchange)
+    lead_temperature: str | None = None  # hot / warm / cold (from AI exchange)
     closing_confidence: float | None = None
     next_follow_up_at: datetime | None = None
     follow_up_count: int = 0

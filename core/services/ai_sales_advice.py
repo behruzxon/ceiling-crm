@@ -9,6 +9,7 @@ suggested message in Uzbek.
 
 Results are cached in Redis for 30 minutes to control API costs.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,7 +48,8 @@ JAVOB FORMATI (JSON):
 @dataclass(frozen=True)
 class SalesAdvice:
     """Result of AI sales advice generation."""
-    lead_status: str              # HOT / WARM / COLD
+
+    lead_status: str  # HOT / WARM / COLD
     recommended_actions: list[str]
     suggested_message: str
     reasoning: str
@@ -182,7 +184,9 @@ def _build_context(
         lines.append("\nOXIRGI XABARLAR:")
         for msg in last_messages[:5]:
             safe_msg = sanitize_user_text_for_prompt(
-                msg, max_length=200, placeholder=_BLOCKED,
+                msg,
+                max_length=200,
+                placeholder=_BLOCKED,
             )
             if safe_msg == _BLOCKED:
                 log.warning(
@@ -330,8 +334,7 @@ def _fallback_advice(
             lead_status="WARM",
             recommended_actions=actions,
             suggested_message=(
-                "Assalomu alaykum! Potalok dizaynlarimiz katalogini "
-                "ko'rib chiqmoqchimisiz? 😊"
+                "Assalomu alaykum! Potalok dizaynlarimiz katalogini " "ko'rib chiqmoqchimisiz? 😊"
             ),
             reasoning="WARM lid — qiziqishni kuchaytirish kerak",
         )
@@ -343,8 +346,7 @@ def _fallback_advice(
                 "2-3 kun keyin qayta aloqa qiling",
             ],
             suggested_message=(
-                "Assalomu alaykum! Hozirda maxsus narxlar mavjud. "
-                "Qiziqsangiz yozing 😊"
+                "Assalomu alaykum! Hozirda maxsus narxlar mavjud. " "Qiziqsangiz yozing 😊"
             ),
             reasoning="COLD lid — yumshoq eslatma bilan qayta faollashtirish",
         )

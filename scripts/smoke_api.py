@@ -15,6 +15,7 @@ Usage::
     # Or specify base URL and token explicitly:
     python scripts/smoke_api.py --base-url http://localhost:8000 --token test-secret-token
 """
+
 from __future__ import annotations
 
 import argparse

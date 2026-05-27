@@ -5,6 +5,7 @@ Safe agent settings mutation with validation, risk assessment,
 confirmation tokens, audit logging, and rollback support.
 Pure validation methods + async DB operations.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -13,38 +14,40 @@ from typing import Any
 
 from core.schemas.agent_settings import AgentSettingsValidationResult, AgentSettingValue
 
-_ALLOWED_KEYS: frozenset[str] = frozenset({
-    "agent_followups_enabled",
-    "agent_catalog_followup_enabled",
-    "agent_price_followup_enabled",
-    "agent_order_followup_enabled",
-    "agent_admin_escalation_enabled",
-    "agent_ai_composer_enabled",
-    "agent_decision_engine_enabled",
-    "agent_lead_signal_enabled",
-    "agent_lead_scoring_enabled",
-    "agent_dynamic_offer_enabled",
-    "agent_conversation_policy_enabled",
-    "agent_response_orchestrator_enabled",
-    "agent_response_orchestrator_log_only",
-    "agent_execution_sandbox_enabled",
-    "agent_execution_mode",
-    "agent_execution_queue_enabled",
-    "agent_execution_api_approval_enabled",
-    "agent_execution_live_sender_enabled",
-    "agent_execution_auto_execute_approved",
-    "agent_catalog_followup_delay_minutes",
-    "agent_price_followup_delay_minutes",
-    "agent_order_followup_delay_minutes",
-    "agent_execution_max_daily_per_user",
-    "agent_decision_min_confidence",
-    "agent_conversation_policy_min_confidence",
-    "agent_dynamic_offer_min_confidence",
-    "agent_response_orchestrator_trace_enabled",
-    "agent_execution_trace_enabled",
-    "agent_text_normalization_enabled",
-    "agent_fuzzy_intent_enabled",
-})
+_ALLOWED_KEYS: frozenset[str] = frozenset(
+    {
+        "agent_followups_enabled",
+        "agent_catalog_followup_enabled",
+        "agent_price_followup_enabled",
+        "agent_order_followup_enabled",
+        "agent_admin_escalation_enabled",
+        "agent_ai_composer_enabled",
+        "agent_decision_engine_enabled",
+        "agent_lead_signal_enabled",
+        "agent_lead_scoring_enabled",
+        "agent_dynamic_offer_enabled",
+        "agent_conversation_policy_enabled",
+        "agent_response_orchestrator_enabled",
+        "agent_response_orchestrator_log_only",
+        "agent_execution_sandbox_enabled",
+        "agent_execution_mode",
+        "agent_execution_queue_enabled",
+        "agent_execution_api_approval_enabled",
+        "agent_execution_live_sender_enabled",
+        "agent_execution_auto_execute_approved",
+        "agent_catalog_followup_delay_minutes",
+        "agent_price_followup_delay_minutes",
+        "agent_order_followup_delay_minutes",
+        "agent_execution_max_daily_per_user",
+        "agent_decision_min_confidence",
+        "agent_conversation_policy_min_confidence",
+        "agent_dynamic_offer_min_confidence",
+        "agent_response_orchestrator_trace_enabled",
+        "agent_execution_trace_enabled",
+        "agent_text_normalization_enabled",
+        "agent_fuzzy_intent_enabled",
+    }
+)
 
 _RISK_MAP: dict[str, str] = {
     "agent_execution_live_sender_enabled": "critical",
@@ -66,14 +69,22 @@ _RISK_MAP: dict[str, str] = {
     "agent_response_orchestrator_enabled": "medium",
 }
 
-_CRITICAL_KEYS: frozenset[str] = frozenset({
-    "agent_execution_live_sender_enabled",
-    "agent_execution_auto_execute_approved",
-})
+_CRITICAL_KEYS: frozenset[str] = frozenset(
+    {
+        "agent_execution_live_sender_enabled",
+        "agent_execution_auto_execute_approved",
+    }
+)
 
-_EXECUTION_MODES: frozenset[str] = frozenset({
-    "log_only", "dry_run", "canary", "approval_required", "live",
-})
+_EXECUTION_MODES: frozenset[str] = frozenset(
+    {
+        "log_only",
+        "dry_run",
+        "canary",
+        "approval_required",
+        "live",
+    }
+)
 
 
 class AgentSettingsService:
@@ -119,14 +130,16 @@ class AgentSettingsService:
     ) -> AgentSettingsValidationResult:
         if not AgentSettingsService.is_allowed_key(key):
             return AgentSettingsValidationResult(
-                allowed=False, risk_level="none",
+                allowed=False,
+                risk_level="none",
                 blockers=[f"unknown_key:{key}"],
             )
 
         ok, reason = AgentSettingsService.validate_value(key, value)
         if not ok:
             return AgentSettingsValidationResult(
-                allowed=False, risk_level="none",
+                allowed=False,
+                risk_level="none",
                 blockers=[reason],
             )
 
@@ -212,13 +225,18 @@ class AgentSettingsService:
             if val is None:
                 continue
             risk = _RISK_MAP.get(key, "low")
-            vtype = "bool" if isinstance(val, bool) else (
-                "int" if isinstance(val, int) else "string"
+            vtype = (
+                "bool" if isinstance(val, bool) else ("int" if isinstance(val, int) else "string")
             )
-            result.append(AgentSettingValue(
-                key=key, value=val, source="effective",
-                risk_level=risk, value_type=vtype,
-            ))
+            result.append(
+                AgentSettingValue(
+                    key=key,
+                    value=val,
+                    source="effective",
+                    risk_level=risk,
+                    value_type=vtype,
+                )
+            )
         return result
 
     @staticmethod

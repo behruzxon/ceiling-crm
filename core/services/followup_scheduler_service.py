@@ -17,6 +17,7 @@ Anti-spam: 5-layer protection
 Stale check: before sending, verifies no superseding event occurred
 after the follow-up was scheduled.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -36,37 +37,54 @@ _MAX_DAILY_FOLLOWUPS = 3
 _MAX_TOTAL_FOLLOWUPS = 5
 _MIN_GAP_SECONDS = 600  # 10 min
 
-_STOP_WORDS: frozenset[str] = frozenset({
-    "kerak emas", "kerakmas", "hozir emas", "stop", "bekor",
-    "qiziqmayman", "yozmang", "не надо", "стоп", "отмена",
-    "yoq kerak emas", "rahmat kerak emas",
-})
+_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "kerak emas",
+        "kerakmas",
+        "hozir emas",
+        "stop",
+        "bekor",
+        "qiziqmayman",
+        "yozmang",
+        "не надо",
+        "стоп",
+        "отмена",
+        "yoq kerak emas",
+        "rahmat kerak emas",
+    }
+)
 
 _SUPERSEDING_EVENTS: dict[str, frozenset[str]] = {
-    "catalog": frozenset({
-        JourneyEventType.PRICE_CALCULATED.value,
-        JourneyEventType.CLICKED_ORDER.value,
-        JourneyEventType.ORDER_FORM_STARTED.value,
-        JourneyEventType.PHONE_SHARED.value,
-        JourneyEventType.OPERATOR_REQUESTED.value,
-        JourneyEventType.DEAL_CLOSED.value,
-        JourneyEventType.LOST_LEAD.value,
-    }),
-    "price": frozenset({
-        JourneyEventType.CLICKED_ORDER.value,
-        JourneyEventType.ORDER_FORM_STARTED.value,
-        JourneyEventType.PHONE_SHARED.value,
-        JourneyEventType.OPERATOR_REQUESTED.value,
-        JourneyEventType.DEAL_CLOSED.value,
-        JourneyEventType.LOST_LEAD.value,
-    }),
-    "abandoned_order": frozenset({
-        JourneyEventType.PHONE_SHARED.value,
-        JourneyEventType.LOCATION_SHARED.value,
-        JourneyEventType.OPERATOR_REQUESTED.value,
-        JourneyEventType.DEAL_CLOSED.value,
-        JourneyEventType.LOST_LEAD.value,
-    }),
+    "catalog": frozenset(
+        {
+            JourneyEventType.PRICE_CALCULATED.value,
+            JourneyEventType.CLICKED_ORDER.value,
+            JourneyEventType.ORDER_FORM_STARTED.value,
+            JourneyEventType.PHONE_SHARED.value,
+            JourneyEventType.OPERATOR_REQUESTED.value,
+            JourneyEventType.DEAL_CLOSED.value,
+            JourneyEventType.LOST_LEAD.value,
+        }
+    ),
+    "price": frozenset(
+        {
+            JourneyEventType.CLICKED_ORDER.value,
+            JourneyEventType.ORDER_FORM_STARTED.value,
+            JourneyEventType.PHONE_SHARED.value,
+            JourneyEventType.OPERATOR_REQUESTED.value,
+            JourneyEventType.DEAL_CLOSED.value,
+            JourneyEventType.LOST_LEAD.value,
+        }
+    ),
+    "abandoned_order": frozenset(
+        {
+            JourneyEventType.PHONE_SHARED.value,
+            JourneyEventType.LOCATION_SHARED.value,
+            JourneyEventType.OPERATOR_REQUESTED.value,
+            JourneyEventType.DEAL_CLOSED.value,
+            JourneyEventType.LOST_LEAD.value,
+        }
+    ),
 }
 
 _FOLLOWUP_MESSAGES: dict[str, str] = {
@@ -244,6 +262,7 @@ class FollowupSchedulerService:
         # Conversation policy check (only when enabled + enforced)
         try:
             from shared.config import get_settings
+
             biz = get_settings().business
             if biz.agent_conversation_policy_enabled and not biz.agent_conversation_policy_log_only:
                 md = memory.memory_data or {}
@@ -328,8 +347,10 @@ class FollowupSchedulerService:
         md = dict(memory_data)
         try:
             from shared.config import get_settings
+
             if get_settings().business.agent_dynamic_offer_enabled:
                 from core.services.dynamic_offer_service import DynamicOfferService
+
                 offer = DynamicOfferService.choose_offer(
                     memory=md,
                     lead_signal=None,
@@ -342,6 +363,7 @@ class FollowupSchedulerService:
 
         try:
             from core.services.ai_message_composer_service import compose_followup
+
             text = await compose_followup(followup_type, md, fallback_text)
         except Exception:
             text = fallback_text

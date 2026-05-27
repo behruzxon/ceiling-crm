@@ -1,4 +1,5 @@
 """Tests for Step BM — Security Enablement Preflight."""
+
 from __future__ import annotations
 
 from core.services.security_enablement_service import SecurityEnablementService
@@ -9,12 +10,16 @@ svc = SecurityEnablementService
 def _defaults():
     return {
         "app_env": "development",
-        "admin_rbac_enabled": False, "admin_db_rbac_enabled": False,
+        "admin_rbac_enabled": False,
+        "admin_db_rbac_enabled": False,
         "admin_db_rbac_fallback_to_env": True,
-        "admin_session_auth_enabled": False, "admin_session_secure_cookie": True,
-        "admin_csrf_enabled": False, "admin_security_actions_enabled": False,
+        "admin_session_auth_enabled": False,
+        "admin_session_secure_cookie": True,
+        "admin_csrf_enabled": False,
+        "admin_security_actions_enabled": False,
         "admin_security_action_audit_enabled": True,
-        "admin_ip_rules_enabled": False, "admin_ip_block_enforcement_enabled": False,
+        "admin_ip_rules_enabled": False,
+        "admin_ip_block_enforcement_enabled": False,
         "admin_login_max_attempts": 5,
     }
 
@@ -221,6 +226,7 @@ class TestImmutability:
         import pytest
 
         from core.services.security_enablement_service import PreflightCheck
+
         c = PreflightCheck()
         with pytest.raises(AttributeError):
             c.status = "x"  # type: ignore[misc]
@@ -229,6 +235,7 @@ class TestImmutability:
         import pytest
 
         from core.services.security_enablement_service import PreflightReport
+
         r = PreflightReport()
         with pytest.raises(AttributeError):
             r.stage = "x"  # type: ignore[misc]
@@ -237,6 +244,7 @@ class TestImmutability:
         import pytest
 
         from core.services.security_enablement_service import RollbackCard
+
         c = RollbackCard()
         with pytest.raises(AttributeError):
             c.from_stage = "x"  # type: ignore[misc]

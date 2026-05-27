@@ -3,6 +3,7 @@
 Service is tested by mocking the repo (AsyncMock).
 Repo upsert/list logic is exercised via the service boundary.
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock

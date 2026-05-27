@@ -8,6 +8,7 @@ for recent messages, and calls the AI Sales Advice service.
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -91,6 +92,7 @@ async def cmd_lead_advice(message: Message, **data: object) -> None:
         last_messages: list[str] = []
         try:
             from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
             mem = await _load_ai_memory(lead.user_id)
             if mem and mem.get("last_user_message"):
                 last_messages = [mem["last_user_message"]]
@@ -125,9 +127,7 @@ async def cmd_lead_advice(message: Message, **data: object) -> None:
         stage_label = _STAGE_LABELS.get(stage_val, stage_val)
         cached_tag = " (cached)" if advice.cached else ""
 
-        actions_text = "\n".join(
-            f"  \u2022 {a}" for a in advice.recommended_actions
-        )
+        actions_text = "\n".join(f"  \u2022 {a}" for a in advice.recommended_actions)
 
         text = (
             f"\U0001f9e0 <b>Lead #{lead.id} Advice</b>{cached_tag}\n\n"

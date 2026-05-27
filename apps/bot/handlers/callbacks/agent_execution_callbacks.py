@@ -1,4 +1,5 @@
 """Admin callbacks for agent execution approval queue."""
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -36,6 +37,7 @@ async def cb_approve(callback: CallbackQuery) -> None:
             from core.services.agent_execution_queue_service import (
                 AgentExecutionQueueService,
             )
+
             svc = AgentExecutionQueueService(session)
             ok, reason = await svc.approve(execution_id, callback.from_user.id)
             await session.commit()
@@ -65,6 +67,7 @@ async def cb_reject(callback: CallbackQuery) -> None:
             from core.services.agent_execution_queue_service import (
                 AgentExecutionQueueService,
             )
+
             svc = AgentExecutionQueueService(session)
             ok, reason = await svc.reject(execution_id, callback.from_user.id)
             await session.commit()
@@ -94,6 +97,7 @@ async def cb_view(callback: CallbackQuery) -> None:
             from core.services.agent_execution_queue_service import (
                 AgentExecutionQueueService,
             )
+
             svc = AgentExecutionQueueService(session)
             record = await svc.get_by_execution_id(execution_id)
 

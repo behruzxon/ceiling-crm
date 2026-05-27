@@ -1,4 +1,5 @@
 """Tests for Step CF — AI Multilingual & Fuzzy Cases."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_detection import (
@@ -112,28 +113,33 @@ class TestDesignNamesCrossLanguage:
         from apps.bot.handlers.private.ai_detection import (
             _extract_design_from_text,
         )
+
         assert _extract_design_from_text("gulli potolok") == "Gulli"
 
     def test_hi_tech_detected(self):
         from apps.bot.handlers.private.ai_detection import (
             _extract_design_from_text,
         )
+
         assert _extract_design_from_text("hi tech dizayn") == "Hi Tech"
 
     def test_mramor_detected(self):
         from apps.bot.handlers.private.ai_detection import (
             _extract_design_from_text,
         )
+
         assert _extract_design_from_text("mramor kerak") == "Mramor"
 
     def test_osmon_detected(self):
         from apps.bot.handlers.private.ai_detection import (
             _extract_design_from_text,
         )
+
         assert _extract_design_from_text("osmon dizayni") == "Osmon"
 
     def test_no_design(self):
         from apps.bot.handlers.private.ai_detection import (
             _extract_design_from_text,
         )
+
         assert _extract_design_from_text("salom dunyo") is None

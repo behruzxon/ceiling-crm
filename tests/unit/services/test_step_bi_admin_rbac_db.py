@@ -1,4 +1,5 @@
 """Tests for Step BI — AdminRBACService DB-backed resolution."""
+
 from __future__ import annotations
 
 from core.services.admin_rbac_service import AdminRBACService
@@ -16,7 +17,10 @@ class TestResolveRoleWithDb:
     def test_db_inactive_user_falls_back(self):
         db_user = {"role": "admin", "is_active": False}
         role, src = svc.resolve_role_with_db(
-            "u1", db_user, db_rbac_enabled=True, fallback_to_env=True,
+            "u1",
+            db_user,
+            db_rbac_enabled=True,
+            fallback_to_env=True,
             owner_ids="u1",
         )
         assert role == "owner"
@@ -24,7 +28,10 @@ class TestResolveRoleWithDb:
 
     def test_db_none_user_falls_back(self):
         role, src = svc.resolve_role_with_db(
-            "u1", None, db_rbac_enabled=True, fallback_to_env=True,
+            "u1",
+            None,
+            db_rbac_enabled=True,
+            fallback_to_env=True,
             admin_ids="u1",
         )
         assert role == "admin"
@@ -32,7 +39,10 @@ class TestResolveRoleWithDb:
 
     def test_db_disabled_no_fallback(self):
         role, src = svc.resolve_role_with_db(
-            "u1", None, db_rbac_enabled=False, fallback_to_env=True,
+            "u1",
+            None,
+            db_rbac_enabled=False,
+            fallback_to_env=True,
             operator_ids="u1",
         )
         assert role == "operator"
@@ -40,7 +50,10 @@ class TestResolveRoleWithDb:
 
     def test_db_enabled_no_fallback(self):
         role, src = svc.resolve_role_with_db(
-            "u1", None, db_rbac_enabled=True, fallback_to_env=False,
+            "u1",
+            None,
+            db_rbac_enabled=True,
+            fallback_to_env=False,
         )
         assert role == "admin"
         assert src == "env"
@@ -54,7 +67,9 @@ class TestResolveRoleWithDb:
     def test_db_takes_priority_over_env(self):
         db_user = {"role": "analyst", "is_active": True}
         role, src = svc.resolve_role_with_db(
-            "u1", db_user, db_rbac_enabled=True,
+            "u1",
+            db_user,
+            db_rbac_enabled=True,
             owner_ids="u1",
         )
         assert role == "analyst"
@@ -62,7 +77,9 @@ class TestResolveRoleWithDb:
 
     def test_env_fallback_uses_all_id_lists(self):
         role, src = svc.resolve_role_with_db(
-            "u5", None, db_rbac_enabled=False,
+            "u5",
+            None,
+            db_rbac_enabled=False,
             viewer_ids="u5",
         )
         assert role == "viewer"
@@ -173,8 +190,10 @@ class TestExistingEnvRbac:
 class TestSettings:
     def test_db_rbac_default_false(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["admin_db_rbac_enabled"].default is False
 
     def test_fallback_default_true(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["admin_db_rbac_fallback_to_env"].default is True

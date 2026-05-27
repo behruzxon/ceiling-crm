@@ -13,6 +13,7 @@ Commands / entry points
 
 RBAC: MANAGER | ADMIN | SUPERADMIN
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -48,16 +49,16 @@ def _period_keyboard(active: str | None = None) -> InlineKeyboardMarkup:
 
     def _btn(label: str, period: str) -> InlineKeyboardButton:
         text = f"✅ {label}" if period == active else label
-        return InlineKeyboardButton(
-            text=text, callback_data=f"stats:period:{period}"
-        )
+        return InlineKeyboardButton(text=text, callback_data=f"stats:period:{period}")
 
     return InlineKeyboardMarkup(
-        inline_keyboard=[[
-            _btn("Bugun", "today"),
-            _btn("7 kun", "7d"),
-            _btn("30 kun", "30d"),
-        ]]
+        inline_keyboard=[
+            [
+                _btn("Bugun", "today"),
+                _btn("7 kun", "7d"),
+                _btn("30 kun", "30d"),
+            ]
+        ]
     )
 
 

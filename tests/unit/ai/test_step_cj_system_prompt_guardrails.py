@@ -1,4 +1,5 @@
 """Tests for Step CJ — System Prompt Guardrails."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,16 +11,19 @@ def _prompt_src() -> str:
 
 def _prompt_text() -> str:
     from apps.bot.ai.system_prompt import _SYSTEM_PROMPT
+
     return _SYSTEM_PROMPT
 
 
 class TestPromptVersion:
     def test_version_exists(self):
         from apps.bot.ai.system_prompt import PROMPT_VERSION
+
         assert PROMPT_VERSION is not None
 
     def test_version_current(self):
         from apps.bot.ai.system_prompt import PROMPT_VERSION
+
         assert "cj" in PROMPT_VERSION or "2026" in PROMPT_VERSION
 
     def test_version_in_source(self):
@@ -143,6 +147,7 @@ class TestPromptLength:
 class TestSmoke:
     def test_parse_ai_scoring(self):
         from apps.bot.ai.system_prompt import _parse_ai_scoring
+
         temp, conf = _parse_ai_scoring(
             {"lead_temperature": "hot", "closing_confidence": 0.8},
         )
@@ -151,4 +156,5 @@ class TestSmoke:
 
     def test_injection_refusal(self):
         from apps.bot.ai.system_prompt import INJECTION_REFUSAL
+
         assert INJECTION_REFUSAL["intent"] == "other"

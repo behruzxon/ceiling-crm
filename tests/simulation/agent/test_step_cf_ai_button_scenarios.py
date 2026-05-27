@@ -3,6 +3,7 @@
 These tests verify module wiring and detection chains
 without real Telegram/OpenAI calls.
 """
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_detection import (
@@ -76,6 +77,7 @@ class TestScenarioStopRequest:
 
     def test_stop_detected(self):
         from core.services.followup_scheduler_service import _STOP_WORDS
+
         assert "kerak emas" in _STOP_WORDS
 
     def test_angry_objection(self):
@@ -126,11 +128,13 @@ class TestScenarioSafetyChecks:
 class TestScenarioOpenAIFailSafe:
     def test_failsafe_text_exists(self):
         from apps.bot.handlers.private.ai_states import _FAILSAFE_TEXT
+
         assert len(_FAILSAFE_TEXT) > 20
         assert "operator" in _FAILSAFE_TEXT.lower()
 
     def test_failsafe_kb_has_button(self):
         from apps.bot.handlers.private.ai_states import _FAILSAFE_KB
+
         assert len(_FAILSAFE_KB.inline_keyboard) > 0
 
 

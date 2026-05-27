@@ -1,14 +1,22 @@
 """Tests for Step BU — CRMCampaignAnalyticsService."""
+
 from __future__ import annotations
 
 from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
 
 svc = CRMCampaignAnalyticsService
 
+
 def _attempt(status="sent", **kw):
-    base = {"campaign_id": 1, "contact_id": 1, "status": status,
-            "blocked_reason": None, "error_message": None,
-            "sent_at": "2026-05-26T10:00:00", "metadata_json": {}}
+    base = {
+        "campaign_id": 1,
+        "contact_id": 1,
+        "status": status,
+        "blocked_reason": None,
+        "error_message": None,
+        "sent_at": "2026-05-26T10:00:00",
+        "metadata_json": {},
+    }
     base.update(kw)
     return base
 
@@ -199,8 +207,11 @@ class TestRecommendations:
             DeliveryMetrics,
             ReplyMetrics,
         )
+
         blocked = [("no_telegram_id", 5)]
-        recs = svc.build_recommendations(DeliveryMetrics(), blocked, CanaryMetrics(), ReplyMetrics())
+        recs = svc.build_recommendations(
+            DeliveryMetrics(), blocked, CanaryMetrics(), ReplyMetrics()
+        )
         assert any("telegram" in r.description.lower() for r in recs)
 
     def test_canary_failure(self):
@@ -209,6 +220,7 @@ class TestRecommendations:
             DeliveryMetrics,
             ReplyMetrics,
         )
+
         canary = CanaryMetrics(canary_failed=2)
         recs = svc.build_recommendations(DeliveryMetrics(), [], canary, ReplyMetrics())
         assert any("canary" in r.description.lower() for r in recs)
@@ -219,6 +231,7 @@ class TestRecommendations:
             DeliveryMetrics,
             ReplyMetrics,
         )
+
         delivery = DeliveryMetrics(sent=10)
         replies = ReplyMetrics(reply_rate=0.02)
         recs = svc.build_recommendations(delivery, [], CanaryMetrics(), replies)
@@ -230,6 +243,7 @@ class TestRecommendations:
             DeliveryMetrics,
             ReplyMetrics,
         )
+
         recs = svc.build_recommendations(DeliveryMetrics(), [], CanaryMetrics(), ReplyMetrics())
         assert any("yaxshi" in r.title.lower() for r in recs)
 
@@ -264,6 +278,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_analytics_service import DeliveryMetrics
+
         m = DeliveryMetrics()
         with pytest.raises(AttributeError):
             m.sent = 5  # type: ignore[misc]
@@ -272,6 +287,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_analytics_service import CampaignAnalytics
+
         a = CampaignAnalytics()
         with pytest.raises(AttributeError):
             a.campaign_id = 5  # type: ignore[misc]
@@ -280,6 +296,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_analytics_service import CampaignRecommendation
+
         r = CampaignRecommendation()
         with pytest.raises(AttributeError):
             r.title = "x"  # type: ignore[misc]

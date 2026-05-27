@@ -28,8 +28,18 @@ def upgrade() -> None:
         sa.Column("attempt_count", sa.Integer, server_default="0", nullable=False),
         sa.Column("last_error", sa.String(500), nullable=True),
         sa.Column("message_text", sa.Text, nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
     )
     op.create_index("ix_fu_user_status", "scheduled_followups", ["telegram_user_id", "status"])
     # Partial index for Postgres only; harmless no-op if DB doesn't support it.

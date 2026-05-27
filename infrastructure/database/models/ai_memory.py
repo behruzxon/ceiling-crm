@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for ai_user_memory table."""
+
 from __future__ import annotations
 
 from datetime import datetime

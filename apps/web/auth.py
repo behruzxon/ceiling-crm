@@ -15,6 +15,7 @@ Behavior:
 - Uses ``secrets.compare_digest`` for constant-time comparison of both
   username and password.
 """
+
 from __future__ import annotations
 
 import logging

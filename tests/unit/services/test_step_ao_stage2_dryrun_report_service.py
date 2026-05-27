@@ -1,4 +1,5 @@
 """Tests for Step AO — Stage2DryRunReportService (pure pass/fail logic)."""
+
 from __future__ import annotations
 
 from core.schemas.stage2_dryrun_report import (
@@ -12,10 +13,14 @@ svc = Stage2DryRunReportService
 
 def _report(**kw) -> Stage2DryRunReport:
     defaults = {
-        "generated_at": "2026-05-26T12:00:00", "since": "2026-05-26T00:00:00",
-        "until": "2026-05-26T12:00:00", "environment": "test",
-        "duration_minutes": 720, "total_payloads": 50,
-        "total_would_execute": 35, "total_blocked": 15,
+        "generated_at": "2026-05-26T12:00:00",
+        "since": "2026-05-26T00:00:00",
+        "until": "2026-05-26T12:00:00",
+        "environment": "test",
+        "duration_minutes": 720,
+        "total_payloads": 50,
+        "total_would_execute": 35,
+        "total_blocked": 15,
         "action_counts": {"send_user_reply": 25, "send_admin_alert": 5, "handoff_operator": 5},
         "channel_counts": {"user_dm": 25, "admin_group": 5, "internal_only": 20},
         "risk_counts": {"low": 30, "medium": 15, "high": 5},
@@ -155,6 +160,7 @@ class TestReportDefaults:
 
     def test_frozen(self):
         import pytest
+
         r = Stage2DryRunReport()
         with pytest.raises(AttributeError):
             r.health_status = "red"  # type: ignore[misc]
@@ -164,9 +170,12 @@ class TestDBService:
     async def test_empty_db_safe(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
-            return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
+            return_value=MagicMock(
+                scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])
+            ),
         )
         s = Stage2DryRunReportService(session)
         now = datetime.now(UTC)
@@ -177,6 +186,7 @@ class TestDBService:
     async def test_db_exception_safe(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock
+
         session = AsyncMock()
         session.execute = AsyncMock(side_effect=Exception("DB down"))
         s = Stage2DryRunReportService(session)
@@ -187,9 +197,12 @@ class TestDBService:
     async def test_has_generated_at(self):
         from datetime import UTC, datetime, timedelta
         from unittest.mock import AsyncMock, MagicMock
+
         session = AsyncMock()
         session.execute = AsyncMock(
-            return_value=MagicMock(scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])),
+            return_value=MagicMock(
+                scalar=MagicMock(return_value=0), all=MagicMock(return_value=[])
+            ),
         )
         s = Stage2DryRunReportService(session)
         now = datetime.now(UTC)
@@ -201,6 +214,7 @@ class TestDBService:
 class TestRedaction:
     def test_no_secrets_in_defaults(self):
         from dataclasses import asdict
+
         text = str(asdict(Stage2DryRunReport()))
         assert "sk-" not in text
         assert "+998" not in text

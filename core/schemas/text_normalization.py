@@ -1,4 +1,5 @@
 """Frozen dataclass for text normalization results."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

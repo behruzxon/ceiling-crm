@@ -1,4 +1,5 @@
 """Tests for Step AM — DRY_RUN Gate UI panel."""
+
 from __future__ import annotations
 
 from pathlib import Path

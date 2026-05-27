@@ -1,4 +1,5 @@
 """Tests for Step CH — Packages Handler."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,10 +12,12 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.bot.handlers.private import packages
+
         assert packages is not None
 
     def test_router(self):
         from apps.bot.handlers.private.packages import router
+
         assert router is not None
 
 

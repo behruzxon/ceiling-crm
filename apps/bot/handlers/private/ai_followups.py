@@ -6,6 +6,7 @@ reminders, and photo funnel.
 
 All tasks use ``asyncio.sleep`` and are fire-and-forget.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -28,6 +29,7 @@ log = get_logger(__name__)
 
 
 # ── Photo funnel follow-up ──────────────────────────────────────────────────
+
 
 async def _photo_followup_task(
     bot: Bot,
@@ -109,13 +111,15 @@ async def _catalog_followup_task(
         if not acquired:
             return
 
-        _skip_states: frozenset[str] = frozenset({
-            AiSupportStates.waiting_for_district.state,
-            AiSupportStates.waiting_for_phone.state,
-            AiSupportStates.waiting_photo.state,
-            AiSupportStates.waiting_room.state,
-            AiSupportStates.waiting_area_photo.state,
-        })
+        _skip_states: frozenset[str] = frozenset(
+            {
+                AiSupportStates.waiting_for_district.state,
+                AiSupportStates.waiting_for_phone.state,
+                AiSupportStates.waiting_photo.state,
+                AiSupportStates.waiting_room.state,
+                AiSupportStates.waiting_area_photo.state,
+            }
+        )
 
         current: str | None = await storage.get_state(key=state_key)  # type: ignore[union-attr]
         if current in _skip_states:
@@ -164,6 +168,7 @@ def _schedule_catalog_followup(
 
 # ── AI interaction follow-up reminders ──────────────────────────────────────
 
+
 async def _refresh_ai_followup_nonce(user_id: int) -> str:
     """Store a fresh random nonce in Redis and return it."""
     from infrastructure.cache.client import get_redis
@@ -209,13 +214,15 @@ async def _ai_followup_task(
     from infrastructure.cache.client import get_redis
     from infrastructure.cache.keys import CacheKeys, CacheTTL
 
-    _skip_states = frozenset({
-        AiSupportStates.waiting_for_phone.state,
-        AiSupportStates.waiting_for_district.state,
-        AiSupportStates.waiting_photo.state,
-        AiSupportStates.waiting_room.state,
-        AiSupportStates.waiting_area_photo.state,
-    })
+    _skip_states = frozenset(
+        {
+            AiSupportStates.waiting_for_phone.state,
+            AiSupportStates.waiting_for_district.state,
+            AiSupportStates.waiting_photo.state,
+            AiSupportStates.waiting_room.state,
+            AiSupportStates.waiting_area_photo.state,
+        }
+    )
 
     async def _cancelled() -> bool:
         try:
@@ -281,7 +288,11 @@ def _schedule_ai_followup(
         return
     asyncio.create_task(
         _ai_followup_task(
-            bot=bot, chat_id=chat_id, user_id=user_id,
-            nonce=nonce, storage=storage, state_key=state_key,
+            bot=bot,
+            chat_id=chat_id,
+            user_id=user_id,
+            nonce=nonce,
+            storage=storage,
+            state_key=state_key,
         )
     )

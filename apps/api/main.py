@@ -11,6 +11,7 @@ The app uses a lifespan context manager to connect/disconnect the database
 and Redis pools at startup/shutdown — the same singletons used by the
 Telegram bot and scheduler.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator

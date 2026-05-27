@@ -19,6 +19,7 @@ Callback namespace
 ------------------
 ``grpmenu:`` — kept so old inline-button messages remain interactive.
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -50,11 +51,12 @@ _CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 # Popup alerts for actions that only work in private DM
 _DM_ONLY_ALERTS: dict[str, str] = {
     "my_orders": "📦 Buyurtmalarni ko'rish uchun botni shaxsiy chatda oching.",
-    "ai":        "🤖 AI yordam faqat shaxsiy chatda ishlaydi. Botni DM da oching.",
+    "ai": "🤖 AI yordam faqat shaxsiy chatda ishlaydi. Botni DM da oching.",
 }
 
 
 # ─── /start and /menu ─────────────────────────────────────────────────────────
+
 
 @router.message(Command("start"), F.chat.type.in_({"group", "supergroup"}))
 async def group_start(message: Message, **data: object) -> None:
@@ -86,6 +88,7 @@ async def group_menu_cmd(message: Message, **data: object) -> None:
 
 
 # ─── grpmenu:* callback dispatcher (backward compat) ──────────────────────────
+
 
 @router.callback_query(F.data.startswith("grpmenu:"))
 async def handle_group_menu(cb: CallbackQuery, state: FSMContext, **data: object) -> None:

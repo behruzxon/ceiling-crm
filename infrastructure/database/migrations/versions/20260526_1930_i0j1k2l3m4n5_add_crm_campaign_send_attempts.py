@@ -2,6 +2,7 @@
 Revision ID: i0j1k2l3m4n5
 Revises: h9i0j1k2l3m4
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -10,8 +11,10 @@ down_revision = "h9i0j1k2l3m4"
 branch_labels = None
 depends_on = None
 
+
 def upgrade() -> None:
-    op.create_table("crm_campaign_send_attempts",
+    op.create_table(
+        "crm_campaign_send_attempts",
         sa.Column("id", sa.BigInteger, sa.Identity(), primary_key=True),
         sa.Column("campaign_id", sa.BigInteger, nullable=False),
         sa.Column("contact_id", sa.BigInteger, nullable=True),
@@ -30,11 +33,20 @@ def upgrade() -> None:
         sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now()),
         sa.Column("metadata_json", sa.JSON, nullable=True),
     )
-    op.create_index("ix_send_campaign_created", "crm_campaign_send_attempts", ["campaign_id", "created_at"])
-    op.create_index("ix_send_campaign_status", "crm_campaign_send_attempts", ["campaign_id", "status"])
-    op.create_index("ix_send_contact_created", "crm_campaign_send_attempts", ["contact_id", "created_at"])
+    op.create_index(
+        "ix_send_campaign_created", "crm_campaign_send_attempts", ["campaign_id", "created_at"]
+    )
+    op.create_index(
+        "ix_send_campaign_status", "crm_campaign_send_attempts", ["campaign_id", "status"]
+    )
+    op.create_index(
+        "ix_send_contact_created", "crm_campaign_send_attempts", ["contact_id", "created_at"]
+    )
     op.create_index("ix_send_batch", "crm_campaign_send_attempts", ["batch_id"])
-    op.create_index("ix_send_status_created", "crm_campaign_send_attempts", ["status", "created_at"])
+    op.create_index(
+        "ix_send_status_created", "crm_campaign_send_attempts", ["status", "created_at"]
+    )
+
 
 def downgrade() -> None:
     op.drop_index("ix_send_status_created", table_name="crm_campaign_send_attempts")

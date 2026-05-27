@@ -1,4 +1,5 @@
 """Tests for Step BD — CRMDashboardAnalyticsService."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -9,15 +10,33 @@ from core.services.crm_dashboard_analytics_service import CRMDashboardAnalyticsS
 svc = CRMDashboardAnalyticsService
 NOW = datetime(2026, 5, 26, 12, 0, 0, tzinfo=UTC)
 
-def _c(*, status="active", temp="warm", last_msg_min=10, intent=None, objection=None,
-       phone=None, district=None, last_reply_min=None):
-    c: dict = {"id": 1, "lead_status": status, "temperature": temp,
-               "last_message_at": NOW - timedelta(minutes=last_msg_min),
-               "metadata_json": {}}
-    if intent: c["metadata_json"]["last_intent"] = intent
-    if objection: c["metadata_json"]["objection_type"] = objection
-    if phone: c["phone"] = phone
-    if district: c["district"] = district
+
+def _c(
+    *,
+    status="active",
+    temp="warm",
+    last_msg_min=10,
+    intent=None,
+    objection=None,
+    phone=None,
+    district=None,
+    last_reply_min=None,
+):
+    c: dict = {
+        "id": 1,
+        "lead_status": status,
+        "temperature": temp,
+        "last_message_at": NOW - timedelta(minutes=last_msg_min),
+        "metadata_json": {},
+    }
+    if intent:
+        c["metadata_json"]["last_intent"] = intent
+    if objection:
+        c["metadata_json"]["objection_type"] = objection
+    if phone:
+        c["phone"] = phone
+    if district:
+        c["district"] = district
     if last_reply_min is not None:
         c["last_operator_reply_at"] = NOW - timedelta(minutes=last_reply_min)
     return c
@@ -171,12 +190,14 @@ class TestRecommendations:
 class TestImmutability:
     def test_frozen(self):
         import pytest
+
         d = svc.build_dashboard([], now=NOW)
         with pytest.raises(AttributeError):
             d.total_contacts = 5  # type: ignore[misc]
 
     def test_missed_frozen(self):
         import pytest
+
         m = CRMMissedLeadMetrics()
         with pytest.raises(AttributeError):
             m.missed_hot_leads = 1  # type: ignore[misc]
@@ -185,6 +206,7 @@ class TestImmutability:
 class TestNoSecrets:
     def test_clean(self):
         from dataclasses import asdict
+
         d = svc.build_dashboard([], now=NOW)
         text = str(asdict(d))
         assert "sk-" not in text and "+998" not in text

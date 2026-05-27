@@ -20,6 +20,7 @@ Changes
 2. Index on last_seen_at — supports future cleanup jobs that purge old
    entries (e.g. users who may have un-blocked the bot after months).
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

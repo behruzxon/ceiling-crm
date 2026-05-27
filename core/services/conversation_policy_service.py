@@ -6,6 +6,7 @@ Deterministic conversation policy engine.
 Decides when the bot should reply, stay silent, schedule a follow-up,
 escalate to admin, or hand off to an operator.  Pure functions — no I/O.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -23,9 +24,13 @@ from shared.constants.enums import (
 
 # ── Terminal states ───────────────────────────────────────────────────────────
 
-_TERMINAL_STATES: frozenset[str] = frozenset({
-    "stopped", "lost", "closed",
-})
+_TERMINAL_STATES: frozenset[str] = frozenset(
+    {
+        "stopped",
+        "lost",
+        "closed",
+    }
+)
 
 _MAX_DAILY_FOLLOWUPS = 3
 _MAX_LIFETIME_FOLLOWUPS = 5
@@ -45,7 +50,10 @@ class ConversationPolicyService:
         now: datetime | None = None,
     ) -> ConversationPolicyDecision:
         ctx = ConversationPolicyService._build_context(
-            memory, decision or {}, offer or {}, lead_signal or {},
+            memory,
+            decision or {},
+            offer or {},
+            lead_signal or {},
         )
         safety = ConversationPolicyService._check_terminal(ctx)
         if safety is not None:
@@ -72,8 +80,11 @@ class ConversationPolicyService:
         if ctx.urgency == "high" and ctx.lead_temperature in ("warm", "hot"):
             return ConversationPolicyAction.ESCALATE_ADMIN.value
         if ctx.intent in (
-            "wants_price", "wants_catalog", "wants_order",
-            "wants_measurement", "wants_discount",
+            "wants_price",
+            "wants_catalog",
+            "wants_order",
+            "wants_measurement",
+            "wants_discount",
         ):
             return ConversationPolicyAction.REPLY_NOW.value
         if ctx.objection_type in ("price", "trust"):
@@ -142,8 +153,11 @@ class ConversationPolicyService:
         if ctx.customer_state in _TERMINAL_STATES:
             return False
         return ctx.intent in (
-            "wants_price", "wants_catalog", "wants_order",
-            "wants_measurement", "wants_discount",
+            "wants_price",
+            "wants_catalog",
+            "wants_order",
+            "wants_measurement",
+            "wants_discount",
         ) or ctx.objection_type in ("price", "trust")
 
     @staticmethod
@@ -159,8 +173,10 @@ class ConversationPolicyService:
         if ctx.intent == "wants_operator":
             return False
         return ctx.customer_state in (
-            "browsing_catalog", "design_interested",
-            "price_considering", "order_abandoned",
+            "browsing_catalog",
+            "design_interested",
+            "price_considering",
+            "order_abandoned",
         ) or (ctx.lead_temperature == "warm" and ctx.intent == "unclear")
 
     @staticmethod
@@ -179,10 +195,7 @@ class ConversationPolicyService:
 
     @staticmethod
     def should_handoff_operator(ctx: ConversationPolicyContext) -> bool:
-        return (
-            ctx.customer_state == "operator_handoff"
-            or ctx.intent == "wants_operator"
-        )
+        return ctx.customer_state == "operator_handoff" or ctx.intent == "wants_operator"
 
     @staticmethod
     def should_cancel_pending(ctx: ConversationPolicyContext) -> bool:
@@ -257,6 +270,7 @@ class ConversationPolicyService:
 
         try:
             from shared.config import get_settings
+
             biz = get_settings().business
             ai_composer = biz.agent_ai_composer_enabled
             dynamic_offer = biz.agent_dynamic_offer_enabled

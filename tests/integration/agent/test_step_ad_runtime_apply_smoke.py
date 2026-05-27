@@ -4,6 +4,7 @@ Step AD — Runtime Apply Smoke Tests.
 End-to-end flow: preset preview → apply → effective settings → stage detection → rollback.
 No real DB, no Telegram, no OpenAI. Uses service layer directly with mocked overrides.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -205,9 +206,12 @@ class TestBlockedPresets:
         assert any("canary" in b for b in r.blockers)
 
     def test_canary_with_ids_allowed(self):
-        r = preset_svc.preview_preset("canary", {
-            "agent_execution_canary_user_ids": "123,456",
-        })
+        r = preset_svc.preview_preset(
+            "canary",
+            {
+                "agent_execution_canary_user_ids": "123,456",
+            },
+        )
         assert r.allowed is True
 
     def test_dry_run_allowed(self):
@@ -252,6 +256,7 @@ class TestDryRunFlow:
 class TestSafety:
     def test_no_secrets_in_snapshot(self):
         from dataclasses import asdict
+
         target = preset_svc.build_preset_settings("log_only")
         s = effective_svc(target)
         s._runtime_enabled = True
@@ -262,6 +267,7 @@ class TestSafety:
 
     def test_no_env_mutation(self):
         import os
+
         before = os.environ.copy()
         preset_svc.preview_preset("log_only")
         after = os.environ.copy()
@@ -270,14 +276,18 @@ class TestSafety:
                 assert before[k] == after.get(k), f"{k} was mutated"
 
     def test_no_telegram_send(self):
-        r = preset_svc.preview_preset("canary", {
-            "agent_execution_canary_user_ids": "123",
-        })
+        r = preset_svc.preview_preset(
+            "canary",
+            {
+                "agent_execution_canary_user_ids": "123",
+            },
+        )
         assert r.allowed is True
 
     def test_validation_still_works(self):
         r = settings_svc.validate_change(
-            "agent_execution_live_sender_enabled", True,
+            "agent_execution_live_sender_enabled",
+            True,
         )
         assert r.allowed is False
 

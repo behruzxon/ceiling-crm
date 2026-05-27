@@ -1,4 +1,5 @@
 """Tests for Step V — Agent Admin Dashboard API + service integration."""
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -23,36 +24,43 @@ from core.services.agent_metrics_service import AgentMetricsService
 class TestAPIRouteImport:
     def test_router_importable(self):
         from apps.api.routes.admin_agent_metrics import router
+
         assert router is not None
 
     def test_router_has_prefix(self):
         from apps.api.routes.admin_agent_metrics import router
+
         assert router.prefix == "/api/v1/admin/agent"
 
     def test_router_has_tags(self):
         from apps.api.routes.admin_agent_metrics import router
+
         assert "agent-admin" in router.tags
 
     def test_app_includes_router(self):
         from apps.api.main import create_app
+
         app = create_app()
         routes = [r.path for r in app.routes]
         assert any("/admin/agent" in r for r in routes)
 
     def test_overview_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         routes = [r.path for r in app.routes]
         assert any("metrics/overview" in r for r in routes)
 
     def test_health_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         routes = [r.path for r in app.routes]
         assert any("metrics/health" in r for r in routes)
 
     def test_pending_endpoint_exists(self):
         from apps.api.main import create_app
+
         app = create_app()
         routes = [r.path for r in app.routes]
         assert any("executions/pending" in r for r in routes)
@@ -201,16 +209,19 @@ class TestNoSecrets:
 class TestWebTemplate:
     def test_template_exists(self):
         from pathlib import Path
+
         tpl = Path("apps/web/templates/agent.html")
         assert tpl.exists()
 
     def test_base_template_has_agent_link(self):
         from pathlib import Path
+
         base = Path("apps/web/templates/base.html").read_text(encoding="utf-8")
         assert "/agent" in base
 
     def test_web_route_importable(self):
         from apps.web.main import app
+
         routes = [r.path for r in app.routes]
         assert "/agent" in routes
 
@@ -277,10 +288,12 @@ class TestReadOnly:
 class TestNonRegression:
     def test_metrics_service_importable(self):
         from infrastructure.di import get_agent_metrics_service
+
         assert callable(get_agent_metrics_service)
 
     def test_signal_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("narxi qancha")
         assert sig.intent == "wants_price"
 
@@ -288,7 +301,12 @@ class TestNonRegression:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"

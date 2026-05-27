@@ -33,6 +33,7 @@ Revises: c4f8a1e2d3b5
 Create Date: 2026-02-20 21:15:00.000000+00:00
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -40,22 +41,37 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'd5e8f1a2b3c4'
-down_revision: str | None = 'c4f8a1e2d3b5'
+revision: str = "d5e8f1a2b3c4"
+down_revision: str | None = "c4f8a1e2d3b5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 # New enum values (upgrade target)
 _NEW_VALUES = (
-    'gulli', 'odnotonny', 'mramor', 'qora_naqsh_uf',
-    'hi_tech', 'kosmos', 'osmon', 'oshxona', 'naqsh_ramka', 'naqsh_oq',
+    "gulli",
+    "odnotonny",
+    "mramor",
+    "qora_naqsh_uf",
+    "hi_tech",
+    "kosmos",
+    "osmon",
+    "oshxona",
+    "naqsh_ramka",
+    "naqsh_oq",
 )
 
 # Old enum values (downgrade target)
 _OLD_VALUES = (
-    'matviy_oq', 'yaltiroq_oq', 'qora_premium', 'gulli_3d',
-    'mramor_dizayn', 'led_podsvetka', 'yulduzli_osmon',
-    'ikki_darajali', 'ofis_minimal', 'oshxona',
+    "matviy_oq",
+    "yaltiroq_oq",
+    "qora_premium",
+    "gulli_3d",
+    "mramor_dizayn",
+    "led_podsvetka",
+    "yulduzli_osmon",
+    "ikki_darajali",
+    "ofis_minimal",
+    "oshxona",
 )
 
 
@@ -65,10 +81,7 @@ def upgrade() -> None:
     op.execute(f"CREATE TYPE ceiling_category_new AS ENUM ({new_vals})")
 
     # ── 2. Detach column from old enum — cast to plain TEXT ──────────────────
-    op.execute(
-        "ALTER TABLE leads "
-        "ALTER COLUMN category TYPE TEXT USING category::TEXT"
-    )
+    op.execute("ALTER TABLE leads " "ALTER COLUMN category TYPE TEXT USING category::TEXT")
 
     # ── 3. Remap old values → new values ─────────────────────────────────────
     op.execute("""
@@ -108,10 +121,7 @@ def downgrade() -> None:
     op.execute(f"CREATE TYPE ceiling_category_old AS ENUM ({old_vals})")
 
     # ── 2. Detach column from new enum — cast to TEXT ─────────────────────────
-    op.execute(
-        "ALTER TABLE leads "
-        "ALTER COLUMN category TYPE TEXT USING category::TEXT"
-    )
+    op.execute("ALTER TABLE leads " "ALTER COLUMN category TYPE TEXT USING category::TEXT")
 
     # ── 3. Remap new values → old values ─────────────────────────────────────
     op.execute("""

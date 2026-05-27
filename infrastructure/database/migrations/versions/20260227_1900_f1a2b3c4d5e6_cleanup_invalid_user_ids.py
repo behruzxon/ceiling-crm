@@ -40,6 +40,7 @@ Application changes (no schema migration required)
 * ``PostgresBroadcastRepository.get_all_private_user_ids()``: adds
   ``UserModel.id > 0`` filter as a belt-and-suspenders query guard.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -57,11 +58,7 @@ def upgrade() -> None:
     # We mark them blocked rather than deleting so the data can be audited.
     # To hard-delete instead, replace the UPDATE with:
     #   op.execute("DELETE FROM users WHERE id <= 0")
-    op.execute(
-        sa.text(
-            "UPDATE users SET is_blocked = true, updated_at = now() WHERE id <= 0"
-        )
-    )
+    op.execute(sa.text("UPDATE users SET is_blocked = true, updated_at = now() WHERE id <= 0"))
 
     # ── Step 2: add CHECK constraint so future invalid inserts are rejected ──
     op.create_check_constraint(

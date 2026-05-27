@@ -7,6 +7,7 @@ Read-only — no mutations, no sends, no secret printing.
 Usage:
     python scripts/agent_stage1_readiness_check.py
 """
+
 from __future__ import annotations
 
 import os

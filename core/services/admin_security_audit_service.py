@@ -4,6 +4,7 @@ core.services.admin_security_audit_service
 Read-only security audit analytics. Pure functions — no DB I/O.
 Accepts pre-queried data dicts and produces dashboard metrics.
 """
+
 from __future__ import annotations
 
 import re
@@ -14,14 +15,22 @@ from typing import Any
 _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
 _BOT_TOKEN_RE = re.compile(r"\d{8,10}:[A-Za-z0-9_-]{30,50}")
 
-_SENSITIVE_ACTIONS = frozenset({
-    "crm.reply.send", "crm.export",
-    "report.delivery.approve", "report.delivery.send",
-    "agent.rollout.apply", "agent.settings.mutate",
-    "agent.execution.approve", "agent.execution.reject",
-    "admin_user.create", "admin_user.change_role",
-    "admin_user.disable", "admin_user.delete",
-})
+_SENSITIVE_ACTIONS = frozenset(
+    {
+        "crm.reply.send",
+        "crm.export",
+        "report.delivery.approve",
+        "report.delivery.send",
+        "agent.rollout.apply",
+        "agent.settings.mutate",
+        "agent.execution.approve",
+        "agent.execution.reject",
+        "admin_user.create",
+        "admin_user.change_role",
+        "admin_user.disable",
+        "admin_user.delete",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -121,9 +130,14 @@ class AdminSecurityAuditService:
         top_admins = sorted(fail_by_admin.items(), key=lambda x: x[1], reverse=True)[:10]
         top_ips = sorted(fail_by_ip.items(), key=lambda x: x[1], reverse=True)[:10]
         return LoginAttemptMetrics(
-            total=total, successful=successful, failed=failed, blocked=blocked,
+            total=total,
+            successful=successful,
+            failed=failed,
+            blocked=blocked,
             failure_rate=round(rate, 3),
-            top_failed_admin_ids=[(AdminSecurityAuditService.sanitize_admin_id(a), c) for a, c in top_admins],
+            top_failed_admin_ids=[
+                (AdminSecurityAuditService.sanitize_admin_id(a), c) for a, c in top_admins
+            ],
             top_failed_ips=[(AdminSecurityAuditService.sanitize_ip(ip), c) for ip, c in top_ips],
         )
 
@@ -175,8 +189,13 @@ class AdminSecurityAuditService:
                     except (ValueError, TypeError):
                         pass
         return SessionMetrics(
-            active=active, expired=expired, revoked=revoked, replaced=replaced,
-            created_today=created_today, expiring_soon=expiring_soon, stale=stale,
+            active=active,
+            expired=expired,
+            revoked=revoked,
+            replaced=replaced,
+            created_today=created_today,
+            expiring_soon=expiring_soon,
+            stale=stale,
         )
 
     @staticmethod
@@ -245,44 +264,62 @@ class AdminSecurityAuditService:
         indicators: list[SuspiciousIndicator] = []
         for ip, count in login_metrics.top_failed_ips:
             if count >= 5:
-                indicators.append(SuspiciousIndicator(
-                    rule="brute_force_ip", severity="high",
-                    description=f"IP {ip} dan {count} marta failed login",
-                    details={"ip": ip, "count": count},
-                ))
+                indicators.append(
+                    SuspiciousIndicator(
+                        rule="brute_force_ip",
+                        severity="high",
+                        description=f"IP {ip} dan {count} marta failed login",
+                        details={"ip": ip, "count": count},
+                    )
+                )
         for aid, count in login_metrics.top_failed_admin_ids:
             if count >= 5:
-                indicators.append(SuspiciousIndicator(
-                    rule="brute_force_admin", severity="high",
-                    description=f"Admin {aid} uchun {count} marta failed login",
-                    details={"admin_id": aid, "count": count},
-                ))
+                indicators.append(
+                    SuspiciousIndicator(
+                        rule="brute_force_admin",
+                        severity="high",
+                        description=f"Admin {aid} uchun {count} marta failed login",
+                        details={"admin_id": aid, "count": count},
+                    )
+                )
         for actor, count in denied_metrics.by_actor:
             if count >= 10:
-                indicators.append(SuspiciousIndicator(
-                    rule="excessive_denied", severity="medium",
-                    description=f"Actor {actor} {count} marta permission denied",
-                    details={"actor": actor, "count": count},
-                ))
+                indicators.append(
+                    SuspiciousIndicator(
+                        rule="excessive_denied",
+                        severity="medium",
+                        description=f"Actor {actor} {count} marta permission denied",
+                        details={"actor": actor, "count": count},
+                    )
+                )
         for action, count in sensitive_metrics.by_action:
             if action == "crm.export" and count >= 3:
-                indicators.append(SuspiciousIndicator(
-                    rule="excessive_export", severity="medium",
-                    description=f"Export {count} marta bajarildi",
-                    details={"action": action, "count": count},
-                ))
+                indicators.append(
+                    SuspiciousIndicator(
+                        rule="excessive_export",
+                        severity="medium",
+                        description=f"Export {count} marta bajarildi",
+                        details={"action": action, "count": count},
+                    )
+                )
         if session_metrics.active > 20:
-            indicators.append(SuspiciousIndicator(
-                rule="too_many_active_sessions", severity="warning",
-                description=f"{session_metrics.active} ta active session mavjud",
-                details={"count": session_metrics.active},
-            ))
+            indicators.append(
+                SuspiciousIndicator(
+                    rule="too_many_active_sessions",
+                    severity="warning",
+                    description=f"{session_metrics.active} ta active session mavjud",
+                    details={"count": session_metrics.active},
+                )
+            )
         if session_metrics.stale > 5:
-            indicators.append(SuspiciousIndicator(
-                rule="stale_sessions", severity="warning",
-                description=f"{session_metrics.stale} ta stale session (24h+ inactive)",
-                details={"count": session_metrics.stale},
-            ))
+            indicators.append(
+                SuspiciousIndicator(
+                    rule="stale_sessions",
+                    severity="warning",
+                    description=f"{session_metrics.stale} ta stale session (24h+ inactive)",
+                    details={"count": session_metrics.stale},
+                )
+            )
         if sessions:
             admin_ips: dict[str, set[str]] = {}
             for s in sessions:
@@ -293,11 +330,14 @@ class AdminSecurityAuditService:
                         admin_ips.setdefault(aid, set()).add(ip)
             for aid, ips in admin_ips.items():
                 if len(ips) >= 3:
-                    indicators.append(SuspiciousIndicator(
-                        rule="multi_ip_session", severity="medium",
-                        description=f"Admin {aid} {len(ips)} xil IP'dan active session",
-                        details={"admin_id": aid, "ip_count": len(ips)},
-                    ))
+                    indicators.append(
+                        SuspiciousIndicator(
+                            rule="multi_ip_session",
+                            severity="medium",
+                            description=f"Admin {aid} {len(ips)} xil IP'dan active session",
+                            details={"admin_id": aid, "ip_count": len(ips)},
+                        )
+                    )
         return indicators
 
     @staticmethod
@@ -309,42 +349,54 @@ class AdminSecurityAuditService:
     ) -> list[SecurityRecommendation]:
         recs: list[SecurityRecommendation] = []
         if login_metrics.failure_rate > 0.3 and login_metrics.total >= 5:
-            recs.append(SecurityRecommendation(
-                priority="high",
-                title="Yuqori login failure rate",
-                description=f"Login failure rate {login_metrics.failure_rate:.0%} — IP blocking yoki CAPTCHA tavsiya etiladi",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="high",
+                    title="Yuqori login failure rate",
+                    description=f"Login failure rate {login_metrics.failure_rate:.0%} — IP blocking yoki CAPTCHA tavsiya etiladi",
+                )
+            )
         if session_metrics.stale > 3:
-            recs.append(SecurityRecommendation(
-                priority="medium",
-                title="Stale sessionlarni tozalang",
-                description=f"{session_metrics.stale} ta session 24+ soat harakatsiz",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="medium",
+                    title="Stale sessionlarni tozalang",
+                    description=f"{session_metrics.stale} ta session 24+ soat harakatsiz",
+                )
+            )
         if session_metrics.expiring_soon > 5:
-            recs.append(SecurityRecommendation(
-                priority="low",
-                title="Tez tugaydigan sessionlar",
-                description=f"{session_metrics.expiring_soon} ta session 2 soat ichida tugaydi",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="low",
+                    title="Tez tugaydigan sessionlar",
+                    description=f"{session_metrics.expiring_soon} ta session 2 soat ichida tugaydi",
+                )
+            )
         high_alerts = [s for s in suspicious if s.severity == "high"]
         if high_alerts:
-            recs.append(SecurityRecommendation(
-                priority="high",
-                title="Shubhali faollik aniqlandi",
-                description=f"{len(high_alerts)} ta yuqori darajali ogohlantirish — tezkor tekshirish kerak",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="high",
+                    title="Shubhali faollik aniqlandi",
+                    description=f"{len(high_alerts)} ta yuqori darajali ogohlantirish — tezkor tekshirish kerak",
+                )
+            )
         if denied_metrics.total_denied > 20:
-            recs.append(SecurityRecommendation(
-                priority="medium",
-                title="Ko'p permission denied",
-                description="RBAC role assignment tekshiring — foydalanuvchilarga kerakli ruxsatlar berilganmi?",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="medium",
+                    title="Ko'p permission denied",
+                    description="RBAC role assignment tekshiring — foydalanuvchilarga kerakli ruxsatlar berilganmi?",
+                )
+            )
         if not recs:
-            recs.append(SecurityRecommendation(
-                priority="low",
-                title="Xavfsizlik holati yaxshi",
-                description="Hozircha shubhali faollik aniqlanmadi",
-            ))
+            recs.append(
+                SecurityRecommendation(
+                    priority="low",
+                    title="Xavfsizlik holati yaxshi",
+                    description="Hozircha shubhali faollik aniqlanmadi",
+                )
+            )
         return recs
 
     @staticmethod
@@ -361,10 +413,17 @@ class AdminSecurityAuditService:
         denied_m = AdminSecurityAuditService.get_permission_denied_metrics(audit_entries)
         sensitive_m = AdminSecurityAuditService.get_sensitive_action_metrics(audit_entries)
         suspicious = AdminSecurityAuditService.detect_suspicious_activity(
-            login_m, session_m, denied_m, sensitive_m, sessions,
+            login_m,
+            session_m,
+            denied_m,
+            sensitive_m,
+            sessions,
         )
         recs = AdminSecurityAuditService.build_security_recommendations(
-            login_m, session_m, denied_m, suspicious,
+            login_m,
+            session_m,
+            denied_m,
+            suspicious,
         )
         return SecurityDashboard(
             login_metrics=login_m,

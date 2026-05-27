@@ -1,4 +1,5 @@
 """Integration tests for Step BP — Browser Alert flow."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -48,12 +49,15 @@ class TestNoTokenLeak:
 class TestSmoke:
     def test_api(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_web(self):
         from apps.web.main import app
+
         assert app is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

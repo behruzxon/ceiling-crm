@@ -2,6 +2,7 @@
 Auto-reply decision layer extracted from ai_support.py.
 Template-based replies that skip OpenAI when appropriate.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -65,6 +66,7 @@ async def _try_auto_reply(
             from core.services.conversation_intelligence_service import (
                 analyze_conversation,
             )
+
             ci = analyze_conversation(
                 score=score,
                 last_objection=mem.get("last_objection"),
@@ -106,12 +108,14 @@ async def _try_auto_reply(
             if admin_group_id and message.bot:
                 dedup_key = CacheKeys.auto_sales_escalation(user_id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTO_SALES_ESCALATION,
                     nx=True,
                 )
                 if was_set:
                     from shared.utils.telegram_send import safe_send_message
+
                     alert = build_escalation_alert(
                         lead_id=user_id,
                         lead_name=mem.get("name", "?"),
@@ -121,9 +125,7 @@ async def _try_auto_reply(
                         suggested_action_uz=esc.suggested_action_uz,
                         urgency=esc.urgency,
                     )
-                    asyncio.create_task(
-                        safe_send_message(message.bot, admin_group_id, alert)
-                    )
+                    asyncio.create_task(safe_send_message(message.bot, admin_group_id, alert))
             return False
 
         decision = decide_auto_reply(
@@ -160,11 +162,13 @@ async def _try_auto_reply(
         if new_count == 1:
             await redis.expire(key, CacheTTL.AUTO_REPLY_CONSECUTIVE)
 
-        log_data = json.dumps({
-            "reply_type": reply.reply_type,
-            "confidence": decision.confidence,
-            "ts": int(__import__("time").time()),
-        })
+        log_data = json.dumps(
+            {
+                "reply_type": reply.reply_type,
+                "confidence": decision.confidence,
+                "ts": int(__import__("time").time()),
+            }
+        )
         await redis.set(
             CacheKeys.auto_reply_log(user_id),
             log_data,
@@ -174,14 +178,17 @@ async def _try_auto_reply(
         import asyncio as _aio
 
         from core.services.tactic_outcome_logger import log_tactic_outcome
+
         _temp = "hot" if score >= 60 else ("warm" if score >= 30 else "cold")
-        _aio.create_task(log_tactic_outcome(
-            event_type="auto_reply",
-            tactic_name=reply.reply_type,
-            user_id=user_id,
-            lead_score_at_time=score,
-            lead_temperature_at_time=_temp,
-        ))
+        _aio.create_task(
+            log_tactic_outcome(
+                event_type="auto_reply",
+                tactic_name=reply.reply_type,
+                user_id=user_id,
+                lead_score_at_time=score,
+                lead_temperature_at_time=_temp,
+            )
+        )
 
         log.info(
             "auto_reply_sent",
@@ -202,17 +209,44 @@ def _detect_simple_intent(text: str) -> str | None:
     """Detect a simple intent from user text for auto-reply templates."""
     t = text.lower().strip()
 
-    _PRICE_WORDS = frozenset({
-        "narx", "qancha", "necha pul", "baho", "qimmat", "arzon",
-        "narxi qancha", "narxi", "qanchaga", "nechpul",
-    })
-    _MATERIAL_WORDS = frozenset({
-        "material", "rang", "dizayn", "qanday", "variant",
-        "tekstura", "mat", "glossy", "satin", "rangli",
-    })
-    _PACKAGE_WORDS = frozenset({
-        "paket", "tayyor", "komplekt", "to'plam", "premium", "standart",
-    })
+    _PRICE_WORDS = frozenset(
+        {
+            "narx",
+            "qancha",
+            "necha pul",
+            "baho",
+            "qimmat",
+            "arzon",
+            "narxi qancha",
+            "narxi",
+            "qanchaga",
+            "nechpul",
+        }
+    )
+    _MATERIAL_WORDS = frozenset(
+        {
+            "material",
+            "rang",
+            "dizayn",
+            "qanday",
+            "variant",
+            "tekstura",
+            "mat",
+            "glossy",
+            "satin",
+            "rangli",
+        }
+    )
+    _PACKAGE_WORDS = frozenset(
+        {
+            "paket",
+            "tayyor",
+            "komplekt",
+            "to'plam",
+            "premium",
+            "standart",
+        }
+    )
 
     for kw in _PRICE_WORDS:
         if kw in t:
@@ -234,6 +268,7 @@ async def _reset_auto_reply_counter(user_id: int) -> None:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         await get_redis().delete(CacheKeys.auto_reply_consecutive(user_id))
     except Exception:
         pass

@@ -5,6 +5,7 @@ Revises: v7w8x9y0z1a2
 Create Date: 2026-05-26 05:00:00.000000
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -36,8 +37,10 @@ def upgrade() -> None:
         sa.Column("rejection_reason", sa.String(255), nullable=True),
         sa.Column("blocked_reason", sa.String(255), nullable=True),
         sa.Column(
-            "created_at", sa.TIMESTAMP(timezone=True),
-            server_default=sa.func.now(), nullable=False,
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
         ),
         sa.Column("expires_at", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("executed_at", sa.TIMESTAMP(timezone=True), nullable=True),

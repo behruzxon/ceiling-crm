@@ -10,6 +10,7 @@ The client is created lazily on first call and reused as a module-level
 singleton.  Usage metrics are recorded into Prometheus counters (the same
 counters exposed at ``/metrics``).
 """
+
 from __future__ import annotations
 
 from typing import Any

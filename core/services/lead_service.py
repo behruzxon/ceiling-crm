@@ -1,6 +1,7 @@
 """
 LeadService — lead creation and management.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -99,12 +100,14 @@ class LeadService:
         )
 
         # Emit domain event
-        await self._events.emit(LeadCreated(
-            lead_id=created_lead.id,
-            user_id=user_id,
-            category=category.value,
-            source=source.value,
-        ))
+        await self._events.emit(
+            LeadCreated(
+                lead_id=created_lead.id,
+                user_id=user_id,
+                category=category.value,
+                source=source.value,
+            )
+        )
 
         return created_lead
 

@@ -5,6 +5,7 @@ Read-only report generator for Stage 1 LOG_ONLY observation.
 Queries existing tables, aggregates metrics, evaluates pass/fail.
 No mutations, no sends.
 """
+
 from __future__ import annotations
 
 import re
@@ -174,14 +175,19 @@ class Stage1ObservationReportService:
     # ── DB queries ────────────────────────────────────────────────────────
 
     async def _count_journey_events(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> int:
         try:
             from infrastructure.database.models.journey_event import (
                 JourneyEventModel,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(JourneyEventModel).where(
+                sa.select(sa.func.count())
+                .select_from(JourneyEventModel)
+                .where(
                     JourneyEventModel.created_at.between(since, until),
                 ),
             )
@@ -190,12 +196,15 @@ class Stage1ObservationReportService:
             return 0
 
     async def _count_active_users(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> int:
         try:
             from infrastructure.database.models.journey_event import (
                 JourneyEventModel,
             )
+
             r = await self._session.execute(
                 sa.select(sa.func.count(sa.distinct(JourneyEventModel.user_id))).where(
                     JourneyEventModel.created_at.between(since, until),
@@ -206,14 +215,19 @@ class Stage1ObservationReportService:
             return 0
 
     async def _count_orchestrator_traces(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> int:
         try:
             from infrastructure.database.models.agent_memory import (
                 AgentMemoryModel,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel).where(
+                sa.select(sa.func.count())
+                .select_from(AgentMemoryModel)
+                .where(
                     AgentMemoryModel.updated_at.between(since, until),
                 ),
             )
@@ -222,12 +236,16 @@ class Stage1ObservationReportService:
             return 0
 
     async def _count_memory_field(
-        self, since: datetime, field_path: str,
+        self,
+        since: datetime,
+        field_path: str,
     ) -> dict[str, int]:
         return {}
 
     async def _collect_no_send_metrics(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> Stage1NoSendSafetyMetrics:
         fu_scheduled = 0
         fu_sent = 0
@@ -239,8 +257,11 @@ class Stage1ObservationReportService:
             from infrastructure.database.models.scheduled_followup import (
                 ScheduledFollowupModel,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(ScheduledFollowupModel).where(
+                sa.select(sa.func.count())
+                .select_from(ScheduledFollowupModel)
+                .where(
                     ScheduledFollowupModel.created_at.between(since, until),
                     ScheduledFollowupModel.status == "pending",
                 ),
@@ -248,7 +269,9 @@ class Stage1ObservationReportService:
             fu_scheduled = r.scalar() or 0
 
             r2 = await self._session.execute(
-                sa.select(sa.func.count()).select_from(ScheduledFollowupModel).where(
+                sa.select(sa.func.count())
+                .select_from(ScheduledFollowupModel)
+                .where(
                     ScheduledFollowupModel.created_at.between(since, until),
                     ScheduledFollowupModel.status == "sent",
                 ),
@@ -261,8 +284,11 @@ class Stage1ObservationReportService:
             from infrastructure.database.models.agent_memory import (
                 AgentMemoryModel,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentMemoryModel).where(
+                sa.select(sa.func.count())
+                .select_from(AgentMemoryModel)
+                .where(
                     AgentMemoryModel.last_admin_escalation_at.between(since, until),
                 ),
             )
@@ -274,8 +300,11 @@ class Stage1ObservationReportService:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(AgentExecutionRecordModel).where(
+                sa.select(sa.func.count())
+                .select_from(AgentExecutionRecordModel)
+                .where(
                     AgentExecutionRecordModel.executed_at.between(since, until),
                 ),
             )
@@ -294,6 +323,7 @@ class Stage1ObservationReportService:
     async def _get_health_status(self) -> str:
         try:
             from core.services.agent_metrics_service import AgentMetricsService
+
             svc = AgentMetricsService(self._session)
             overview = await svc.get_overview()
             return overview.health.status

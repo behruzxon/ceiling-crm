@@ -5,6 +5,7 @@ Read-only kanban pipeline endpoint for the CRM dashboard.
 
 GET /api/v1/pipeline/kanban — 5-column kanban board with lead counts and items.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
@@ -30,7 +31,11 @@ def _lead_to_kanban_out(lead) -> KanbanLeadOut:
         name=lead.name,
         phone=lead.phone,
         district=lead.district,
-        current_stage=lead.current_stage.value if hasattr(lead.current_stage, "value") else str(lead.current_stage),
+        current_stage=(
+            lead.current_stage.value
+            if hasattr(lead.current_stage, "value")
+            else str(lead.current_stage)
+        ),
         score=lead.score,
         lead_status=lead.lead_status,
         room_area=lead.room_area,

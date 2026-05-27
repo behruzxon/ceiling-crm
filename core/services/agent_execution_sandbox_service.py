@@ -5,6 +5,7 @@ Validates, gates, and traces agent execution payloads before any real
 action is taken.  Supports log_only, dry_run, canary, approval_required,
 and live modes.  Pure functions — no I/O, no Telegram sends.
 """
+
 from __future__ import annotations
 
 import re
@@ -25,9 +26,14 @@ _FAKE_DISCOUNT_RE = re.compile(r"\d+\s*%")
 _SAME_DAY_RE = re.compile(r"bugun qilamiz", re.IGNORECASE)
 _ENG_ARZON_RE = re.compile(r"eng arzon", re.IGNORECASE)
 
-_TERMINAL_STOP_REASONS: frozenset[str] = frozenset({
-    "lost_lead", "deal_closed", "user_opted_out", "user_stop_signal",
-})
+_TERMINAL_STOP_REASONS: frozenset[str] = frozenset(
+    {
+        "lost_lead",
+        "deal_closed",
+        "user_opted_out",
+        "user_stop_signal",
+    }
+)
 
 _DEFAULT_MAX_DAILY = 3
 
@@ -61,7 +67,9 @@ class AgentExecutionSandboxService:
             admin_alert_text=admin_text,
             risk_level=risk,
             approval_required=AgentExecutionSandboxService.requires_approval(
-                action, channel, mode,
+                action,
+                channel,
+                mode,
             ),
         )
 
@@ -73,7 +81,9 @@ class AgentExecutionSandboxService:
         max_daily: int = _DEFAULT_MAX_DAILY,
     ) -> AgentExecutionResult:
         blocked, reason = AgentExecutionSandboxService.should_block(
-            execution, memory, max_daily,
+            execution,
+            memory,
+            max_daily,
         )
         if blocked:
             return AgentExecutionResult(
@@ -108,7 +118,8 @@ class AgentExecutionSandboxService:
 
         if execution.mode == AgentExecutionMode.CANARY.value:
             is_canary = AgentExecutionSandboxService.is_canary_user(
-                execution.target_user_id, canary_user_ids,
+                execution.target_user_id,
+                canary_user_ids,
             )
             if not is_canary:
                 return AgentExecutionResult(
@@ -239,7 +250,8 @@ class AgentExecutionSandboxService:
         memory: dict[str, Any],
     ) -> AgentExecutionResult:
         return AgentExecutionSandboxService.validate_execution(
-            execution, memory,
+            execution,
+            memory,
         )
 
     @staticmethod

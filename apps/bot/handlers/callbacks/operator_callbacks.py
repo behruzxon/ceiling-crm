@@ -14,6 +14,7 @@ Callback patterns:
   op:{lead_id}:call          — call script
   op:{lead_id}:autoclose     — AI auto-close suggestion
 """
+
 from __future__ import annotations
 
 import re
@@ -52,37 +53,38 @@ async def cb_operator_menu(callback: CallbackQuery, **data: object) -> None:
         return
 
     lead_id = int(m.group(1))
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="\U0001f4ac Yumshoq javob",
-                callback_data=f"op:{lead_id}:soft",
-            ),
-            InlineKeyboardButton(
-                text="\U0001f3af Closing javob",
-                callback_data=f"op:{lead_id}:close",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="\U0001f4b2 Byudjet javob",
-                callback_data=f"op:{lead_id}:budget",
-            ),
-            InlineKeyboardButton(
-                text="\U0001f4de Qo'ng'iroq skript",
-                callback_data=f"op:{lead_id}:call",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="\U0001f9e0 Auto Close",
-                callback_data=f"op:{lead_id}:autoclose",
-            ),
-        ],
-    ])
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="\U0001f4ac Yumshoq javob",
+                    callback_data=f"op:{lead_id}:soft",
+                ),
+                InlineKeyboardButton(
+                    text="\U0001f3af Closing javob",
+                    callback_data=f"op:{lead_id}:close",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="\U0001f4b2 Byudjet javob",
+                    callback_data=f"op:{lead_id}:budget",
+                ),
+                InlineKeyboardButton(
+                    text="\U0001f4de Qo'ng'iroq skript",
+                    callback_data=f"op:{lead_id}:call",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="\U0001f9e0 Auto Close",
+                    callback_data=f"op:{lead_id}:autoclose",
+                ),
+            ],
+        ]
+    )
     await callback.message.answer(  # type: ignore[union-attr]
-        f"\U0001f4a1 <b>Lid #{lead_id} uchun operator yordam</b>\n\n"
-        "Qaysi javob kerak?",
+        f"\U0001f4a1 <b>Lid #{lead_id} uchun operator yordam</b>\n\n" "Qaysi javob kerak?",
         reply_markup=keyboard,
     )
 
@@ -123,6 +125,7 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
     mem: dict = {}
     try:
         from apps.bot.handlers.private.ai_support import _load_ai_memory
+
         mem = await _load_ai_memory(lead.user_id)
     except Exception:
         pass  # proceed without memory
@@ -138,9 +141,11 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
 
     try:
         from shared.utils.deal_probability import evaluate_deal_probability
+
         _sv = None
         try:
             from core.services.signal_vector_service import build_signal_vector
+
             _sv = build_signal_vector(
                 lead_score=lead.score or 0,
                 closing_confidence=lead.closing_confidence,
@@ -153,8 +158,10 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
             )
         except Exception:
             pass
-        dp = evaluate_deal_probability(signal_vector=_sv) if _sv else \
-            evaluate_deal_probability(
+        dp = (
+            evaluate_deal_probability(signal_vector=_sv)
+            if _sv
+            else evaluate_deal_probability(
                 score=lead.score or 0,
                 closing_confidence=lead.closing_confidence,
                 phone_captured=bool(lead.phone),
@@ -163,10 +170,12 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
                 has_district=bool(lead.district),
                 follow_up_count=lead.follow_up_count or 0,
             )
+        )
         dp_pct = dp.deal_probability_percent
 
         if not buyer_type:
             from core.services.lead_intelligence_service import analyze_buyer_type
+
             bp = analyze_buyer_type(
                 score=lead.score or 0,
                 closing_confidence=lead.closing_confidence,
@@ -180,6 +189,7 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
         from core.services.conversation_memory_graph_service import (
             analyze_conversation_graph,
         )
+
         cg = analyze_conversation_graph(
             score=lead.score or 0,
             phone_captured=bool(lead.phone),
@@ -238,14 +248,17 @@ async def cb_operator_action(callback: CallbackQuery, **data: object) -> None:
     import asyncio
 
     from core.services.tactic_outcome_logger import log_tactic_outcome
-    asyncio.create_task(log_tactic_outcome(
-        event_type="operator",
-        tactic_name=action,
-        user_id=lead.user_id,
-        lead_id=lead_id,
-        lead_score_at_time=lead.score or 0,
-        lead_temperature_at_time=lead.lead_temperature,
-    ))
+
+    asyncio.create_task(
+        log_tactic_outcome(
+            event_type="operator",
+            tactic_name=action,
+            user_id=lead.user_id,
+            lead_id=lead_id,
+            lead_score_at_time=lead.score or 0,
+            lead_temperature_at_time=lead.lead_temperature,
+        )
+    )
 
 
 # ── Auto Close callback ──────────────────────────────────────────────────────
@@ -284,6 +297,7 @@ async def cb_operator_autoclose(callback: CallbackQuery, **data: object) -> None
     redis_score: int = 0
     try:
         from apps.bot.handlers.private.ai_support import _get_lead_score, _load_ai_memory
+
         mem = await _load_ai_memory(lead.user_id)
         redis_score = await _get_lead_score(lead.user_id)
     except Exception:

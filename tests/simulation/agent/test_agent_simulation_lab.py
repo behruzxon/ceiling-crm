@@ -5,6 +5,7 @@ Runs virtual customer messages and events through the full agent pipeline
 (signal → decision → offer → policy → orchestrator) without any real bot
 interaction, OpenAI calls, or database access.
 """
+
 from __future__ import annotations
 
 from tests.simulation.agent.simulation_runner import build_memory, run_scenario
@@ -269,7 +270,9 @@ class TestHotLeadScenarios:
     def test_j35_phone_shared_hot(self):
         r = run_scenario(
             memory=build_memory(
-                state="phone_shared_hot", temp="hot", phone=True,
+                state="phone_shared_hot",
+                temp="hot",
+                phone=True,
             ),
         )
         assert r.policy_action == "escalate_admin"
@@ -292,7 +295,9 @@ class TestHotLeadScenarios:
     def test_j38_order_phone_hot(self):
         r = run_scenario(
             memory=build_memory(
-                state="phone_shared_hot", temp="hot", phone=True,
+                state="phone_shared_hot",
+                temp="hot",
+                phone=True,
                 lead_score=80,
             ),
         )
@@ -377,7 +382,9 @@ class TestSafetyRegression:
     def test_l48_admin_cooldown(self):
         r = run_scenario(
             memory=build_memory(
-                lead_score=80, temp="hot", admin_cooldown=True,
+                lead_score=80,
+                temp="hot",
+                admin_cooldown=True,
             ),
         )
         assert r.orch_action != "send_admin_alert" or "admin_escalation_cooldown" in r.safety_flags
@@ -420,7 +427,9 @@ class TestJourneyScenarios:
     def test_m53_price_no_answer_escalation(self):
         r = run_scenario(
             memory=build_memory(
-                state="price_considering", temp="hot", lead_score=75,
+                state="price_considering",
+                temp="hot",
+                lead_score=75,
             ),
         )
         assert r.policy_action in ("escalate_admin", "schedule_followup", "store_only")
@@ -481,17 +490,20 @@ class TestUzbekCyrillicScenarios:
 class TestAIComposerSafety:
     def test_p62_ai_disabled_deterministic(self):
         from core.services.ai_message_composer_service import _build_user_prompt
+
         prompt = _build_user_prompt("catalog", {})
         assert isinstance(prompt, str)
 
     def test_p63_ai_composer_fallback(self):
         from core.services.ai_message_composer_service import validate_ai_output
+
         ok, reason = validate_ai_output("", "catalog", {})
         assert ok is False
         assert reason == "empty"
 
     def test_p64_offer_hint_safe(self):
         from core.services.ai_message_composer_service import _build_user_prompt
+
         md = {"last_dynamic_offer": {"message_hint": "Arzonroq variant bor"}}
         prompt = _build_user_prompt("price", md)
         assert "o'ylab topma" in prompt.lower()
@@ -507,8 +519,10 @@ class TestOrchestratorTrace:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
+
         p = AgentResponseOrchestrator.run_pipeline(
-            build_memory(temp="warm"), text="narxi qancha",
+            build_memory(temp="warm"),
+            text="narxi qancha",
         )
         trace = p.debug_trace
         assert "signal" in trace
@@ -520,10 +534,14 @@ class TestOrchestratorTrace:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
+
         trace = AgentResponseOrchestrator.build_trace(
             signal={"phone": "+998901234567"},
-            decision={}, offer={}, policy={},
-            action="test", source="test",
+            decision={},
+            offer={},
+            policy={},
+            action="test",
+            source="test",
         )
         assert "+998" not in str(trace["signal"])
 
@@ -531,10 +549,14 @@ class TestOrchestratorTrace:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
+
         trace = AgentResponseOrchestrator.build_trace(
             signal={"text": "sk-abc123secret"},
-            decision={}, offer={}, policy={},
-            action="test", source="test",
+            decision={},
+            offer={},
+            policy={},
+            action="test",
+            source="test",
         )
         assert "sk-abc" not in str(trace["signal"])
 
@@ -547,12 +569,16 @@ class TestOrchestratorTrace:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
+
         payload = AgentResponsePayload(
-            action="send_user_reply", source="test",
-            allowed=True, reason="test",
+            action="send_user_reply",
+            source="test",
+            allowed=True,
+            reason="test",
         )
         result = AgentResponseOrchestrator.apply_safety(
-            payload, {"allowed": False},
+            payload,
+            {"allowed": False},
         )
         assert result.allowed is False
 
@@ -570,14 +596,17 @@ class TestQualityGates:
 
     def test_gate_cold_never_escalates(self):
         r = run_scenario(
-            "salom", build_memory(lead_score=80, temp="cold"),
+            "salom",
+            build_memory(lead_score=80, temp="cold"),
         )
         assert r.orch_action != "send_admin_alert"
 
     def test_gate_admin_cooldown_no_dup(self):
         r = run_scenario(
             memory=build_memory(
-                lead_score=80, temp="hot", admin_cooldown=True,
+                lead_score=80,
+                temp="hot",
+                admin_cooldown=True,
             ),
         )
         has_cooldown_flag = "admin_escalation_cooldown" in r.safety_flags
@@ -610,10 +639,14 @@ class TestQualityGates:
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
+
         trace = AgentResponseOrchestrator.build_trace(
             signal={"phone": "+998901111111"},
-            decision={}, offer={}, policy={},
-            action="test", source="test",
+            decision={},
+            offer={},
+            policy={},
+            action="test",
+            source="test",
         )
         assert "+998" not in str(trace)
 
@@ -671,19 +704,22 @@ class TestExtraScenarios:
 
     def test_r76_comparing_objection(self):
         r = run_scenario(
-            "boshqa firma bilan taqqoslayapman", build_memory(temp="warm"),
+            "boshqa firma bilan taqqoslayapman",
+            build_memory(temp="warm"),
         )
         assert r.signal_objection == "comparing"
         assert r.offer_type == "portfolio_social_proof"
 
     def test_r77_family_objection(self):
         r = run_scenario(
-            "erim bilan maslahat qilaman", build_memory(temp="warm"),
+            "erim bilan maslahat qilaman",
+            build_memory(temp="warm"),
         )
         assert r.signal_objection == "spouse_family_decision"
 
     def test_r78_budget_mention(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("budjetim 10 mln")
         assert sig.budget_amount == 10_000_000
 
@@ -706,7 +742,9 @@ class TestExtraScenarios:
     def test_r83_pending_blocks_schedule(self):
         r = run_scenario(
             memory=build_memory(
-                state="browsing_catalog", temp="warm", has_pending=True,
+                state="browsing_catalog",
+                temp="warm",
+                has_pending=True,
             ),
         )
         assert "pending_followup_exists" in r.safety_flags or r.policy_action != "schedule_followup"

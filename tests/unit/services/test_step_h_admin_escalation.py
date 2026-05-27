@@ -1,4 +1,5 @@
 """Step H tests: admin escalation service, flags, cooldown, message format."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -40,16 +41,19 @@ def mock_session() -> AsyncMock:
 class TestEscalationFlags:
     def test_flag_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_admin_escalation_enabled is False
 
     def test_threshold_default_2(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_admin_escalation_after_followups == 2
 
     def test_cooldown_default_60(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_admin_escalation_cooldown_minutes == 60
 
@@ -194,15 +198,18 @@ class TestMarkEscalated:
 class TestNoRegression:
     def test_catalog_buttons_unchanged(self) -> None:
         from core.services.followup_scheduler_service import FollowupSchedulerService
+
         _, buttons = FollowupSchedulerService.build_message("catalog")
         assert len(buttons) == 3
 
     def test_price_buttons_unchanged(self) -> None:
         from core.services.followup_scheduler_service import FollowupSchedulerService
+
         _, buttons = FollowupSchedulerService.build_message("price")
         assert len(buttons) == 3
 
     def test_order_buttons_unchanged(self) -> None:
         from core.services.followup_scheduler_service import FollowupSchedulerService
+
         _, buttons = FollowupSchedulerService.build_message("abandoned_order")
         assert len(buttons) == 3

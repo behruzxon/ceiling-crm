@@ -1,4 +1,5 @@
 """Sales autopilot jobs — opportunity detection, risk alerts, NBA suggestions."""
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -93,9 +94,7 @@ async def run_sales_autopilot() -> None:
             if last_ts:
                 mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
             else:
-                mins_inactive = int(
-                    (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-                )
+                mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
             stage_str = (
                 lead.current_stage.value
@@ -125,8 +124,7 @@ async def run_sales_autopilot() -> None:
             )
 
             objection_resolved = bool(
-                mem.get("last_objection")
-                and mem.get("last_negotiation_tactic")
+                mem.get("last_objection") and mem.get("last_negotiation_tactic")
             )
 
             # Build SignalVector
@@ -136,6 +134,7 @@ async def run_sales_autopilot() -> None:
                     build_signal_vector,
                     with_deal_probability,
                 )
+
                 sv = build_signal_vector(
                     lead_score=score,
                     health_score=ci.health_score,
@@ -161,8 +160,11 @@ async def run_sales_autopilot() -> None:
             dp_pct: int | None = None
             try:
                 from shared.utils.deal_probability import evaluate_deal_probability
-                dp = evaluate_deal_probability(signal_vector=sv) if sv else \
-                    evaluate_deal_probability(
+
+                dp = (
+                    evaluate_deal_probability(signal_vector=sv)
+                    if sv
+                    else evaluate_deal_probability(
                         score=score,
                         closing_confidence=lead.closing_confidence,
                         phone_captured=bool(lead.phone),
@@ -171,6 +173,7 @@ async def run_sales_autopilot() -> None:
                         has_district=bool(lead.district),
                         follow_up_count=lead.follow_up_count or 0,
                     )
+                )
                 dp_pct = dp.deal_probability_percent
                 if sv:
                     sv = with_deal_probability(sv, dp_pct)
@@ -178,8 +181,10 @@ async def run_sales_autopilot() -> None:
                 pass
 
             # ── 1. Opportunity detection ───────────────────────────
-            opp = detect_opportunity(signal_vector=sv) if sv else \
-                detect_opportunity(
+            opp = (
+                detect_opportunity(signal_vector=sv)
+                if sv
+                else detect_opportunity(
                     score=score,
                     health_score=ci.health_score,
                     last_objection=mem.get("last_objection"),
@@ -190,11 +195,13 @@ async def run_sales_autopilot() -> None:
                     closing_confidence=lead.closing_confidence,
                     deal_probability_percent=dp_pct,
                 )
+            )
 
             if opp.detected and not off_hours:
                 dedup_key = CacheKeys.autopilot_opportunity(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTOPILOT_OPPORTUNITY,
                     nx=True,
                 )
@@ -216,8 +223,10 @@ async def run_sales_autopilot() -> None:
                     alerts_sent += 1
 
             # ── 2. At-risk detection ──────────────────────────────
-            risk = detect_at_risk(signal_vector=sv) if sv else \
-                detect_at_risk(
+            risk = (
+                detect_at_risk(signal_vector=sv)
+                if sv
+                else detect_at_risk(
                     score=score,
                     health_score=ci.health_score,
                     last_objection=mem.get("last_objection"),
@@ -228,14 +237,14 @@ async def run_sales_autopilot() -> None:
                     closing_confidence=lead.closing_confidence,
                     current_stage=stage_str,
                 )
+            )
 
             # At-risk: critical = anytime, normal = business hours only
-            if risk.detected and (
-                not off_hours or risk.urgency == "critical"
-            ):
+            if risk.detected and (not off_hours or risk.urgency == "critical"):
                 dedup_key = CacheKeys.autopilot_risk(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTOPILOT_RISK,
                     nx=True,
                 )
@@ -257,8 +266,10 @@ async def run_sales_autopilot() -> None:
                     alerts_sent += 1
 
             # ── 3. Closing suggestion ─────────────────────────────
-            closing = suggest_closing_tactic(signal_vector=sv) if sv else \
-                suggest_closing_tactic(
+            closing = (
+                suggest_closing_tactic(signal_vector=sv)
+                if sv
+                else suggest_closing_tactic(
                     score=score,
                     phone_captured=bool(lead.phone),
                     area_m2=float(lead.room_area) if lead.room_area else None,
@@ -269,11 +280,13 @@ async def run_sales_autopilot() -> None:
                     last_objection=mem.get("last_objection"),
                     closing_attempted=bool(mem.get("last_closing_attempt")),
                 )
+            )
 
             if closing.should_close and closing.confidence >= 0.70 and not off_hours:
                 dedup_key = CacheKeys.autopilot_closing(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.AUTOPILOT_CLOSING,
                     nx=True,
                 )
@@ -283,9 +296,7 @@ async def run_sales_autopilot() -> None:
                             token=bot_token,
                             default=DefaultBotProperties(parse_mode="HTML"),
                         )
-                    tactic_label = CLOSING_TACTIC_LABELS.get(
-                        closing.tactic, closing.tactic
-                    )
+                    tactic_label = CLOSING_TACTIC_LABELS.get(closing.tactic, closing.tactic)
                     alert = build_closing_alert_text(
                         lead_id=lead.id,
                         lead_name=lead.name,
@@ -322,6 +333,7 @@ async def _load_lead_memory(user_id: int) -> dict:
     """Load AI memory from Redis. Returns {} on error."""
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         return await _load_ai_memory(user_id) or {}
     except Exception:
         return {}
@@ -332,6 +344,7 @@ async def _get_lead_score(user_id: int) -> int:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
         return int(raw) if raw else 0
     except Exception:

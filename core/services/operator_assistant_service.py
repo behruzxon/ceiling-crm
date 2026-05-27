@@ -26,6 +26,7 @@ Usage::
     )
     # assist.operator_reply_close == "Aziz, bugun ustamiz ..."
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -58,16 +59,13 @@ class OperatorAssist:
 # Soft openers by buyer type
 _SOFT_BY_BUYER: dict[str, str] = {
     "quality_buyer": (
-        "{name}siz uchun premium dizaynlarimiz bor — "
-        "xonangizga mos variantni ko'rsatib beraymi?"
+        "{name}siz uchun premium dizaynlarimiz bor — " "xonangizga mos variantni ko'rsatib beraymi?"
     ),
     "fast_buyer": (
-        "{name}nima kerakligini tushundim. "
-        "Tez aniq javob beraman — xona maydonini ayting."
+        "{name}nima kerakligini tushundim. " "Tez aniq javob beraman — xona maydonini ayting."
     ),
     "research_buyer": (
-        "{name}batafsil ma'lumot va namunalar yuboraman. "
-        "Qaysi xona uchun kerak?"
+        "{name}batafsil ma'lumot va namunalar yuboraman. " "Qaysi xona uchun kerak?"
     ),
     "price_sensitive": (
         "{name}arzon va sifatli variantlarimiz bor. "
@@ -150,9 +148,7 @@ def build_operator_assist(
 
     # ── Close reply ─────────────────────────────────────────────────
     if area_m2 and area_m2 > 0:
-        close = _CLOSE_WITH_AREA.format(
-            name=name_prefix, area=f"{area_m2:g}"
-        )
+        close = _CLOSE_WITH_AREA.format(name=name_prefix, area=f"{area_m2:g}")
     elif phone_captured:
         close = _CLOSE_WITH_PHONE.format(name=name_prefix)
     else:
@@ -216,9 +212,11 @@ def _build_reason(
     parts: list[str] = []
     if decision_stage:
         from core.services.conversation_memory_graph_service import STAGE_LABELS
+
         parts.append(STAGE_LABELS.get(decision_stage, decision_stage))
     if engagement_trend:
         from core.services.conversation_memory_graph_service import TREND_LABELS
+
         parts.append(TREND_LABELS.get(engagement_trend, engagement_trend))
     if buyer_type:
         _bt = {

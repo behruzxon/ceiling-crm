@@ -21,109 +21,111 @@ from __future__ import annotations
 # TTL constants (seconds)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class CacheTTL:
     """All TTL values in seconds. Reference in set() calls."""
 
     # User data
-    USER_PROFILE       = 3_600       # 1 hour
-    USER_ROLE          = 3_600       # 1 hour
+    USER_PROFILE = 3_600  # 1 hour
+    USER_ROLE = 3_600  # 1 hour
 
     # Group / category resolution
-    GROUP_CONFIG       = 3_600       # 1 hour — refreshed by cache_warmup job
-    CATEGORY_MAPPING   = 3_600       # chat_id → category mapping
+    GROUP_CONFIG = 3_600  # 1 hour — refreshed by cache_warmup job
+    CATEGORY_MAPPING = 3_600  # chat_id → category mapping
 
     # Pricing (refreshed every 30 min by scheduler)
-    PRICE_CONFIG       = 1_800       # 30 min
-    DISTRICT_MODIFIERS = 1_800       # 30 min
+    PRICE_CONFIG = 1_800  # 30 min
+    DISTRICT_MODIFIERS = 1_800  # 30 min
 
     # FSM states (managed by aiogram RedisStorage)
-    FSM_STATE          = 86_400      # 24 hours
+    FSM_STATE = 86_400  # 24 hours
 
     # Rate limiting
-    RATE_LIMIT_WINDOW  = 65          # Slightly longer than window to handle edge
+    RATE_LIMIT_WINDOW = 65  # Slightly longer than window to handle edge
 
     # Lead cards (prevent duplicate sends)
-    LEAD_CARD_SENT     = 300         # 5 min dedup window
+    LEAD_CARD_SENT = 300  # 5 min dedup window
 
     # Analytics cache
-    DAILY_STATS        = 3_600       # 1 hour
-    PIPELINE_COUNTS    = 300         # 5 min — frequently updated
+    DAILY_STATS = 3_600  # 1 hour
+    PIPELINE_COUNTS = 300  # 5 min — frequently updated
 
     # Broadcast dedup
-    BROADCAST_USER_SENT = 86_400     # 24 hours — prevent re-send same broadcast
+    BROADCAST_USER_SENT = 86_400  # 24 hours — prevent re-send same broadcast
 
     # Group moderation
-    MOD_LINK_WINDOW     = 600        # 10 min — link violation counter window
+    MOD_LINK_WINDOW = 600  # 10 min — link violation counter window
 
     # CTA inactivity feature
-    CTA_SENT            = 172_800    # 2 days — dedup flag per user per calendar day
+    CTA_SENT = 172_800  # 2 days — dedup flag per user per calendar day
 
     # Group menu injection dedup
-    GRP_MENU_SHOWN        = 86_400   # 24 hours — send selective keyboard at most once per user/day
-    GRP_INLINE_MENU_SHOWN = 86_400   # 24 hours — send URL inline menu at most once per user/day
+    GRP_MENU_SHOWN = 86_400  # 24 hours — send selective keyboard at most once per user/day
+    GRP_INLINE_MENU_SHOWN = 86_400  # 24 hours — send URL inline menu at most once per user/day
 
     # Catalog follow-up dedup (Madina AI)
-    CATALOG_FOLLOWUP_SENT = 86_400   # 24 hours — at most one catalog follow-up per user/day
+    CATALOG_FOLLOWUP_SENT = 86_400  # 24 hours — at most one catalog follow-up per user/day
 
     # AI interaction follow-up nonce (Madina AI)
-    AI_FOLLOWUP_NONCE     = 7_200    # 2 hours — auto-expires if user is completely inactive
+    AI_FOLLOWUP_NONCE = 7_200  # 2 hours — auto-expires if user is completely inactive
 
     # AI lead score (Madina AI funnel)
-    AI_LEAD_SCORE         = 2_592_000  # 30 days — persists across sessions
+    AI_LEAD_SCORE = 2_592_000  # 30 days — persists across sessions
 
     # AI memory (Madina AI per-user context: name, district, area_m2, etc.)
-    AI_MEMORY             = 2_592_000  # 30 days
+    AI_MEMORY = 2_592_000  # 30 days
 
     # AI follow-up reminder state + last interaction timestamp (Madina AI)
-    AI_FOLLOWUP_STATE     = 86_400    # 24 hours — {first_sent, second_sent, lead_created}
-    AI_LAST_INTERACTION   = 86_400    # 24 hours — unix timestamp of last user message
+    AI_FOLLOWUP_STATE = 86_400  # 24 hours — {first_sent, second_sent, lead_created}
+    AI_LAST_INTERACTION = 86_400  # 24 hours — unix timestamp of last user message
 
     # AI daily stats counters (Madina AI analytics)
-    AI_STATS              = 172_800   # 48 hours — keeps today + yesterday for comparison
-    AI_STATS_USER_DAY     = 90_000    # 25 hours — dedup flag: count each user once per day
+    AI_STATS = 172_800  # 48 hours — keeps today + yesterday for comparison
+    AI_STATS_USER_DAY = 90_000  # 25 hours — dedup flag: count each user once per day
 
     # Sales closer cooldown (Madina AI)
-    SALES_CLOSER_COOLDOWN = 600       # 10 minutes — max one closing CTA per user per window
+    SALES_CLOSER_COOLDOWN = 600  # 10 minutes — max one closing CTA per user per window
 
     # AI daily rate limit (per-user)
-    AI_RATE_LIMIT_DAILY   = 90_000    # 25 hours — expires just past midnight
+    AI_RATE_LIMIT_DAILY = 90_000  # 25 hours — expires just past midnight
 
     # AI sales advice cache (per lead)
-    AI_LEAD_ADVICE        = 1_800     # 30 minutes — avoid excessive OpenAI calls
+    AI_LEAD_ADVICE = 1_800  # 30 minutes — avoid excessive OpenAI calls
 
     # Conversation intelligence dedup
-    CONV_INTEL_ALERT        = 3_600   # 1 hour — one insight alert per lead per hour
-    CONV_MGR_DELAY_ALERT    = 1_800   # 30 minutes — one manager delay alert per lead
-    CONV_COOLING_ALERT      = 7_200   # 2 hours — one cooling alert per lead
+    CONV_INTEL_ALERT = 3_600  # 1 hour — one insight alert per lead per hour
+    CONV_MGR_DELAY_ALERT = 1_800  # 30 minutes — one manager delay alert per lead
+    CONV_COOLING_ALERT = 7_200  # 2 hours — one cooling alert per lead
 
     # Sales autopilot dedup
-    AUTOPILOT_OPPORTUNITY   = 7_200   # 2 hours — one opportunity alert per lead
-    AUTOPILOT_RISK          = 3_600   # 1 hour — one risk alert per lead
-    AUTOPILOT_CLOSING       = 7_200   # 2 hours — one closing suggestion per lead
+    AUTOPILOT_OPPORTUNITY = 7_200  # 2 hours — one opportunity alert per lead
+    AUTOPILOT_RISK = 3_600  # 1 hour — one risk alert per lead
+    AUTOPILOT_CLOSING = 7_200  # 2 hours — one closing suggestion per lead
 
     # AI Closer dedup
-    CLOSING_OPPORTUNITY     = 7_200   # 2 hours — one closing readiness alert per lead
-    CLOSING_LOSS_RISK       = 3_600   # 1 hour — one close-loss risk alert per lead
+    CLOSING_OPPORTUNITY = 7_200  # 2 hours — one closing readiness alert per lead
+    CLOSING_LOSS_RISK = 3_600  # 1 hour — one close-loss risk alert per lead
 
     # Auto-seller
-    AUTO_REPLY_CONSECUTIVE  = 3_600   # 1 hour — consecutive auto-reply counter TTL
-    AUTO_SALES_ESCALATION   = 3_600   # 1 hour — dedup escalation alerts per lead
-    AUTO_REPLY_LOG          = 86_400  # 24 hours — last auto-reply metadata
+    AUTO_REPLY_CONSECUTIVE = 3_600  # 1 hour — consecutive auto-reply counter TTL
+    AUTO_SALES_ESCALATION = 3_600  # 1 hour — dedup escalation alerts per lead
+    AUTO_REPLY_LOG = 86_400  # 24 hours — last auto-reply metadata
 
     # Adaptive weights (outcome-based learning)
-    ADAPTIVE_WEIGHTS        = 7_200   # 2 hours — refreshed every 1 hour by scheduler
+    ADAPTIVE_WEIGHTS = 7_200  # 2 hours — refreshed every 1 hour by scheduler
 
     # Agent follow-up engine
-    AGENT_FU_CATALOG        = 86_400  # 24h — catalog follow-up dedup
-    AGENT_FU_PRICE          = 7_200   # 2h — price follow-up dedup
-    AGENT_FU_ORDER          = 21_600  # 6h — abandoned order follow-up dedup
-    AGENT_FU_DAILY_COUNT    = 90_000  # 25h — daily follow-up counter
-    AGENT_FU_LAST_SENT      = 600     # 10 min — min gap between follow-ups
+    AGENT_FU_CATALOG = 86_400  # 24h — catalog follow-up dedup
+    AGENT_FU_PRICE = 7_200  # 2h — price follow-up dedup
+    AGENT_FU_ORDER = 21_600  # 6h — abandoned order follow-up dedup
+    AGENT_FU_DAILY_COUNT = 90_000  # 25h — daily follow-up counter
+    AGENT_FU_LAST_SENT = 600  # 10 min — min gap between follow-ups
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key builders — all return unprefixed keys (prefix added by CacheClient)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class CacheKeys:
     """

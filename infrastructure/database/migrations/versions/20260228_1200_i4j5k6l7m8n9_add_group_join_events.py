@@ -22,6 +22,7 @@ New table: group_join_events
   Indexes:
     ix_group_join_events_group_joined (group_id, joined_at) — period count queries
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -46,7 +47,8 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.UniqueConstraint(
-            "group_id", "user_id",
+            "group_id",
+            "user_id",
             name="uq_group_join_events_group_user",
         ),
     )

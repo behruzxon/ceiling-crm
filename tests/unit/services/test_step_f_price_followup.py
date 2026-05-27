@@ -1,4 +1,5 @@
 """Step F tests: price follow-up feature flag, delay, buttons, stale checks."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
@@ -53,21 +54,25 @@ def mock_session() -> AsyncMock:
 class TestPriceFeatureFlag:
     def test_price_flag_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_price_followup_enabled is False
 
     def test_price_delay_default_10(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_price_followup_delay_minutes == 10
 
     def test_price_delay_accepts_1(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings(AGENT_PRICE_FOLLOWUP_DELAY_MINUTES=1)
         assert s.agent_price_followup_delay_minutes == 1
 
     def test_price_delay_rejects_zero(self) -> None:
         from shared.config.settings import BusinessSettings
+
         with pytest.raises(Exception):
             BusinessSettings(AGENT_PRICE_FOLLOWUP_DELAY_MINUTES=0)
 

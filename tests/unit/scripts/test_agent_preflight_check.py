@@ -1,4 +1,5 @@
 """Tests for agent preflight check script."""
+
 from __future__ import annotations
 
 import os

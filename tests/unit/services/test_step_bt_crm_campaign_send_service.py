@@ -1,20 +1,31 @@
 """Tests for Step BT — CRMCampaignSendService."""
+
 from __future__ import annotations
 
 from core.services.crm_campaign_send_service import CRMCampaignSendService
 
 svc = CRMCampaignSendService
 
+
 def _campaign(**kw):
     base = {"id": 1, "status": "approved", "message_text": "Salom {first_name}!"}
     base.update(kw)
     return base
 
+
 def _contact(**kw):
-    base = {"id": 1, "telegram_user_id": 123, "telegram_chat_id": 123,
-            "first_name": "Ali", "username": "ali", "lead_status": "active",
-            "merge_status": "active", "marketing_allowed": True,
-            "followup_allowed": True, "metadata_json": {}}
+    base = {
+        "id": 1,
+        "telegram_user_id": 123,
+        "telegram_chat_id": 123,
+        "first_name": "Ali",
+        "username": "ali",
+        "lead_status": "active",
+        "merge_status": "active",
+        "marketing_allowed": True,
+        "followup_allowed": True,
+        "metadata_json": {},
+    }
     base.update(kw)
     return base
 
@@ -30,34 +41,51 @@ class TestValidateCampaign:
         assert "dry_run_only" in r.blockers
 
     def test_unapproved(self):
-        r = svc.validate_campaign_for_send(_campaign(status="draft"), send_enabled=True, dry_run_only=False)
+        r = svc.validate_campaign_for_send(
+            _campaign(status="draft"), send_enabled=True, dry_run_only=False
+        )
         assert "campaign_not_approved" in r.blockers
 
     def test_no_confirm(self):
-        r = svc.validate_campaign_for_send(_campaign(), send_enabled=True, dry_run_only=False, confirm=False)
+        r = svc.validate_campaign_for_send(
+            _campaign(), send_enabled=True, dry_run_only=False, confirm=False
+        )
         assert "confirmation_required" in r.blockers
 
     def test_empty_message(self):
-        r = svc.validate_campaign_for_send(_campaign(message_text=""), send_enabled=True, dry_run_only=False, confirm=True)
+        r = svc.validate_campaign_for_send(
+            _campaign(message_text=""), send_enabled=True, dry_run_only=False, confirm=True
+        )
         assert "empty_message" in r.blockers
 
     def test_token_blocked(self):
-        r = svc.validate_campaign_for_send(_campaign(message_text="sk-secret123"), send_enabled=True, dry_run_only=False, confirm=True)
+        r = svc.validate_campaign_for_send(
+            _campaign(message_text="sk-secret123"),
+            send_enabled=True,
+            dry_run_only=False,
+            confirm=True,
+        )
         assert "token_in_message" in r.blockers
 
     def test_bot_token_blocked(self):
         r = svc.validate_campaign_for_send(
             _campaign(message_text="1234567890:ABCdefGhIjKlMnOpQrStUvWxYz12345678"),
-            send_enabled=True, dry_run_only=False, confirm=True,
+            send_enabled=True,
+            dry_run_only=False,
+            confirm=True,
         )
         assert "bot_token_in_message" in r.blockers
 
     def test_long_message(self):
-        r = svc.validate_campaign_for_send(_campaign(message_text="x" * 1001), send_enabled=True, dry_run_only=False, confirm=True)
+        r = svc.validate_campaign_for_send(
+            _campaign(message_text="x" * 1001), send_enabled=True, dry_run_only=False, confirm=True
+        )
         assert "message_too_long" in r.blockers
 
     def test_all_pass(self):
-        r = svc.validate_campaign_for_send(_campaign(), send_enabled=True, dry_run_only=False, confirm=True)
+        r = svc.validate_campaign_for_send(
+            _campaign(), send_enabled=True, dry_run_only=False, confirm=True
+        )
         assert r.allowed
 
 
@@ -243,6 +271,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_send_service import SendValidation
+
         r = SendValidation()
         with pytest.raises(AttributeError):
             r.allowed = True  # type: ignore[misc]
@@ -251,6 +280,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_send_service import DryRunResult
+
         r = DryRunResult()
         with pytest.raises(AttributeError):
             r.would_send = 5  # type: ignore[misc]
@@ -259,6 +289,7 @@ class TestImmutability:
         import pytest
 
         from core.services.crm_campaign_send_service import SendResult
+
         r = SendResult()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]

@@ -9,6 +9,7 @@ Callback data format:
 
 Both values are integers; combined they stay well under Telegram's 64-byte limit.
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -23,6 +24,7 @@ router = Router(name="callbacks:payment")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _parse_callback(data: str) -> tuple[int, int] | None:
     """Return (payment_id, user_id) from 'pay:a:123:456', or None if malformed."""
@@ -51,6 +53,7 @@ async def _edit_admin_caption(callback: CallbackQuery, suffix: str) -> None:
 
 
 # ── Approve ───────────────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("pay:a:"))
 async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
@@ -98,6 +101,7 @@ async def cb_approve_payment(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── Reject ────────────────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("pay:r:"))
 async def cb_reject_payment(callback: CallbackQuery, **data: object) -> None:

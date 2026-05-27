@@ -15,6 +15,7 @@ RBAC: MANAGER | ADMIN | SUPERADMIN
 Works in both DM and admin group chats.
 Timezone: Asia/Tashkent for display.
 """
+
 from __future__ import annotations
 
 import re
@@ -173,10 +174,7 @@ async def cmd_opstats(message: Message, **data: object) -> None:
     )
 
     divider = "\n\n" + "─" * 32 + "\n\n"
-    header = (
-        f"📈 <b>Operator statistika</b>\n"
-        f"📅 Oxirgi {days} kun  |  {now_tz} (Tashkent)\n"
-    )
+    header = f"📈 <b>Operator statistika</b>\n" f"📅 Oxirgi {days} kun  |  {now_tz} (Tashkent)\n"
     await message.answer(
         header + divider + leaderboard_text + divider + response_text + divider + funnel_text
     )
@@ -244,8 +242,7 @@ async def cmd_lead_card(message: Message, **data: object) -> None:
     lead_id = _parse_lead_id_from_text(message.text)
     if lead_id is None:
         await message.answer(
-            "❓ Lid raqamini kiriting:\n"
-            "<code>/lead 42</code>  yoki  <code>/lead_42</code>"
+            "❓ Lid raqamini kiriting:\n" "<code>/lead 42</code>  yoki  <code>/lead_42</code>"
         )
         return
 

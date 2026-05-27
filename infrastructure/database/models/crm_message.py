@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models for crm_messages, crm_contact_notes, crm_contact_tags."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,7 +24,9 @@ class CRMMessageModel(Base):
     payload_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     redacted_text: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     is_sensitive: Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text("false"))
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
 
     __table_args__ = (
         sa.Index("ix_crm_msg_contact_created", "contact_id", "created_at"),
@@ -39,7 +42,9 @@ class CRMContactNoteModel(Base):
     contact_id: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
     note_text: Mapped[str] = mapped_column(sa.Text, nullable=False)
     created_by: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
 
 
@@ -49,8 +54,8 @@ class CRMContactTagModel(Base):
     id: Mapped[int] = mapped_column(sa.BigInteger, sa.Identity(), primary_key=True)
     contact_id: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
     tag: Mapped[str] = mapped_column(sa.String(30), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
-
-    __table_args__ = (
-        sa.UniqueConstraint("contact_id", "tag", name="uq_contact_tag"),
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
     )
+
+    __table_args__ = (sa.UniqueConstraint("contact_id", "tag", name="uq_contact_tag"),)

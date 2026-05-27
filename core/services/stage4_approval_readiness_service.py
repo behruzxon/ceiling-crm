@@ -4,6 +4,7 @@ core.services.stage4_approval_readiness_service
 Evaluates readiness from CANARY to APPROVAL_REQUIRED.
 APPROVAL is human-in-the-loop before public sends. Pure functions.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -25,10 +26,15 @@ class Stage4ApprovalReadinessService:
         blockers = Stage4ApprovalReadinessService.build_blockers(report, cs)
         warnings = Stage4ApprovalReadinessService.build_warnings(report, cs)
         score = Stage4ApprovalReadinessService.calculate_readiness_score(
-            blockers, warnings,
+            blockers,
+            warnings,
         )
         recs = Stage4ApprovalReadinessService.build_recommendations(
-            report, blockers, warnings, score, cs,
+            report,
+            blockers,
+            warnings,
+            score,
+            cs,
         )
 
         if blockers:
@@ -41,15 +47,21 @@ class Stage4ApprovalReadinessService:
             verdict, allowed = "not_ready", False
 
         return Stage4ApprovalReadinessResult(
-            from_stage="canary", to_stage="approval_required",
-            allowed=allowed, readiness_score=score, verdict=verdict,
-            blockers=blockers, warnings=warnings, recommendations=recs,
+            from_stage="canary",
+            to_stage="approval_required",
+            allowed=allowed,
+            readiness_score=score,
+            verdict=verdict,
+            blockers=blockers,
+            warnings=warnings,
+            recommendations=recs,
             generated_at=datetime.now(UTC).isoformat(),
         )
 
     @staticmethod
     def build_blockers(
-        report: Stage3CanaryReport, settings: dict[str, Any],
+        report: Stage3CanaryReport,
+        settings: dict[str, Any],
     ) -> list[str]:
         blockers: list[str] = []
 
@@ -80,17 +92,25 @@ class Stage4ApprovalReadinessService:
         if settings.get("agent_execution_mode") == "live":
             blockers.append("execution_mode_live")
         if not settings.get("agent_execution_queue_enabled", True):
-            if "agent_execution_queue_enabled" in settings and not settings["agent_execution_queue_enabled"]:
+            if (
+                "agent_execution_queue_enabled" in settings
+                and not settings["agent_execution_queue_enabled"]
+            ):
                 blockers.append("queue_disabled")
         if not settings.get("agent_execution_api_approval_enabled", True):
-            if "agent_execution_api_approval_enabled" in settings and not settings["agent_execution_api_approval_enabled"]:
+            if (
+                "agent_execution_api_approval_enabled" in settings
+                and not settings["agent_execution_api_approval_enabled"]
+            ):
                 blockers.append("api_approval_disabled")
 
         from core.services.agent_rollout_preset_service import (
             AgentRolloutPresetService,
         )
+
         preview = AgentRolloutPresetService.preview_preset(
-            "approval_required", settings,
+            "approval_required",
+            settings,
         )
         if not preview.allowed:
             blockers.append("approval_preset_blocked")
@@ -99,7 +119,8 @@ class Stage4ApprovalReadinessService:
 
     @staticmethod
     def build_warnings(
-        report: Stage3CanaryReport, settings: dict[str, Any],
+        report: Stage3CanaryReport,
+        settings: dict[str, Any],
     ) -> list[str]:
         warnings: list[str] = []
 
@@ -121,14 +142,17 @@ class Stage4ApprovalReadinessService:
 
     @staticmethod
     def calculate_readiness_score(
-        blockers: list[str], warnings: list[str],
+        blockers: list[str],
+        warnings: list[str],
     ) -> int:
         if blockers:
             return min(40, 100 - len(blockers) * 12)
         score = 100
         penalty = {
-            "low_canary_sends": 10, "no_canary_sends": 20,
-            "high_blocked_ratio": 15, "health_yellow": 10,
+            "low_canary_sends": 10,
+            "no_canary_sends": 20,
+            "high_blocked_ratio": 15,
+            "health_yellow": 10,
             "short_observation": 10,
         }
         for w in warnings:
@@ -137,8 +161,11 @@ class Stage4ApprovalReadinessService:
 
     @staticmethod
     def build_recommendations(
-        report: Stage3CanaryReport, blockers: list[str],
-        warnings: list[str], score: int, settings: dict[str, Any],
+        report: Stage3CanaryReport,
+        blockers: list[str],
+        warnings: list[str],
+        score: int,
+        settings: dict[str, Any],
     ) -> list[str]:
         recs: list[str] = []
         if blockers:

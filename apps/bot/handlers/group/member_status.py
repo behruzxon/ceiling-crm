@@ -6,6 +6,7 @@ User join analytics (upsert_join) live in welcome.py so that both the
 welcome message and the analytics record are driven by the same
 chat_member event without competing handlers consuming the update.
 """
+
 from __future__ import annotations
 
 from aiogram import Router

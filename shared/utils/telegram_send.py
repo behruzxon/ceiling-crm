@@ -13,6 +13,7 @@ Usage:
 
     ok = await safe_send_message(bot, chat_id, text, reply_markup=kb)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -35,9 +36,7 @@ async def safe_send_message(
     **kwargs: Any,
 ) -> bool:
     """Send a message with retry on transient errors. Returns True on success."""
-    return await _retry_send(
-        bot.send_message, chat_id, text, max_retries=max_retries, **kwargs
-    )
+    return await _retry_send(bot.send_message, chat_id, text, max_retries=max_retries, **kwargs)
 
 
 async def safe_edit_message_text(
@@ -69,9 +68,7 @@ async def safe_send_photo(
     **kwargs: Any,
 ) -> bool:
     """Send a photo with retry on transient errors. Returns True on success."""
-    return await _retry_send(
-        bot.send_photo, chat_id, photo, max_retries=max_retries, **kwargs
-    )
+    return await _retry_send(bot.send_photo, chat_id, photo, max_retries=max_retries, **kwargs)
 
 
 async def _retry_send(

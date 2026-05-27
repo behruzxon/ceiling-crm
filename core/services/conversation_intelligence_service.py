@@ -31,6 +31,7 @@ Usage::
     # result.signals == ["interest", "price_resistance"]
     # result.risk_level == "medium"
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -90,54 +91,81 @@ class ManagerResponseAssessment:
 
 # ── Signal keywords (Uzbek + Russian) ──────────────────────────────────────
 
-_INTEREST_SIGNALS: frozenset[str] = frozenset({
-    "qachon", "o'lchov", "buyurtma", "narx", "hisob",
-    "qancha", "bepul", "kelasizmi", "tayyor", "boshlaymiz",
-    "когда", "замер", "заказ", "цена", "сколько",
-})
+_INTEREST_SIGNALS: frozenset[str] = frozenset(
+    {
+        "qachon",
+        "o'lchov",
+        "buyurtma",
+        "narx",
+        "hisob",
+        "qancha",
+        "bepul",
+        "kelasizmi",
+        "tayyor",
+        "boshlaymiz",
+        "когда",
+        "замер",
+        "заказ",
+        "цена",
+        "сколько",
+    }
+)
 
-_HESITATION_SIGNALS: frozenset[str] = frozenset({
-    "o'ylab", "fikrlab", "keyinroq", "keyin", "bilmayman",
-    "aniq emas", "qiyin", "ko'raman", "maslahat",
-    "подумаю", "позже", "не знаю", "не уверен",
-})
+_HESITATION_SIGNALS: frozenset[str] = frozenset(
+    {
+        "o'ylab",
+        "fikrlab",
+        "keyinroq",
+        "keyin",
+        "bilmayman",
+        "aniq emas",
+        "qiyin",
+        "ko'raman",
+        "maslahat",
+        "подумаю",
+        "позже",
+        "не знаю",
+        "не уверен",
+    }
+)
 
-_CONFUSION_SIGNALS: frozenset[str] = frozenset({
-    "tushunmadim", "nima degani", "qanday bo'ladi",
-    "nimani nazarda", "qaysi", "farqi nima",
-    "не понял", "не понимаю", "как это", "что значит",
-})
+_CONFUSION_SIGNALS: frozenset[str] = frozenset(
+    {
+        "tushunmadim",
+        "nima degani",
+        "qanday bo'ladi",
+        "nimani nazarda",
+        "qaysi",
+        "farqi nima",
+        "не понял",
+        "не понимаю",
+        "как это",
+        "что значит",
+    }
+)
 
 
 # ── Action suggestions (Uzbek, sales-safe) ─────────────────────────────────
 
 _ACTION_SUGGESTIONS: dict[str, str] = {
     "schedule_measurement": (
-        "Bepul o'lchov taklif qiling — "
-        "\"Qaysi kun qulay? Mutaxassisimiz bepul o'lchab beradi.\""
+        "Bepul o'lchov taklif qiling — " '"Qaysi kun qulay? Mutaxassisimiz bepul o\'lchab beradi."'
     ),
     "offer_discount": (
         "Arzonroq variant yoki chegirma taklif qiling — "
-        "\"Sizga mos byudjet variant bor, hisoblab beraman.\""
+        '"Sizga mos byudjet variant bor, hisoblab beraman."'
     ),
     "ask_clarification": (
-        "Aniqlashtiruvchi savol bering — "
-        "\"Qaysi xona uchun kerak? Taxminan nechchi m²?\""
+        "Aniqlashtiruvchi savol bering — " '"Qaysi xona uchun kerak? Taxminan nechchi m²?"'
     ),
-    "escalate_manager": (
-        "Menejerga uzating — lid shaxsiy yondashuvni talab qiladi."
-    ),
-    "send_catalog": (
-        "Katalog yuboring — \"Bizning ishlarimiz fotosi — "
-        "qaysi dizayn yoqdi?\""
-    ),
+    "escalate_manager": ("Menejerga uzating — lid shaxsiy yondashuvni talab qiladi."),
+    "send_catalog": ('Katalog yuboring — "Bizning ishlarimiz fotosi — ' 'qaysi dizayn yoqdi?"'),
     "soft_followup": (
         "Yumshoq eslatma yuboring — "
-        "\"Salom! Potolok haqida savolingiz bormi? Yordam berishga tayyorman 🙂\""
+        '"Salom! Potolok haqida savolingiz bormi? Yordam berishga tayyorman 🙂"'
     ),
     "urgency_offer": (
-        "Shoshilinch taklif yuboring — "
-        "\"Bu oy oxirigacha maxsus narx amal qilmoqda!\""
+        "Shoshilinch taklif yuboring — " '"Bu oy oxirigacha maxsus narx amal qilmoqda!"'
     ),
     "reactivation": (
         "Qayta faollashtirish — "
@@ -151,24 +179,24 @@ _ACTION_SUGGESTIONS: dict[str, str] = {
 # ── Risk level thresholds ──────────────────────────────────────────────────
 
 _RISK_THRESHOLDS = {
-    "critical": 30,   # health_score <= 30
-    "high": 50,       # health_score <= 50
-    "medium": 70,     # health_score <= 70
+    "critical": 30,  # health_score <= 30
+    "high": 50,  # health_score <= 50
+    "medium": 70,  # health_score <= 70
 }
 
 # Manager response thresholds (minutes)
-_MANAGER_DELAY_WARNING = 10   # HOT lead
+_MANAGER_DELAY_WARNING = 10  # HOT lead
 _MANAGER_DELAY_CRITICAL = 20  # any lead
-_MANAGER_DELAY_WARM = 30      # WARM lead threshold
+_MANAGER_DELAY_WARM = 30  # WARM lead threshold
 
 # Silence/cooling thresholds (minutes) — business hours
-_SILENCE_HOT = 120     # 2 hours
-_SILENCE_WARM = 360    # 6 hours
-_SILENCE_COLD = 1440   # 24 hours
+_SILENCE_HOT = 120  # 2 hours
+_SILENCE_WARM = 360  # 6 hours
+_SILENCE_COLD = 1440  # 24 hours
 
 # Silence/cooling thresholds — off-hours (relaxed to avoid false alarms)
-_SILENCE_HOT_OFF = 360    # 6 hours
-_SILENCE_WARM_OFF = 720   # 12 hours
+_SILENCE_HOT_OFF = 360  # 6 hours
+_SILENCE_WARM_OFF = 720  # 12 hours
 _SILENCE_COLD_OFF = 2160  # 36 hours
 
 
@@ -281,6 +309,7 @@ def analyze_conversation(
     # Use relaxed thresholds during off-hours to avoid false alarms
     try:
         from shared.utils.business_hours import is_off_hours as _is_off
+
         _off = _is_off()
     except Exception:
         _off = False
@@ -295,23 +324,17 @@ def analyze_conversation(
         signals.append("silence_risk")
         cooling = True
         health -= 15
-        risk_reasons.append(
-            f"HOT lid {minutes_since_last_activity} daqiqa javobsiz"
-        )
+        risk_reasons.append(f"HOT lid {minutes_since_last_activity} daqiqa javobsiz")
     elif temp == "warm" and minutes_since_last_activity >= silence_warm:
         signals.append("silence_risk")
         cooling = True
         health -= 10
-        risk_reasons.append(
-            f"WARM lid {minutes_since_last_activity} daqiqa javobsiz"
-        )
+        risk_reasons.append(f"WARM lid {minutes_since_last_activity} daqiqa javobsiz")
     elif minutes_since_last_activity >= silence_cold:
         signals.append("silence_risk")
         cooling = True
         health -= 12
-        risk_reasons.append(
-            f"Lid {minutes_since_last_activity // 60} soat javobsiz"
-        )
+        risk_reasons.append(f"Lid {minutes_since_last_activity // 60} soat javobsiz")
     elif minutes_since_last_activity >= stall_threshold:
         health -= 3  # mild penalty
 
@@ -321,8 +344,12 @@ def analyze_conversation(
     # ── Pipeline stage bonus ───────────────────────────────────────
     stage = (current_stage or "").upper()
     _STAGE_BONUS = {
-        "DEAL": 15, "INSTALLATION": 15, "COMPLETED": 20,
-        "QUOTE": 10, "MEASUREMENT": 8, "CONTACTED": 5,
+        "DEAL": 15,
+        "INSTALLATION": 15,
+        "COMPLETED": 20,
+        "QUOTE": 10,
+        "MEASUREMENT": 8,
+        "CONTACTED": 5,
     }
     health += _STAGE_BONUS.get(stage, 0)
 
@@ -401,8 +428,7 @@ def assess_manager_response(
 
     if is_hot and minutes_since_user_message >= _MANAGER_DELAY_WARNING:
         severity = (
-            "critical" if minutes_since_user_message >= _MANAGER_DELAY_CRITICAL
-            else "warning"
+            "critical" if minutes_since_user_message >= _MANAGER_DELAY_CRITICAL else "warning"
         )
         alert = (
             f"\u26a0\ufe0f <b>Manager Response Delay</b>\n\n"
@@ -493,13 +519,13 @@ def build_insight_alert(
         "objection_unresolved": "\U0001f534 E'tiroz ochiq",
     }
     _RISK_BADGES = {
-        "low": "\U0001f7e2", "medium": "\U0001f7e1",
-        "high": "\U0001f534", "critical": "\u26d4",
+        "low": "\U0001f7e2",
+        "medium": "\U0001f7e1",
+        "high": "\U0001f534",
+        "critical": "\u26d4",
     }
 
-    signal_text = ", ".join(
-        _SIGNAL_LABELS.get(s, s) for s in signals[:4]
-    ) or "\u2014"
+    signal_text = ", ".join(_SIGNAL_LABELS.get(s, s) for s in signals[:4]) or "\u2014"
     risk_badge = _RISK_BADGES.get(risk_level, "\u26aa")
 
     return (
@@ -566,8 +592,12 @@ def _compute_quality_score(
 
     # Pipeline progress (max +15)
     _STAGE_QUALITY = {
-        "COMPLETED": 15, "INSTALLATION": 15, "DEAL": 12,
-        "QUOTE": 10, "MEASUREMENT": 8, "CONTACTED": 5,
+        "COMPLETED": 15,
+        "INSTALLATION": 15,
+        "DEAL": 12,
+        "QUOTE": 10,
+        "MEASUREMENT": 8,
+        "CONTACTED": 5,
         "PACKAGE_SELECTED": 3,
     }
     quality += _STAGE_QUALITY.get(current_stage, 0)

@@ -5,6 +5,7 @@ Read-only leads endpoint for the CRM dashboard.
 
 GET /api/v1/leads — paginated list with optional stage filter.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query

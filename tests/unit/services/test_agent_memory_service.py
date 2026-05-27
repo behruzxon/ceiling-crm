@@ -1,4 +1,5 @@
 """Unit tests for AgentMemoryService."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -80,7 +81,9 @@ class TestUpdateFromEvent:
 
         svc = AgentMemoryService(mock_session)
         result = await svc.update_from_event(
-            12345, JourneyEventType.VIEWED_CATALOG_ITEM, {"design": "mramor"},
+            12345,
+            JourneyEventType.VIEWED_CATALOG_ITEM,
+            {"design": "mramor"},
         )
         assert "mramor" in result.interested_designs
         assert "gulli" in result.interested_designs
@@ -112,7 +115,9 @@ class TestUpdateFromEvent:
 
         svc = AgentMemoryService(mock_session)
         result = await svc.update_from_event(
-            12345, JourneyEventType.PHONE_SHARED, {"phone": "+998901234567"},
+            12345,
+            JourneyEventType.PHONE_SHARED,
+            {"phone": "+998901234567"},
         )
         assert result.lead_temperature == "hot"
         assert result.phone_masked == "+998**…**67"

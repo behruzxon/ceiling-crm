@@ -14,6 +14,7 @@ Run locally::
     WEB_DASHBOARD_PASSWORD=secret \
     uvicorn apps.web.main:app --host 0.0.0.0 --port 8001 --reload
 """
+
 from __future__ import annotations
 
 from pathlib import Path

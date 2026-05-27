@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for agent_execution_records table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -31,7 +32,8 @@ class AgentExecutionRecordModel(Base):
     rejection_reason: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     blocked_reason: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
     expires_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=False)
     executed_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)

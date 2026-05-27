@@ -7,6 +7,7 @@ Tracks what the bot knows about each customer: catalog interests, pricing
 data, lead temperature, follow-up state. Updated automatically when
 journey events are emitted.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -21,18 +22,22 @@ from shared.logging import get_logger
 
 log = get_logger(__name__)
 
-_TERMINAL_EVENTS: frozenset[str] = frozenset({
-    JourneyEventType.OPERATOR_REQUESTED.value,
-    JourneyEventType.DEAL_CLOSED.value,
-    JourneyEventType.LOST_LEAD.value,
-})
+_TERMINAL_EVENTS: frozenset[str] = frozenset(
+    {
+        JourneyEventType.OPERATOR_REQUESTED.value,
+        JourneyEventType.DEAL_CLOSED.value,
+        JourneyEventType.LOST_LEAD.value,
+    }
+)
 
-_CANCEL_FOLLOWUP_EVENTS: frozenset[str] = frozenset({
-    JourneyEventType.PHONE_SHARED.value,
-    JourneyEventType.OPERATOR_REQUESTED.value,
-    JourneyEventType.DEAL_CLOSED.value,
-    JourneyEventType.LOST_LEAD.value,
-})
+_CANCEL_FOLLOWUP_EVENTS: frozenset[str] = frozenset(
+    {
+        JourneyEventType.PHONE_SHARED.value,
+        JourneyEventType.OPERATOR_REQUESTED.value,
+        JourneyEventType.DEAL_CLOSED.value,
+        JourneyEventType.LOST_LEAD.value,
+    }
+)
 
 
 class AgentMemoryService:

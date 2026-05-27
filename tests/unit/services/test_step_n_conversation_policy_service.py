@@ -1,4 +1,5 @@
 """Tests for Step N — ConversationPolicyService."""
+
 from __future__ import annotations
 
 import pytest
@@ -285,9 +286,13 @@ class TestSpamLimits:
 
 class TestAdminCooldown:
     def test_admin_cooldown_prevents_escalation(self):
-        p = svc.evaluate(_mem(
-            lead_score=80, temp="hot", admin_cooldown=True,
-        ))
+        p = svc.evaluate(
+            _mem(
+                lead_score=80,
+                temp="hot",
+                admin_cooldown=True,
+            )
+        )
         assert p.policy_action != "escalate_admin"
         assert "admin_escalation_cooldown" in p.safety_flags
 
@@ -385,7 +390,8 @@ class TestShouldHelpers:
 
     def test_should_schedule_catalog(self):
         ctx = ConversationPolicyContext(
-            customer_state="browsing_catalog", followup_enabled=True,
+            customer_state="browsing_catalog",
+            followup_enabled=True,
         )
         assert svc.should_schedule_followup(ctx) is True
 
@@ -399,25 +405,29 @@ class TestShouldHelpers:
 
     def test_should_schedule_operator_blocks(self):
         ctx = ConversationPolicyContext(
-            intent="wants_operator", followup_enabled=True,
+            intent="wants_operator",
+            followup_enabled=True,
         )
         assert svc.should_schedule_followup(ctx) is False
 
     def test_should_escalate_hot(self):
         ctx = ConversationPolicyContext(
-            lead_score=80, lead_temperature="hot",
+            lead_score=80,
+            lead_temperature="hot",
         )
         assert svc.should_escalate_admin(ctx) is True
 
     def test_should_escalate_cold_no(self):
         ctx = ConversationPolicyContext(
-            lead_score=80, lead_temperature="cold",
+            lead_score=80,
+            lead_temperature="cold",
         )
         assert svc.should_escalate_admin(ctx) is False
 
     def test_should_escalate_cooldown_no(self):
         ctx = ConversationPolicyContext(
-            lead_score=80, lead_temperature="hot",
+            lead_score=80,
+            lead_temperature="hot",
             admin_escalation_cooldown_active=True,
         )
         assert svc.should_escalate_admin(ctx) is False
@@ -482,6 +492,7 @@ class TestMemoryStorage:
 class TestDecisionEngineIntegration:
     def test_evaluate_full_returns_triple(self):
         from core.services.agent_decision_engine import evaluate_full
+
         memory = {"followup_enabled": True, "memory_data": {}}
         decision, offer, policy = evaluate_full(memory, [])
         assert decision is not None
@@ -491,6 +502,7 @@ class TestDecisionEngineIntegration:
 
     def test_evaluate_still_works(self):
         from core.services.agent_decision_engine import evaluate
+
         memory = {"followup_enabled": True, "memory_data": {}}
         decision = evaluate(memory, [])
         assert decision.customer_state is not None

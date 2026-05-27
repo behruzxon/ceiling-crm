@@ -3,6 +3,7 @@
 Uses DESIGN_PRICES_CUSTOMER for customer-facing calculations.
 Internal quote prices (DEFAULT_BASE_PRICES) are NOT used here.
 """
+
 from __future__ import annotations
 
 import re
@@ -133,7 +134,8 @@ class PriceCalculatorService:
         design = self.parse_design_from_text(text)
         if area and design:
             return PriceClarificationResult(
-                parsed_area=area, parsed_design=design,
+                parsed_area=area,
+                parsed_design=design,
             )
         if area and not design:
             return PriceClarificationResult(
@@ -149,10 +151,7 @@ class PriceCalculatorService:
             return PriceClarificationResult(
                 needs_area=True,
                 parsed_design=design,
-                question=(
-                    "Xona razmerini yozing.\n\n"
-                    "Masalan: 5x4 yoki 20 kv"
-                ),
+                question=("Xona razmerini yozing.\n\n" "Masalan: 5x4 yoki 20 kv"),
             )
         return PriceClarificationResult(
             needs_area=True,
@@ -179,8 +178,7 @@ class PriceCalculatorService:
         lines.append(f"<b>Jami: {self.format_uzs(result.total_uzs)} so'm</b>")
         lines.append("")
         lines.append(
-            "⚠️ Bu taxminiy hisob. Yakuniy narx o'lchov va "
-            "material bo'yicha aniqlanadi.",
+            "⚠️ Bu taxminiy hisob. Yakuniy narx o'lchov va " "material bo'yicha aniqlanadi.",
         )
         return "\n".join(lines)
 

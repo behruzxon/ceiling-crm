@@ -30,6 +30,7 @@ Usage::
     # decision.follow_up_type == "measurement_push"
     # decision.follow_up_delay_minutes == 20
 """
+
 from __future__ import annotations
 
 import time
@@ -92,8 +93,7 @@ _FU_MESSAGES: dict[str, str] = {
         "aniq narx chiqarib beradi. Majburiyat yo'q \U0001f642"
     ),
     "soft_reactivation": (
-        "Salom! Oldingi suhbatimiz qoldi \u2014 "
-        "potolok bo'yicha yordam kerakmi? \U0001f642"
+        "Salom! Oldingi suhbatimiz qoldi \u2014 " "potolok bo'yicha yordam kerakmi? \U0001f642"
     ),
     "manager_call_offer": (
         "Mutaxassisimiz siz bilan bog'lanib, "
@@ -234,11 +234,7 @@ def _check_skip(
             return f"Foydalanuvchi {int(minutes_ago)} daqiqa oldin faol"
 
     # Cold + cooling + low score — give up
-    if (
-        decision_stage == "cold"
-        and engagement_trend == "cooling_down"
-        and score < 15
-    ):
+    if decision_stage == "cold" and engagement_trend == "cooling_down" and score < 15:
         return "Sovuq lid, pasayish trendi, past ball"
 
     return None
@@ -278,11 +274,7 @@ def _select_type(
         )
 
     # ── Rule 2: close_ready + warming_up + high prob → measurement ──
-    if (
-        decision_stage == "close_ready"
-        and engagement_trend == "warming_up"
-        and prob >= 60
-    ):
+    if decision_stage == "close_ready" and engagement_trend == "warming_up" and prob >= 60:
         return _avoid_repeat(
             "measurement_push",
             "Sotuvga tayyor, isitilmoqda, yuqori ehtimol",
@@ -414,7 +406,10 @@ def _avoid_repeat(
                 return rotated, f"{reason} (adaptive: {FU_TYPE_LABELS.get(rotated, rotated)})"
 
         rotated = _fallback.get(preferred, "price_reminder")
-        return rotated, f"{reason} (avvalgi: {FU_TYPE_LABELS.get(previous, previous)}, almashtirildi)"
+        return (
+            rotated,
+            f"{reason} (avvalgi: {FU_TYPE_LABELS.get(previous, previous)}, almashtirildi)",
+        )
     return preferred, reason
 
 
@@ -435,11 +430,11 @@ def _compute_delay(
     # Base delays by type
     _base_delays: dict[str, int] = {
         "measurement_push": 20,
-        "price_reminder": 180,       # 3 hours
-        "catalog_nudge": 180,        # 3 hours
+        "price_reminder": 180,  # 3 hours
+        "catalog_nudge": 180,  # 3 hours
         "budget_option_offer": 120,  # 2 hours
-        "manager_call_offer": 60,    # 1 hour
-        "soft_reactivation": 1440,   # 24 hours
+        "manager_call_offer": 60,  # 1 hour
+        "soft_reactivation": 1440,  # 24 hours
     }
     delay = _base_delays.get(fu_type, 360)  # default 6h
 

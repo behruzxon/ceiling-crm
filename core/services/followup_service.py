@@ -10,6 +10,7 @@ For each lead whose ``next_follow_up_at`` is in the past the service:
   3. Increments ``follow_up_count``.
   4. Schedules the next reminder using brain-computed delay.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -61,7 +62,9 @@ class FollowupService:
                         # Safety cap: stop reminders after _MAX_FOLLOWUP_COUNT
                         if (lead.follow_up_count or 0) >= _MAX_FOLLOWUP_COUNT:
                             await repo.update_ai_scoring(lead.id, next_follow_up_at=None)
-                            log.info("followup_cap_reached", lead_id=lead.id, count=lead.follow_up_count)
+                            log.info(
+                                "followup_cap_reached", lead_id=lead.id, count=lead.follow_up_count
+                            )
                             continue
 
                         # ── Ask the follow-up brain ─────────────────────
@@ -92,6 +95,7 @@ class FollowupService:
                             _sv = None
                             try:
                                 from core.services.signal_vector_service import build_signal_vector
+
                                 _sv = build_signal_vector(
                                     lead_score=lead.score or 0,
                                     closing_confidence=lead.closing_confidence,
@@ -104,8 +108,10 @@ class FollowupService:
                                 )
                             except Exception:
                                 pass
-                            _dp = evaluate_deal_probability(signal_vector=_sv) if _sv else \
-                                evaluate_deal_probability(
+                            _dp = (
+                                evaluate_deal_probability(signal_vector=_sv)
+                                if _sv
+                                else evaluate_deal_probability(
                                     score=lead.score or 0,
                                     closing_confidence=lead.closing_confidence,
                                     phone_captured=bool(lead.phone),
@@ -114,6 +120,7 @@ class FollowupService:
                                     has_district=bool(lead.district),
                                     follow_up_count=lead.follow_up_count or 0,
                                 )
+                            )
                             prob_line = f"\n\U0001f4ca Ehtimol: {_dp.deal_probability_percent}%"
                             if _dp.expected_deal_value is not None:
                                 prob_line += f" | {_dp.expected_deal_value:,} UZS"
@@ -122,44 +129,45 @@ class FollowupService:
 
                         # Brain decision line
                         from core.services.followup_brain_service import FU_TYPE_LABELS
+
                         fu_label = FU_TYPE_LABELS.get(
                             fu_decision.follow_up_type,
                             fu_decision.follow_up_type,
                         )
                         delay_str = self._format_delay(fu_decision.follow_up_delay_minutes)
-                        brain_line = (
-                            f"\n\U0001f9e0 FU: {fu_label} | {delay_str}"
-                        )
+                        brain_line = f"\n\U0001f9e0 FU: {fu_label} | {delay_str}"
 
                         text = (
                             f"\u23f0 <b>Follow-up eslatmasi</b>\n\n"
                             f"\U0001f4cb Lid #{lead.id} \u2014 {lead.name}\n"
                             f"\U0001f4f1 {lead.phone}\n"
                             f"\U0001f4cd {lead.district}\n"
-                            f"\U0001f321 Holat: {lead.lead_temperature or '\u2014'}\n"
+                            f"\U0001f321 Holat: {lead.lead_temperature or chr(0x2014)}\n"
                             f"\U0001f4a1 Ishonch: {conf_str}\n"
                             f"\U0001f501 Follow-up #{(lead.follow_up_count or 0) + 1}"
                             f"{prob_line}{brain_line}\n\n"
                             f"/lead_{lead.id}"
                         )
-                        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="\U0001f4cc Kanban'da ochish",
-                                    callback_data=f"kanban:lead:{lead.id}:new",
-                                ),
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text="\u2705 Bog'landim",
-                                    callback_data=f"lead:{lead.id}:status:contacted",
-                                ),
-                                InlineKeyboardButton(
-                                    text="\u274c Yo'qotildi",
-                                    callback_data=f"lead:{lead.id}:status:lost",
-                                ),
-                            ],
-                        ])
+                        keyboard = InlineKeyboardMarkup(
+                            inline_keyboard=[
+                                [
+                                    InlineKeyboardButton(
+                                        text="\U0001f4cc Kanban'da ochish",
+                                        callback_data=f"kanban:lead:{lead.id}:new",
+                                    ),
+                                ],
+                                [
+                                    InlineKeyboardButton(
+                                        text="\u2705 Bog'landim",
+                                        callback_data=f"lead:{lead.id}:status:contacted",
+                                    ),
+                                    InlineKeyboardButton(
+                                        text="\u274c Yo'qotildi",
+                                        callback_data=f"lead:{lead.id}:status:lost",
+                                    ),
+                                ],
+                            ]
+                        )
                         from shared.utils.telegram_send import safe_send_message
 
                         await safe_send_message(
@@ -176,6 +184,7 @@ class FollowupService:
                                 defer_to_business_hours,
                                 is_off_hours,
                             )
+
                             if is_off_hours(next_fu):
                                 next_fu = defer_to_business_hours(next_fu)
                         except Exception:
@@ -190,14 +199,17 @@ class FollowupService:
                         import asyncio as _aio
 
                         from core.services.tactic_outcome_logger import log_tactic_outcome
-                        _aio.create_task(log_tactic_outcome(
-                            event_type="followup",
-                            tactic_name=fu_decision.follow_up_type or "price_reminder",
-                            user_id=lead.user_id,
-                            lead_id=lead.id,
-                            lead_score_at_time=lead.score or 0,
-                            lead_temperature_at_time=lead.lead_temperature,
-                        ))
+
+                        _aio.create_task(
+                            log_tactic_outcome(
+                                event_type="followup",
+                                tactic_name=fu_decision.follow_up_type or "price_reminder",
+                                user_id=lead.user_id,
+                                lead_id=lead.id,
+                                lead_score_at_time=lead.score or 0,
+                                lead_temperature_at_time=lead.lead_temperature,
+                            )
+                        )
 
                         processed += 1
                     except Exception:
@@ -238,6 +250,7 @@ class FollowupService:
             log.warning("followup_brain_error", lead_id=lead.id)  # type: ignore[union-attr]
             # Fallback: always follow up with default
             from core.services.followup_brain_service import FollowUpDecision
+
             return FollowUpDecision(
                 should_follow_up=True,
                 follow_up_delay_minutes=360,

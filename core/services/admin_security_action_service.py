@@ -4,6 +4,7 @@ core.services.admin_security_action_service
 Security actions: session revoke, admin disable, IP rules.
 Pure validation + dict builders. No direct DB I/O.
 """
+
 from __future__ import annotations
 
 import re
@@ -83,11 +84,17 @@ class AdminSecurityActionService:
         if not check.ok:
             return check
         if session_dict is None:
-            return SecurityActionResult(ok=False, action="session.revoke", error="session_not_found")
+            return SecurityActionResult(
+                ok=False, action="session.revoke", error="session_not_found"
+            )
         if session_dict.get("status") == "revoked":
-            return SecurityActionResult(ok=False, action="session.revoke", error="session_already_revoked")
+            return SecurityActionResult(
+                ok=False, action="session.revoke", error="session_already_revoked"
+            )
         if session_dict.get("status") == "expired":
-            return SecurityActionResult(ok=False, action="session.revoke", error="session_already_expired")
+            return SecurityActionResult(
+                ok=False, action="session.revoke", error="session_already_expired"
+            )
         return SecurityActionResult(ok=True, action="session.revoke")
 
     @staticmethod
@@ -134,7 +141,9 @@ class AdminSecurityActionService:
         if not check.ok:
             return SecurityActionResult(ok=False, action="admin.disable", error=check.error)
         if not target_dict.get("is_active", True):
-            return SecurityActionResult(ok=False, action="admin.disable", error="admin_already_disabled")
+            return SecurityActionResult(
+                ok=False, action="admin.disable", error="admin_already_disabled"
+            )
         check = AdminSecurityActionService.prevent_last_owner_disable(
             target_dict.get("role", "viewer"),
             target_dict.get("is_super_owner", False),
@@ -160,7 +169,9 @@ class AdminSecurityActionService:
         if target_dict is None:
             return SecurityActionResult(ok=False, action="admin.enable", error="admin_not_found")
         if target_dict.get("is_active", True):
-            return SecurityActionResult(ok=False, action="admin.enable", error="admin_already_active")
+            return SecurityActionResult(
+                ok=False, action="admin.enable", error="admin_already_active"
+            )
         return SecurityActionResult(ok=True, action="admin.enable")
 
     # ── IP Rules ───────────────────────────────────────────────────────
@@ -181,7 +192,9 @@ class AdminSecurityActionService:
     @staticmethod
     def validate_rule_type(rule_type: str) -> SecurityActionResult:
         if rule_type not in _RULE_TYPES:
-            return SecurityActionResult(ok=False, error=f"invalid_rule_type, must be one of {_RULE_TYPES}")
+            return SecurityActionResult(
+                ok=False, error=f"invalid_rule_type, must be one of {_RULE_TYPES}"
+            )
         return SecurityActionResult(ok=True)
 
     @staticmethod
@@ -216,7 +229,9 @@ class AdminSecurityActionService:
         enforcement_enabled: bool = False,
     ) -> IPEvaluationResult:
         if not rules:
-            return IPEvaluationResult(ip=ip_address, decision="unknown", enforcement_enabled=enforcement_enabled)
+            return IPEvaluationResult(
+                ip=ip_address, decision="unknown", enforcement_enabled=enforcement_enabled
+            )
         for rule in rules:
             if not rule.get("is_active", False):
                 continue
@@ -236,7 +251,9 @@ class AdminSecurityActionService:
                     matched_rule_type=rule["rule_type"],
                     enforcement_enabled=enforcement_enabled,
                 )
-        return IPEvaluationResult(ip=ip_address, decision="unknown", enforcement_enabled=enforcement_enabled)
+        return IPEvaluationResult(
+            ip=ip_address, decision="unknown", enforcement_enabled=enforcement_enabled
+        )
 
     @staticmethod
     def get_rule_types() -> tuple[str, ...]:

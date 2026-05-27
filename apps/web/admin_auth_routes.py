@@ -4,6 +4,7 @@ apps.web.admin_auth_routes
 Login/logout/session web routes for admin session auth.
 Backward compatible — when session auth disabled, shows info notice.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,6 +24,7 @@ router = APIRouter(tags=["admin-auth"])
 def _get_session_auth_enabled() -> bool:
     try:
         from shared.config import get_settings
+
         return get_settings().business.admin_session_auth_enabled
     except Exception:
         return False
@@ -82,6 +84,7 @@ async def logout(request: Request, response: Response):
         return RedirectResponse(url="/login", status_code=302)
     try:
         from shared.config import get_settings
+
         settings = get_settings()
         cookie_name = settings.business.admin_session_cookie_name
     except Exception:

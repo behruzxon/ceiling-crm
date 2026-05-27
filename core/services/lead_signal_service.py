@@ -7,6 +7,7 @@ Extracts customer intent, objection type, urgency level, area and budget
 mentions from Uzbek/Russian text using keyword rules.  No AI — pure
 pattern matching.
 """
+
 from __future__ import annotations
 
 import re
@@ -19,113 +20,207 @@ from shared.utils.area_parser import parse_area
 # ── Stop keywords (checked first, multi-word before single-word) ──────────────
 
 _STOP_KEYWORDS: tuple[str, ...] = (
-    "kerak emas", "kerakmas", "yozmang", "qiziqmayman",
-    "stop", "bekor",
-    "не надо", "стоп", "отмена", "отстаньте",
+    "kerak emas",
+    "kerakmas",
+    "yozmang",
+    "qiziqmayman",
+    "stop",
+    "bekor",
+    "не надо",
+    "стоп",
+    "отмена",
+    "отстаньте",
 )
 
 # ── Intent keyword groups ─────────────────────────────────────────────────────
 
 _ORDER_STRONG: tuple[str, ...] = (
-    "zakaz", "buyurtma", "заказать", "заказ",
+    "zakaz",
+    "buyurtma",
+    "заказать",
+    "заказ",
 )
 
 _ORDER_WEAK: tuple[str, ...] = (
-    "boshlaymiz", "chaqirish", "kelish",
-    "qilamiz", "kerak",
+    "boshlaymiz",
+    "chaqirish",
+    "kelish",
+    "qilamiz",
+    "kerak",
 )
 
 _OPERATOR_KEYWORDS: tuple[str, ...] = (
-    "odam bilan", "operator", "telefon qiling", "bog'laning",
-    "оператор", "позвоните", "свяжитесь",
+    "odam bilan",
+    "operator",
+    "telefon qiling",
+    "bog'laning",
+    "оператор",
+    "позвоните",
+    "свяжитесь",
     "pozvonite",
 )
 
 _MEASUREMENT_KEYWORDS: tuple[str, ...] = (
-    "usta", "o'lchovchi", "o'lchov", "olchov",
-    "замер", "мастер",
+    "usta",
+    "o'lchovchi",
+    "o'lchov",
+    "olchov",
+    "замер",
+    "мастер",
 )
 
 _PRICE_KEYWORDS: tuple[str, ...] = (
-    "narx", "qancha", "nech pul", "nechpul", "hisobla",
-    "kvadrat", "m2", "kv",
-    "цена", "сколько", "стоимость", "почем",
-    "skolko", "stoit",
+    "narx",
+    "qancha",
+    "nech pul",
+    "nechpul",
+    "hisobla",
+    "kvadrat",
+    "m2",
+    "kv",
+    "цена",
+    "сколько",
+    "стоимость",
+    "почем",
+    "skolko",
+    "stoit",
 )
 
 _CATALOG_KEYWORDS: tuple[str, ...] = (
-    "katalog", "model", "rasm", "gulli", "matoviy", "dizayn", "rang",
-    "каталог", "фото", "модел",
+    "katalog",
+    "model",
+    "rasm",
+    "gulli",
+    "matoviy",
+    "dizayn",
+    "rang",
+    "каталог",
+    "фото",
+    "модел",
 )
 
 _DISCOUNT_KEYWORDS: tuple[str, ...] = (
-    "chegirma", "arzonroq", "tushirib berasizmi", "skidka",
-    "скидка", "дешевле",
+    "chegirma",
+    "arzonroq",
+    "tushirib berasizmi",
+    "skidka",
+    "скидка",
+    "дешевле",
 )
 
 _INSTALLATION_TIME_KEYWORDS: tuple[str, ...] = (
-    "qachon o'rnatiladi", "qancha vaqt", "o'rnatish muddati",
-    "когда установка", "сроки установки",
+    "qachon o'rnatiladi",
+    "qancha vaqt",
+    "o'rnatish muddati",
+    "когда установка",
+    "сроки установки",
 )
 
 _LOCATION_SERVICE_KEYWORDS: tuple[str, ...] = (
-    "kelib bering", "manzil", "lokatsiya",
-    "адрес", "приедете к нам",
+    "kelib bering",
+    "manzil",
+    "lokatsiya",
+    "адрес",
+    "приедете к нам",
 )
 
 # ── Objection keyword groups ─────────────────────────────────────────────────
 
 _PRICE_OBJECTION: tuple[str, ...] = (
-    "qimmat", "qimmatku", "pulim yetmaydi",
-    "дорого", "дороговато",
+    "qimmat",
+    "qimmatku",
+    "pulim yetmaydi",
+    "дорого",
+    "дороговато",
     "dorogo",
 )
 
 _TIME_OBJECTION: tuple[str, ...] = (
-    "uzoq davom", "qachon tugaydi", "ko'p vaqt", "vaqt yo'q",
-    "долго", "нет времени",
+    "uzoq davom",
+    "qachon tugaydi",
+    "ko'p vaqt",
+    "vaqt yo'q",
+    "долго",
+    "нет времени",
 )
 
 _TRUST_OBJECTION: tuple[str, ...] = (
-    "ishonch", "kafolat", "oldin ishlaringiz", "real rasm", "mijozlar fikri",
-    "гарантия", "отзывы", "реальные фото",
+    "ishonch",
+    "kafolat",
+    "oldin ishlaringiz",
+    "real rasm",
+    "mijozlar fikri",
+    "гарантия",
+    "отзывы",
+    "реальные фото",
 )
 
 _CONSULTATION_OBJECTION: tuple[str, ...] = (
-    "maslahat kerak", "so'rab ko'raman", "o'ylab ko'raman",
-    "посоветуюсь", "подумаю",
+    "maslahat kerak",
+    "so'rab ko'raman",
+    "o'ylab ko'raman",
+    "посоветуюсь",
+    "подумаю",
 )
 
 _COMPARING_OBJECTION: tuple[str, ...] = (
-    "boshqa firma", "raqobat", "taqqosla", "boshqa joy",
-    "другая фирма", "сравнить", "конкурент",
+    "boshqa firma",
+    "raqobat",
+    "taqqosla",
+    "boshqa joy",
+    "другая фирма",
+    "сравнить",
+    "конкурент",
 )
 
 _NOT_READY_OBJECTION: tuple[str, ...] = (
-    "keyinroq", "hali emas", "hozir emas",
-    "позже", "не сейчас", "потом",
+    "keyinroq",
+    "hali emas",
+    "hozir emas",
+    "позже",
+    "не сейчас",
+    "потом",
 )
 
 _LOCATION_OBJECTION: tuple[str, ...] = (
-    "uzoq joy", "kelasizlarmi", "bizning tumanga",
+    "uzoq joy",
+    "kelasizlarmi",
+    "bizning tumanga",
     "далеко",
 )
 
 _FAMILY_OBJECTION: tuple[str, ...] = (
-    "erim bilan", "xotinim bilan", "oilaga", "ota-onam",
-    "с мужем", "с женой", "с семьей",
+    "erim bilan",
+    "xotinim bilan",
+    "oilaga",
+    "ota-onam",
+    "с мужем",
+    "с женой",
+    "с семьей",
 )
 
 # ── Urgency keyword groups ────────────────────────────────────────────────────
 
 _HIGH_URGENCY: tuple[str, ...] = (
-    "bugun", "ertaga", "tez", "hozir", "shoshilinch", "shu hafta",
-    "сегодня", "завтра", "срочно", "сейчас",
+    "bugun",
+    "ertaga",
+    "tez",
+    "hozir",
+    "shoshilinch",
+    "shu hafta",
+    "сегодня",
+    "завтра",
+    "срочно",
+    "сейчас",
 )
 
 _MEDIUM_URGENCY: tuple[str, ...] = (
-    "shu oyda", "yaqinda", "tezroq",
-    "на этой неделе", "в этом месяце", "скоро",
+    "shu oyda",
+    "yaqinda",
+    "tezroq",
+    "на этой неделе",
+    "в этом месяце",
+    "скоро",
 )
 
 # ── Budget pattern ────────────────────────────────────────────────────────────
@@ -173,10 +268,7 @@ class LeadSignalService:
         search_text = norm.latin
         t = search_text.lower().strip()
         original_lower = text.lower().strip()
-        lang = language_hint or (
-            "ru" if "russian" in norm.detected_languages
-            else "uz"
-        )
+        lang = language_hint or ("ru" if "russian" in norm.detected_languages else "uz")
 
         intent = LeadSignalService.detect_intent(search_text)
         if intent == CustomerIntent.UNCLEAR:
@@ -197,18 +289,26 @@ class LeadSignalService:
         budget = LeadSignalService.detect_budget_mention(text)
         keywords = LeadSignalService._collect_keywords(t)
         keywords.extend(
-            kw for kw in LeadSignalService._collect_keywords(original_lower)
-            if kw not in keywords
+            kw for kw in LeadSignalService._collect_keywords(original_lower) if kw not in keywords
         )
 
         if objection is not None and intent == CustomerIntent.UNCLEAR:
             intent = CustomerIntent.SENDS_OBJECTION
 
         delta = LeadSignalService._compute_score_delta(
-            intent, objection, urgency, area, budget,
+            intent,
+            objection,
+            urgency,
+            area,
+            budget,
         )
         confidence = LeadSignalService._compute_confidence(
-            intent, objection, urgency, area, budget, keywords,
+            intent,
+            objection,
+            urgency,
+            area,
+            budget,
+            keywords,
         )
 
         should_disable = intent == CustomerIntent.STOP_REQUEST
@@ -352,7 +452,7 @@ class LeadSignalService:
             val = float(raw)
         except ValueError:
             return None
-        unit_text = text[m.end(1):m.end()].lower().strip()
+        unit_text = text[m.end(1) : m.end()].lower().strip()
         if any(u in unit_text for u in _BUDGET_MILLION_UNITS):
             return int(val * 1_000_000)
         if any(u in unit_text for u in _BUDGET_THOUSAND_UNITS):
@@ -424,14 +524,26 @@ class LeadSignalService:
     def _collect_keywords(t: str) -> list[str]:
         found: list[str] = []
         all_kw_groups = (
-            _STOP_KEYWORDS, _ORDER_STRONG, _ORDER_WEAK,
-            _OPERATOR_KEYWORDS, _MEASUREMENT_KEYWORDS,
-            _PRICE_KEYWORDS, _CATALOG_KEYWORDS, _DISCOUNT_KEYWORDS,
-            _INSTALLATION_TIME_KEYWORDS, _LOCATION_SERVICE_KEYWORDS,
-            _PRICE_OBJECTION, _TIME_OBJECTION, _TRUST_OBJECTION,
-            _CONSULTATION_OBJECTION, _COMPARING_OBJECTION,
-            _NOT_READY_OBJECTION, _LOCATION_OBJECTION, _FAMILY_OBJECTION,
-            _HIGH_URGENCY, _MEDIUM_URGENCY,
+            _STOP_KEYWORDS,
+            _ORDER_STRONG,
+            _ORDER_WEAK,
+            _OPERATOR_KEYWORDS,
+            _MEASUREMENT_KEYWORDS,
+            _PRICE_KEYWORDS,
+            _CATALOG_KEYWORDS,
+            _DISCOUNT_KEYWORDS,
+            _INSTALLATION_TIME_KEYWORDS,
+            _LOCATION_SERVICE_KEYWORDS,
+            _PRICE_OBJECTION,
+            _TIME_OBJECTION,
+            _TRUST_OBJECTION,
+            _CONSULTATION_OBJECTION,
+            _COMPARING_OBJECTION,
+            _NOT_READY_OBJECTION,
+            _LOCATION_OBJECTION,
+            _FAMILY_OBJECTION,
+            _HIGH_URGENCY,
+            _MEDIUM_URGENCY,
         )
         for group in all_kw_groups:
             for kw in group:
@@ -490,6 +602,7 @@ class LeadSignalService:
         from core.services.text_normalization_service import (
             TextNormalizationService,
         )
+
         fuzzy_map: list[tuple[tuple[str, ...], CustomerIntent]] = [
             (("narx", "narxi", "qancha", "hisobla"), CustomerIntent.WANTS_PRICE),
             (("zakaz", "buyurtma"), CustomerIntent.WANTS_ORDER),
@@ -507,6 +620,7 @@ class LeadSignalService:
         from core.services.text_normalization_service import (
             TextNormalizationService,
         )
+
         obj_fuzzy: list[tuple[tuple[str, ...], ObjectionType]] = [
             (("qimmat", "qimmatku"), ObjectionType.PRICE),
             (("kafolat", "garantiya"), ObjectionType.TRUST),

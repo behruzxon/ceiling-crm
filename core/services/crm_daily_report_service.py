@@ -3,6 +3,7 @@ core.services.crm_daily_report_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Daily CRM report generation. Pure summary logic + schema.
 """
+
 from __future__ import annotations
 
 import re
@@ -53,6 +54,7 @@ class CRMDailyReportService:
     ) -> CRMDailyReportSnapshot:
         from datetime import UTC
         from datetime import datetime as dt
+
         if report_date is None:
             report_date = date.today()
         missed = analytics.get("missed") or {}

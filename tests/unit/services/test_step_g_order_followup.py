@@ -1,4 +1,5 @@
 """Step G tests: abandoned order follow-up flag, delay, buttons, stale checks."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
@@ -53,21 +54,25 @@ def mock_session() -> AsyncMock:
 class TestOrderFeatureFlag:
     def test_order_flag_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_order_followup_enabled is False
 
     def test_order_delay_default_10(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_order_followup_delay_minutes == 10
 
     def test_order_delay_accepts_1(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings(AGENT_ORDER_FOLLOWUP_DELAY_MINUTES=1)
         assert s.agent_order_followup_delay_minutes == 1
 
     def test_order_delay_rejects_zero(self) -> None:
         from shared.config.settings import BusinessSettings
+
         with pytest.raises(Exception):
             BusinessSettings(AGENT_ORDER_FOLLOWUP_DELAY_MINUTES=0)
 
@@ -180,18 +185,22 @@ class TestOrderStale:
 class TestOrderSupersedingEvents:
     def test_location_shared_is_superseding(self) -> None:
         from core.services.followup_scheduler_service import _SUPERSEDING_EVENTS
+
         assert "location_shared" in _SUPERSEDING_EVENTS["abandoned_order"]
 
     def test_phone_shared_is_superseding(self) -> None:
         from core.services.followup_scheduler_service import _SUPERSEDING_EVENTS
+
         assert "phone_shared" in _SUPERSEDING_EVENTS["abandoned_order"]
 
     def test_operator_requested_is_superseding(self) -> None:
         from core.services.followup_scheduler_service import _SUPERSEDING_EVENTS
+
         assert "operator_requested" in _SUPERSEDING_EVENTS["abandoned_order"]
 
     def test_deal_closed_is_superseding(self) -> None:
         from core.services.followup_scheduler_service import _SUPERSEDING_EVENTS
+
         assert "deal_closed" in _SUPERSEDING_EVENTS["abandoned_order"]
 
 
@@ -201,6 +210,7 @@ class TestOrderSupersedingEvents:
 class TestOrderBusinessHours:
     def test_business_hours_apply(self) -> None:
         from shared.utils.business_hours import is_off_hours
+
         tz = timezone(timedelta(hours=5))
         assert is_off_hours(datetime(2026, 5, 25, 23, 0, tzinfo=tz)) is True
         assert is_off_hours(datetime(2026, 5, 25, 14, 0, tzinfo=tz)) is False

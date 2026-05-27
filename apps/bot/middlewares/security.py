@@ -6,6 +6,7 @@ Guards against abuse: burst spam, oversized messages, and suspicious callback da
 Runs AFTER AuthMiddleware (needs user_id) and BEFORE RateLimitMiddleware
 (catches fast-burst before the sliding window does).
 """
+
 from __future__ import annotations
 
 import re
@@ -23,9 +24,9 @@ log = get_logger(__name__)
 
 # ── Tuneable constants ───────────────────────────────────────────────────────
 
-_BURST_WINDOW = 3          # seconds
-_BURST_MAX = 5             # max messages within burst window
-_MAX_TEXT_LENGTH = 4096    # Telegram limit
+_BURST_WINDOW = 3  # seconds
+_BURST_MAX = 5  # max messages within burst window
+_MAX_TEXT_LENGTH = 4096  # Telegram limit
 _MAX_CALLBACK_LENGTH = 64  # callback_data max in Telegram is 64 bytes
 
 # Only allow safe characters in callback data (alphanumeric, :, _, -, .)

@@ -7,6 +7,7 @@ Each row records one admin button press on a lead card:
   payload       — optional JSON context (e.g. {"note": "text"})
   created_at    — UTC timestamp (auto-set by DB)
 """
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -1,4 +1,5 @@
 """Unit tests for the AI Auto Closer service."""
+
 from __future__ import annotations
 
 from core.services.ai_auto_closer_service import (
@@ -32,7 +33,10 @@ class TestBuildAutoCloseReplyMinimal:
     def test_buyer_type_propagated(self):
         result = build_auto_close_reply(score=60, phone_captured=True)
         assert result.buyer_type in (
-            "price_sensitive", "quality_buyer", "fast_buyer", "research_buyer",
+            "price_sensitive",
+            "quality_buyer",
+            "fast_buyer",
+            "research_buyer",
         )
 
 
@@ -41,7 +45,8 @@ class TestStrategySelection:
 
     def test_price_sensitive_gets_budget(self):
         result = build_auto_close_reply(
-            last_objection="expensive", intent="price",
+            last_objection="expensive",
+            intent="price",
         )
         assert result.recommended_strategy == "budget_option"
 
@@ -87,7 +92,10 @@ class TestStrategySelection:
 
     def test_researching_no_phone_gets_measurement(self):
         result = build_auto_close_reply(
-            score=20, has_area=True, area_m2=15.0, has_district=True,
+            score=20,
+            has_area=True,
+            area_m2=15.0,
+            has_district=True,
         )
         # researching + no phone → measurement_push
         if result.recommended_strategy not in ("premium_design", "budget_option"):
@@ -140,7 +148,11 @@ class TestCloseProbability:
 
     def test_hot_lead_high_probability(self):
         result = build_auto_close_reply(
-            score=80, phone_captured=True, closing_confidence=0.85,
-            has_area=True, area_m2=25.0, has_district=True,
+            score=80,
+            phone_captured=True,
+            closing_confidence=0.85,
+            has_area=True,
+            area_m2=25.0,
+            has_district=True,
         )
         assert result.close_probability >= 0.5

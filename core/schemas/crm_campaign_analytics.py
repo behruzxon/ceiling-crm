@@ -1,4 +1,5 @@
 """Frozen dataclasses for CRM campaign analytics schemas."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -69,7 +70,9 @@ class CRMCampaignAnalytics:
     failure_reasons: list[CRMCampaignFailureMetric] = field(default_factory=list)
     canary: CRMCampaignCanaryMetrics = field(default_factory=CRMCampaignCanaryMetrics)
     replies: CRMCampaignReplyMetrics = field(default_factory=CRMCampaignReplyMetrics)
-    status_changes: CRMCampaignStatusChangeMetrics = field(default_factory=CRMCampaignStatusChangeMetrics)
+    status_changes: CRMCampaignStatusChangeMetrics = field(
+        default_factory=CRMCampaignStatusChangeMetrics
+    )
     recommendations: list[CRMCampaignRecommendation] = field(default_factory=list)
     generated_at: str = ""
 

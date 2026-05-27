@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_contacts table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -24,9 +25,15 @@ class CRMContactModel(Base):
     lead_status: Mapped[str] = mapped_column(sa.String(30), server_default="new")
     lead_score: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     temperature: Mapped[str | None] = mapped_column(sa.String(10), nullable=True)
-    last_message_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    last_seen_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    last_message_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
 

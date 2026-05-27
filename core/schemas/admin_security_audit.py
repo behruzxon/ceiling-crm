@@ -1,4 +1,5 @@
 """Frozen dataclasses for admin security audit dashboard schemas."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

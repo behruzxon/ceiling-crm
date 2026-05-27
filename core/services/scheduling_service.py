@@ -1,6 +1,7 @@
 """
 SchedulingService — appointment creation and installer assignment.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

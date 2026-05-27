@@ -1,4 +1,5 @@
 """Tests for Step CH — Order Handler."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,14 +12,17 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.bot.handlers.private import order
+
         assert order is not None
 
     def test_router(self):
         from apps.bot.handlers.private.order import router
+
         assert router is not None
 
     def test_order_flow_states(self):
         from apps.bot.handlers.private.order import OrderFlow
+
         assert hasattr(OrderFlow, "waiting_for_name")
         assert hasattr(OrderFlow, "waiting_for_phone")
         assert hasattr(OrderFlow, "waiting_for_district")
@@ -56,10 +60,12 @@ class TestPhoneStep:
 
     def test_phone_validation(self):
         from shared.utils.phone import is_valid_uz_phone
+
         assert callable(is_valid_uz_phone)
 
     def test_phone_normalize(self):
         from shared.utils.phone import normalize_phone
+
         assert callable(normalize_phone)
 
 
@@ -89,6 +95,7 @@ class TestAreaStep:
 
     def test_area_parser(self):
         from shared.utils.area_parser import parse_area
+
         assert callable(parse_area)
 
 

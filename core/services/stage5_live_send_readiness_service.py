@@ -4,6 +4,7 @@ core.services.stage5_live_send_readiness_service
 Strictest gate: evaluates readiness for APPROVED_LIVE_SEND.
 Approved payloads will be sent to real users. Pure functions.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -25,7 +26,9 @@ class Stage5LiveSendReadinessService:
         blockers = Stage5LiveSendReadinessService.build_blockers(report, cs)
         warnings = Stage5LiveSendReadinessService.build_warnings(report, cs)
         score = Stage5LiveSendReadinessService.calculate_readiness_score(blockers, warnings)
-        recs = Stage5LiveSendReadinessService.build_recommendations(report, blockers, warnings, score, cs)
+        recs = Stage5LiveSendReadinessService.build_recommendations(
+            report, blockers, warnings, score, cs
+        )
 
         if blockers:
             verdict, allowed = "not_ready", False
@@ -37,9 +40,14 @@ class Stage5LiveSendReadinessService:
             verdict, allowed = "not_ready", False
 
         return Stage5LiveSendReadinessResult(
-            from_stage="approval_required", to_stage="approved_live_send",
-            allowed=allowed, readiness_score=score, verdict=verdict,
-            blockers=blockers, warnings=warnings, recommendations=recs,
+            from_stage="approval_required",
+            to_stage="approved_live_send",
+            allowed=allowed,
+            readiness_score=score,
+            verdict=verdict,
+            blockers=blockers,
+            warnings=warnings,
+            recommendations=recs,
             generated_at=datetime.now(UTC).isoformat(),
         )
 
@@ -79,9 +87,12 @@ class Stage5LiveSendReadinessService:
             blockers.append("execution_mode_already_live")
 
         from core.services.agent_rollout_preset_service import AgentRolloutPresetService
+
         allow_live = bool(settings.get("agent_settings_allow_live_flags"))
         preview = AgentRolloutPresetService.preview_preset(
-            "approved_live_send", settings, allow_live,
+            "approved_live_send",
+            settings,
+            allow_live,
         )
         if not preview.allowed:
             blockers.append("live_send_preset_blocked")
@@ -117,9 +128,12 @@ class Stage5LiveSendReadinessService:
             return min(40, 100 - len(blockers) * 10)
         score = 100
         penalty = {
-            "low_proposal_count": 10, "low_approved_count": 15,
-            "high_rejection_rate": 10, "high_expiration_rate": 10,
-            "pending_count_high": 10, "health_yellow": 10,
+            "low_proposal_count": 10,
+            "low_approved_count": 15,
+            "high_rejection_rate": 10,
+            "high_expiration_rate": 10,
+            "pending_count_high": 10,
+            "health_yellow": 10,
             "short_observation": 10,
         }
         for w in warnings:
@@ -128,8 +142,11 @@ class Stage5LiveSendReadinessService:
 
     @staticmethod
     def build_recommendations(
-        report: Stage4ApprovalReport, blockers: list[str],
-        warnings: list[str], score: int, settings: dict[str, Any],
+        report: Stage4ApprovalReport,
+        blockers: list[str],
+        warnings: list[str],
+        score: int,
+        settings: dict[str, Any],
     ) -> list[str]:
         if blockers:
             recs: list[str] = []

@@ -29,6 +29,7 @@ its asyncpg connection pool bound to that dead loop, causing
 on the next task.  Therefore each top-level coroutine creates its own
 AsyncEngine and disposes it in a finally block.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -60,13 +61,15 @@ _COUNTER_BATCH = 50  # flush counters to DB every N sends
 # Lowercase substrings that identify a permanently unreachable chat.
 # TelegramForbiddenError (403) is always terminal.
 # Specific TelegramBadRequest (400) messages are listed here.
-_BLOCK_PHRASES: frozenset[str] = frozenset({
-    "chat not found",
-    "bot was blocked by the user",
-    "user is deactivated",
-    "have no rights to send a message",
-    "group chat was upgraded to a supergroup chat",
-})
+_BLOCK_PHRASES: frozenset[str] = frozenset(
+    {
+        "chat not found",
+        "bot was blocked by the user",
+        "user is deactivated",
+        "have no rights to send a message",
+        "group chat was upgraded to a supergroup chat",
+    }
+)
 
 
 def _is_terminal_error(exc: Exception) -> bool:
@@ -117,16 +120,16 @@ class _Stats:
     groups_sent: int = 0
 
     # Failure breakdown
-    failed_blocked: int = 0    # bot was blocked by the user
+    failed_blocked: int = 0  # bot was blocked by the user
     failed_forbidden: int = 0  # forbidden / kicked / no rights / chat not found
-    failed_other: int = 0      # network, timeout, unexpected errors
+    failed_other: int = 0  # network, timeout, unexpected errors
 
     # Operational counters
-    retry_count: int = 0   # number of TelegramRetryAfter back-offs triggered
-    batch_count: int = 0   # number of DB counter-flush operations performed
+    retry_count: int = 0  # number of TelegramRetryAfter back-offs triggered
+    batch_count: int = 0  # number of DB counter-flush operations performed
 
     # Auto-clean counters
-    newly_blocked: int = 0         # chat IDs added to blocked_chats this run
+    newly_blocked: int = 0  # chat IDs added to blocked_chats this run
     skipped_by_blocklist: int = 0  # targets excluded at resolution time
 
     finished_at: datetime | None = None
@@ -280,8 +283,7 @@ def process_broadcast_batch(self, broadcast_id: int) -> dict:
         raise
 
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=60,
-                 name="broadcast.send_single")
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=60, name="broadcast.send_single")
 def send_broadcast_message(self, user_id: int, broadcast_id: int, message: str) -> dict:
     """Legacy single-send task (kept for backward compat). TODO: remove."""
     raise NotImplementedError
@@ -435,9 +437,7 @@ async def _async_process_broadcast(broadcast_id: int) -> dict:
                     # excluded from future broadcasts automatically.
                     # Transient "other" errors (network, timeout) are also
                     # recorded so repeated soft failures accumulate a seen_count.
-                    is_new = await _upsert_blocked_chat(
-                        chat_id, result_code, Session
-                    )
+                    is_new = await _upsert_blocked_chat(chat_id, result_code, Session)
                     if is_new:
                         stats.newly_blocked += 1
 

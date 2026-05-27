@@ -1,4 +1,5 @@
 """Tests for Step BV — Platform Readiness Audit Script."""
+
 from __future__ import annotations
 
 from scripts.platform_readiness_audit import (

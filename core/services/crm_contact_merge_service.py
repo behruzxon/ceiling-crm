@@ -4,6 +4,7 @@ core.services.crm_contact_merge_service
 Duplicate detection, merge preview/plan, data quality. Pure functions.
 Actual merge is feature-flag gated (CRM_CONTACT_MERGE_ENABLED).
 """
+
 from __future__ import annotations
 
 import re
@@ -15,8 +16,16 @@ _TOKEN_RE = re.compile(r"(?:sk-|token[=:]|Bearer\s)\S+", re.IGNORECASE)
 _PHONE_RE = re.compile(r"\+?\d{9,15}")
 
 _STATUS_PRIORITY = {
-    "hot": 1, "operator_needed": 2, "price_interested": 3, "order_started": 4,
-    "active": 5, "browsing": 6, "new": 7, "won": 8, "lost": 9, "stopped": 10,
+    "hot": 1,
+    "operator_needed": 2,
+    "price_interested": 3,
+    "order_started": 4,
+    "active": 5,
+    "browsing": 6,
+    "new": 7,
+    "won": 8,
+    "lost": 9,
+    "stopped": 10,
 }
 _TEMP_PRIORITY = {"hot": 1, "warm": 2, "cold": 3}
 
@@ -87,7 +96,13 @@ class CRMContactMergeService:
         phone_b = _normalize_phone(contact_b.get("phone", ""))
         if phone_a and phone_b and phone_a == phone_b:
             return 95
-        if phone_a and phone_b and len(phone_a) >= 9 and len(phone_b) >= 9 and phone_a[-9:] == phone_b[-9:]:
+        if (
+            phone_a
+            and phone_b
+            and len(phone_a) >= 9
+            and len(phone_b) >= 9
+            and phone_a[-9:] == phone_b[-9:]
+        ):
             return 85
         user_a = (contact_a.get("username") or "").lower().strip()
         user_b = (contact_b.get("username") or "").lower().strip()
@@ -143,7 +158,7 @@ class CRMContactMergeService:
         for i, a in enumerate(contacts):
             if _is_merged(a):
                 continue
-            for b in contacts[i + 1:]:
+            for b in contacts[i + 1 :]:
                 if _is_merged(b):
                     continue
                 pair = (min(a.get("id", 0), b.get("id", 0)), max(a.get("id", 0), b.get("id", 0)))
@@ -152,12 +167,14 @@ class CRMContactMergeService:
                 conf = CRMContactMergeService.calculate_duplicate_confidence(a, b)
                 if conf >= min_confidence:
                     reasons = CRMContactMergeService.build_duplicate_reasons(a, b)
-                    candidates.append(DuplicateCandidate(
-                        contact_a_id=a.get("id", 0),
-                        contact_b_id=b.get("id", 0),
-                        confidence=conf,
-                        reasons=reasons,
-                    ))
+                    candidates.append(
+                        DuplicateCandidate(
+                            contact_a_id=a.get("id", 0),
+                            contact_b_id=b.get("id", 0),
+                            confidence=conf,
+                            reasons=reasons,
+                        )
+                    )
                     seen.add(pair)
                     if len(candidates) >= limit:
                         return candidates
@@ -172,11 +189,17 @@ class CRMContactMergeService:
             "keep_phone": _choose_best(target.get("phone"), source.get("phone")),
             "keep_name": _choose_best(target.get("first_name"), source.get("first_name")),
             "keep_username": _choose_best(target.get("username"), source.get("username")),
-            "keep_telegram_user_id": target.get("telegram_user_id") or source.get("telegram_user_id"),
-            "keep_telegram_chat_id": target.get("telegram_chat_id") or source.get("telegram_chat_id"),
+            "keep_telegram_user_id": target.get("telegram_user_id")
+            or source.get("telegram_user_id"),
+            "keep_telegram_chat_id": target.get("telegram_chat_id")
+            or source.get("telegram_chat_id"),
             "keep_score": max(target.get("lead_score", 0) or 0, source.get("lead_score", 0) or 0),
-            "keep_temperature": _choose_hottest(target.get("temperature"), source.get("temperature")),
-            "keep_status": _choose_priority_status(target.get("lead_status"), source.get("lead_status")),
+            "keep_temperature": _choose_hottest(
+                target.get("temperature"), source.get("temperature")
+            ),
+            "keep_status": _choose_priority_status(
+                target.get("lead_status"), source.get("lead_status")
+            ),
             "merge_tags": True,
             "merge_notes": True,
             "merge_messages": True,
@@ -242,7 +265,10 @@ class CRMContactMergeService:
         if require_confirmation and not confirm:
             return MergeResult(ok=False, error="confirmation_required")
         preview = CRMContactMergeService.build_merge_preview(
-            source, target, merge_enabled=True, min_confidence=min_confidence,
+            source,
+            target,
+            merge_enabled=True,
+            min_confidence=min_confidence,
         )
         if not preview.allowed:
             return MergeResult(ok=False, error="; ".join(preview.blockers))
@@ -295,16 +321,42 @@ class CRMContactMergeService:
         total = len(contacts)
         active = sum(1 for c in contacts if c.get("merge_status", "active") == "active")
         merged = sum(1 for c in contacts if c.get("merge_status") == "merged")
-        missing_phone = sum(1 for c in contacts if not c.get("phone") and c.get("merge_status", "active") == "active")
-        missing_name = sum(1 for c in contacts if not c.get("first_name") and c.get("merge_status", "active") == "active")
-        missing_loc = sum(1 for c in contacts if not (c.get("metadata_json") or {}).get("district") and c.get("merge_status", "active") == "active")
-        missing_area = sum(1 for c in contacts if not (c.get("metadata_json") or {}).get("area_m2") and c.get("merge_status", "active") == "active")
-        scores = [c.get("data_quality_score", 0) or 0 for c in contacts if c.get("merge_status", "active") == "active"]
+        missing_phone = sum(
+            1
+            for c in contacts
+            if not c.get("phone") and c.get("merge_status", "active") == "active"
+        )
+        missing_name = sum(
+            1
+            for c in contacts
+            if not c.get("first_name") and c.get("merge_status", "active") == "active"
+        )
+        missing_loc = sum(
+            1
+            for c in contacts
+            if not (c.get("metadata_json") or {}).get("district")
+            and c.get("merge_status", "active") == "active"
+        )
+        missing_area = sum(
+            1
+            for c in contacts
+            if not (c.get("metadata_json") or {}).get("area_m2")
+            and c.get("merge_status", "active") == "active"
+        )
+        scores = [
+            c.get("data_quality_score", 0) or 0
+            for c in contacts
+            if c.get("merge_status", "active") == "active"
+        ]
         avg = sum(scores) / len(scores) if scores else 0.0
         return DataQualitySummary(
-            total_contacts=total, active_contacts=active, merged_contacts=merged,
-            missing_phone=missing_phone, missing_name=missing_name,
-            missing_location=missing_loc, missing_area=missing_area,
+            total_contacts=total,
+            active_contacts=active,
+            merged_contacts=merged,
+            missing_phone=missing_phone,
+            missing_name=missing_name,
+            missing_location=missing_loc,
+            missing_area=missing_area,
             avg_quality_score=round(avg, 1),
         )
 

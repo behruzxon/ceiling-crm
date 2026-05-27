@@ -1,4 +1,5 @@
 """Conversation intelligence jobs — health analysis, cooling, manager delay alerts."""
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -95,9 +96,7 @@ async def check_conversation_health() -> None:
             if last_activity_ts:
                 minutes_inactive = max(0, (now_ts - int(last_activity_ts)) // 60)
             else:
-                minutes_inactive = int(
-                    (now - lead.updated_at).total_seconds() / 60
-                )
+                minutes_inactive = int((now - lead.updated_at).total_seconds() / 60)
 
             # Run conversation analysis
             result = analyze_conversation(
@@ -128,7 +127,10 @@ async def check_conversation_health() -> None:
             if result.cooling_detected and not off_hours:
                 dedup_key = CacheKeys.conv_cooling_alert(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1", ttl=CacheTTL.CONV_COOLING_ALERT, nx=True,
+                    dedup_key,
+                    "1",
+                    ttl=CacheTTL.CONV_COOLING_ALERT,
+                    nx=True,
                 )
                 if was_set:
                     temp = lead.lead_temperature or _classify_temp(score)
@@ -144,12 +146,13 @@ async def check_conversation_health() -> None:
                     alerts_sent += 1
 
             # ── Insight alert: critical = anytime, high = business hours
-            if result.risk_level == "critical" or (
-                result.risk_level == "high" and not off_hours
-            ):
+            if result.risk_level == "critical" or (result.risk_level == "high" and not off_hours):
                 dedup_key = CacheKeys.conv_intel_alert(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1", ttl=CacheTTL.CONV_INTEL_ALERT, nx=True,
+                    dedup_key,
+                    "1",
+                    ttl=CacheTTL.CONV_INTEL_ALERT,
+                    nx=True,
                 )
                 if was_set:
                     alert = build_insight_alert(
@@ -251,7 +254,10 @@ async def check_manager_response_delay() -> None:
             # Dedup
             dedup_key = CacheKeys.conv_mgr_delay_alert(lead.id)
             was_set = await redis.set(
-                dedup_key, "1", ttl=CacheTTL.CONV_MGR_DELAY_ALERT, nx=True,
+                dedup_key,
+                "1",
+                ttl=CacheTTL.CONV_MGR_DELAY_ALERT,
+                nx=True,
             )
             if not was_set:
                 continue
@@ -294,6 +300,7 @@ async def _load_lead_memory(user_id: int) -> dict:
     """Load AI memory from Redis. Returns {} on error."""
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         return await _load_ai_memory(user_id)
     except Exception:
         return {}
@@ -304,6 +311,7 @@ async def _get_lead_score(user_id: int) -> int:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
         return int(raw) if raw else 0
     except Exception:

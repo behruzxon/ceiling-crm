@@ -1,4 +1,5 @@
 """Frozen dataclass for Stage 4 APPROVAL_REQUIRED readiness gate."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

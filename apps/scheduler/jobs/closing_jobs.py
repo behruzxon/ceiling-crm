@@ -1,4 +1,5 @@
 """Closing readiness jobs — opportunity alerts and close-loss risk detection."""
+
 from __future__ import annotations
 
 from datetime import UTC
@@ -100,9 +101,7 @@ async def run_closing_scanner() -> None:
                 lead_temperature=signals.get("lead_temperature"),
                 buyer_type=signals.get("buyer_type"),
                 current_stage=signals.get("current_stage"),
-                minutes_since_last_activity=signals.get(
-                    "minutes_since_last_activity", 0
-                ),
+                minutes_since_last_activity=signals.get("minutes_since_last_activity", 0),
                 deal_probability_percent=signals.get("deal_probability_percent"),
             )
 
@@ -114,7 +113,8 @@ async def run_closing_scanner() -> None:
             if readiness.readiness_tier == TIER_READY_TO_CLOSE and not off_hours:
                 dedup_key = CacheKeys.closing_opportunity(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.CLOSING_OPPORTUNITY,
                     nx=True,
                 )
@@ -128,9 +128,7 @@ async def run_closing_scanner() -> None:
                         phone_captured=signals.get("phone_captured", False),
                         area_m2=signals.get("area_m2"),
                         closing_attempted=signals.get("closing_attempted", False),
-                        minutes_since_last_activity=signals.get(
-                            "minutes_since_last_activity", 0
-                        ),
+                        minutes_since_last_activity=signals.get("minutes_since_last_activity", 0),
                         follow_up_count=signals.get("follow_up_count", 0),
                         lead_temperature=signals.get("lead_temperature"),
                     )
@@ -155,9 +153,7 @@ async def run_closing_scanner() -> None:
             risk = detect_close_loss_risk(
                 readiness_tier=readiness.readiness_tier,
                 closing_score=readiness.closing_score,
-                minutes_since_last_activity=signals.get(
-                    "minutes_since_last_activity", 0
-                ),
+                minutes_since_last_activity=signals.get("minutes_since_last_activity", 0),
                 health_score=signals.get("health_score", 50),
                 lead_temperature=signals.get("lead_temperature"),
                 last_objection=signals.get("last_objection"),
@@ -167,7 +163,8 @@ async def run_closing_scanner() -> None:
             if risk.detected:
                 dedup_key = CacheKeys.closing_loss_risk(lead.id)
                 was_set = await redis.set(
-                    dedup_key, "1",
+                    dedup_key,
+                    "1",
                     ttl=CacheTTL.CLOSING_LOSS_RISK,
                     nx=True,
                 )
@@ -207,6 +204,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
     mem: dict = {}
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         mem = await _load_ai_memory(lead.user_id) or {}
     except Exception:
         pass
@@ -216,6 +214,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(lead.user_id))
         if raw:
             ai_score = max(ai_score, int(raw))
@@ -228,9 +227,8 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
         mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
     else:
         from datetime import datetime
-        mins_inactive = int(
-            (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-        )
+
+        mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
     # Health score
     health_score = 50
@@ -238,6 +236,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
         from core.services.conversation_intelligence_service import (
             analyze_conversation,
         )
+
         stage_str = (
             lead.current_stage.value
             if hasattr(lead.current_stage, "value")
@@ -265,6 +264,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
     dp_pct: int | None = None
     try:
         from shared.utils.deal_probability import evaluate_deal_probability
+
         dp = evaluate_deal_probability(
             score=ai_score,
             closing_confidence=lead.closing_confidence,
@@ -283,6 +283,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
     if not buyer_type:
         try:
             from core.services.lead_intelligence_service import analyze_buyer_type
+
             bp = analyze_buyer_type(
                 score=ai_score,
                 closing_confidence=lead.closing_confidence,
@@ -301,9 +302,7 @@ async def _build_lead_signals(lead: object, now_ts: int) -> dict:
         else str(lead.current_stage)
     )
 
-    objection_resolved = bool(
-        mem.get("last_objection") and mem.get("last_negotiation_tactic")
-    )
+    objection_resolved = bool(mem.get("last_objection") and mem.get("last_negotiation_tactic"))
 
     return {
         "score": ai_score,

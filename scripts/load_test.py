@@ -20,6 +20,7 @@ This only works when the bot is running in webhook mode (docker/staging).
 
 For polling mode, use --mode direct to test service layers directly.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -87,12 +88,26 @@ def _percentile(data: list[float], p: float) -> float:
 # ── Fake Telegram update payloads ─────────────────────────────────────────────
 
 _DISTRICTS = [
-    "Chilonzor", "Sergeli", "Yunusobod", "Mirzo Ulug'bek",
-    "Olmazor", "Yakkasaroy", "Shayxontohur", "Mirobod",
+    "Chilonzor",
+    "Sergeli",
+    "Yunusobod",
+    "Mirzo Ulug'bek",
+    "Olmazor",
+    "Yakkasaroy",
+    "Shayxontohur",
+    "Mirobod",
 ]
 _NAMES = [
-    "Alisher", "Dilshod", "Sardor", "Farrux", "Bobur",
-    "Nodira", "Gulnora", "Malika", "Aziza", "Kamola",
+    "Alisher",
+    "Dilshod",
+    "Sardor",
+    "Farrux",
+    "Bobur",
+    "Nodira",
+    "Gulnora",
+    "Malika",
+    "Aziza",
+    "Kamola",
 ]
 _COMMANDS = ["/start", "/menu", "/catalog", "/price", "/help"]
 _TEXTS = [
@@ -173,6 +188,7 @@ def _random_update(user_id: int) -> dict:
 
 # ── HTTP load test (webhook mode) ─────────────────────────────────────────────
 
+
 async def _send_request(
     session: aiohttp.ClientSession,
     url: str,
@@ -239,6 +255,7 @@ async def run_webhook_load_test(
 
 # ── Direct service test (polling mode) ────────────────────────────────────────
 
+
 async def run_direct_load_test(num_users: int, rounds: int) -> Stats:
     """Test service layers directly without HTTP. Requires DB + Redis."""
     stats = Stats()
@@ -257,6 +274,7 @@ async def run_direct_load_test(num_users: int, rounds: int) -> Stats:
         print(f"Round {round_num}/{rounds} — {num_users} DB queries...")
         tasks = []
         for _ in range(num_users):
+
             async def _query() -> None:
                 t0 = time.monotonic()
                 try:
@@ -292,6 +310,7 @@ async def run_direct_load_test(num_users: int, rounds: int) -> Stats:
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="CeilingCRM load test")
     parser.add_argument(
@@ -300,15 +319,21 @@ def main() -> None:
         help="Webhook URL to test (default: http://localhost:8080/webhook)",
     )
     parser.add_argument(
-        "--users", type=int, default=100,
+        "--users",
+        type=int,
+        default=100,
         help="Number of simulated users (default: 100)",
     )
     parser.add_argument(
-        "--rounds", type=int, default=3,
+        "--rounds",
+        type=int,
+        default=3,
         help="Number of rounds (default: 3)",
     )
     parser.add_argument(
-        "--concurrency", type=int, default=50,
+        "--concurrency",
+        type=int,
+        default=50,
         help="Max concurrent requests (default: 50)",
     )
     parser.add_argument(
@@ -328,13 +353,12 @@ def main() -> None:
         # Import aiohttp only when needed
         global aiohttp
         import aiohttp  # noqa: F811
+
         stats = asyncio.run(
             run_webhook_load_test(args.url, args.users, args.rounds, args.concurrency)
         )
     else:
-        stats = asyncio.run(
-            run_direct_load_test(args.users, args.rounds)
-        )
+        stats = asyncio.run(run_direct_load_test(args.users, args.rounds))
 
     print(stats.summary())
 

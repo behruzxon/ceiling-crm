@@ -3,6 +3,7 @@ core.services.crm_dashboard_analytics_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Pure CRM analytics computation from contact/task data. No I/O.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -43,6 +44,7 @@ class CRMDashboardAnalyticsService:
     ) -> CRMDashboardAnalytics:
         from datetime import UTC
         from datetime import datetime as dt
+
         if now is None:
             now = dt.now(UTC)
         tasks = tasks or []
@@ -86,18 +88,30 @@ class CRMDashboardAnalyticsService:
         funnel = CRMDashboardAnalyticsService._build_funnel(statuses, len(contacts))
         task_metrics = CRMDashboardAnalyticsService._compute_task_metrics(tasks)
         recs = CRMDashboardAnalyticsService._build_recommendations(
-            critical, overdue, unanswered, missed, task_metrics, objections,
+            critical,
+            overdue,
+            unanswered,
+            missed,
+            task_metrics,
+            objections,
         )
 
         return CRMDashboardAnalytics(
             generated_at=now.isoformat(),
             total_contacts=len(contacts),
-            hot_leads=temps["hot"], warm_leads=temps["warm"], cold_leads=temps["cold"],
+            hot_leads=temps["hot"],
+            warm_leads=temps["warm"],
+            cold_leads=temps["cold"],
             stopped=statuses.get("stopped", 0),
-            won=statuses.get("won", 0), lost=statuses.get("lost", 0),
-            unanswered_count=unanswered, critical_count=critical, overdue_count=overdue,
-            funnel=funnel, missed=missed,
-            task_open=task_metrics["open"], task_overdue=task_metrics["overdue"],
+            won=statuses.get("won", 0),
+            lost=statuses.get("lost", 0),
+            unanswered_count=unanswered,
+            critical_count=critical,
+            overdue_count=overdue,
+            funnel=funnel,
+            missed=missed,
+            task_open=task_metrics["open"],
+            task_overdue=task_metrics["overdue"],
             task_completed=task_metrics["completed"],
             task_completion_rate=task_metrics["rate"],
             top_intents=dict(sorted(intents.items(), key=lambda x: -x[1])[:10]),
@@ -108,7 +122,8 @@ class CRMDashboardAnalyticsService:
 
     @staticmethod
     def _build_funnel(
-        statuses: dict[str, int], total: int,
+        statuses: dict[str, int],
+        total: int,
     ) -> list[CRMFunnelStage]:
         stages: list[CRMFunnelStage] = []
         prev_count = total or 1
@@ -116,18 +131,22 @@ class CRMDashboardAnalyticsService:
             count = sum(statuses.get(k, 0) for k in keys)
             conv_prev = count / prev_count if prev_count > 0 else 0
             conv_total = count / total if total > 0 else 0
-            stages.append(CRMFunnelStage(
-                name=name, count=count,
-                conversion_from_previous=round(conv_prev, 3),
-                conversion_from_total=round(conv_total, 3),
-            ))
+            stages.append(
+                CRMFunnelStage(
+                    name=name,
+                    count=count,
+                    conversion_from_previous=round(conv_prev, 3),
+                    conversion_from_total=round(conv_total, 3),
+                )
+            )
             if count > 0:
                 prev_count = count
         return stages
 
     @staticmethod
     def _compute_missed(
-        contacts: list[dict[str, Any]], now: datetime,
+        contacts: list[dict[str, Any]],
+        now: datetime,
     ) -> CRMMissedLeadMetrics:
         missed_hot = 0
         missed_op = 0
@@ -151,24 +170,35 @@ class CRMDashboardAnalyticsService:
 
         total = missed_hot + missed_op + missed_phone + missed_price
         return CRMMissedLeadMetrics(
-            missed_lead_count=total, missed_hot_leads=missed_hot,
-            missed_operator_requests=missed_op, missed_phone_shared=missed_phone,
+            missed_lead_count=total,
+            missed_hot_leads=missed_hot,
+            missed_operator_requests=missed_op,
+            missed_phone_shared=missed_phone,
             missed_price_interested=missed_price,
         )
 
     @staticmethod
     def _compute_task_metrics(tasks: list[dict[str, Any]]) -> dict[str, Any]:
         open_count = sum(1 for t in tasks if t.get("status") in ("todo", "in_progress"))
-        overdue = sum(1 for t in tasks if t.get("status") in ("todo", "in_progress") and t.get("overdue"))
+        overdue = sum(
+            1 for t in tasks if t.get("status") in ("todo", "in_progress") and t.get("overdue")
+        )
         completed = sum(1 for t in tasks if t.get("status") == "done")
         total = len(tasks) or 1
-        return {"open": open_count, "overdue": overdue, "completed": completed,
-                "rate": round(completed / total, 3) if tasks else 0.0}
+        return {
+            "open": open_count,
+            "overdue": overdue,
+            "completed": completed,
+            "rate": round(completed / total, 3) if tasks else 0.0,
+        }
 
     @staticmethod
     def _build_recommendations(
-        critical: int, overdue: int, unanswered: int,
-        missed: CRMMissedLeadMetrics, tasks: dict[str, Any],
+        critical: int,
+        overdue: int,
+        unanswered: int,
+        missed: CRMMissedLeadMetrics,
+        tasks: dict[str, Any],
         objections: dict[str, int],
     ) -> list[str]:
         recs: list[str] = []

@@ -1,4 +1,5 @@
 """Tests for Step BK — AdminSecurityAuditService."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -13,13 +14,20 @@ def _now():
 
 
 def _login(status="success", admin_id="u1", ip="1.2.3.4"):
-    return {"status": status, "admin_id": admin_id, "ip_address": ip, "created_at": _now().isoformat()}
+    return {
+        "status": status,
+        "admin_id": admin_id,
+        "ip_address": ip,
+        "created_at": _now().isoformat(),
+    }
 
 
 def _session(status="active", admin_id="u1", ip="1.2.3.4", hours_ago=1, expires_hours=11):
     now = _now()
     return {
-        "status": status, "admin_id": admin_id, "ip_address": ip,
+        "status": status,
+        "admin_id": admin_id,
+        "ip_address": ip,
         "created_at": (now - timedelta(hours=hours_ago)).isoformat(),
         "last_seen_at": (now - timedelta(hours=hours_ago)).isoformat(),
         "expires_at": (now + timedelta(hours=expires_hours)).isoformat(),
@@ -28,8 +36,11 @@ def _session(status="active", admin_id="u1", ip="1.2.3.4", hours_ago=1, expires_
 
 def _audit(action="rbac.denied", status="denied", actor="u1", reason="", created_at=""):
     return {
-        "action": action, "status": status, "actor_admin_id": actor,
-        "reason": reason, "created_at": created_at or _now().isoformat(),
+        "action": action,
+        "status": status,
+        "actor_admin_id": actor,
+        "reason": reason,
+        "created_at": created_at or _now().isoformat(),
         "metadata_json": None,
     }
 
@@ -71,9 +82,12 @@ class TestEmptyDB:
             SensitiveActionMetrics,
             SessionMetrics,
         )
+
         s = svc.detect_suspicious_activity(
-            LoginAttemptMetrics(), SessionMetrics(),
-            PermissionDeniedMetrics(), SensitiveActionMetrics(),
+            LoginAttemptMetrics(),
+            SessionMetrics(),
+            PermissionDeniedMetrics(),
+            SensitiveActionMetrics(),
         )
         assert s == []
 
@@ -228,7 +242,9 @@ class TestSensitiveActionMetrics:
 
     def test_last_action_at(self):
         entries = [
-            _audit(action="agent.settings.mutate", status="success", created_at="2026-05-26T14:00:00"),
+            _audit(
+                action="agent.settings.mutate", status="success", created_at="2026-05-26T14:00:00"
+            ),
         ]
         m = svc.get_sensitive_action_metrics(entries)
         assert "14:00" in m.last_action_at
@@ -243,59 +259,81 @@ class TestSensitiveActionMetrics:
 class TestSuspiciousActivity:
     def _login_metrics(self, **kw):
         from core.services.admin_security_audit_service import LoginAttemptMetrics
+
         return LoginAttemptMetrics(**kw)
 
     def _session_metrics(self, **kw):
         from core.services.admin_security_audit_service import SessionMetrics
+
         return SessionMetrics(**kw)
 
     def _denied_metrics(self, **kw):
         from core.services.admin_security_audit_service import PermissionDeniedMetrics
+
         return PermissionDeniedMetrics(**kw)
 
     def _sensitive_metrics(self, **kw):
         from core.services.admin_security_audit_service import SensitiveActionMetrics
+
         return SensitiveActionMetrics(**kw)
 
     def test_brute_force_ip(self):
         lm = self._login_metrics(top_failed_ips=[("1.1.1.1", 6)])
         indicators = svc.detect_suspicious_activity(
-            lm, self._session_metrics(), self._denied_metrics(), self._sensitive_metrics(),
+            lm,
+            self._session_metrics(),
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert any(i.rule == "brute_force_ip" for i in indicators)
 
     def test_brute_force_admin(self):
         lm = self._login_metrics(top_failed_admin_ids=[("bad_user", 7)])
         indicators = svc.detect_suspicious_activity(
-            lm, self._session_metrics(), self._denied_metrics(), self._sensitive_metrics(),
+            lm,
+            self._session_metrics(),
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert any(i.rule == "brute_force_admin" for i in indicators)
 
     def test_excessive_denied(self):
         dm = self._denied_metrics(by_actor=[("op1", 15)])
         indicators = svc.detect_suspicious_activity(
-            self._login_metrics(), self._session_metrics(), dm, self._sensitive_metrics(),
+            self._login_metrics(),
+            self._session_metrics(),
+            dm,
+            self._sensitive_metrics(),
         )
         assert any(i.rule == "excessive_denied" for i in indicators)
 
     def test_excessive_export(self):
         sm = self._sensitive_metrics(by_action=[("crm.export", 5)])
         indicators = svc.detect_suspicious_activity(
-            self._login_metrics(), self._session_metrics(), self._denied_metrics(), sm,
+            self._login_metrics(),
+            self._session_metrics(),
+            self._denied_metrics(),
+            sm,
         )
         assert any(i.rule == "excessive_export" for i in indicators)
 
     def test_too_many_active_sessions(self):
         sess = self._session_metrics(active=25)
         indicators = svc.detect_suspicious_activity(
-            self._login_metrics(), sess, self._denied_metrics(), self._sensitive_metrics(),
+            self._login_metrics(),
+            sess,
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert any(i.rule == "too_many_active_sessions" for i in indicators)
 
     def test_stale_sessions(self):
         sess = self._session_metrics(stale=8)
         indicators = svc.detect_suspicious_activity(
-            self._login_metrics(), sess, self._denied_metrics(), self._sensitive_metrics(),
+            self._login_metrics(),
+            sess,
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert any(i.rule == "stale_sessions" for i in indicators)
 
@@ -306,8 +344,10 @@ class TestSuspiciousActivity:
             {"status": "active", "admin_id": "u1", "ip_address": "3.3.3.3"},
         ]
         indicators = svc.detect_suspicious_activity(
-            self._login_metrics(), self._session_metrics(),
-            self._denied_metrics(), self._sensitive_metrics(),
+            self._login_metrics(),
+            self._session_metrics(),
+            self._denied_metrics(),
+            self._sensitive_metrics(),
             sessions=sessions,
         )
         assert any(i.rule == "multi_ip_session" for i in indicators)
@@ -315,14 +355,20 @@ class TestSuspiciousActivity:
     def test_no_suspicious_below_thresholds(self):
         lm = self._login_metrics(top_failed_ips=[("1.1.1.1", 2)])
         indicators = svc.detect_suspicious_activity(
-            lm, self._session_metrics(), self._denied_metrics(), self._sensitive_metrics(),
+            lm,
+            self._session_metrics(),
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert len(indicators) == 0
 
     def test_severity_levels(self):
         lm = self._login_metrics(top_failed_ips=[("x", 10)])
         indicators = svc.detect_suspicious_activity(
-            lm, self._session_metrics(), self._denied_metrics(), self._sensitive_metrics(),
+            lm,
+            self._session_metrics(),
+            self._denied_metrics(),
+            self._sensitive_metrics(),
         )
         assert indicators[0].severity == "high"
 
@@ -330,49 +376,73 @@ class TestSuspiciousActivity:
 class TestRecommendations:
     def _lm(self, **kw):
         from core.services.admin_security_audit_service import LoginAttemptMetrics
+
         return LoginAttemptMetrics(**kw)
+
     def _sm(self, **kw):
         from core.services.admin_security_audit_service import SessionMetrics
+
         return SessionMetrics(**kw)
+
     def _dm(self, **kw):
         from core.services.admin_security_audit_service import PermissionDeniedMetrics
+
         return PermissionDeniedMetrics(**kw)
 
     def test_high_failure_rate(self):
         recs = svc.build_security_recommendations(
-            self._lm(total=10, failure_rate=0.5), self._sm(), self._dm(), [],
+            self._lm(total=10, failure_rate=0.5),
+            self._sm(),
+            self._dm(),
+            [],
         )
         assert any(r.priority == "high" for r in recs)
 
     def test_stale_sessions(self):
         recs = svc.build_security_recommendations(
-            self._lm(), self._sm(stale=5), self._dm(), [],
+            self._lm(),
+            self._sm(stale=5),
+            self._dm(),
+            [],
         )
         assert any("stale" in r.title.lower() for r in recs)
 
     def test_expiring_soon(self):
         recs = svc.build_security_recommendations(
-            self._lm(), self._sm(expiring_soon=8), self._dm(), [],
+            self._lm(),
+            self._sm(expiring_soon=8),
+            self._dm(),
+            [],
         )
         assert any("tugaydigan" in r.title.lower() for r in recs)
 
     def test_high_alerts(self):
         from core.services.admin_security_audit_service import SuspiciousIndicator
+
         alerts = [SuspiciousIndicator(severity="high", rule="brute_force")]
         recs = svc.build_security_recommendations(
-            self._lm(), self._sm(), self._dm(), alerts,
+            self._lm(),
+            self._sm(),
+            self._dm(),
+            alerts,
         )
         assert any(r.priority == "high" and "shubhali" in r.title.lower() for r in recs)
 
     def test_many_denied(self):
         recs = svc.build_security_recommendations(
-            self._lm(), self._sm(), self._dm(total_denied=25), [],
+            self._lm(),
+            self._sm(),
+            self._dm(total_denied=25),
+            [],
         )
         assert any("denied" in r.title.lower() for r in recs)
 
     def test_ok_when_clean(self):
         recs = svc.build_security_recommendations(
-            self._lm(), self._sm(), self._dm(), [],
+            self._lm(),
+            self._sm(),
+            self._dm(),
+            [],
         )
         assert any("yaxshi" in r.title.lower() for r in recs)
 
@@ -459,6 +529,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_audit_service import LoginAttemptMetrics
+
         m = LoginAttemptMetrics()
         with pytest.raises(AttributeError):
             m.total = 5  # type: ignore[misc]
@@ -467,6 +538,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_audit_service import SessionMetrics
+
         m = SessionMetrics()
         with pytest.raises(AttributeError):
             m.active = 5  # type: ignore[misc]
@@ -475,6 +547,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_audit_service import SecurityDashboard
+
         d = SecurityDashboard()
         with pytest.raises(AttributeError):
             d.period_hours = 48  # type: ignore[misc]
@@ -483,6 +556,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_audit_service import SuspiciousIndicator
+
         i = SuspiciousIndicator()
         with pytest.raises(AttributeError):
             i.rule = "x"  # type: ignore[misc]
@@ -491,6 +565,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_security_audit_service import SecurityRecommendation
+
         r = SecurityRecommendation()
         with pytest.raises(AttributeError):
             r.title = "x"  # type: ignore[misc]

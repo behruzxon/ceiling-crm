@@ -5,6 +5,7 @@ Covers:
   2. AbstractBlockedChatRepository contract — via AsyncMock(spec=...).
   3. _upsert_blocked_chat helper — patched repo, verifies never-raise contract.
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,6 +16,7 @@ from core.repositories.blocked_chat_repo import AbstractBlockedChatRepository
 from infrastructure.queue.tasks.broadcast_tasks import _classify_error
 
 # ── _classify_error ────────────────────────────────────────────────────────────
+
 
 class TestClassifyError:
     """Pure-function tests — no I/O, no mocks."""
@@ -63,6 +65,7 @@ class TestClassifyError:
 
 
 # ── AbstractBlockedChatRepository contract ─────────────────────────────────────
+
 
 class TestBlockedChatRepositoryContract:
     """Tests against a mocked AbstractBlockedChatRepository.
@@ -113,6 +116,7 @@ class TestBlockedChatRepositoryContract:
 
 # ── _upsert_blocked_chat helper ────────────────────────────────────────────────
 
+
 class TestUpsertBlockedChatHelper:
     """Tests the _upsert_blocked_chat wrapper in broadcast_tasks.
 
@@ -121,6 +125,7 @@ class TestUpsertBlockedChatHelper:
 
     async def test_returns_true_on_new_entry(self) -> None:
         from infrastructure.queue.tasks.broadcast_tasks import _upsert_blocked_chat
+
         mock_repo = AsyncMock(spec=AbstractBlockedChatRepository)
         mock_repo.upsert_block.return_value = True
 
@@ -141,6 +146,7 @@ class TestUpsertBlockedChatHelper:
 
     async def test_returns_false_on_existing_entry(self) -> None:
         from infrastructure.queue.tasks.broadcast_tasks import _upsert_blocked_chat
+
         mock_repo = AsyncMock(spec=AbstractBlockedChatRepository)
         mock_repo.upsert_block.return_value = False
 

@@ -1,4 +1,5 @@
 """Tests for Step AM — StageTransitionGateService."""
+
 from __future__ import annotations
 
 from core.schemas.stage1_observation_report import (
@@ -13,13 +14,18 @@ svc = StageTransitionGateService
 
 def _report(**kw) -> Stage1ObservationReport:
     defaults = {
-        "generated_at": "2026-05-26T12:00:00", "since": "2026-05-26T00:00:00",
-        "until": "2026-05-26T12:00:00", "environment": "test",
-        "duration_minutes": 720, "total_users_observed": 50,
-        "total_journey_events": 100, "total_orchestrator_traces": 80,
+        "generated_at": "2026-05-26T12:00:00",
+        "since": "2026-05-26T00:00:00",
+        "until": "2026-05-26T12:00:00",
+        "environment": "test",
+        "duration_minutes": 720,
+        "total_users_observed": 50,
+        "total_journey_events": 100,
+        "total_orchestrator_traces": 80,
         "intent_counts": {"wants_price": 30, "wants_catalog": 20, "unclear": 10},
         "objection_counts": {"price": 5, "trust": 3},
-        "decision_state_counts": {}, "offer_type_counts": {},
+        "decision_state_counts": {},
+        "offer_type_counts": {},
         "policy_action_counts": {},
         "no_send": Stage1NoSendSafetyMetrics(),
         "health_status": "green",
@@ -150,10 +156,15 @@ class TestReadinessScore:
 
     def test_score_clamped_0_100(self):
         r = svc.evaluate_stage1_to_dry_run(
-            _report(no_send=Stage1NoSendSafetyMetrics(
-                followups_sent=1, admin_escalations_sent=1,
-                execution_records_executed=1, live_sender_executed=1,
-            ), pass_fail=Stage1PassFailResult(passed=False, failures=["x"])),
+            _report(
+                no_send=Stage1NoSendSafetyMetrics(
+                    followups_sent=1,
+                    admin_escalations_sent=1,
+                    execution_records_executed=1,
+                    live_sender_executed=1,
+                ),
+                pass_fail=Stage1PassFailResult(passed=False, failures=["x"]),
+            ),
         )
         assert 0 <= r.readiness_score <= 100
 
@@ -164,17 +175,25 @@ class TestReadinessScore:
 
     def test_conditional_65_84(self):
         r = svc.evaluate_stage1_to_dry_run(
-            _report(health_status="yellow", duration_minutes=20,
-                    total_orchestrator_traces=15, total_journey_events=50),
+            _report(
+                health_status="yellow",
+                duration_minutes=20,
+                total_orchestrator_traces=15,
+                total_journey_events=50,
+            ),
         )
         if 65 <= r.readiness_score < 85 and not r.blockers:
             assert r.verdict == "conditional"
 
     def test_not_ready_below_65(self):
         r = svc.evaluate_stage1_to_dry_run(
-            _report(total_journey_events=0, total_orchestrator_traces=0,
-                    total_users_observed=0, health_status="yellow",
-                    duration_minutes=10),
+            _report(
+                total_journey_events=0,
+                total_orchestrator_traces=0,
+                total_users_observed=0,
+                health_status="yellow",
+                duration_minutes=10,
+            ),
         )
         if r.readiness_score < 65 and not r.blockers:
             assert r.verdict == "not_ready"
@@ -191,7 +210,9 @@ class TestRecommendations:
         r = svc.evaluate_stage1_to_dry_run(
             _report(no_send=Stage1NoSendSafetyMetrics(followups_sent=1)),
         )
-        assert any("rollback" in rec.lower() or "violation" in rec.lower() for rec in r.recommendations)
+        assert any(
+            "rollback" in rec.lower() or "violation" in rec.lower() for rec in r.recommendations
+        )
 
     def test_low_traces_recommends_continue(self):
         rep = _report(total_orchestrator_traces=10, total_journey_events=50)
@@ -226,6 +247,7 @@ class TestEmptyReport:
 class TestImmutability:
     def test_frozen(self):
         import pytest
+
         r = svc.evaluate_stage1_to_dry_run(_report())
         with pytest.raises(AttributeError):
             r.verdict = "x"  # type: ignore[misc]

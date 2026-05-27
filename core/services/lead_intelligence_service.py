@@ -33,6 +33,7 @@ Usage::
     )
     # profile.buyer_type == "fast_buyer"
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -61,24 +62,33 @@ class BuyerProfile:
 
 _TYPE_LABELS: dict[str, str] = {
     "price_sensitive": "Narxga sezgir",
-    "quality_buyer":   "Sifat xaridori",
-    "fast_buyer":      "Tez qaror",
-    "research_buyer":  "Tadqiqotchi",
+    "quality_buyer": "Sifat xaridori",
+    "fast_buyer": "Tez qaror",
+    "research_buyer": "Tadqiqotchi",
 }
 
 _TYPE_STRATEGIES: dict[str, str] = {
     "price_sensitive": "Chegirma yoki byudjet variantini taklif qiling",
-    "quality_buyer":   "Premium dizaynlarni ko'rsating va o'lchov taklif qiling",
-    "fast_buyer":      "Darhol qo'ng'iroq qiling va buyurtmani rasmiylashtiing",
-    "research_buyer":  "Batafsil ma'lumot yuboring va 24 soatdan keyin follow-up",
+    "quality_buyer": "Premium dizaynlarni ko'rsating va o'lchov taklif qiling",
+    "fast_buyer": "Darhol qo'ng'iroq qiling va buyurtmani rasmiylashtiing",
+    "research_buyer": "Batafsil ma'lumot yuboring va 24 soatdan keyin follow-up",
 }
 
 # ── Premium design keywords ─────────────────────────────────────────────────
 
-_PREMIUM_DESIGNS: frozenset[str] = frozenset({
-    "hi-tech", "hitech", "mramor", "naqsh", "kosmos", "osmon",
-    "qora uf", "qora", "gulli",
-})
+_PREMIUM_DESIGNS: frozenset[str] = frozenset(
+    {
+        "hi-tech",
+        "hitech",
+        "mramor",
+        "naqsh",
+        "kosmos",
+        "osmon",
+        "qora uf",
+        "qora",
+        "gulli",
+    }
+)
 
 
 # ── Scoring engine ───────────────────────────────────────────────────────────

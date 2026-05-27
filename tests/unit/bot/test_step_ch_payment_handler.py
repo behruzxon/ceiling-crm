@@ -1,4 +1,5 @@
 """Tests for Step CH — Payment Handler."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,10 +12,12 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.bot.handlers.private import payment
+
         assert payment is not None
 
     def test_router(self):
         from apps.bot.handlers.private.payment import router
+
         assert router is not None
 
 
@@ -29,6 +32,7 @@ class TestPaymentEntry:
 class TestPaymentFSM:
     def test_fsm_states(self):
         from apps.bot.handlers.private.payment import PaymentSubmitFSM
+
         assert hasattr(PaymentSubmitFSM, "waiting_amount")
         assert hasattr(PaymentSubmitFSM, "waiting_proof")
 

@@ -1,4 +1,5 @@
 """Tests for Step U — ApprovedExecutionSenderService."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -184,10 +185,13 @@ class TestMessageSafety:
         assert r.blocked_reason == "high_risk_user_dm"
 
     def test_high_risk_admin_group_allowed(self):
-        r = svc.validate_before_send(_rec(
-            risk="high", channel="admin_group",
-            action="send_admin_alert",
-        ))
+        r = svc.validate_before_send(
+            _rec(
+                risk="high",
+                channel="admin_group",
+                action="send_admin_alert",
+            )
+        )
         assert r.blocked is False
 
 
@@ -232,7 +236,8 @@ class TestSendRecord:
         assert r.would_execute is True
         assert r.status == "executed"
         bot.send_message.assert_called_once_with(
-            chat_id=12345, text="Salom",
+            chat_id=12345,
+            text="Salom",
         )
 
     async def test_send_admin_alert(self):
@@ -384,6 +389,7 @@ class TestSchedulerJob:
         from apps.scheduler.jobs.approved_execution_sender_jobs import (
             process_approved_executions,
         )
+
         assert callable(process_approved_executions)
 
 
@@ -395,27 +401,32 @@ class TestSchedulerJob:
 class TestSettings:
     def test_live_sender_default_false(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_execution_live_sender_enabled"
-        ].default is False
+
+        assert BusinessSettings.model_fields["agent_execution_live_sender_enabled"].default is False
 
     def test_batch_limit_default_10(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_execution_live_sender_batch_limit"
-        ].default == 10
+
+        assert (
+            BusinessSettings.model_fields["agent_execution_live_sender_batch_limit"].default == 10
+        )
 
     def test_revalidate_default_true(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_execution_live_sender_revalidate"
-        ].default is True
+
+        assert (
+            BusinessSettings.model_fields["agent_execution_live_sender_revalidate"].default is True
+        )
 
     def test_mark_failed_default_true(self):
         from shared.config.settings import BusinessSettings
-        assert BusinessSettings.model_fields[
-            "agent_execution_live_sender_mark_failed_on_error"
-        ].default is True
+
+        assert (
+            BusinessSettings.model_fields[
+                "agent_execution_live_sender_mark_failed_on_error"
+            ].default
+            is True
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -428,25 +439,33 @@ class TestNonRegression:
         from core.services.agent_execution_queue_service import (
             AgentExecutionQueueService,
         )
+
         assert callable(AgentExecutionQueueService.can_execute)
 
     def test_sandbox_still_works(self):
         from core.services.agent_execution_sandbox_service import (
             AgentExecutionSandboxService,
         )
+
         assert AgentExecutionSandboxService is not None
 
     def test_orchestrator_still_works(self):
         from core.services.agent_response_orchestrator import (
             AgentResponseOrchestrator,
         )
-        mem = {"followup_enabled": True, "memory_data": {},
-               "lead_temperature": "warm", "telegram_user_id": 1}
+
+        mem = {
+            "followup_enabled": True,
+            "memory_data": {},
+            "lead_temperature": "warm",
+            "telegram_user_id": 1,
+        }
         p = AgentResponseOrchestrator.run_pipeline(mem, text="narxi qancha")
         assert p.action == "send_user_reply"
 
     def test_signal_still_works(self):
         from core.services.lead_signal_service import LeadSignalService
+
         sig = LeadSignalService.extract_signals("kerak emas")
         assert sig.intent == "stop_request"
 
@@ -524,9 +543,13 @@ class TestAdminAlertDetails:
         assert call_args.kwargs.get("chat_id") == 77777
 
     async def test_admin_alert_no_message_check(self):
-        r = svc.validate_before_send(_rec(
-            action="send_admin_alert", msg="", channel="admin_group",
-        ))
+        r = svc.validate_before_send(
+            _rec(
+                action="send_admin_alert",
+                msg="",
+                channel="admin_group",
+            )
+        )
         assert r.blocked is False
 
 
@@ -579,7 +602,11 @@ class TestEdgeCases:
         assert call_args.kwargs.get("chat_id") == 55555
 
     def test_low_risk_admin_group_allowed(self):
-        r = svc.validate_before_send(_rec(
-            risk="low", channel="admin_group", action="send_admin_alert",
-        ))
+        r = svc.validate_before_send(
+            _rec(
+                risk="low",
+                channel="admin_group",
+                action="send_admin_alert",
+            )
+        )
         assert r.blocked is False

@@ -2,6 +2,7 @@
 Lead card inline keyboard callbacks.
 Handles button presses on lead cards sent to admin group.
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -74,10 +75,12 @@ async def cb_assign_lead(callback: CallbackQuery, **data: object) -> None:
             return
 
         buttons = [
-            [InlineKeyboardButton(
-                text=f"👤 {m.full_name}",
-                callback_data=f"lead:do_assign:{lead_id}:{m.id}",
-            )]
+            [
+                InlineKeyboardButton(
+                    text=f"👤 {m.full_name}",
+                    callback_data=f"lead:do_assign:{lead_id}:{m.id}",
+                )
+            ]
             for m in managers
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)

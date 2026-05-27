@@ -4,6 +4,7 @@ Revision ID: x9y0z1a2b3c4
 Revises: w8x9y0z1a2b3
 Create Date: 2026-05-26 06:50:00.000000
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -25,8 +26,9 @@ def upgrade() -> None:
         sa.Column("description", sa.String(255), nullable=True),
         sa.Column("updated_by", sa.BigInteger, nullable=True),
         sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True),
-                  server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("is_active", sa.Boolean, server_default=sa.text("true")),
     )
     op.create_index("ix_runtime_setting_active", "agent_runtime_settings", ["is_active"])
@@ -44,13 +46,14 @@ def upgrade() -> None:
         sa.Column("rollback_snapshot_json", sa.JSON, nullable=True),
         sa.Column("validation_result_json", sa.JSON, nullable=True),
         sa.Column("reason", sa.String(500), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True),
-                  server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_audit_key_created", "agent_setting_audit_logs",
-                    ["setting_key", "created_at"])
-    op.create_index("ix_audit_action_created", "agent_setting_audit_logs",
-                    ["action", "created_at"])
+    op.create_index(
+        "ix_audit_key_created", "agent_setting_audit_logs", ["setting_key", "created_at"]
+    )
+    op.create_index("ix_audit_action_created", "agent_setting_audit_logs", ["action", "created_at"])
 
 
 def downgrade() -> None:

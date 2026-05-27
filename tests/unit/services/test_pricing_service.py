@@ -1,4 +1,5 @@
 """Unit tests for PricingService quote calculation."""
+
 from __future__ import annotations
 
 from decimal import Decimal

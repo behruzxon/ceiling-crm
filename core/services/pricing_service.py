@@ -1,6 +1,7 @@
 """
 PricingService — quote calculation engine.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -91,61 +92,75 @@ class PricingService:
         details: list[QuoteAddonDetail] = []
 
         if addons.led_strip:
-            details.append(QuoteAddonDetail(
-                name="LED strip",
-                quantity=perimeter,
-                unit_price=ADDON_PRICES["led_strip"],
-                total=perimeter * ADDON_PRICES["led_strip"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="LED strip",
+                    quantity=perimeter,
+                    unit_price=ADDON_PRICES["led_strip"],
+                    total=perimeter * ADDON_PRICES["led_strip"],
+                )
+            )
 
         if addons.led_rgb:
-            details.append(QuoteAddonDetail(
-                name="LED RGB",
-                quantity=perimeter,
-                unit_price=ADDON_PRICES["led_rgb"],
-                total=perimeter * ADDON_PRICES["led_rgb"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="LED RGB",
+                    quantity=perimeter,
+                    unit_price=ADDON_PRICES["led_rgb"],
+                    total=perimeter * ADDON_PRICES["led_rgb"],
+                )
+            )
 
         if addons.chandelier_holes > 0:
             qty = Decimal(addons.chandelier_holes)
-            details.append(QuoteAddonDetail(
-                name="Chandelier holes",
-                quantity=qty,
-                unit_price=ADDON_PRICES["chandelier_holes"],
-                total=qty * ADDON_PRICES["chandelier_holes"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="Chandelier holes",
+                    quantity=qty,
+                    unit_price=ADDON_PRICES["chandelier_holes"],
+                    total=qty * ADDON_PRICES["chandelier_holes"],
+                )
+            )
 
         if addons.spot_holes > 0:
             qty = Decimal(addons.spot_holes)
-            details.append(QuoteAddonDetail(
-                name="Spot light holes",
-                quantity=qty,
-                unit_price=ADDON_PRICES["spot_holes"],
-                total=qty * ADDON_PRICES["spot_holes"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="Spot light holes",
+                    quantity=qty,
+                    unit_price=ADDON_PRICES["spot_holes"],
+                    total=qty * ADDON_PRICES["spot_holes"],
+                )
+            )
 
         if addons.cornice:
-            details.append(QuoteAddonDetail(
-                name="Cornice",
-                quantity=perimeter,
-                unit_price=ADDON_PRICES["cornice"],
-                total=perimeter * ADDON_PRICES["cornice"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="Cornice",
+                    quantity=perimeter,
+                    unit_price=ADDON_PRICES["cornice"],
+                    total=perimeter * ADDON_PRICES["cornice"],
+                )
+            )
 
         if addons.profile_rounding:
-            details.append(QuoteAddonDetail(
-                name="Profile rounding",
-                quantity=Decimal("1"),
-                unit_price=ADDON_PRICES["profile_rounding"],
-                total=ADDON_PRICES["profile_rounding"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="Profile rounding",
+                    quantity=Decimal("1"),
+                    unit_price=ADDON_PRICES["profile_rounding"],
+                    total=ADDON_PRICES["profile_rounding"],
+                )
+            )
 
         if addons.two_level_step:
-            details.append(QuoteAddonDetail(
-                name="Two-level step",
-                quantity=Decimal("1"),
-                unit_price=ADDON_PRICES["two_level_step"],
-                total=ADDON_PRICES["two_level_step"],
-            ))
+            details.append(
+                QuoteAddonDetail(
+                    name="Two-level step",
+                    quantity=Decimal("1"),
+                    unit_price=ADDON_PRICES["two_level_step"],
+                    total=ADDON_PRICES["two_level_step"],
+                )
+            )
 
         return details

@@ -3,6 +3,7 @@ core.services.crm_conversation_sync_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Full conversation timeline sync + answered/unanswered logic. Pure functions.
 """
+
 from __future__ import annotations
 
 import re
@@ -112,12 +113,16 @@ class CRMConversationSyncService:
         timeline_counts: dict[str, int] | None = None,
     ) -> dict[str, Any]:
         answered = CRMConversationSyncService.compute_answered_status(
-            last_inbound_at, last_bot_reply_at, last_operator_reply_at, lead_status,
+            last_inbound_at,
+            last_bot_reply_at,
+            last_operator_reply_at,
+            lead_status,
         )
         unanswered_min = None
         if answered["is_unanswered"] and last_inbound_at:
             from datetime import UTC
             from datetime import datetime as dt
+
             now = dt.now(UTC)
             unanswered_min = max(0, int((now - last_inbound_at).total_seconds() / 60))
 
@@ -126,7 +131,9 @@ class CRMConversationSyncService:
             "answered_by": answered["answered_by"],
             "last_inbound_at": last_inbound_at.isoformat() if last_inbound_at else None,
             "last_bot_reply_at": last_bot_reply_at.isoformat() if last_bot_reply_at else None,
-            "last_operator_reply_at": last_operator_reply_at.isoformat() if last_operator_reply_at else None,
+            "last_operator_reply_at": (
+                last_operator_reply_at.isoformat() if last_operator_reply_at else None
+            ),
             "unanswered_minutes": unanswered_min,
             "timeline_counts": timeline_counts or {},
         }

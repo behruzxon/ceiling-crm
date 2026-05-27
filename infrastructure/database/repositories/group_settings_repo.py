@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractGroupSettingsRepository."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -10,14 +11,16 @@ from core.repositories.group_settings_repo import AbstractGroupSettingsRepositor
 from infrastructure.database.models.group_settings import GroupSettingsModel
 
 # Whitelist — only these fields may be toggled or set via set_field().
-_ALLOWED_FIELDS: frozenset[str] = frozenset({
-    "welcome_enabled",
-    "welcome_autodelete_seconds",
-    "captcha_enabled",
-    "link_block_enabled",
-    "flood_enabled",
-    "logs_enabled",
-})
+_ALLOWED_FIELDS: frozenset[str] = frozenset(
+    {
+        "welcome_enabled",
+        "welcome_autodelete_seconds",
+        "captcha_enabled",
+        "link_block_enabled",
+        "flood_enabled",
+        "logs_enabled",
+    }
+)
 
 
 class PostgresGroupSettingsRepository(AbstractGroupSettingsRepository):

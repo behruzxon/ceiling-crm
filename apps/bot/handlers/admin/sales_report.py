@@ -5,6 +5,7 @@ apps.bot.handlers.admin.sales_report
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

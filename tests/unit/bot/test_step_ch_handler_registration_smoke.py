@@ -1,4 +1,5 @@
 """Tests for Step CH — Handler Registration Smoke."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,26 +8,32 @@ from pathlib import Path
 class TestAllModulesImport:
     def test_catalog(self):
         from apps.bot.handlers.private.catalog import router
+
         assert router is not None
 
     def test_packages(self):
         from apps.bot.handlers.private.packages import router
+
         assert router is not None
 
     def test_order(self):
         from apps.bot.handlers.private.order import router
+
         assert router is not None
 
     def test_lead_capture(self):
         from apps.bot.handlers.private.lead_capture import router
+
         assert router is not None
 
     def test_measurement_lead(self):
         from apps.bot.handlers.private.measurement_lead import router
+
         assert router is not None
 
     def test_payment(self):
         from apps.bot.handlers.private.payment import router
+
         assert router is not None
 
 
@@ -40,6 +47,7 @@ class TestNoCircularImport:
             packages,  # noqa: F401
             payment,  # noqa: F401
         )
+
         assert True
 
     def test_with_ai_support(self):
@@ -48,16 +56,19 @@ class TestNoCircularImport:
             catalog,  # noqa: F401
             order,  # noqa: F401
         )
+
         assert True
 
 
 class TestDispatcher:
     def test_build_dispatcher_imports(self):
         from apps.bot.main import build_dispatcher
+
         assert callable(build_dispatcher)
 
     def test_bot_commands(self):
         from apps.bot.main import BOT_COMMANDS
+
         assert len(BOT_COMMANDS) >= 10
 
 
@@ -79,6 +90,7 @@ class TestRouterRegistration:
 class TestScheduler:
     def test_scheduler_unaffected(self):
         import apps.scheduler.main  # noqa: F401
+
         assert True
 
 

@@ -4,6 +4,7 @@ core.services.stage2_dryrun_report_service
 Read-only DRY_RUN observation report. Aggregates sandbox/execution metrics.
 No mutations, no sends.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -62,7 +63,8 @@ class Stage2DryRunReportService:
 
         return Stage2DryRunReport(
             generated_at=report.generated_at,
-            since=report.since, until=report.until,
+            since=report.since,
+            until=report.until,
             environment=report.environment,
             duration_minutes=report.duration_minutes,
             total_payloads=report.total_payloads,
@@ -141,17 +143,22 @@ class Stage2DryRunReportService:
         return recs
 
     async def _collect_execution_metrics(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> dict:
         try:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
+
             base = sa.select(M).where(M.created_at.between(since, until))
 
-            total = (await self._session.execute(
-                sa.select(sa.func.count()).select_from(base.subquery()),
-            )).scalar() or 0
+            total = (
+                await self._session.execute(
+                    sa.select(sa.func.count()).select_from(base.subquery()),
+                )
+            ).scalar() or 0
 
             status_q = (
                 sa.select(M.status, sa.func.count())
@@ -192,20 +199,31 @@ class Stage2DryRunReportService:
                 "by_block_reason": {},
             }
         except Exception:
-            return {"total": 0, "would_execute": 0, "blocked": 0,
-                    "by_action": {}, "by_risk": {}, "by_channel": {},
-                    "by_block_reason": {}}
+            return {
+                "total": 0,
+                "would_execute": 0,
+                "blocked": 0,
+                "by_action": {},
+                "by_risk": {},
+                "by_channel": {},
+                "by_block_reason": {},
+            }
 
     async def _collect_no_send(
-        self, since: datetime, until: datetime,
+        self,
+        since: datetime,
+        until: datetime,
     ) -> Stage2NoSendSafetyMetrics:
         executed = 0
         try:
             from infrastructure.database.models.agent_execution_record import (
                 AgentExecutionRecordModel as M,
             )
+
             r = await self._session.execute(
-                sa.select(sa.func.count()).select_from(M).where(
+                sa.select(sa.func.count())
+                .select_from(M)
+                .where(
                     M.executed_at.between(since, until),
                 ),
             )
@@ -219,6 +237,7 @@ class Stage2DryRunReportService:
     async def _get_health(self) -> str:
         try:
             from core.services.agent_metrics_service import AgentMetricsService
+
             svc = AgentMetricsService(self._session)
             o = await svc.get_overview()
             return o.health.status

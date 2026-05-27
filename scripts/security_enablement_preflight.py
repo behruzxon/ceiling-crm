@@ -9,6 +9,7 @@ Usage:
     python scripts/security_enablement_preflight.py --stage S3
     python scripts/security_enablement_preflight.py --json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,9 +46,13 @@ def gather_settings() -> dict:
         "admin_session_secure_cookie": _env_bool("ADMIN_SESSION_SECURE_COOKIE", True),
         "admin_csrf_enabled": _env_bool("ADMIN_CSRF_ENABLED", False),
         "admin_security_actions_enabled": _env_bool("ADMIN_SECURITY_ACTIONS_ENABLED", False),
-        "admin_security_action_audit_enabled": _env_bool("ADMIN_SECURITY_ACTION_AUDIT_ENABLED", True),
+        "admin_security_action_audit_enabled": _env_bool(
+            "ADMIN_SECURITY_ACTION_AUDIT_ENABLED", True
+        ),
         "admin_ip_rules_enabled": _env_bool("ADMIN_IP_RULES_ENABLED", False),
-        "admin_ip_block_enforcement_enabled": _env_bool("ADMIN_IP_BLOCK_ENFORCEMENT_ENABLED", False),
+        "admin_ip_block_enforcement_enabled": _env_bool(
+            "ADMIN_IP_BLOCK_ENFORCEMENT_ENABLED", False
+        ),
         "admin_login_max_attempts": _env_int("ADMIN_LOGIN_MAX_ATTEMPTS", 5),
     }
 
@@ -59,6 +64,7 @@ def main() -> int:
     args = parser.parse_args()
 
     from core.services.security_enablement_service import SecurityEnablementService
+
     svc = SecurityEnablementService
 
     settings = gather_settings()
@@ -73,6 +79,7 @@ def main() -> int:
 
     if args.json:
         from dataclasses import asdict
+
         print(json.dumps(asdict(report), indent=2, ensure_ascii=False))
         return 0 if report.can_proceed else 1
 

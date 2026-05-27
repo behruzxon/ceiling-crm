@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for ai_tactic_outcomes table — outcome-based learning."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,22 +28,29 @@ class AiTacticOutcomeModel(Base):
 
     # Context snapshot
     lead_score_at_time: Mapped[int] = mapped_column(
-        sa.Integer, server_default="0", nullable=False,
+        sa.Integer,
+        server_default="0",
+        nullable=False,
     )
     stage_at_time: Mapped[str | None] = mapped_column(sa.String(32), nullable=True)
     lead_temperature_at_time: Mapped[str | None] = mapped_column(
-        sa.String(16), nullable=True,
+        sa.String(16),
+        nullable=True,
     )
 
     # Outcome (resolved by scheduler job)
     outcome: Mapped[str] = mapped_column(
-        sa.String(32), server_default="pending", nullable=False,
+        sa.String(32),
+        server_default="pending",
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
     resolved_at: Mapped[datetime | None] = mapped_column(
-        sa.TIMESTAMP(timezone=True), nullable=True,
+        sa.TIMESTAMP(timezone=True),
+        nullable=True,
     )
 
     __table_args__ = (

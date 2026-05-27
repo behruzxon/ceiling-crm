@@ -1,4 +1,5 @@
 """Tests for Step CO — Operator Handoff Bot Wiring."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -116,8 +117,7 @@ class TestStopNotHandoff:
             0,
         )
         op_idx = next(
-            (i for i, ln in enumerate(lines)
-             if "_try_operator_handoff" in ln and "def " not in ln),
+            (i for i, ln in enumerate(lines) if "_try_operator_handoff" in ln and "def " not in ln),
             9999,
         )
         assert obj_idx < op_idx
@@ -126,23 +126,27 @@ class TestStopNotHandoff:
 class TestAIKeyboardPreserved:
     def test_keyboard_size(self):
         from apps.bot.handlers.private.ai_states import _ai_keyboard
+
         kb = _ai_keyboard()
         flat = [btn.text for row in kb.keyboard for btn in row]
         assert len(flat) == 6
 
     def test_operator_button_still_exists(self):
         from apps.bot.handlers.private.ai_states import BTN_AI_OPERATOR
+
         assert "Operator" in BTN_AI_OPERATOR
 
 
 class TestConfigFlags:
     def test_queue_enabled_default(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_queue_enabled"].default is True
 
     def test_admin_notify_disabled(self):
         from shared.config.settings import BusinessSettings
+
         f = BusinessSettings.model_fields
         assert f["crm_operator_handoff_admin_notify_enabled"].default is False
 
@@ -150,12 +154,15 @@ class TestConfigFlags:
 class TestSmoke:
     def test_dispatcher(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_ai_support(self):
         from apps.bot.handlers.private import ai_support
+
         assert ai_support is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

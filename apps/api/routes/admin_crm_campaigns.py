@@ -2,6 +2,7 @@
 CRM Marketing Segments & Campaign Drafts API endpoints.
 Send always disabled — draft/preview only.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -40,6 +41,7 @@ class DraftUpdateBody(BaseModel):
 @router.get("/segments")
 async def list_segments() -> dict:
     from core.services.crm_campaign_service import CRMCampaignService
+
     segments = CRMCampaignService.get_available_segments()
     return {"segments": [asdict(s) for s in segments]}
 
@@ -47,6 +49,7 @@ async def list_segments() -> dict:
 @router.post("/preview-recipients")
 async def preview_recipients(body: PreviewRecipientsBody) -> dict:
     from core.services.crm_campaign_service import CRMCampaignService
+
     if not CRMCampaignService.is_valid_segment(body.segment_key):
         return {"ok": False, "error": f"invalid_segment:{body.segment_key}"}
     result = CRMCampaignService.preview_recipients([], body.segment_key, body.limit)
@@ -56,6 +59,7 @@ async def preview_recipients(body: PreviewRecipientsBody) -> dict:
 @router.post("/safety-check")
 async def safety_check(body: SafetyCheckBody) -> dict:
     from core.services.crm_campaign_service import CRMCampaignService
+
     if not CRMCampaignService.is_valid_segment(body.segment_key):
         return {"ok": False, "error": f"invalid_segment:{body.segment_key}"}
     validation = CRMCampaignService.validate_draft("check", body.segment_key, body.message_text)
@@ -77,16 +81,26 @@ async def list_drafts(
 @router.post("/drafts")
 async def create_draft(body: DraftCreateBody) -> dict:
     from core.services.crm_campaign_service import CRMCampaignService
+
     validation = CRMCampaignService.validate_draft(
-        body.name, body.segment_key, body.message_text,
+        body.name,
+        body.segment_key,
+        body.message_text,
     )
     if not validation.ok:
         return {"ok": False, "error": validation.error}
     draft = CRMCampaignService.build_draft_dict(
-        name=body.name, segment_key=body.segment_key,
-        message_text=body.message_text, created_by="api",
+        name=body.name,
+        segment_key=body.segment_key,
+        message_text=body.message_text,
+        created_by="api",
     )
-    return {"ok": True, "preview": draft, "warnings": validation.warnings, "note": "Draft preview — DB not wired"}
+    return {
+        "ok": True,
+        "preview": draft,
+        "warnings": validation.warnings,
+        "note": "Draft preview — DB not wired",
+    }
 
 
 @router.get("/drafts/{campaign_id}")
@@ -130,6 +144,7 @@ class SendLimitedBody(BaseModel):
 @router.post("/drafts/{campaign_id}/send-preview")
 async def send_preview(campaign_id: int, body: SendPreviewBody) -> dict:
     from core.services.crm_campaign_send_service import CRMCampaignSendService
+
     svc = CRMCampaignSendService
     campaign = {"id": campaign_id, "status": "draft", "message_text": ""}
     validation = svc.validate_campaign_for_send(campaign, send_enabled=False, dry_run_only=True)
@@ -147,6 +162,7 @@ async def dry_run(campaign_id: int, body: DryRunBody) -> dict:
     from dataclasses import asdict
 
     from core.services.crm_campaign_send_service import CRMCampaignSendService
+
     campaign = {"id": campaign_id, "status": "draft", "message_text": "Salom {first_name}!"}
     result = CRMCampaignSendService.dry_run(campaign, [], max_recipients=body.limit)
     return asdict(result)
@@ -155,10 +171,14 @@ async def dry_run(campaign_id: int, body: DryRunBody) -> dict:
 @router.post("/drafts/{campaign_id}/send-limited")
 async def send_limited(campaign_id: int, body: SendLimitedBody) -> dict:
     from core.services.crm_campaign_send_service import CRMCampaignSendService
+
     svc = CRMCampaignSendService
     campaign = {"id": campaign_id, "status": "draft", "message_text": ""}
     validation = svc.validate_campaign_for_send(
-        campaign, send_enabled=False, dry_run_only=True, confirm=body.confirm,
+        campaign,
+        send_enabled=False,
+        dry_run_only=True,
+        confirm=body.confirm,
     )
     if not validation.allowed:
         return {"ok": False, "blockers": validation.blockers, "note": "Send disabled"}
@@ -178,6 +198,7 @@ async def campaign_analytics(
     from dataclasses import asdict
 
     from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
+
     analytics = CRMCampaignAnalyticsService.build_campaign_analytics(campaign_id, [])
     return asdict(analytics)
 
@@ -189,5 +210,6 @@ async def campaign_dashboard(
     from dataclasses import asdict
 
     from core.services.crm_campaign_analytics_service import CRMCampaignAnalyticsService
+
     summary = CRMCampaignAnalyticsService.build_dashboard_summary([], [])
     return asdict(summary)

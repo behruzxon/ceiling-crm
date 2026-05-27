@@ -2,6 +2,7 @@
 Admin /system_status command.
 Shows database, Redis, OpenAI connectivity and uptime diagnostics.
 """
+
 from __future__ import annotations
 
 import time

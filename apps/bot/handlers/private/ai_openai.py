@@ -6,6 +6,7 @@ and the main ``_call_ai`` function.
 
 No dependencies on other ``ai_*`` sibling modules.
 """
+
 from __future__ import annotations
 
 import json
@@ -39,14 +40,15 @@ log = get_logger(__name__)
 
 # ── Tuneable constants ───────────────────────────────────────────────────────
 
-_MAX_MESSAGES = 12           # rolling window size stored in ai_conversations
-_HISTORY_TO_SEND = 8         # how many messages to pass to OpenAI per call
+_MAX_MESSAGES = 12  # rolling window size stored in ai_conversations
+_HISTORY_TO_SEND = 8  # how many messages to pass to OpenAI per call
 _SUMMARY_EVERY_N_TURNS = 10  # regenerate summary every N user turns
-_MAX_REQUEST_TOKENS = 8000   # hard cap on total prompt tokens per OpenAI call
-_CHARS_PER_TOKEN = 3         # conservative estimate (real ≈ 3.5-4 for Uzbek)
+_MAX_REQUEST_TOKENS = 8000  # hard cap on total prompt tokens per OpenAI call
+_CHARS_PER_TOKEN = 3  # conservative estimate (real ≈ 3.5-4 for Uzbek)
 
 
 # ── Context builder ─────────────────────────────────────────────────────────
+
 
 def _build_context_block(
     profile: dict[str, Any],
@@ -78,6 +80,7 @@ def _build_context_block(
 
 
 # ── DB helpers (all non-fatal) ──────────────────────────────────────────────
+
 
 async def _load_context(
     user_id: int,
@@ -117,7 +120,9 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
         raw = m.get("text", "")
         if m["role"] == "user":
             text = sanitize_user_text_for_prompt(
-                raw, max_length=300, placeholder=_BLOCKED,
+                raw,
+                max_length=300,
+                placeholder=_BLOCKED,
             )
             if text == _BLOCKED:
                 log.warning(
@@ -142,7 +147,7 @@ async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
         max_tokens=150,
         messages=[
             {"role": "system", "content": _SUMMARY_SYSTEM},
-            {"role": "user",   "content": history_text},
+            {"role": "user", "content": history_text},
         ],
         max_retries=2,
         base_delay=1.0,
@@ -174,7 +179,7 @@ async def _persist_exchange(
         new_messages = (
             current_messages
             + [
-                {"role": "user",      "text": user_text},
+                {"role": "user", "text": user_text},
                 {"role": "assistant", "text": assistant_text},
             ]
         )[-_MAX_MESSAGES:]
@@ -278,9 +283,7 @@ async def _store_user_message_only(
 ) -> None:
     """Persist the user's message even when the AI call fails."""
     try:
-        new_messages = (
-            current_messages + [{"role": "user", "text": user_text}]
-        )[-_MAX_MESSAGES:]
+        new_messages = (current_messages + [{"role": "user", "text": user_text}])[-_MAX_MESSAGES:]
 
         factory = get_session_factory()
         async with factory() as session:
@@ -301,6 +304,7 @@ async def _store_user_message_only(
 
 
 # ── OpenAI call ─────────────────────────────────────────────────────────────
+
 
 async def _call_ai(
     user_text: str,

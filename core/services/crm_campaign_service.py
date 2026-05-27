@@ -4,6 +4,7 @@ core.services.crm_campaign_service
 Marketing segment selection, campaign draft validation, recipient preview,
 safety checks. Pure functions — no DB I/O. Send always disabled.
 """
+
 from __future__ import annotations
 
 import re
@@ -109,18 +110,23 @@ class CRMCampaignService:
         exclude_marketing_disabled: bool = True,
     ) -> dict[str, Any]:
         eligible, excluded = CRMCampaignService.filter_recipients(
-            contacts, segment_key, exclude_stopped, exclude_marketing_disabled,
+            contacts,
+            segment_key,
+            exclude_stopped,
+            exclude_marketing_disabled,
         )
         preview = []
         for c in eligible[:max_preview]:
-            preview.append({
-                "contact_id": c.get("id", 0),
-                "first_name": c.get("first_name", ""),
-                "username": c.get("username", ""),
-                "lead_status": c.get("lead_status", ""),
-                "temperature": c.get("temperature", ""),
-                "lead_score": c.get("lead_score", 0),
-            })
+            preview.append(
+                {
+                    "contact_id": c.get("id", 0),
+                    "first_name": c.get("first_name", ""),
+                    "username": c.get("username", ""),
+                    "lead_status": c.get("lead_status", ""),
+                    "temperature": c.get("temperature", ""),
+                    "lead_score": c.get("lead_score", 0),
+                }
+            )
         return {
             "segment_key": segment_key,
             "total_eligible": len(eligible),
@@ -145,7 +151,9 @@ class CRMCampaignService:
         if not message_text or not message_text.strip():
             return DraftValidation(ok=False, error="message_required")
         if len(message_text) > max_message_length:
-            return DraftValidation(ok=False, error=f"message_too_long:{len(message_text)}/{max_message_length}")
+            return DraftValidation(
+                ok=False, error=f"message_too_long:{len(message_text)}/{max_message_length}"
+            )
         if _TOKEN_RE.search(message_text):
             return DraftValidation(ok=False, error="message_contains_token")
         if _BOT_TOKEN_RE.search(message_text):
@@ -183,7 +191,8 @@ class CRMCampaignService:
         return SafetyCheckResult(
             status=status,
             reasons=reasons,
-            allowed=len([r for r in reasons if r not in ("send_disabled", "large_recipient_list")]) == 0,
+            allowed=len([r for r in reasons if r not in ("send_disabled", "large_recipient_list")])
+            == 0,
             send_enabled=send_enabled,
         )
 

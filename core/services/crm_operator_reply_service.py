@@ -3,6 +3,7 @@ core.services.crm_operator_reply_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Operator reply validation and send (mockable). Feature-flag gated.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -78,8 +79,10 @@ class CRMOperatorReplyService:
 
         return ReplyPreviewResult(
             allowed=len(blockers) == 0,
-            blockers=blockers, warnings=warnings,
-            sanitized_preview=preview, message_hash=msg_hash,
+            blockers=blockers,
+            warnings=warnings,
+            sanitized_preview=preview,
+            message_hash=msg_hash,
         )
 
     @staticmethod

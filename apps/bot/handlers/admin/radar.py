@@ -9,6 +9,7 @@ admin card.
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from aiogram import Router
@@ -96,17 +97,19 @@ async def _build_signals_batch(leads: list) -> list[dict]:
         except Exception:
             log.warning("radar_signal_build_failed", lead_id=lead.id)
             # Fallback: minimal signals from DB fields only
-            results.append({
-                "lead_id": lead.id,
-                "score": lead.score or 0,
-                "phone_captured": bool(lead.phone),
-                "has_area": lead.room_area is not None,
-                "has_district": bool(lead.district),
-                "lead_status": lead.lead_status,
-                "lead_temperature": lead.lead_temperature,
-                "closing_confidence": lead.closing_confidence,
-                "follow_up_count": lead.follow_up_count or 0,
-            })
+            results.append(
+                {
+                    "lead_id": lead.id,
+                    "score": lead.score or 0,
+                    "phone_captured": bool(lead.phone),
+                    "has_area": lead.room_area is not None,
+                    "has_district": bool(lead.district),
+                    "lead_status": lead.lead_status,
+                    "lead_temperature": lead.lead_temperature,
+                    "closing_confidence": lead.closing_confidence,
+                    "follow_up_count": lead.follow_up_count or 0,
+                }
+            )
     return results
 
 
@@ -124,6 +127,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     ai_score = lead.score or 0
     try:
         from apps.bot.handlers.private.ai_scoring import _get_lead_score
+
         redis_score = await _get_lead_score(lead.user_id)
         if redis_score > ai_score:
             ai_score = redis_score
@@ -137,6 +141,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
             build_signal_vector,
             with_deal_probability,
         )
+
         sv = build_signal_vector(
             lead_score=ai_score,
             closing_confidence=lead.closing_confidence,
@@ -159,8 +164,11 @@ async def _build_signals_for_lead(lead: object) -> dict:
     dp_pct: int | None = None
     try:
         from shared.utils.deal_probability import evaluate_deal_probability
-        dp = evaluate_deal_probability(signal_vector=sv) if sv else \
-            evaluate_deal_probability(
+
+        dp = (
+            evaluate_deal_probability(signal_vector=sv)
+            if sv
+            else evaluate_deal_probability(
                 score=ai_score,
                 closing_confidence=lead.closing_confidence,
                 phone_captured=bool(lead.phone),
@@ -169,6 +177,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
                 has_district=bool(lead.district),
                 follow_up_count=lead.follow_up_count or 0,
             )
+        )
         dp_pct = dp.deal_probability_percent
         # Update SV with dp result
         if sv:
@@ -181,6 +190,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     if not buyer_type:
         try:
             from core.services.lead_intelligence_service import analyze_buyer_type
+
             bp = analyze_buyer_type(
                 score=ai_score,
                 closing_confidence=lead.closing_confidence,
@@ -198,6 +208,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     rev_max: int | None = None
     try:
         from core.services.revenue_predictor_service import predict_lead_revenue
+
         rev = predict_lead_revenue(
             area_m2=float(lead.room_area) if lead.room_area else None,
             design_type=mem.get("design_type"),
@@ -215,6 +226,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     engagement_trend: str | None = None
     try:
         from core.services.conversation_memory_graph_service import analyze_conversation_graph
+
         cg = analyze_conversation_graph(
             score=ai_score,
             phone_captured=bool(lead.phone),
@@ -240,6 +252,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     fu_type: str | None = None
     try:
         from core.services.followup_brain_service import decide_follow_up
+
         fd = decide_follow_up(
             score=ai_score,
             deal_probability_percent=dp_pct,
@@ -264,6 +277,7 @@ async def _build_signals_for_lead(lead: object) -> dict:
     if sv:
         try:
             from dataclasses import replace as _dc_replace
+
             sv_for_radar = _dc_replace(
                 sv,
                 predicted_revenue_best=rev_best,

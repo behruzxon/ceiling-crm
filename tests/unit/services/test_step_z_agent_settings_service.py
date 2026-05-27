@@ -1,4 +1,5 @@
 """Tests for Step Z — AgentSettingsService (pure validation logic)."""
+
 from __future__ import annotations
 
 from core.services.agent_settings_service import AgentSettingsService
@@ -105,7 +106,8 @@ class TestValidateChange:
 
     def test_critical_allowed_with_flag(self):
         r = svc.validate_change(
-            "agent_execution_live_sender_enabled", True,
+            "agent_execution_live_sender_enabled",
+            True,
             current_settings={"agent_execution_queue_enabled": True},
             allow_live_flags=True,
         )
@@ -113,7 +115,8 @@ class TestValidateChange:
 
     def test_live_sender_without_queue_blocked(self):
         r = svc.validate_change(
-            "agent_execution_live_sender_enabled", True,
+            "agent_execution_live_sender_enabled",
+            True,
             current_settings={"agent_execution_queue_enabled": False},
             allow_live_flags=True,
         )
@@ -122,7 +125,8 @@ class TestValidateChange:
 
     def test_auto_execute_without_sender_blocked(self):
         r = svc.validate_change(
-            "agent_execution_auto_execute_approved", True,
+            "agent_execution_auto_execute_approved",
+            True,
             current_settings={"agent_execution_live_sender_enabled": False},
             allow_live_flags=True,
         )
@@ -130,7 +134,8 @@ class TestValidateChange:
 
     def test_canary_without_ids_blocked(self):
         r = svc.validate_change(
-            "agent_execution_mode", "canary",
+            "agent_execution_mode",
+            "canary",
             current_settings={"agent_execution_canary_user_ids": ""},
         )
         assert r.allowed is False
@@ -138,7 +143,8 @@ class TestValidateChange:
 
     def test_canary_with_ids_allowed(self):
         r = svc.validate_change(
-            "agent_execution_mode", "canary",
+            "agent_execution_mode",
+            "canary",
             current_settings={"agent_execution_canary_user_ids": "123,456"},
         )
         assert r.allowed is True
@@ -149,7 +155,8 @@ class TestValidateChange:
 
     def test_live_mode_allowed_with_flag(self):
         r = svc.validate_change(
-            "agent_execution_mode", "live",
+            "agent_execution_mode",
+            "live",
             allow_live_flags=True,
         )
         assert r.allowed is True
@@ -208,37 +215,47 @@ class TestDangerousCombinations:
         assert d == []
 
     def test_live_sender_without_queue(self):
-        d = svc.detect_dangerous_combinations({
-            "agent_execution_live_sender_enabled": True,
-        })
+        d = svc.detect_dangerous_combinations(
+            {
+                "agent_execution_live_sender_enabled": True,
+            }
+        )
         assert "live_sender_without_queue" in d
 
     def test_auto_execute_without_sender(self):
-        d = svc.detect_dangerous_combinations({
-            "agent_execution_auto_execute_approved": True,
-        })
+        d = svc.detect_dangerous_combinations(
+            {
+                "agent_execution_auto_execute_approved": True,
+            }
+        )
         assert "auto_execute_without_sender" in d
 
     def test_canary_without_ids(self):
-        d = svc.detect_dangerous_combinations({
-            "agent_execution_mode": "canary",
-            "agent_execution_canary_user_ids": "",
-        })
+        d = svc.detect_dangerous_combinations(
+            {
+                "agent_execution_mode": "canary",
+                "agent_execution_canary_user_ids": "",
+            }
+        )
         assert "canary_without_user_ids" in d
 
     def test_live_mode_dangerous(self):
-        d = svc.detect_dangerous_combinations({
-            "agent_execution_mode": "live",
-        })
+        d = svc.detect_dangerous_combinations(
+            {
+                "agent_execution_mode": "live",
+            }
+        )
         assert "execution_mode_live" in d
 
     def test_safe_config_no_dangers(self):
-        d = svc.detect_dangerous_combinations({
-            "agent_execution_queue_enabled": True,
-            "agent_execution_live_sender_enabled": True,
-            "agent_execution_auto_execute_approved": True,
-            "agent_execution_mode": "approval_required",
-        })
+        d = svc.detect_dangerous_combinations(
+            {
+                "agent_execution_queue_enabled": True,
+                "agent_execution_live_sender_enabled": True,
+                "agent_execution_auto_execute_approved": True,
+                "agent_execution_mode": "approval_required",
+            }
+        )
         assert "live_sender_without_queue" not in d
         assert "auto_execute_without_sender" not in d
 
@@ -275,6 +292,7 @@ class TestRollbackSnapshot:
 class TestImmutability:
     def test_validation_frozen(self):
         import pytest
+
         r = svc.validate_change("agent_followups_enabled", True)
         with pytest.raises(AttributeError):
             r.allowed = False  # type: ignore[misc]

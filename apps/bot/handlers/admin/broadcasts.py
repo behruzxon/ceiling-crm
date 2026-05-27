@@ -12,6 +12,7 @@ FSM flow
                       └─► confirming   ← preview + Yuborish / Bekor
                             └─ [create DB record, enqueue Celery worker]
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -40,38 +41,35 @@ router = Router(name="admin:broadcasts")
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 _SEGMENT_LABELS: dict[str, str] = {
-    "all":    "👥 Barcha foydalanuvchilar",
-    "stage":  "🔀 Bosqich bo'yicha",
+    "all": "👥 Barcha foydalanuvchilar",
+    "stage": "🔀 Bosqich bo'yicha",
     "groups": "📢 Admin guruhlar",
 }
 
 _PAYLOAD_LABELS: dict[str, str] = {
-    "text":     "✍️ Matn",
-    "photo":    "🖼 Rasm",
-    "video":    "🎥 Video",
+    "text": "✍️ Matn",
+    "photo": "🖼 Rasm",
+    "video": "🎥 Video",
     "document": "📄 Hujjat",
 }
 
 _SEGMENT_TYPE_MAP: dict[str, SegmentType] = {
-    "all":    SegmentType.ALL_PRIVATE,
-    "stage":  SegmentType.LEAD_STAGE,
+    "all": SegmentType.ALL_PRIVATE,
+    "stage": SegmentType.LEAD_STAGE,
     "groups": SegmentType.ADMIN_GROUPS,
 }
 
 _PAYLOAD_TYPE_MAP: dict[str, PayloadType] = {
-    "text":     PayloadType.TEXT,
-    "photo":    PayloadType.PHOTO,
-    "video":    PayloadType.VIDEO,
+    "text": PayloadType.TEXT,
+    "photo": PayloadType.PHOTO,
+    "video": PayloadType.VIDEO,
     "document": PayloadType.DOCUMENT,
 }
 
 
 def _is_bot_admin(user_id: int) -> bool:
     settings = get_settings()
-    return (
-        settings.bot.admin_user_id is not None
-        and user_id == settings.bot.admin_user_id
-    )
+    return settings.bot.admin_user_id is not None and user_id == settings.bot.admin_user_id
 
 
 async def _cancel_flow(message: Message | CallbackQuery, state: FSMContext) -> None:
@@ -85,6 +83,7 @@ async def _cancel_flow(message: Message | CallbackQuery, state: FSMContext) -> N
 
 
 # ── entry point ────────────────────────────────────────────────────────────────
+
 
 @router.message(
     F.chat.type == "private",
@@ -101,13 +100,13 @@ async def cmd_broadcast_entry(message: Message, state: FSMContext, **data: objec
     await state.clear()
     await state.set_state(BroadcastStates.choosing_segment)
     await message.answer(
-        "📣 <b>Yangi rassilka</b>\n\n"
-        "Qaysi auditoriyaga yubormoqchisiz?",
+        "📣 <b>Yangi rassilka</b>\n\n" "Qaysi auditoriyaga yubormoqchisiz?",
         reply_markup=segment_keyboard(),
     )
 
 
 # ── segment step ───────────────────────────────────────────────────────────────
+
 
 @router.callback_query(
     F.message.chat.type == "private",
@@ -168,6 +167,7 @@ async def cb_back_to_segment(callback: CallbackQuery, state: FSMContext, **data:
 
 # ── payload type step ──────────────────────────────────────────────────────────
 
+
 @router.callback_query(
     F.message.chat.type == "private",
     StateFilter(BroadcastStates.choosing_payload),
@@ -194,6 +194,7 @@ async def cb_choose_payload(callback: CallbackQuery, state: FSMContext, **data: 
 
 
 # ── content collection ─────────────────────────────────────────────────────────
+
 
 @router.message(
     StateFilter(BroadcastStates.waiting_for_text),
@@ -268,6 +269,7 @@ async def _show_preview(message: Message, state: FSMContext) -> None:
 
 # ── confirm / cancel ───────────────────────────────────────────────────────────
 
+
 @router.callback_query(
     F.message.chat.type == "private",
     StateFilter(BroadcastStates.confirming),
@@ -315,8 +317,7 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, **data: object)
 
     await state.clear()
     await callback.message.edit_text(
-        f"✅ Rassilka #{broadcast_id} navbatga qo'yildi!\n"
-        "Jarayon fonda bajarilmoqda."
+        f"✅ Rassilka #{broadcast_id} navbatga qo'yildi!\n" "Jarayon fonda bajarilmoqda."
     )
     log.info("broadcast_enqueued", broadcast_id=broadcast_id, created_by=created_by)
 

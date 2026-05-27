@@ -23,6 +23,7 @@ New table: lead_actions
     ix_lead_actions_lead_created   (lead_id, created_at)        — per-lead history
     ix_lead_actions_created        (created_at)                 — time-range scans
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

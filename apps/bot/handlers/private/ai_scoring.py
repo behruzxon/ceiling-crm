@@ -7,6 +7,7 @@ severity scoring, and objection handling with negotiation-engine integration.
 Cross-module dependencies (``ai_memory``) are lazy-imported to avoid
 circular imports.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,32 +33,59 @@ log = get_logger(__name__)
 @dataclass(frozen=True, slots=True)
 class ObjectionDetection:
     """Result of objection detection with severity."""
-    objection_type: str          # expensive | trust | compare | delay | angry
-    severity: str                # low | medium | high
+
+    objection_type: str  # expensive | trust | compare | delay | angry
+    severity: str  # low | medium | high
 
 
 # Severity amplifiers — if ANY of these appear alongside a base objection,
 # bump severity up.  Checked against lowercased text.
-_SEVERITY_HIGH_KW: frozenset[str] = frozenset({
-    "umuman", "hech qachon", "aslo", "kerakmas", "olmayman",
-    "rad etaman", "bo'lmaydi", "ortiqcha", "hech narsa",
-    "juda qimmat", "juda baland", "слишком", "очень дорого",
-    "никогда", "вообще", "ни за что", "жуда қиммат",
-})
+_SEVERITY_HIGH_KW: frozenset[str] = frozenset(
+    {
+        "umuman",
+        "hech qachon",
+        "aslo",
+        "kerakmas",
+        "olmayman",
+        "rad etaman",
+        "bo'lmaydi",
+        "ortiqcha",
+        "hech narsa",
+        "juda qimmat",
+        "juda baland",
+        "слишком",
+        "очень дорого",
+        "никогда",
+        "вообще",
+        "ни за что",
+        "жуда қиммат",
+    }
+)
 
-_SEVERITY_MEDIUM_KW: frozenset[str] = frozenset({
-    "juda", "ancha", "biroz", "ko'p", "sal", "довольно",
-    "жуда", "анча", "кўп",
-})
+_SEVERITY_MEDIUM_KW: frozenset[str] = frozenset(
+    {
+        "juda",
+        "ancha",
+        "biroz",
+        "ko'p",
+        "sal",
+        "довольно",
+        "жуда",
+        "анча",
+        "кўп",
+    }
+)
 
 
 # ── Lead scoring (0-100, Redis-backed) ───────────────────────────────────────
+
 
 async def _get_lead_score(user_id: int) -> int:
     """Return current score from Redis, 0 if not set."""
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
         return int(raw) if raw else 0
     except Exception:
@@ -69,6 +97,7 @@ async def _add_lead_score(user_id: int, delta: int) -> int:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys, CacheTTL
+
         current = await _get_lead_score(user_id)
         new_score = max(0, min(100, current + delta))
         await get_redis().set(
@@ -90,82 +119,173 @@ def classify_score(score: int) -> str:
 
 # ── Objection detection ─────────────────────────────────────────────────────
 
-_OBJECTION_EXPENSIVE_KW: frozenset[str] = frozenset({
-    # Latin Uzbek
-    "qimmat", "qimmatku", "qimmat ekan", "narx baland", "narxi baland",
-    "qimmat bo'libdi", "qimmatmi", "qimmatroq",
-    "qimmatga tushadi", "arzonroq bor", "arzon joy topaman",
-    "boshqa kompaniyada arzon",
-    # Latin Uzbek — financial constraints
-    "pul yo'q", "pulim yo'q", "byudjetim yetmaydi", "byudjet kam",
-    "pulim yetmaydi", "mablag' yetmaydi",
-    # Russian
-    "дорого", "дороговато", "цена высокая", "очень дорого",
-    "дорогой", "слишком дорого",
-    "нет денег", "денег нет",
-    # Cyrillic Uzbek
-    "қиммат", "нархи баланд", "пул йўқ",
-})
+_OBJECTION_EXPENSIVE_KW: frozenset[str] = frozenset(
+    {
+        # Latin Uzbek
+        "qimmat",
+        "qimmatku",
+        "qimmat ekan",
+        "narx baland",
+        "narxi baland",
+        "qimmat bo'libdi",
+        "qimmatmi",
+        "qimmatroq",
+        "qimmatga tushadi",
+        "arzonroq bor",
+        "arzon joy topaman",
+        "boshqa kompaniyada arzon",
+        # Latin Uzbek — financial constraints
+        "pul yo'q",
+        "pulim yo'q",
+        "byudjetim yetmaydi",
+        "byudjet kam",
+        "pulim yetmaydi",
+        "mablag' yetmaydi",
+        # Russian
+        "дорого",
+        "дороговато",
+        "цена высокая",
+        "очень дорого",
+        "дорогой",
+        "слишком дорого",
+        "нет денег",
+        "денег нет",
+        # Cyrillic Uzbek
+        "қиммат",
+        "нархи баланд",
+        "пул йўқ",
+    }
+)
 
-_OBJECTION_TRUST_KW: frozenset[str] = frozenset({
-    # Latin Uzbek
-    "ishonch", "ishonmayman", "garantiya bormi", "kafolat bormi",
-    "aldayapsiz", "firib", "ishonmiman", "ishonchim komil emas",
-    "kafolat bormiga", "sifati qandayligini bilmiman", "tajriba bormi",
-    # Russian
-    "обман", "не верю", "гарантия", "надежно",
-    "не доверяю", "не уверен",
-    # Cyrillic Uzbek
-    "ишонмайман", "кафолат борми", "ишонч", "алдаяпсиз",
-})
+_OBJECTION_TRUST_KW: frozenset[str] = frozenset(
+    {
+        # Latin Uzbek
+        "ishonch",
+        "ishonmayman",
+        "garantiya bormi",
+        "kafolat bormi",
+        "aldayapsiz",
+        "firib",
+        "ishonmiman",
+        "ishonchim komil emas",
+        "kafolat bormiga",
+        "sifati qandayligini bilmiman",
+        "tajriba bormi",
+        # Russian
+        "обман",
+        "не верю",
+        "гарантия",
+        "надежно",
+        "не доверяю",
+        "не уверен",
+        # Cyrillic Uzbek
+        "ишонмайман",
+        "кафолат борми",
+        "ишонч",
+        "алдаяпсиз",
+    }
+)
 
-_OBJECTION_COMPARE_KW: frozenset[str] = frozenset({
-    # Latin Uzbek — price comparison / discount requests
-    "boshqada arzon", "arzonroq", "narxni tushir", "skidka",
-    "chegirma qil", "pasaytiring", "narxni pasaytir",
-    # Russian
-    "дешевле", "скидка", "снизьте цену", "скидку",
-    # Cyrillic Uzbek
-    "арзонроқ", "нархни тушир", "чегирма қил",
-})
+_OBJECTION_COMPARE_KW: frozenset[str] = frozenset(
+    {
+        # Latin Uzbek — price comparison / discount requests
+        "boshqada arzon",
+        "arzonroq",
+        "narxni tushir",
+        "skidka",
+        "chegirma qil",
+        "pasaytiring",
+        "narxni pasaytir",
+        # Russian
+        "дешевле",
+        "скидка",
+        "снизьте цену",
+        "скидку",
+        # Cyrillic Uzbek
+        "арзонроқ",
+        "нархни тушир",
+        "чегирма қил",
+    }
+)
 
-_OBJECTION_DELAY_KW: frozenset[str] = frozenset({
-    # Latin Uzbek
-    "keyinroq", "kechroq", "keyin qaytaman", "hozir emas",
-    "vaqtim yo'q", "vaqt yo'q", "vaqt bo'lmaydi", "keyinga qoldiramiz",
-    "o'ylab ko'raman", "fikrlab ko'raman",
-    "erta", "indin", "boshqa payt",
-    # Latin Uzbek — family/postpone
-    "oilaga maslahat", "oiladan so'rab ko'raman", "oilam bilan maslahat",
-    "uyga maslahat", "maslahat qilaman",
-    "keyin yuboring", "keyinroq yuboring", "keyin jo'nating",
-    # Russian
-    "потом", "позже", "не сейчас", "я подумаю",
-    "спрошу у семьи", "подумаю", "позже отправьте",
-    # Cyrillic Uzbek
-    "кейинроқ", "ҳозир эмас", "ўйлаб кўраман",
-    "оилага маслаҳат", "кейин юборинг",
-})
+_OBJECTION_DELAY_KW: frozenset[str] = frozenset(
+    {
+        # Latin Uzbek
+        "keyinroq",
+        "kechroq",
+        "keyin qaytaman",
+        "hozir emas",
+        "vaqtim yo'q",
+        "vaqt yo'q",
+        "vaqt bo'lmaydi",
+        "keyinga qoldiramiz",
+        "o'ylab ko'raman",
+        "fikrlab ko'raman",
+        "erta",
+        "indin",
+        "boshqa payt",
+        # Latin Uzbek — family/postpone
+        "oilaga maslahat",
+        "oiladan so'rab ko'raman",
+        "oilam bilan maslahat",
+        "uyga maslahat",
+        "maslahat qilaman",
+        "keyin yuboring",
+        "keyinroq yuboring",
+        "keyin jo'nating",
+        # Russian
+        "потом",
+        "позже",
+        "не сейчас",
+        "я подумаю",
+        "спрошу у семьи",
+        "подумаю",
+        "позже отправьте",
+        # Cyrillic Uzbek
+        "кейинроқ",
+        "ҳозир эмас",
+        "ўйлаб кўраман",
+        "оилага маслаҳат",
+        "кейин юборинг",
+    }
+)
 
-_OBJECTION_ANGRY_KW: frozenset[str] = frozenset({
-    # Latin Uzbek
-    "yomon", "kerakmas", "bezor", "zaybal", "nerv",
-    "jonga tegdi", "aldov", "xafa", "tushunmadim",
-    # Russian
-    "плохо", "не надо", "достали", "бесит", "развод",
-    # Cyrillic Uzbek
-    "ёмон", "керакмас", "безор", "хафа", "алдов",
-})
+_OBJECTION_ANGRY_KW: frozenset[str] = frozenset(
+    {
+        # Latin Uzbek
+        "yomon",
+        "kerakmas",
+        "bezor",
+        "zaybal",
+        "nerv",
+        "jonga tegdi",
+        "aldov",
+        "xafa",
+        "tushunmadim",
+        # Russian
+        "плохо",
+        "не надо",
+        "достали",
+        "бесит",
+        "развод",
+        # Cyrillic Uzbek
+        "ёмон",
+        "керакмас",
+        "безор",
+        "хафа",
+        "алдов",
+    }
+)
 
 # ── Fuzzy patterns: regex-based variants that keyword matching misses ──────
 # Each tuple: (compiled_regex, objection_type)
 _FUZZY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # EXPENSIVE variants — misspellings & compound phrases
-    (re.compile(r"qimmat\w*", re.I), "expensive"),              # qimmatda, qimmatroq, qimmatlik
+    (re.compile(r"qimmat\w*", re.I), "expensive"),  # qimmatda, qimmatroq, qimmatlik
     (re.compile(r"pul\w*\s+(yo.?q|yetma|kam)", re.I), "expensive"),  # pulim yetmayapti, pul yoq
     (re.compile(r"(hozir|menda?)\s+pul\s+yo.?q", re.I), "expensive"),  # hozir pul yo'q
     (re.compile(r"byudjet\w*\s+(yet|kam|oz)", re.I), "expensive"),  # byudjetim yetarli emas
-    (re.compile(r"mablag.?\s+(yet|kam|oz)", re.I), "expensive"),   # mablag' yetmaydi
+    (re.compile(r"mablag.?\s+(yet|kam|oz)", re.I), "expensive"),  # mablag' yetmaydi
     (re.compile(r"narx\w*\s*(baland|yuqori|ko.?p|oshib)", re.I), "expensive"),
     # TRUST variants
     (re.compile(r"ishonch\w*\s+(komil|yo.?q|kam)", re.I), "trust"),  # ishonchim komil emas
@@ -216,10 +336,10 @@ _OBJECTION_REPLIES: dict[str, str] = {
 
 _OBJECTION_SCORE_DELTAS: dict[str, int] = {
     "expensive": 5,
-    "trust":     5,
-    "compare":   5,
-    "delay":    -10,
-    "angry":    -5,
+    "trust": 5,
+    "compare": 5,
+    "delay": -10,
+    "angry": -5,
 }
 
 
@@ -294,6 +414,7 @@ def _build_objection_reply(kind: str, name: str | None = None) -> str:
 
 # ── Smart closing CTA ───────────────────────────────────────────────────────
 
+
 async def _smart_closing_cta(state: FSMContext) -> str:
     """Return ONE targeted question based on what's still missing in the funnel."""
     fsm_data = await state.get_data()
@@ -306,8 +427,12 @@ async def _smart_closing_cta(state: FSMContext) -> str:
 
 # ── Objection handling ───────────────────────────────────────────────────────
 
+
 async def _handle_objection(
-    obj_type: str, message: Message, state: FSMContext, user_id: int,
+    obj_type: str,
+    message: Message,
+    state: FSMContext,
+    user_id: int,
     severity: str = "low",
 ) -> None:
     """Send objection reply with negotiation engine + AI-generated alternatives.
@@ -356,6 +481,7 @@ async def _handle_objection(
 
                 from infrastructure.cache.client import get_redis as _get_redis
                 from infrastructure.cache.keys import CacheKeys as _CK
+
                 _raw_w = await _get_redis().get(_CK.adaptive_weights("negotiation"))
                 if _raw_w:
                     _neg_weights = _json.loads(_raw_w)
@@ -418,27 +544,29 @@ async def _handle_objection(
             else f"objection_{obj_type}"
         )
         from core.services.tactic_outcome_logger import log_tactic_outcome
-        asyncio.create_task(log_tactic_outcome(
-            event_type="negotiation",
-            tactic_name=tactic_for_log,
-            user_id=user_id,
-            objection_type=obj_type,
-            lead_score_at_time=score,
-            lead_temperature_at_time=classify_score(score),
-        ))
+
+        asyncio.create_task(
+            log_tactic_outcome(
+                event_type="negotiation",
+                tactic_name=tactic_for_log,
+                user_id=user_id,
+                objection_type=obj_type,
+                lead_score_at_time=score,
+                lead_temperature_at_time=classify_score(score),
+            )
+        )
 
         # Contextual delay handling
         if obj_type == "delay":
-            asyncio.create_task(
-                _extend_followup_on_delay(user_id, severity, score)
-            )
+            asyncio.create_task(_extend_followup_on_delay(user_id, severity, score))
 
         # Real-time admin alert for first objection from HOT lead
         is_hot = score >= 60 or classify_score(score) == "hot"
         is_first = _mem.get("last_objection") is None or _mem.get("last_objection") != obj_type
         if is_hot and is_first:
             tactic_name = (
-                negotiation_result.tactic if negotiation_result and negotiation_result.negotiation_detected
+                negotiation_result.tactic
+                if negotiation_result and negotiation_result.negotiation_detected
                 else "none"
             )
             asyncio.create_task(
@@ -454,7 +582,9 @@ async def _handle_objection(
 
 
 async def _extend_followup_on_delay(
-    user_id: int, severity: str = "low", score: int = 0,
+    user_id: int,
+    severity: str = "low",
+    score: int = 0,
 ) -> None:
     """Extend follow-up contextually based on lead temperature and severity.
 
@@ -464,6 +594,7 @@ async def _extend_followup_on_delay(
     COLD lead                → +48h (lower pressure)
     """
     from datetime import timedelta
+
     try:
         classification = classify_score(score)
 
@@ -477,6 +608,7 @@ async def _extend_followup_on_delay(
         factory = get_session_factory()
         async with factory() as session:
             from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+
             repo = PostgresLeadRepository(session)
             leads = await repo.list_by_user(user_id, limit=1)
             if not leads:
@@ -484,13 +616,16 @@ async def _extend_followup_on_delay(
             lead = leads[0]
             if lead.next_follow_up_at is not None:
                 from datetime import datetime as _dt
+
                 new_fu = _dt.now(UTC) + timedelta(hours=hours)
                 await repo.update_ai_scoring(lead.id, next_follow_up_at=new_fu)
                 await session.commit()
                 log.debug(
                     "followup_extended_delay_objection",
-                    lead_id=lead.id, user_id=user_id,
-                    hours=hours, severity=severity,
+                    lead_id=lead.id,
+                    user_id=user_id,
+                    hours=hours,
+                    severity=severity,
                     classification=classification,
                 )
     except Exception:
@@ -526,12 +661,16 @@ async def _alert_hot_lead_objection(
         admin_group_id = settings.bot.admin_group_id
 
         from core.services.negotiation_engine_service import TACTIC_LABELS
+
         tactic_label = TACTIC_LABELS.get(tactic, tactic)
 
         _SEV_BADGES = {"low": "\U0001f7e2", "medium": "\U0001f7e1", "high": "\U0001f534"}
         _TYPE_LABELS = {
-            "expensive": "PRICE", "trust": "TRUST", "compare": "COMPARE",
-            "delay": "DELAY", "angry": "ANGRY",
+            "expensive": "PRICE",
+            "trust": "TRUST",
+            "compare": "COMPARE",
+            "delay": "DELAY",
+            "angry": "ANGRY",
         }
 
         sev_badge = _SEV_BADGES.get(severity, "\u26aa")
@@ -544,6 +683,7 @@ async def _alert_hot_lead_objection(
             factory = get_session_factory()
             async with factory() as session:
                 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+
                 leads = await PostgresLeadRepository(session).list_by_user(user_id, limit=1)
                 if leads:
                     lead_ref = f"\n\U0001f4cb Lead: #{leads[0].id}"
@@ -561,11 +701,14 @@ async def _alert_hot_lead_objection(
         )
 
         from aiogram import Bot
+
         bot: Bot | None = None
         try:
             bot = Bot(token=settings.bot.token.get_secret_value())
             await bot.send_message(
-                chat_id=admin_group_id, text=text, parse_mode="HTML",
+                chat_id=admin_group_id,
+                text=text,
+                parse_mode="HTML",
             )
         finally:
             if bot:

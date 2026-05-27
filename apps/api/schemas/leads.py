@@ -1,4 +1,5 @@
 """Pydantic response schemas for the leads API."""
+
 from __future__ import annotations
 
 from datetime import datetime

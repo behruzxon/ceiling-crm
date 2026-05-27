@@ -4,6 +4,7 @@ core.services.admin_auth_service
 Admin authentication, session management, login attempt tracking.
 Pure validation + deterministic helpers. No I/O in static methods.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -128,7 +129,8 @@ class AdminAuthService:
         status = session_dict.get("status", "")
         if status != "active":
             return SessionValidateResult(
-                ok=False, error=f"session_{status}",
+                ok=False,
+                error=f"session_{status}",
                 status=status,
                 admin_id=session_dict.get("admin_id", ""),
             )
@@ -144,7 +146,8 @@ class AdminAuthService:
                 check_time = now or datetime.now(UTC)
                 if check_time > expires_at:
                     return SessionValidateResult(
-                        ok=False, error="session_expired",
+                        ok=False,
+                        error="session_expired",
                         status="expired",
                         admin_id=session_dict.get("admin_id", ""),
                     )
@@ -206,11 +209,14 @@ class AdminAuthService:
     ) -> LoginAttemptResult:
         if failed_count >= max_attempts:
             return LoginAttemptResult(
-                ok=False, blocked=True, remaining_attempts=0,
+                ok=False,
+                blocked=True,
+                remaining_attempts=0,
                 error="too_many_failed_attempts",
             )
         return LoginAttemptResult(
-            ok=True, blocked=False,
+            ok=True,
+            blocked=False,
             remaining_attempts=max(0, max_attempts - failed_count),
         )
 

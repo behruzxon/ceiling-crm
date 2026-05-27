@@ -4,6 +4,7 @@ Tracks chat IDs (private users AND groups) that have permanently rejected
 the bot.  Used to exclude them from all future broadcasts without hitting
 Telegram every time.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -35,10 +36,6 @@ class BlockedChatModel(Base):
     )
 
     # How many broadcast runs have hit this chat_id as unreachable.
-    seen_count: Mapped[int] = mapped_column(
-        sa.Integer, server_default="1", nullable=False
-    )
+    seen_count: Mapped[int] = mapped_column(sa.Integer, server_default="1", nullable=False)
 
-    __table_args__ = (
-        sa.Index("ix_blocked_chats_last_seen_at", "last_seen_at"),
-    )
+    __table_args__ = (sa.Index("ix_blocked_chats_last_seen_at", "last_seen_at"),)

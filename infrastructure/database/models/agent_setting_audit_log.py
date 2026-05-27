@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for agent_setting_audit_logs table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -24,7 +25,8 @@ class AgentSettingAuditLogModel(Base):
     validation_result_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     reason: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
 
     __table_args__ = (

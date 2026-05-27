@@ -1,4 +1,5 @@
 """Tests for Step L — LeadSignalService (lead scoring 2.0 + objection detection)."""
+
 from __future__ import annotations
 
 import pytest
@@ -170,7 +171,10 @@ class TestDetectObjection:
         assert svc.detect_objection("подумаю") == ObjectionType.NEED_CONSULTATION
 
     def test_erim_bilan_family(self):
-        assert svc.detect_objection("erim bilan maslahat qilaman") == ObjectionType.SPOUSE_FAMILY_DECISION
+        assert (
+            svc.detect_objection("erim bilan maslahat qilaman")
+            == ObjectionType.SPOUSE_FAMILY_DECISION
+        )
 
     def test_s_muzhem_family(self):
         assert svc.detect_objection("с мужем посоветуюсь") == ObjectionType.SPOUSE_FAMILY_DECISION
@@ -367,10 +371,14 @@ class TestCalculateLeadScore:
 
     def test_score_clamped_100(self):
         sig = svc.extract_signals("bugun zakaz qilaman 50 m2")
-        score = svc.calculate_lead_score({"lead_score": 90}, [
-            {"event_type": "phone_shared"},
-            {"event_type": "operator_requested"},
-        ], sig)
+        score = svc.calculate_lead_score(
+            {"lead_score": 90},
+            [
+                {"event_type": "phone_shared"},
+                {"event_type": "operator_requested"},
+            ],
+            sig,
+        )
         assert score <= 100
 
     def test_score_clamped_0(self):
@@ -449,6 +457,7 @@ class TestUpdateMemoryFromSignal:
 class TestDecisionEngineSignals:
     def test_price_objection_negotiating(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"objection_type": "price"},
@@ -458,6 +467,7 @@ class TestDecisionEngineSignals:
 
     def test_wants_operator_handoff(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"last_intent": "wants_operator"},
@@ -467,6 +477,7 @@ class TestDecisionEngineSignals:
 
     def test_wants_order_intent(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"last_intent": "wants_order"},
@@ -476,6 +487,7 @@ class TestDecisionEngineSignals:
 
     def test_wants_price_no_area_checking(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"last_intent": "wants_price"},
@@ -485,6 +497,7 @@ class TestDecisionEngineSignals:
 
     def test_wants_price_with_area_considering(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "area_m2": 20.0,
@@ -495,6 +508,7 @@ class TestDecisionEngineSignals:
 
     def test_wants_price_with_area_in_md(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"last_intent": "wants_price", "area_m2": 25.0},
@@ -504,6 +518,7 @@ class TestDecisionEngineSignals:
 
     def test_stop_request_stopped(self):
         from core.services.agent_decision_engine import classify_customer_state
+
         memory = {
             "followup_enabled": True,
             "memory_data": {"last_intent": "stop_request"},
@@ -513,6 +528,7 @@ class TestDecisionEngineSignals:
 
     def test_urgency_high_priority_boost(self):
         from core.services.agent_decision_engine import calculate_priority_score
+
         memory_no_urgency = {
             "lead_temperature": "warm",
             "memory_data": {},
@@ -527,6 +543,7 @@ class TestDecisionEngineSignals:
 
     def test_urgency_cold_no_boost(self):
         from core.services.agent_decision_engine import calculate_priority_score
+
         memory = {
             "lead_temperature": "cold",
             "memory_data": {"urgency": "high"},
@@ -542,6 +559,7 @@ class TestDecisionEngineSignals:
     def test_event_based_still_works(self):
         from core.services.agent_decision_engine import classify_customer_state
         from shared.constants.enums import JourneyEventType
+
         memory = {"followup_enabled": True}
         et = frozenset({JourneyEventType.PHONE_SHARED.value})
         state = classify_customer_state(memory, et)

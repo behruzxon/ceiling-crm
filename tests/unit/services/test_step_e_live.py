@@ -1,4 +1,5 @@
 """Step E tests: business hours, feature flags, Redis fallback, stop words, buttons."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
@@ -92,6 +93,7 @@ class TestBusinessHours:
 class TestFeatureFlags:
     def test_flags_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_followups_enabled is False
         assert s.agent_catalog_followup_enabled is False
@@ -100,6 +102,7 @@ class TestFeatureFlags:
 
     def test_delay_default_10(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_catalog_followup_delay_minutes == 10
 
@@ -108,18 +111,37 @@ class TestFeatureFlags:
 
 
 class TestStopWords:
-    @pytest.mark.parametrize("word", [
-        "kerak emas", "kerakmas", "stop", "bekor",
-        "yozmang", "qiziqmayman", "hozir emas",
-        "не надо", "стоп", "отмена",
-    ])
+    @pytest.mark.parametrize(
+        "word",
+        [
+            "kerak emas",
+            "kerakmas",
+            "stop",
+            "bekor",
+            "yozmang",
+            "qiziqmayman",
+            "hozir emas",
+            "не надо",
+            "стоп",
+            "отмена",
+        ],
+    )
     def test_stop_words_detected(self, word: str) -> None:
         assert FollowupSchedulerService.is_stop_signal(word) is True
 
-    @pytest.mark.parametrize("word", [
-        "Salom", "Narxi qancha?", "Ha", "Yo'q",
-        "5x4", "Gulli", "rahmat", "ok",
-    ])
+    @pytest.mark.parametrize(
+        "word",
+        [
+            "Salom",
+            "Narxi qancha?",
+            "Ha",
+            "Yo'q",
+            "5x4",
+            "Gulli",
+            "rahmat",
+            "ok",
+        ],
+    )
     def test_normal_words_not_stop(self, word: str) -> None:
         assert FollowupSchedulerService.is_stop_signal(word) is False
 
@@ -199,10 +221,12 @@ class TestRedisFallback:
 class TestConfigurableDelay:
     def test_delay_field_accepts_1_minute(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings(AGENT_CATALOG_FOLLOWUP_DELAY_MINUTES=1)
         assert s.agent_catalog_followup_delay_minutes == 1
 
     def test_delay_field_rejects_zero(self) -> None:
         from shared.config.settings import BusinessSettings
+
         with pytest.raises(Exception):
             BusinessSettings(AGENT_CATALOG_FOLLOWUP_DELAY_MINUTES=0)

@@ -6,6 +6,7 @@ for the AI support module.
 
 Pure functions — no I/O, no Redis, no DB.  Safe to import anywhere.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -16,25 +17,53 @@ from shared.utils.area_parser import parse_area as _parse_area  # noqa: F401 —
 
 # ── Measurement trigger detection ────────────────────────────────────────────
 
-_MEASUREMENT_TRIGGERS: frozenset[str] = frozenset({
-    # ── Latin Uzbek — explicit order / measurement ────────────────────────────
-    "yozib qo'y", "yozib qoʻy", "yozib qoy",
-    "ha yozib", "bepul o'lchov", "bepul oʻlchov",
-    "o'lchov kerak", "oʻlchov kerak",
-    "o'lchov olish", "oʻlchov olish",
-    "bepul olchov", "usta chaqir", "usta yuborin", "usta kerak",
-    # ── Latin Uzbek — order / zakaz keywords ─────────────────────────────────
-    "zakaz", "zakaz qil", "zakaz qilmoqchiman",
-    "zakaz oling", "zakaz bering",
-    "buyurtma", "buyurtma ber", "buyurtma qil", "buyurtma qoldir",
-    "qildirmoqchiman", "potolok qildirmoqchiman",
-    "o'rnatmoqchiman", "oʻrnatmoqchiman",
-    "ustani yuboring", "kelib ko'ring", "kelib koʻring",
-    # ── Cyrillic Uzbek / Russian — order / measurement ────────────────────────
-    "заказ", "заказ олинг", "заказ беринг",
-    "буйуртма", "буйуртма бер", "буйуртма кил",
-    "ўлчов", "ўлчов керак", "келиб куринг", "келиб кўринг",
-})
+_MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
+    {
+        # ── Latin Uzbek — explicit order / measurement ────────────────────────────
+        "yozib qo'y",
+        "yozib qoʻy",
+        "yozib qoy",
+        "ha yozib",
+        "bepul o'lchov",
+        "bepul oʻlchov",
+        "o'lchov kerak",
+        "oʻlchov kerak",
+        "o'lchov olish",
+        "oʻlchov olish",
+        "bepul olchov",
+        "usta chaqir",
+        "usta yuborin",
+        "usta kerak",
+        # ── Latin Uzbek — order / zakaz keywords ─────────────────────────────────
+        "zakaz",
+        "zakaz qil",
+        "zakaz qilmoqchiman",
+        "zakaz oling",
+        "zakaz bering",
+        "buyurtma",
+        "buyurtma ber",
+        "buyurtma qil",
+        "buyurtma qoldir",
+        "qildirmoqchiman",
+        "potolok qildirmoqchiman",
+        "o'rnatmoqchiman",
+        "oʻrnatmoqchiman",
+        "ustani yuboring",
+        "kelib ko'ring",
+        "kelib koʻring",
+        # ── Cyrillic Uzbek / Russian — order / measurement ────────────────────────
+        "заказ",
+        "заказ олинг",
+        "заказ беринг",
+        "буйуртма",
+        "буйуртма бер",
+        "буйуртма кил",
+        "ўлчов",
+        "ўлчов керак",
+        "келиб куринг",
+        "келиб кўринг",
+    }
+)
 
 
 def _is_measurement_request(text: str) -> bool:
@@ -44,30 +73,83 @@ def _is_measurement_request(text: str) -> bool:
 
 # ── Catalog link shortcut ────────────────────────────────────────────────────
 
-_CATALOG_TRIGGERS: frozenset[str] = frozenset({
-    # ── Latin Uzbek — catalog / portfolio / design intent ─────────────────────
-    "katalog", "katolog", "kataloq", "catalog", "portfolio",
-    "variant", "variantlar", "dizayn", "dizaynlar", "design",
-    "rasm", "foto", "surat", "namuna", "misol",
-    "ko'rsat", "korsat", "tashla", "yubor", "kanal", "link",
-    "ishlar", "работы",
-    # Design type names (Latin)
-    "gulli", "gullili", "mramor", "naqsh", "hi tech", "hitech", "kosmos", "osmon",
-    "qora uf", "pechat",
-    # Room types — Latin
-    "mehmonxona", "mehmon xona", "zal",
-    "yotoqxona", "yotoq xona", "oshxona", "osh xona",
-    "hammom", "dush", "vanna",
-    "detskiy", "bolalar",
-    "spalnya", "spalniy", "koridor", "terassa", "teras", "veranda", "balkon",
-    # ── Cyrillic Uzbek ────────────────────────────────────────────────────────
-    "каталог", "католог",
-    "расм", "фото", "сурат", "дизайн", "вариант", "вариантлар",
-    "расм юбор", "расм тaшла",
-    "дизайн кўрсат", "каталог кўрсат",
-    # Room types — Cyrillic
-    "меҳмонхона", "ётоқхона", "ошхона", "ҳаммом",
-})
+_CATALOG_TRIGGERS: frozenset[str] = frozenset(
+    {
+        # ── Latin Uzbek — catalog / portfolio / design intent ─────────────────────
+        "katalog",
+        "katolog",
+        "kataloq",
+        "catalog",
+        "portfolio",
+        "variant",
+        "variantlar",
+        "dizayn",
+        "dizaynlar",
+        "design",
+        "rasm",
+        "foto",
+        "surat",
+        "namuna",
+        "misol",
+        "ko'rsat",
+        "korsat",
+        "tashla",
+        "yubor",
+        "kanal",
+        "link",
+        "ishlar",
+        "работы",
+        # Design type names (Latin)
+        "gulli",
+        "gullili",
+        "mramor",
+        "naqsh",
+        "hi tech",
+        "hitech",
+        "kosmos",
+        "osmon",
+        "qora uf",
+        "pechat",
+        # Room types — Latin
+        "mehmonxona",
+        "mehmon xona",
+        "zal",
+        "yotoqxona",
+        "yotoq xona",
+        "oshxona",
+        "osh xona",
+        "hammom",
+        "dush",
+        "vanna",
+        "detskiy",
+        "bolalar",
+        "spalnya",
+        "spalniy",
+        "koridor",
+        "terassa",
+        "teras",
+        "veranda",
+        "balkon",
+        # ── Cyrillic Uzbek ────────────────────────────────────────────────────────
+        "каталог",
+        "католог",
+        "расм",
+        "фото",
+        "сурат",
+        "дизайн",
+        "вариант",
+        "вариантлар",
+        "расм юбор",
+        "расм тaшла",
+        "дизайн кўрсат",
+        "каталог кўрсат",
+        # Room types — Cyrillic
+        "меҳмонхона",
+        "ётоқхона",
+        "ошхона",
+        "ҳаммом",
+    }
+)
 
 
 def _is_catalog_request(text: str) -> bool:
@@ -79,38 +161,38 @@ def _is_catalog_request(text: str) -> bool:
 
 _CATALOG_ROOM_KEYWORDS: dict[str, str] = {
     "mehmon xona": "Mehmonxona",
-    "yotoq xona":  "Yotoqxona",
-    "osh xona":    "Oshxona",
-    "mehmonxona":  "Mehmonxona",
-    "yotoqxona":   "Yotoqxona",
-    "oshxona":     "Oshxona",
-    "zal":         "Zal",
-    "dush":        "Hammom",
-    "hammom":      "Hammom",
-    "vanna":       "Hammom",
-    "spalnya":     "Yotoqxona",
-    "spalniy":     "Yotoqxona",
-    "koridor":     "Koridor",
-    "terassa":     "Terassa",
-    "teras":       "Terassa",
-    "veranda":     "Terassa",
-    "balkon":      "Balkon",
-    "bolalar":     "Bolalar xonasi",
-    "detskiy":     "Bolalar xonasi",
+    "yotoq xona": "Yotoqxona",
+    "osh xona": "Oshxona",
+    "mehmonxona": "Mehmonxona",
+    "yotoqxona": "Yotoqxona",
+    "oshxona": "Oshxona",
+    "zal": "Zal",
+    "dush": "Hammom",
+    "hammom": "Hammom",
+    "vanna": "Hammom",
+    "spalnya": "Yotoqxona",
+    "spalniy": "Yotoqxona",
+    "koridor": "Koridor",
+    "terassa": "Terassa",
+    "teras": "Terassa",
+    "veranda": "Terassa",
+    "balkon": "Balkon",
+    "bolalar": "Bolalar xonasi",
+    "detskiy": "Bolalar xonasi",
 }
 
 _CATALOG_DESIGN_KEYWORDS: dict[str, str] = {
-    "gullili":    "Gulli",
-    "gulli":      "Gulli",
-    "hi tech":    "Hi Tech",
-    "hitech":     "Hi Tech",
-    "hi-tech":    "Hi Tech",
-    "mramor":     "Mramor",
-    "naqsh":      "Naqsh",
-    "osmon":      "Osmon",
-    "kosmos":     "Kosmos",
-    "qora uf":    "Qora UF",
-    "pechat":     "Pechat",
+    "gullili": "Gulli",
+    "gulli": "Gulli",
+    "hi tech": "Hi Tech",
+    "hitech": "Hi Tech",
+    "hi-tech": "Hi Tech",
+    "mramor": "Mramor",
+    "naqsh": "Naqsh",
+    "osmon": "Osmon",
+    "kosmos": "Kosmos",
+    "qora uf": "Qora UF",
+    "pechat": "Pechat",
     "adnatonniy": "Adnatonniy",
 }
 
@@ -142,18 +224,34 @@ def _build_smart_catalog_response(room: str | None, design: str | None) -> str:
 
 
 def _catalog_link_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📂 To'liq katalogimiz", url="https://t.me/vashpotolokuz"),
-    ]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📂 To'liq katalogimiz", url="https://t.me/vashpotolokuz"
+                ),
+            ]
+        ]
+    )
 
 
 # ── Photo funnel detection ───────────────────────────────────────────────────
 
-_PHOTO_FUNNEL_TRIGGERS: frozenset[str] = frozenset({
-    "rasm", "foto", "surat", "dizayn", "variant",
-    "ko'rsat", "korsat", "rasm tashla", "katalog",
-    "portfolio", "namuna",
-})
+_PHOTO_FUNNEL_TRIGGERS: frozenset[str] = frozenset(
+    {
+        "rasm",
+        "foto",
+        "surat",
+        "dizayn",
+        "variant",
+        "ko'rsat",
+        "korsat",
+        "rasm tashla",
+        "katalog",
+        "portfolio",
+        "namuna",
+    }
+)
 
 
 def _is_photo_funnel_request(text: str) -> bool:
@@ -164,9 +262,9 @@ def _is_photo_funnel_request(text: str) -> bool:
 # Room synonyms for photo funnel detection
 _ROOM_SYNONYMS_MAP: dict[str, list[str]] = {
     "mehmonxona": ["mehmon xona", "zal", "katta xona", "terassa", "teras", "veranda"],
-    "yotoqxona":  ["yotoq xona", "spalniy", "spalnya", "спальня"],
-    "oshxona":    ["osh xona", "кухня", "kitchen"],
-    "hammom":     ["dush", "vanna", "sanuzel", "ванна"],
+    "yotoqxona": ["yotoq xona", "spalniy", "spalnya", "спальня"],
+    "oshxona": ["osh xona", "кухня", "kitchen"],
+    "hammom": ["dush", "vanna", "sanuzel", "ванна"],
 }
 
 
@@ -229,9 +327,9 @@ def _room_design_text(room: str) -> str:
 
 _ROOM_SYNONYMS: dict[str, list[str]] = {
     "mehmonxona": ["mehmon xona", "zal", "katta xona"],
-    "yotoqxona":  ["yotoq xona", "spalnya"],
-    "oshxona":    ["osh xona", "кухня"],
-    "hammom":     ["vanna", "sanuzel"],
+    "yotoqxona": ["yotoq xona", "spalnya"],
+    "oshxona": ["osh xona", "кухня"],
+    "hammom": ["vanna", "sanuzel"],
 }
 
 
@@ -248,21 +346,44 @@ def _normalize_room(text: str) -> str:
 
 # ── Generic confirmation intercept ───────────────────────────────────────────
 
-_GENERIC_CONFIRMATIONS: frozenset[str] = frozenset({
-    "zo'r", "zor", "ok", "ha", "xo'p", "xop", "rahmat",
-    "mayli", "bo'ldi", "boldi", "tushunarli", "yaxshi",
-    "super", "ajoyib", "tushundim", "oke",
-})
+_GENERIC_CONFIRMATIONS: frozenset[str] = frozenset(
+    {
+        "zo'r",
+        "zor",
+        "ok",
+        "ha",
+        "xo'p",
+        "xop",
+        "rahmat",
+        "mayli",
+        "bo'ldi",
+        "boldi",
+        "tushunarli",
+        "yaxshi",
+        "super",
+        "ajoyib",
+        "tushundim",
+        "oke",
+    }
+)
 
 
 # ── Greeting detection ───────────────────────────────────────────────────────
 
-_GREETING_TRIGGERS: frozenset[str] = frozenset({
-    "salom", "assalomu alaykum", "as-salamu alaykum",
-    "ассалому алайкум", "ассалом",
-    "hello", "hi", "hey",
-    "привет", "добрый",
-})
+_GREETING_TRIGGERS: frozenset[str] = frozenset(
+    {
+        "salom",
+        "assalomu alaykum",
+        "as-salamu alaykum",
+        "ассалому алайкум",
+        "ассалом",
+        "hello",
+        "hi",
+        "hey",
+        "привет",
+        "добрый",
+    }
+)
 
 
 def _is_greeting(text: str) -> bool:
@@ -276,27 +397,67 @@ def _is_greeting(text: str) -> bool:
 
 # ── Price intent detection ───────────────────────────────────────────────────
 
-_PRICE_KEYWORDS: frozenset[str] = frozenset({
-    # ── Latin Uzbek ───────────────────────────────────────────────────────────
-    "narx", "narxlar", "narxi qancha", "qancha turadi", "qancha pul",
-    "nech pul", "nech pul bo'ladi", "nechadan qilyapsizlar", "qanchadan",
-    "nechadan", "hisoblab ber", "narxini ayt", "narxini hisobla",
-    "narxini chiqar", "narx kalkulyator", "narx hisoblash",
-    "kv narx", "kvadrat narx", "m2 narx",
-    # Design-specific price queries (Latin)
-    "gulli qancha", "gulli narx", "hitech narx", "hi tech narx",
-    "mramor narx", "naqsh narx", "osmon narx", "qora uf narx",
-    "adnatonniy narx",
-    # Latin transliterations of Russian
-    "price", "stoimost", "skolka", "tsena",
-    # ── Russian ───────────────────────────────────────────────────────────────
-    "сколько", "сколько стоит", "цена", "цены", "рассчитать цену",
-    # ── Cyrillic Uzbek ────────────────────────────────────────────────────────
-    "нарх", "нархлар", "нархи канча", "канча туради", "канча пул",
-    "неч пул", "нархи неч пул", "хисоблаб беринг", "хисоблаб бер",
-    "нархини айт", "нархини хисобла", "нарх хисоблаш",
-    "кв нарх", "квадрат нарх", "м2 нарх",
-})
+_PRICE_KEYWORDS: frozenset[str] = frozenset(
+    {
+        # ── Latin Uzbek ───────────────────────────────────────────────────────────
+        "narx",
+        "narxlar",
+        "narxi qancha",
+        "qancha turadi",
+        "qancha pul",
+        "nech pul",
+        "nech pul bo'ladi",
+        "nechadan qilyapsizlar",
+        "qanchadan",
+        "nechadan",
+        "hisoblab ber",
+        "narxini ayt",
+        "narxini hisobla",
+        "narxini chiqar",
+        "narx kalkulyator",
+        "narx hisoblash",
+        "kv narx",
+        "kvadrat narx",
+        "m2 narx",
+        # Design-specific price queries (Latin)
+        "gulli qancha",
+        "gulli narx",
+        "hitech narx",
+        "hi tech narx",
+        "mramor narx",
+        "naqsh narx",
+        "osmon narx",
+        "qora uf narx",
+        "adnatonniy narx",
+        # Latin transliterations of Russian
+        "price",
+        "stoimost",
+        "skolka",
+        "tsena",
+        # ── Russian ───────────────────────────────────────────────────────────────
+        "сколько",
+        "сколько стоит",
+        "цена",
+        "цены",
+        "рассчитать цену",
+        # ── Cyrillic Uzbek ────────────────────────────────────────────────────────
+        "нарх",
+        "нархлар",
+        "нархи канча",
+        "канча туради",
+        "канча пул",
+        "неч пул",
+        "нархи неч пул",
+        "хисоблаб беринг",
+        "хисоблаб бер",
+        "нархини айт",
+        "нархини хисобла",
+        "нарх хисоблаш",
+        "кв нарх",
+        "квадрат нарх",
+        "м2 нарх",
+    }
+)
 
 
 def _is_price_query(text: str) -> bool:
@@ -308,35 +469,35 @@ def _is_price_query(text: str) -> bool:
 
 _DESIGN_NAMES_IN_TEXT: dict[str, str] = {
     # ── Latin Uzbek ───────────────────────────────────────────────────────────
-    "gullili":     "Gulli",
-    "gulli":       "Gulli",
-    "hi tech":     "Hi Tech",
-    "hitech":      "Hi Tech",
-    "hi-tech":     "Hi Tech",
-    "mramor":      "Mramor",
-    "naqsh":       "Naqsh",
-    "naxsh":       "Naqsh",
-    "osmon":       "Osmon",
-    "kosmos":      "Kosmos",
-    "qora uf":     "Qora UF",
-    "kora uf":     "Qora UF",
-    "adnatonniy":  "Adnatonniy",
-    "adnotoniy":   "Adnatonniy",
-    "odnotonniy":  "Adnatonniy",
-    "odnotoniy":   "Adnatonniy",
-    "pechat":      "Pechat",
+    "gullili": "Gulli",
+    "gulli": "Gulli",
+    "hi tech": "Hi Tech",
+    "hitech": "Hi Tech",
+    "hi-tech": "Hi Tech",
+    "mramor": "Mramor",
+    "naqsh": "Naqsh",
+    "naxsh": "Naqsh",
+    "osmon": "Osmon",
+    "kosmos": "Kosmos",
+    "qora uf": "Qora UF",
+    "kora uf": "Qora UF",
+    "adnatonniy": "Adnatonniy",
+    "adnotoniy": "Adnatonniy",
+    "odnotonniy": "Adnatonniy",
+    "odnotoniy": "Adnatonniy",
+    "pechat": "Pechat",
     # ── Cyrillic Uzbek / Russian ──────────────────────────────────────────────
-    "гулли":       "Gulli",
-    "хай тек":     "Hi Tech",
-    "хайтек":      "Hi Tech",
-    "мрамор":      "Mramor",
-    "нақш":        "Naqsh",
-    "осмон":       "Osmon",
-    "космос":      "Kosmos",
-    "қора уф":     "Qora UF",
-    "аднатонний":  "Adnatonniy",
-    "печать":      "Pechat",
-    "печат":       "Pechat",
+    "гулли": "Gulli",
+    "хай тек": "Hi Tech",
+    "хайтек": "Hi Tech",
+    "мрамор": "Mramor",
+    "нақш": "Naqsh",
+    "осмон": "Osmon",
+    "космос": "Kosmos",
+    "қора уф": "Qora UF",
+    "аднатонний": "Adnatonniy",
+    "печать": "Pechat",
+    "печат": "Pechat",
 }
 
 
@@ -353,34 +514,34 @@ def _extract_design_from_text(text: str) -> str | None:
 
 _DISTRICT_ALIASES: dict[str, str] = {
     # Latin normalized (apostrophes stripped)
-    "qarshi":      "Qarshi",
-    "shahrisabz":  "Shahrisabz",
-    "kitob":       "Kitob",
-    "yakkabog":    "Yakkabog'",
-    "chiroqchi":   "Chiroqchi",
-    "guzor":       "G'uzor",
-    "koson":       "Koson",
-    "kasbi":       "Kasbi",
-    "muborak":     "Muborak",
-    "nishon":      "Nishon",
-    "dehqonobod":  "Dehqonobod",
-    "mirishkor":   "Mirishkor",
-    "qamashi":     "Qamashi",
+    "qarshi": "Qarshi",
+    "shahrisabz": "Shahrisabz",
+    "kitob": "Kitob",
+    "yakkabog": "Yakkabog'",
+    "chiroqchi": "Chiroqchi",
+    "guzor": "G'uzor",
+    "koson": "Koson",
+    "kasbi": "Kasbi",
+    "muborak": "Muborak",
+    "nishon": "Nishon",
+    "dehqonobod": "Dehqonobod",
+    "mirishkor": "Mirishkor",
+    "qamashi": "Qamashi",
     # Cyrillic Uzbek synonyms
-    "яккабог":     "Yakkabog'",
-    "шахрисабз":   "Shahrisabz",
-    "карши":       "Qarshi",
-    "қарши":       "Qarshi",
-    "китоб":       "Kitob",
-    "чироқчи":     "Chiroqchi",
-    "ғузор":       "G'uzor",
-    "косон":       "Koson",
-    "касби":       "Kasbi",
-    "муборак":     "Muborak",
-    "нишон":       "Nishon",
-    "деҳқонобод":  "Dehqonobod",
-    "миришкор":    "Mirishkor",
-    "қамаши":      "Qamashi",
+    "яккабог": "Yakkabog'",
+    "шахрисабз": "Shahrisabz",
+    "карши": "Qarshi",
+    "қарши": "Qarshi",
+    "китоб": "Kitob",
+    "чироқчи": "Chiroqchi",
+    "ғузор": "G'uzor",
+    "косон": "Koson",
+    "касби": "Kasbi",
+    "муборак": "Muborak",
+    "нишон": "Nishon",
+    "деҳқонобод": "Dehqonobod",
+    "миришкор": "Mirishkor",
+    "қамаши": "Qamashi",
 }
 
 
@@ -403,12 +564,13 @@ def detect_district(text: str) -> str | None:
 
 # ── Combo parser ─────────────────────────────────────────────────────────────
 
+
 def parse_combo(text: str) -> dict[str, Any]:
     """Extract area (m2), district and design from a single free-text message."""
     return {
-        "area":     _parse_area(text),
+        "area": _parse_area(text),
         "district": detect_district(text),
-        "design":   _extract_design_from_text(text),
+        "design": _extract_design_from_text(text),
     }
 
 
@@ -420,11 +582,27 @@ def parse_user_payload(text: str) -> dict[str, Any]:
 
 # ── Name validation ──────────────────────────────────────────────────────────
 
-_NAME_REJECT_KEYWORDS: frozenset[str] = frozenset({
-    "zakaz", "buyurtma", "narx", "qancha", "nech", "pul",
-    "katalog", "rasm", "dizayn", "variant", "operator",
-    "telefon", "aloqa", "tuman", "m2", "kv", "kvadrat",
-})
+_NAME_REJECT_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "zakaz",
+        "buyurtma",
+        "narx",
+        "qancha",
+        "nech",
+        "pul",
+        "katalog",
+        "rasm",
+        "dizayn",
+        "variant",
+        "operator",
+        "telefon",
+        "aloqa",
+        "tuman",
+        "m2",
+        "kv",
+        "kvadrat",
+    }
+)
 
 
 def normalize_name(text: str) -> str:
@@ -447,8 +625,10 @@ def is_valid_name(text: str) -> bool:
 
 # ── Price display helpers ────────────────────────────────────────────────────
 
+
 def _build_price_calc(area: float) -> str:
     """Build a price calculation table for the given area in m2."""
+
     def _fmt(v: int) -> str:
         return f"{v:,}".replace(",", " ")
 

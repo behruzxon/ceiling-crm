@@ -1,4 +1,5 @@
 """Tests for Step BQ — Operator Workflow Polish UI."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,6 +7,7 @@ from pathlib import Path
 
 def _crm():
     return Path("apps/web/templates/crm_contacts.html").read_text(encoding="utf-8")
+
 
 def _detail():
     return Path("apps/web/templates/crm_contact_detail.html").read_text(encoding="utf-8")
@@ -185,20 +187,25 @@ class TestSafety:
 class TestSettings:
     def test_workflow_polish(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_operator_workflow_polish_enabled"].default is True
 
     def test_shortcuts(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_keyboard_shortcuts_enabled"].default is True
 
     def test_quick_actions(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_quick_actions_enabled"].default is True
 
     def test_hide_stopped(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_default_hide_stopped"].default is True
 
     def test_next_contact(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_operator_next_contact_enabled"].default is True

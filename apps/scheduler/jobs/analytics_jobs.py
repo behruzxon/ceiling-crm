@@ -1,4 +1,5 @@
 """Daily analytics aggregation + AI activity report jobs."""
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -25,7 +26,8 @@ def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
     scheduler.add_job(
         aggregate_daily_stats,
         trigger="cron",
-        hour=23, minute=59,
+        hour=23,
+        minute=59,
         id="analytics_daily",
         replace_existing=True,
     )
@@ -33,7 +35,8 @@ def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
     scheduler.add_job(
         send_ai_daily_report,
         trigger="cron",
-        hour=21, minute=0,
+        hour=21,
+        minute=0,
         id="ai_daily_report",
         replace_existing=True,
     )
@@ -41,7 +44,8 @@ def register_analytics_jobs(scheduler: AsyncIOScheduler) -> None:
     scheduler.add_job(
         send_daily_admin_summary,
         trigger="cron",
-        hour=20, minute=0,
+        hour=20,
+        minute=0,
         id="daily_admin_summary",
         replace_existing=True,
     )
@@ -106,6 +110,7 @@ async def send_ai_daily_report() -> None:
 
     # ── Send to admin group ────────────────────────────────────────────────────
     from aiogram import Bot
+
     bot: Bot | None = None
     try:
         bot = Bot(token=bot_token)

@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for agent_runtime_settings table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,10 +23,9 @@ class AgentRuntimeSettingModel(Base):
     updated_by: Mapped[int | None] = mapped_column(sa.BigInteger, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
     is_active: Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.text("true"))
 
-    __table_args__ = (
-        sa.Index("ix_runtime_setting_active", "is_active"),
-    )
+    __table_args__ = (sa.Index("ix_runtime_setting_active", "is_active"),)

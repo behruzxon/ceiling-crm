@@ -4,6 +4,7 @@ core.services.stage_transition_gate_service
 Evaluates readiness to transition between rollout stages.
 Pure functions — no I/O, no mutations.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -25,10 +26,15 @@ class StageTransitionGateService:
         blockers = StageTransitionGateService.build_blockers(report, cs)
         warnings = StageTransitionGateService.build_warnings(report)
         score = StageTransitionGateService.calculate_readiness_score(
-            report, blockers, warnings,
+            report,
+            blockers,
+            warnings,
         )
         recs = StageTransitionGateService.build_recommendations(
-            report, blockers, warnings, score,
+            report,
+            blockers,
+            warnings,
+            score,
         )
 
         if blockers:
@@ -82,6 +88,7 @@ class StageTransitionGateService:
         from core.services.agent_rollout_preset_service import (
             AgentRolloutPresetService,
         )
+
         preview = AgentRolloutPresetService.preview_preset("dry_run", settings)
         if not preview.allowed:
             blockers.append("dry_run_preset_blocked")

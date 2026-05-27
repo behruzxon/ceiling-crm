@@ -1,4 +1,5 @@
 """Tests for Step CN — Price Calculator Service."""
+
 from __future__ import annotations
 
 from core.schemas.price_calculator import (
@@ -159,6 +160,7 @@ class TestCalculateEstimate:
 
     def test_result_frozen(self):
         import pytest
+
         r = svc.calculate_estimate(20.0, "gulli")
         with pytest.raises(AttributeError):
             r.total_uzs = 0

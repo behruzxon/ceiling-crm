@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for customer_journey_events table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,7 +19,8 @@ class JourneyEventModel(Base):
     event_data: Mapped[dict] = mapped_column(sa.JSON, server_default="{}", nullable=False)
     source_handler: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP(timezone=True), server_default=sa.func.now(),
+        sa.TIMESTAMP(timezone=True),
+        server_default=sa.func.now(),
     )
 
     __table_args__ = (

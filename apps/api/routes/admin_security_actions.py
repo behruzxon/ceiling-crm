@@ -2,6 +2,7 @@
 Admin Security Actions API endpoints.
 Feature-gated by ADMIN_SECURITY_ACTIONS_ENABLED.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -39,6 +40,7 @@ class IPRuleDisableBody(BaseModel):
 @router.post("/sessions/{session_id}/revoke")
 async def revoke_session(session_id: int, body: RevokeBody) -> dict:
     from core.services.admin_security_action_service import AdminSecurityActionService
+
     svc = AdminSecurityActionService
     check = svc.check_actions_enabled(enabled=False)
     if not check.ok:
@@ -57,6 +59,7 @@ async def revoke_session(session_id: int, body: RevokeBody) -> dict:
 @router.post("/admin-users/{admin_id}/disable")
 async def disable_admin(admin_id: str, body: DisableBody) -> dict:
     from core.services.admin_security_action_service import AdminSecurityActionService
+
     svc = AdminSecurityActionService
     check = svc.check_actions_enabled(enabled=False)
     if not check.ok:
@@ -67,6 +70,7 @@ async def disable_admin(admin_id: str, body: DisableBody) -> dict:
 @router.post("/admin-users/{admin_id}/enable")
 async def enable_admin(admin_id: str, body: EnableBody) -> dict:
     from core.services.admin_security_action_service import AdminSecurityActionService
+
     svc = AdminSecurityActionService
     check = svc.check_actions_enabled(enabled=False)
     if not check.ok:
@@ -87,6 +91,7 @@ async def list_ip_rules(rule_type: str = "", is_active: bool | None = None) -> d
 @router.post("/ip-rules")
 async def create_ip_rule(body: IPRuleCreateBody) -> dict:
     from core.services.admin_security_action_service import AdminSecurityActionService
+
     svc = AdminSecurityActionService
     check = svc.validate_ip_pattern(body.ip_pattern)
     if not check.ok:
@@ -109,6 +114,7 @@ async def create_ip_rule(body: IPRuleCreateBody) -> dict:
 @router.post("/ip-rules/{rule_id}/disable")
 async def disable_ip_rule(rule_id: int, body: IPRuleDisableBody) -> dict:
     from core.services.admin_security_action_service import AdminSecurityActionService
+
     svc = AdminSecurityActionService
     return {
         "ok": True,

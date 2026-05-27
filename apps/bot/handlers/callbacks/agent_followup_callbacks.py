@@ -1,4 +1,5 @@
 """Callback handlers for agent follow-up inline buttons."""
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -25,26 +26,31 @@ async def cb_agent_followup(callback: CallbackQuery, state: FSMContext, **data: 
 
     if action == "order":
         from apps.bot.handlers.private.order import cmd_order_start
+
         if callback.message:
             await cmd_order_start(callback.message, state, **data)
 
     elif action == "price":
         from apps.bot.handlers.private.pricing import start_pricing_flow
+
         if callback.message:
             await start_pricing_flow(callback.message, state)
 
     elif action == "operator":
         from apps.bot.handlers.private.operator import start_operator_flow
+
         if callback.message:
             await start_operator_flow(callback.message, state)
 
     elif action == "resume":
         from apps.bot.handlers.private.order import cmd_order_start
+
         if callback.message:
             await cmd_order_start(callback.message, state, **data)
 
     elif action == "catalog":
         from apps.bot.handlers.private.catalog import cmd_catalog
+
         if callback.message:
             await cmd_catalog(callback.message, state, **data)
 
@@ -64,9 +70,7 @@ async def cb_agent_followup(callback: CallbackQuery, state: FSMContext, **data: 
             log.warning("followup_stop_error", user_id=user_id)
 
         if callback.message:
-            await callback.message.answer(
-                "Tushunaman! Fikringiz o'zgarsa, istalgan vaqt yozing 😊"
-            )
+            await callback.message.answer("Tushunaman! Fikringiz o'zgarsa, istalgan vaqt yozing 😊")
 
     else:
         log.warning("unknown_followup_action", action=action, user_id=user_id)

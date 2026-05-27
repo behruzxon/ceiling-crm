@@ -76,8 +76,8 @@ def _create_engine() -> AsyncEngine:
         pool_size=db.pool_size,
         max_overflow=db.max_overflow,
         pool_timeout=db.pool_timeout,
-        pool_pre_ping=True,          # detect stale connections
-        pool_recycle=3600,           # recycle connections after 1 hour
+        pool_pre_ping=True,  # detect stale connections
+        pool_recycle=3600,  # recycle connections after 1 hour
         connect_args={
             # asyncpg-specific: disable JIT for predictable query plans
             "server_settings": {"jit": "off"},
@@ -110,8 +110,8 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
         _session_factory = async_sessionmaker(
             bind=get_engine(),
             class_=AsyncSession,
-            expire_on_commit=False,   # objects remain accessible after commit
-            autoflush=False,          # explicit flush control
+            expire_on_commit=False,  # objects remain accessible after commit
+            autoflush=False,  # explicit flush control
             autocommit=False,
         )
     return _session_factory

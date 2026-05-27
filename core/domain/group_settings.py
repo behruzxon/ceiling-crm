@@ -1,4 +1,5 @@
 """Domain model for per-group moderation settings."""
+
 from __future__ import annotations
 
 from datetime import datetime

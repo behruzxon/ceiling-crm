@@ -3,6 +3,7 @@ Stage 5 APPROVED_LIVE_SEND Readiness Check
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Read-only — no mutations, no sends, no secret printing.
 """
+
 from __future__ import annotations
 
 import os
@@ -18,11 +19,15 @@ class LiveSendReadinessResult:
     warnings: list[str] = field(default_factory=list)
     checks: list[str] = field(default_factory=list)
 
+
 def _env_bool(key, default=False):
     val = os.environ.get(key, "").strip().lower()
-    if val in ("true", "1", "yes"): return True
-    if val in ("false", "0", "no"): return False
+    if val in ("true", "1", "yes"):
+        return True
+    if val in ("false", "0", "no"):
+        return False
     return default
+
 
 def run_live_send_readiness() -> LiveSendReadinessResult:
     r = LiveSendReadinessResult()
@@ -60,14 +65,22 @@ def run_live_send_readiness() -> LiveSendReadinessResult:
         r.checks.append("PASS: No critical blockers")
     return r
 
+
 def print_result(r):
     icon = {"green": "[OK]", "yellow": "[WARN]", "red": "[FAIL]"}.get(r.status, "[?]")
-    print(f"\n{icon} Stage 5 APPROVED_LIVE_SEND: {'READY' if r.ready else 'NOT READY'} ({r.status})\n")
-    for c in r.checks: print(f"  {c}")
-    for w in r.warnings: print(f"  {w}")
-    for b in r.blockers: print(f"  {b}")
+    print(
+        f"\n{icon} Stage 5 APPROVED_LIVE_SEND: {'READY' if r.ready else 'NOT READY'} ({r.status})\n"
+    )
+    for c in r.checks:
+        print(f"  {c}")
+    for w in r.warnings:
+        print(f"  {w}")
+    for b in r.blockers:
+        print(f"  {b}")
+
 
 if __name__ == "__main__":
     result = run_live_send_readiness()
     print_result(result)
-    if not result.ready: sys.exit(1)
+    if not result.ready:
+        sys.exit(1)

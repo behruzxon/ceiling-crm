@@ -4,6 +4,7 @@ core.services.admin_csrf_service
 CSRF token generation and validation. Pure functions.
 Default disabled by config — foundation only.
 """
+
 from __future__ import annotations
 
 import hashlib

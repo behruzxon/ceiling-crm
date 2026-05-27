@@ -3,6 +3,7 @@ core.services.crm_realtime_inbox_service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Live inbox summary builder. Pure functions — wraps CRMInboxAlertService.
 """
+
 from __future__ import annotations
 
 import re
@@ -39,10 +40,12 @@ class CRMRealtimeInboxService:
     ) -> LiveInboxSummary:
         check_time = now or datetime.now(UTC)
         from core.services.crm_inbox_alert_service import CRMInboxAlertService
+
         overview = CRMInboxAlertService.get_alert_overview(contacts, check_time)
         alerts = CRMInboxAlertService.build_alerts(contacts, check_time, limit=max_alerts)
         unanswered = sum(
-            1 for c in contacts
+            1
+            for c in contacts
             if c.get("last_message_direction") == "inbound"
             and c.get("lead_status") not in ("stopped", "lost", "won")
         )

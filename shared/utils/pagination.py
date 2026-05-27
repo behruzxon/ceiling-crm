@@ -1,4 +1,5 @@
 """Pagination utilities for admin lists."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

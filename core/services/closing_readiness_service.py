@@ -22,6 +22,7 @@ Usage::
     # cr.readiness_tier == "READY_TO_CLOSE"
     # cr.closing_score == 84
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -163,26 +164,12 @@ _TACTIC_MESSAGES: dict[str, str] = {
 }
 
 _TACTIC_FALLBACKS: dict[str, str] = {
-    "urgency_close": (
-        "Narxlar tez o'zgarishi mumkin. "
-        "Hozirgi sharoitda hisoblab bersinmi?"
-    ),
-    "bonus_offer": (
-        "Qo'shimcha xizmatlarimiz haqida ma'lumot beraymi?"
-    ),
-    "measurement_booking": (
-        "Bepul maslahat olishni xohlaysizmi? "
-        "Hech qanday majburiyat yo'q."
-    ),
-    "simplified_package_close": (
-        "Eng oddiy variantimiz haqida aytib beraymi?"
-    ),
-    "trust_reassurance_close": (
-        "Oldingi ishlarimiz fotosini ko'rmoqchimisiz?"
-    ),
-    "manager_direct_call": (
-        "Savollaringiz bo'lsa, yozing \u2014 yordam beramiz!"
-    ),
+    "urgency_close": ("Narxlar tez o'zgarishi mumkin. " "Hozirgi sharoitda hisoblab bersinmi?"),
+    "bonus_offer": ("Qo'shimcha xizmatlarimiz haqida ma'lumot beraymi?"),
+    "measurement_booking": ("Bepul maslahat olishni xohlaysizmi? " "Hech qanday majburiyat yo'q."),
+    "simplified_package_close": ("Eng oddiy variantimiz haqida aytib beraymi?"),
+    "trust_reassurance_close": ("Oldingi ishlarimiz fotosini ko'rmoqchimisiz?"),
+    "manager_direct_call": ("Savollaringiz bo'lsa, yozing \u2014 yordam beramiz!"),
 }
 
 
@@ -321,7 +308,8 @@ def _evaluate_readiness_from_vector(sv: SignalVector) -> ClosingReadiness:
         else:
             severity_penalty = {"low": -3, "medium": -8, "high": -15}
             pts += severity_penalty.get(
-                (sv.last_objection_severity or "low").lower(), -3,
+                (sv.last_objection_severity or "low").lower(),
+                -3,
             )
             blockers.append(f"unresolved_{sv.last_objection}")
     else:
@@ -480,8 +468,11 @@ def _evaluate_readiness_legacy(
         pts += 5
 
     _stage_pts = {
-        "DEAL": 8, "QUOTE": 6, "MEASUREMENT": 5,
-        "CONTACTED": 3, "PACKAGE_SELECTED": 2,
+        "DEAL": 8,
+        "QUOTE": 6,
+        "MEASUREMENT": 5,
+        "CONTACTED": 3,
+        "PACKAGE_SELECTED": 2,
     }
     stage_bonus = _stage_pts.get(stage, 0)
     if stage_bonus:
@@ -861,7 +852,8 @@ def build_close_advice_card(
     tier_label = TIER_LABELS.get(readiness.readiness_tier, readiness.readiness_tier)
     tier_badge = TIER_BADGES.get(readiness.readiness_tier, "\u26aa")
     timeline = (
-        "hozir" if readiness.suggested_timeline_hours == 0
+        "hozir"
+        if readiness.suggested_timeline_hours == 0
         else f"{readiness.suggested_timeline_hours} soat ichida"
     )
 
@@ -925,8 +917,11 @@ def build_close_advice_card(
             if b.startswith("unresolved_"):
                 obj = b.replace("unresolved_", "")
                 _obj_uz = {
-                    "expensive": "Narx", "compare": "Taqqoslash",
-                    "delay": "Kechiktirish", "trust": "Ishonch", "angry": "Norozilik",
+                    "expensive": "Narx",
+                    "compare": "Taqqoslash",
+                    "delay": "Kechiktirish",
+                    "trust": "Ishonch",
+                    "angry": "Norozilik",
                 }
                 label = f"\u26a0\ufe0f {_obj_uz.get(obj, obj)} e'tirozi ochiq"
             else:
@@ -941,7 +936,9 @@ def build_close_advice_card(
 
 
 def _build_tactic_result(
-    tactic: str, reason_uz: str, confidence: float,
+    tactic: str,
+    reason_uz: str,
+    confidence: float,
 ) -> ClosingTacticResult:
     return ClosingTacticResult(
         tactic=tactic,
@@ -972,7 +969,9 @@ def _build_reason(signals: list[str], blockers: list[str]) -> str:
 
 
 def _build_reason_uz(
-    tier: str, signals: list[str], blockers: list[str],
+    tier: str,
+    signals: list[str],
+    blockers: list[str],
 ) -> str:
     """Build Uzbek reason for admin card."""
     if tier == TIER_READY_TO_CLOSE:

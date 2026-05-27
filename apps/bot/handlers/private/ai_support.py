@@ -22,6 +22,7 @@ has been extracted into sibling modules:
   ai_support_agent.py       - Agent pipeline (orchestrator + lead signal)
   ai_support_auto_reply.py  - Auto-reply decision layer + rate limiting
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -141,7 +142,6 @@ log = get_logger(__name__)
 router = Router(name="private:ai_support")
 
 
-
 # Extracted module imports (agent pipeline + auto-reply)
 from apps.bot.handlers.private.ai_support_agent import (  # noqa: F401, E402
     _process_lead_signal,
@@ -156,22 +156,25 @@ from apps.bot.handlers.private.ai_support_auto_reply import (  # noqa: F401, E40
 
 # ── Explicit AI mode — entry ────────────────────────────────────────────────
 
+
 @router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_AI)
-async def cmd_ai_start(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def cmd_ai_start(message: Message, state: FSMContext, **data: object) -> None:
     """Enter dedicated AI chat mode (private only; redirect groups to DM)."""
     if message.from_user is None:
         return
     if message.chat.type != "private":
         settings = get_settings()
         bot_username = settings.bot.username or "bot"
-        kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(
-                text="💬 Madina bilan suhbat",
-                url=f"https://t.me/{bot_username}?start=ai",
-            )
-        ]])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="💬 Madina bilan suhbat",
+                        url=f"https://t.me/{bot_username}?start=ai",
+                    )
+                ]
+            ]
+        )
         await message.answer(
             "🤖 AI yordamchisi faqat shaxsiy chatda ishlaydi. "
             "Quyidagi tugma orqali bot bilan to'g'ridan-to'g'ri yozing:",
@@ -207,11 +210,27 @@ async def cmd_ai_start(
 
 # ── Name collection ─────────────────────────────────────────────────────────
 
-_NAME_REJECT_KEYWORDS: frozenset[str] = frozenset({
-    "zakaz", "buyurtma", "narx", "qancha", "nech", "pul",
-    "katalog", "rasm", "dizayn", "variant", "operator",
-    "telefon", "aloqa", "tuman", "m2", "kv", "kvadrat",
-})
+_NAME_REJECT_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "zakaz",
+        "buyurtma",
+        "narx",
+        "qancha",
+        "nech",
+        "pul",
+        "katalog",
+        "rasm",
+        "dizayn",
+        "variant",
+        "operator",
+        "telefon",
+        "aloqa",
+        "tuman",
+        "m2",
+        "kv",
+        "kvadrat",
+    }
+)
 
 
 @router.message(
@@ -219,9 +238,7 @@ _NAME_REJECT_KEYWORDS: frozenset[str] = frozenset({
     F.text,
     ~F.text.startswith("/"),
 )
-async def handle_name_input(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_name_input(message: Message, state: FSMContext, **data: object) -> None:
     """Collect user's name; if input is not a name, handle intent instead."""
     text = (message.text or "").strip()
 
@@ -257,6 +274,7 @@ async def handle_name_input(
 
     if _is_measurement_request(text):
         from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
         await start_measurement_flow(message, state)
         return
 
@@ -271,14 +289,13 @@ async def handle_name_input(
 
 # ── District collection ─────────────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_for_district),
     F.text,
     ~F.text.startswith("/"),
 )
-async def handle_district_input(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_district_input(message: Message, state: FSMContext, **data: object) -> None:
     """Collect district, then ask for phone number."""
     text = (message.text or "").strip()
     if text in _EXIT_TEXTS:
@@ -296,13 +313,12 @@ async def handle_district_input(
 
 # ── Phone collection (contact share) ────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_for_phone),
     F.contact,
 )
-async def handle_phone_contact(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_phone_contact(message: Message, state: FSMContext, **data: object) -> None:
     """Handle Telegram contact share."""
     contact = message.contact
     if contact is None or not contact.phone_number:
@@ -334,6 +350,7 @@ async def handle_phone_contact(
 
 
 # ── Phone step completion (shared by contact and text input) ─────────────────
+
 
 async def _complete_phone_step(message: Message, state: FSMContext, phone: str) -> None:
     """Shared success path for both contact-share and manual phone entry."""
@@ -367,6 +384,7 @@ async def _complete_phone_step(message: Message, state: FSMContext, phone: str) 
             try:
                 from infrastructure.cache.client import get_redis
                 from infrastructure.cache.keys import CacheKeys, CacheTTL
+
                 redis = get_redis()
                 fu_state = (await redis.get_json(CacheKeys.ai_followup_state(uid))) or {}
                 fu_state["lead_created"] = True
@@ -387,7 +405,10 @@ async def _complete_phone_step(message: Message, state: FSMContext, phone: str) 
             factory = get_session_factory()
             async with factory() as _ld_sess:
                 from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
-                _ld_list = await PostgresLeadRepository(_ld_sess).list_by_user(_phone_user_id, limit=1)
+
+                _ld_list = await PostgresLeadRepository(_ld_sess).list_by_user(
+                    _phone_user_id, limit=1
+                )
                 if _ld_list:
                     _resolved_lead_id = _ld_list[0].id
         except Exception:
@@ -419,14 +440,13 @@ async def _complete_phone_step(message: Message, state: FSMContext, phone: str) 
 
 # ── Phone collection (text input) ───────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_for_phone),
     F.text,
     ~F.text.startswith("/"),
 )
-async def handle_phone_input(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_phone_input(message: Message, state: FSMContext, **data: object) -> None:
     """Collect phone (manual text entry), confirm, and fire admin notification."""
     text = (message.text or "").strip()
     if text in _EXIT_TEXTS:
@@ -452,7 +472,9 @@ async def handle_phone_input(
     if phone is None:
         await message.answer(
             "Telefon raqamni shunday yozing:\n90xxxxxxx yoki +99890xxxxxxx",
-            reply_markup=_phone_request_keyboard() if message.chat.type == "private" else _ai_keyboard(),
+            reply_markup=(
+                _phone_request_keyboard() if message.chat.type == "private" else _ai_keyboard()
+            ),
         )
         return
     await _complete_phone_step(message, state, phone)
@@ -460,22 +482,19 @@ async def handle_phone_input(
 
 # ── AI exit handlers ────────────────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text.in_(_EXIT_TEXTS),
 )
-async def handle_ai_exit(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_exit(message: Message, state: FSMContext, **data: object) -> None:
     """Exit AI mode and return to main menu."""
     await state.clear()
     await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
 
 
 @router.message(StateFilter(AiSupportStates.waiting_for_ai_question), Command("ai_off"))
-async def handle_ai_off(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_off(message: Message, state: FSMContext, **data: object) -> None:
     """Exit AI mode via /ai_off command."""
     await state.clear()
     await message.answer("🤖 AI rejim o'chirildi.", reply_markup=main_menu_keyboard())
@@ -485,17 +504,13 @@ async def handle_ai_off(
 
 
 @router.message(Command("ai_help"))
-async def cmd_ai_help(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def cmd_ai_help(message: Message, state: FSMContext, **data: object) -> None:
     """Show AI capabilities and usage examples."""
     await message.answer(_AI_HELP_TEXT, parse_mode="HTML", reply_markup=_ai_keyboard())
 
 
 @router.message(Command("ai_reset"))
-async def cmd_ai_reset(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def cmd_ai_reset(message: Message, state: FSMContext, **data: object) -> None:
     """Clear AI conversation memory (keeps CRM data)."""
     if message.from_user is None:
         return
@@ -515,9 +530,7 @@ async def cmd_ai_reset(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text == BTN_AI_HELP,
 )
-async def handle_ai_help_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_help_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: show AI help."""
     await cmd_ai_help(message, state, **data)
 
@@ -526,9 +539,7 @@ async def handle_ai_help_btn(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text == BTN_AI_RESET,
 )
-async def handle_ai_reset_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_reset_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: reset AI memory."""
     await cmd_ai_reset(message, state, **data)
 
@@ -537,30 +548,37 @@ async def handle_ai_reset_btn(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text == BTN_AI_PRICE,
 )
-async def handle_ai_price_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_price_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: prompt for pricing input."""
     await message.answer(
-        _AI_PRICE_PROMPT, parse_mode="HTML", reply_markup=_ai_keyboard(),
+        _AI_PRICE_PROMPT,
+        parse_mode="HTML",
+        reply_markup=_ai_keyboard(),
     )
 
 
 # ── Deterministic price calculator (wired in Step CO) ──────────────────
 
+
 async def _try_price_calculator(
-    message: Message, state: FSMContext, text: str, user_id: int,
+    message: Message,
+    state: FSMContext,
+    text: str,
+    user_id: int,
 ) -> bool:
     """Try deterministic price calculation. Returns True if handled."""
     try:
         from core.services.price_calculator_service import (
             PriceCalculatorService,
         )
+
         svc = PriceCalculatorService()
         resp = svc.extract_and_respond(text)
         if resp.estimate is not None:
             await message.answer(
-                resp.user_text, parse_mode="HTML", reply_markup=_ai_keyboard(),
+                resp.user_text,
+                parse_mode="HTML",
+                reply_markup=_ai_keyboard(),
             )
             if resp.memory_payload and user_id:
                 try:
@@ -579,9 +597,7 @@ async def _try_price_calculator(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text == BTN_AI_CATALOG,
 )
-async def handle_ai_catalog_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_catalog_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: show catalog."""
     await message.answer(_CATALOG_INTRO, parse_mode="HTML", reply_markup=catalog_list_keyboard())
 
@@ -590,9 +606,7 @@ async def handle_ai_catalog_btn(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text == BTN_AI_OPERATOR,
 )
-async def handle_ai_operator_btn(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_operator_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: operator handoff with queue recording."""
     user_id = message.from_user.id if message.from_user else 0
     msg = await _try_operator_handoff(user_id, source="ai_button")
@@ -611,6 +625,7 @@ async def _try_operator_handoff(
             build_user_message,
         )
         from shared.config import get_settings
+
         settings = get_settings()
         if not settings.business.crm_operator_handoff_queue_enabled:
             return _AI_OPERATOR_PROMPT
@@ -619,6 +634,7 @@ async def _try_operator_handoff(
             from apps.bot.handlers.private.ai_memory import (
                 _load_ai_memory,
             )
+
             mem = await _load_ai_memory(user_id) or {}
             has_phone = bool(mem.get("phone_captured"))
         except Exception:
@@ -630,14 +646,13 @@ async def _try_operator_handoff(
 
 # ── Photo funnel handlers ───────────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_photo),
     F.photo,
     F.chat.type == "private",
 )
-async def handle_photo_received(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_photo_received(message: Message, state: FSMContext, **data: object) -> None:
     """Photo received -> ask room type."""
     await state.set_state(AiSupportStates.waiting_room)
     await message.answer(
@@ -653,9 +668,7 @@ async def handle_photo_received(
     ~F.text.startswith("/"),
     F.chat.type == "private",
 )
-async def handle_photo_state_text(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_photo_state_text(message: Message, state: FSMContext, **data: object) -> None:
     """Non-photo message while waiting for photo -> re-prompt."""
     text = (message.text or "").strip()
     if text in _EXIT_TEXTS:
@@ -674,9 +687,7 @@ async def handle_photo_state_text(
     ~F.text.startswith("/"),
     F.chat.type == "private",
 )
-async def handle_room_input(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_room_input(message: Message, state: FSMContext, **data: object) -> None:
     """Detect room type -> send recommendations + catalog button + ask area."""
     text = (message.text or "").strip()
     if text in _EXIT_TEXTS:
@@ -714,9 +725,7 @@ async def handle_room_input(
     ~F.text.startswith("/"),
     F.chat.type == "private",
 )
-async def handle_area_photo_input(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_area_photo_input(message: Message, state: FSMContext, **data: object) -> None:
     """Collect area in photo funnel -> ask district immediately."""
     text = (message.text or "").strip()
     if text in _EXIT_TEXTS:
@@ -743,15 +752,14 @@ async def handle_area_photo_input(
 
 # ── Explicit AI question handler ────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text,
     ~F.text.startswith("/"),
     ~F.text.in_(_EXIT_TEXTS),
 )
-async def handle_ai_question(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_question(message: Message, state: FSMContext, **data: object) -> None:
     """Answer questions with the AI service while in explicit AI mode."""
     text = _normalize_room(message.text or "")
     user_id = message.from_user.id if message.from_user else 0
@@ -771,8 +779,12 @@ async def handle_ai_question(
     if message.bot and user_id and message.chat.type == "private":
         _nonce = await _refresh_ai_followup_nonce(user_id)
         _schedule_ai_followup(
-            bot=message.bot, chat_id=message.chat.id, user_id=user_id,
-            nonce=_nonce, storage=state.storage, state_key=state.key,
+            bot=message.bot,
+            chat_id=message.chat.id,
+            user_id=user_id,
+            nonce=_nonce,
+            storage=state.storage,
+            state_key=state.key,
         )
 
     await state.update_data(last_user_message=text[:200])
@@ -782,6 +794,7 @@ async def handle_ai_question(
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 25))
         from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
         await start_measurement_flow(message, state)
         return
 
@@ -819,7 +832,9 @@ async def handle_ai_question(
 
     _obj_det = detect_objection_full(text)
     if _obj_det:
-        await _handle_objection(_obj_det.objection_type, message, state, user_id, severity=_obj_det.severity)
+        await _handle_objection(
+            _obj_det.objection_type, message, state, user_id, severity=_obj_det.severity
+        )
         return
 
     _combo = parse_combo(text)
@@ -827,15 +842,22 @@ async def handle_ai_question(
     if _is_price_query(text) or _price_area is not None:
         if _price_area is not None and _combo["design"]:
             if user_id:
-                asyncio.create_task(_add_lead_score(user_id, 15 + (10 if _combo["district"] else 0)))
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
             if await _try_price_calculator(message, state, text, user_id):
                 return
         if _price_area is not None:
             if user_id:
-                asyncio.create_task(_add_lead_score(user_id, 15 + (10 if _combo["district"] else 0)))
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
             await _show_price_upsell(
-                message, state, _price_area,
-                district=_combo["district"], design=_combo["design"],
+                message,
+                state,
+                _price_area,
+                district=_combo["district"],
+                design=_combo["design"],
             )
         elif _combo["district"]:
             if user_id:
@@ -885,9 +907,7 @@ async def handle_ai_question(
             raise ValueError("empty AI reply")
     except Exception:
         log.exception("ai_call_failed", user_id=user_id)
-        await _store_user_message_only(
-            user_id=user_id, user_text=text, current_messages=history
-        )
+        await _store_user_message_only(user_id=user_id, user_text=text, current_messages=history)
         await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
         return
 
@@ -898,9 +918,12 @@ async def handle_ai_question(
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close
+
         _closer_score = await _get_lead_score(user_id)
         await attempt_close(
-            message, state, user_id,
+            message,
+            state,
+            user_id,
             intent=intent,
             score=_closer_score,
             closing_confidence=closing_confidence,
@@ -931,7 +954,9 @@ async def handle_ai_question(
     _fsm_for_mem = await state.get_data()
     asyncio.create_task(
         _update_ai_memory_from_interaction(
-            user_id, text=text, fsm_data=_fsm_for_mem,
+            user_id,
+            text=text,
+            fsm_data=_fsm_for_mem,
             first_name=message.from_user.first_name if message.from_user else None,
         )
     )
@@ -947,15 +972,14 @@ async def handle_ai_question(
 
 # ── Passive handler (default_state catch-all) ───────────────────────────────
 
+
 @router.message(
     F.chat.type == "private",
     F.text,
     ~F.text.startswith("/"),
     StateFilter(default_state),
 )
-async def handle_ai_message(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_message(message: Message, state: FSMContext, **data: object) -> None:
     """Route free-text DMs: dimension shortcut or AI reply with persistent memory."""
     text = message.text or ""
     user_id = message.from_user.id if message.from_user else 0
@@ -996,8 +1020,12 @@ async def handle_ai_message(
     if message.bot and user_id and message.chat.type == "private":
         _nonce = await _refresh_ai_followup_nonce(user_id)
         _schedule_ai_followup(
-            bot=message.bot, chat_id=message.chat.id, user_id=user_id,
-            nonce=_nonce, storage=state.storage, state_key=state.key,
+            bot=message.bot,
+            chat_id=message.chat.id,
+            user_id=user_id,
+            nonce=_nonce,
+            storage=state.storage,
+            state_key=state.key,
         )
 
     if _is_measurement_request(text):
@@ -1005,6 +1033,7 @@ async def handle_ai_message(
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 25))
         from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
         await start_measurement_flow(message, state)
         return
 
@@ -1035,10 +1064,12 @@ async def handle_ai_message(
 
     # ── Stop-word detection: disable agent follow-ups ───────────────────
     from core.services.followup_scheduler_service import FollowupSchedulerService as _FuSvc
+
     if _FuSvc.is_stop_signal(text):
         log.info("stop_signal_received", user_id=user_id, text=text[:30])
         try:
             from core.services.agent_memory_service import AgentMemoryService as _MemSvc
+
             _stop_factory = get_session_factory()
             async with _stop_factory() as _stop_sess:
                 await _MemSvc(_stop_sess).disable_followup(user_id, "user_opted_out")
@@ -1056,7 +1087,9 @@ async def handle_ai_message(
 
     _obj_det = detect_objection_full(text)
     if _obj_det:
-        await _handle_objection(_obj_det.objection_type, message, state, user_id, severity=_obj_det.severity)
+        await _handle_objection(
+            _obj_det.objection_type, message, state, user_id, severity=_obj_det.severity
+        )
         return
 
     _combo = parse_combo(text)
@@ -1064,10 +1097,15 @@ async def handle_ai_message(
     if _is_price_query(text) or area is not None:
         if area is not None:
             if user_id:
-                asyncio.create_task(_add_lead_score(user_id, 15 + (10 if _combo["district"] else 0)))
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
             await _show_price_upsell(
-                message, state, area,
-                district=_combo["district"], design=_combo["design"],
+                message,
+                state,
+                area,
+                district=_combo["district"],
+                design=_combo["design"],
             )
         elif _combo["district"]:
             if user_id:
@@ -1131,9 +1169,12 @@ async def handle_ai_message(
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close
+
         _closer_score = await _get_lead_score(user_id)
         await attempt_close(
-            message, state, user_id,
+            message,
+            state,
+            user_id,
             intent=intent,
             score=_closer_score,
             closing_confidence=closing_confidence,
@@ -1164,7 +1205,9 @@ async def handle_ai_message(
     _fsm_for_mem = await state.get_data()
     asyncio.create_task(
         _update_ai_memory_from_interaction(
-            user_id, text=text, fsm_data=_fsm_for_mem,
+            user_id,
+            text=text,
+            fsm_data=_fsm_for_mem,
             first_name=message.from_user.first_name if message.from_user else None,
         )
     )
@@ -1179,10 +1222,9 @@ async def handle_ai_message(
 
 # ── Inline-button callbacks ─────────────────────────────────────────────────
 
+
 @router.callback_query(F.data == "ai:start_price")
-async def cb_start_price(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_start_price(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Kick off the pricing FSM from an AI-generated inline button."""
     await callback.answer()
     if callback.message:

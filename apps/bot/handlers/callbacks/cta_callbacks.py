@@ -15,6 +15,7 @@ Callback routing
   cta:operator  — start the operator contact flow (reuses start_operator_flow)
   cta:catalog   — show catalog section keyboard
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -54,9 +55,7 @@ async def cb_cta_discount(callback: CallbackQuery, **data: object) -> None:
 
 
 @router.callback_query(F.data == "cta:order")
-async def cb_cta_order(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_cta_order(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the full order FSM — same flow as tapping '🛒 Zakaz berish'."""
     await callback.answer()
     if not callback.message or not callback.from_user:
@@ -74,9 +73,7 @@ async def cb_cta_order(
 
 
 @router.callback_query(F.data == "cta:pricing")
-async def cb_cta_pricing(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_cta_pricing(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the pricing calculator — same flow as '💰 Narx kalkulyator'."""
     await callback.answer()
     if callback.message:
@@ -87,9 +84,7 @@ async def cb_cta_pricing(
 
 
 @router.callback_query(F.data == "cta:operator")
-async def cb_cta_operator(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_cta_operator(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Start the operator contact flow — same as '☎️ Operator'."""
     await callback.answer()
     if callback.message:

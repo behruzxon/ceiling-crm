@@ -2,6 +2,7 @@
 Rate limit middleware.
 Prevents abuse using Redis sliding window counter.
 """
+
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable

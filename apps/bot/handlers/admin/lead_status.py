@@ -4,6 +4,7 @@ Admin quick-status callbacks for lead notification cards.
 Callback pattern: lead:{id}:status:{status}
 Supported statuses: contacted | measurement | quoted | deal | lost
 """
+
 from __future__ import annotations
 
 import re
@@ -20,11 +21,11 @@ router = Router(name="admin:lead_status")
 
 # Map status slug → human-readable confirmation label
 _STATUS_LABELS: dict[str, str] = {
-    "contacted":   "✅ Bog'lanildi",
+    "contacted": "✅ Bog'lanildi",
     "measurement": "📅 O'lchov belgilandi",
-    "quoted":      "💰 Narx yuborildi",
-    "deal":        "🧾 Zakaz rasmiylashtirildi",
-    "lost":        "❌ Yo'qotildi",
+    "quoted": "💰 Narx yuborildi",
+    "deal": "🧾 Zakaz rasmiylashtirildi",
+    "lost": "❌ Yo'qotildi",
 }
 
 # Terminal statuses: clear next_follow_up_at so scheduler stops sending reminders

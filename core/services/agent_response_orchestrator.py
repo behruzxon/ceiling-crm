@@ -6,6 +6,7 @@ Coordinates the full agent response pipeline:
 
 Pure static methods for the core logic; async entry points for DB I/O.
 """
+
 from __future__ import annotations
 
 import re
@@ -25,48 +26,25 @@ log = get_logger(__name__)
 
 _REPLY_TEXTS: dict[str, str] = {
     "stop": "Tushunarli 😊 Sizga boshqa xabar yubormaymiz.",
-    "operator": (
-        "Operatorimiz tez orada siz bilan bog'lanadi 👨‍💼"
-    ),
-    "price_ask_area": (
-        "Kvadratingizni yozsangiz, taxminiy narxni "
-        "hisoblab beraman 📐"
-    ),
-    "price_ask_design": (
-        "Qaysi turini tanlaysiz: oddiy, gulli yoki premium?"
-    ),
+    "operator": ("Operatorimiz tez orada siz bilan bog'lanadi 👨‍💼"),
+    "price_ask_area": ("Kvadratingizni yozsangiz, taxminiy narxni " "hisoblab beraman 📐"),
+    "price_ask_design": ("Qaysi turini tanlaysiz: oddiy, gulli yoki premium?"),
     "cheaper_option": (
-        "Arzonroq variantdan ham hisoblab berish mumkin. "
-        "Operator bilan kelishiladi 😊"
+        "Arzonroq variantdan ham hisoblab berish mumkin. " "Operator bilan kelishiladi 😊"
     ),
-    "warranty_trust": (
-        "Bajarilgan ishlar va kafolat bo'yicha "
-        "batafsil ma'lumot beramiz ✅"
-    ),
-    "design_help": (
-        "Katalogdan mos model tanlashga yordam beraman 🎨"
-    ),
-    "fast_install": (
-        "Tezkor o'lchov uchun operatorimiz yordam beradi ⚡"
-    ),
+    "warranty_trust": ("Bajarilgan ishlar va kafolat bo'yicha " "batafsil ma'lumot beramiz ✅"),
+    "design_help": ("Katalogdan mos model tanlashga yordam beraman 🎨"),
+    "fast_install": ("Tezkor o'lchov uchun operatorimiz yordam beradi ⚡"),
     "order_continue": "Buyurtmani davom ettiramizmi? 😊",
     "callback_request": (
-        "Telefon raqamingizni yuborsangiz, operatorimiz "
-        "siz bilan bog'lanadi 📞"
+        "Telefon raqamingizni yuborsangiz, operatorimiz " "siz bilan bog'lanadi 📞"
     ),
-    "discount_discuss": (
-        "Chegirma bo'yicha operator bilan kelishiladi 😊"
-    ),
-    "measurement": (
-        "Usta kelib bepul o'lchov qilib beradi 📏"
-    ),
+    "discount_discuss": ("Chegirma bo'yicha operator bilan kelishiladi 😊"),
+    "measurement": ("Usta kelib bepul o'lchov qilib beradi 📏"),
 }
 
 _ADMIN_ALERT_TEMPLATE = (
-    "🔔 Agent alert\n"
-    "User: {user_id}\n"
-    "Action: {action}\n"
-    "Reason: {reason}"
+    "🔔 Agent alert\n" "User: {user_id}\n" "Action: {action}\n" "Reason: {reason}"
 )
 
 _PHONE_RE = re.compile(r"\+?\d{9,15}")
@@ -108,6 +86,7 @@ class AgentResponseOrchestrator:
                 from core.services.lead_signal_service import (
                     LeadSignalService,
                 )
+
                 sig = LeadSignalService.extract_signals(text)
                 signal_dict = {
                     "intent": sig.intent,
@@ -125,6 +104,7 @@ class AgentResponseOrchestrator:
         offer_dict: dict[str, Any] = {}
         try:
             from core.services import agent_decision_engine as ade
+
             decision = ade.evaluate(memory, [])
             decision_dict = {
                 "customer_state": decision.customer_state,
@@ -139,6 +119,7 @@ class AgentResponseOrchestrator:
             from core.services.dynamic_offer_service import (
                 DynamicOfferService,
             )
+
             offer = DynamicOfferService.choose_offer(
                 memory=memory,
                 lead_signal=signal_dict or None,
@@ -160,6 +141,7 @@ class AgentResponseOrchestrator:
             from core.services.conversation_policy_service import (
                 ConversationPolicyService,
             )
+
             policy = ConversationPolicyService.evaluate(
                 memory=memory,
                 decision=decision_dict,
@@ -192,7 +174,8 @@ class AgentResponseOrchestrator:
         )
 
         payload = AgentResponseOrchestrator.apply_safety(
-            payload, policy_dict,
+            payload,
+            policy_dict,
         )
 
         return payload
@@ -215,19 +198,32 @@ class AgentResponseOrchestrator:
         flags: list[str] = list(policy.get("safety_flags") or [])
 
         action = AgentResponseOrchestrator._map_action(
-            policy_action, signal, offer, source,
+            policy_action,
+            signal,
+            offer,
+            source,
         )
         msg_text = AgentResponseOrchestrator._build_reply_text(
-            action, signal, offer,
+            action,
+            signal,
+            offer,
         )
         buttons = AgentResponseOrchestrator._build_buttons(offer)
         admin_text = AgentResponseOrchestrator._build_admin_alert(
-            action, notify_admin, memory, signal,
+            action,
+            notify_admin,
+            memory,
+            signal,
         )
         disable = action == AgentOrchestratorAction.DISABLE_AGENT.value
 
         trace = AgentResponseOrchestrator.build_trace(
-            signal, decision, offer, policy, action, source,
+            signal,
+            decision,
+            offer,
+            policy,
+            action,
+            source,
         )
 
         return AgentResponsePayload(
@@ -264,10 +260,7 @@ class AgentResponseOrchestrator:
                 flags.append("policy_denied")
 
         risk = policy.get("risk_level", "none")
-        if (
-            risk == "high"
-            and action == AgentOrchestratorAction.SEND_USER_REPLY.value
-        ):
+        if risk == "high" and action == AgentOrchestratorAction.SEND_USER_REPLY.value:
             action = AgentOrchestratorAction.STORE_MEMORY_ONLY.value
             allowed = False
             flags.append("high_risk_blocked")
@@ -277,9 +270,15 @@ class AgentResponseOrchestrator:
             action = AgentOrchestratorAction.DISABLE_AGENT.value
             msg = _REPLY_TEXTS["stop"]
             allowed = True
-            flags = [f for f in flags if f not in (
-                "policy_denied", "high_risk_blocked",
-            )]
+            flags = [
+                f
+                for f in flags
+                if f
+                not in (
+                    "policy_denied",
+                    "high_risk_blocked",
+                )
+            ]
 
         if (
             flags != payload.safety_flags
@@ -298,9 +297,7 @@ class AgentResponseOrchestrator:
                 followup_type=payload.followup_type,
                 delay_minutes=payload.delay_minutes,
                 cancel_pending=payload.cancel_pending,
-                disable_agent=(
-                    action == AgentOrchestratorAction.DISABLE_AGENT.value
-                ),
+                disable_agent=(action == AgentOrchestratorAction.DISABLE_AGENT.value),
                 should_commit_memory=payload.should_commit_memory,
                 safety_flags=flags,
                 debug_trace=payload.debug_trace,
@@ -325,20 +322,20 @@ class AgentResponseOrchestrator:
             "decision": {
                 k: decision[k]
                 for k in (
-                    "customer_state", "action_type",
-                    "priority_score", "confidence_score",
+                    "customer_state",
+                    "action_type",
+                    "priority_score",
+                    "confidence_score",
                 )
                 if k in decision
             },
-            "offer": {
-                k: offer[k]
-                for k in ("offer_type", "cta", "priority")
-                if k in offer
-            },
+            "offer": {k: offer[k] for k in ("offer_type", "cta", "priority") if k in offer},
             "policy": {
                 k: policy[k]
                 for k in (
-                    "policy_action", "channel", "allowed",
+                    "policy_action",
+                    "channel",
+                    "allowed",
                     "risk_level",
                 )
                 if k in policy

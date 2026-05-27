@@ -1,4 +1,5 @@
 """Tests for Step BF — CRMDailyReportService."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -7,13 +8,25 @@ from core.services.crm_daily_report_service import CRMDailyReportService, CRMDai
 
 svc = CRMDailyReportService
 
+
 def _analytics(**kw):
-    defaults = {"total_contacts": 100, "new_contacts": 10, "hot_leads": 5,
-                "unanswered_count": 8, "critical_count": 2, "won": 3, "lost": 2,
-                "missed": {"missed_lead_count": 1}, "task_open": 5, "task_overdue": 1,
-                "task_completed": 10, "top_intents": {"wants_price": 20},
-                "top_objections": {"price": 5}, "top_locations": {"qarshi": 15},
-                "recommendations": ["Fix SLA"]}
+    defaults = {
+        "total_contacts": 100,
+        "new_contacts": 10,
+        "hot_leads": 5,
+        "unanswered_count": 8,
+        "critical_count": 2,
+        "won": 3,
+        "lost": 2,
+        "missed": {"missed_lead_count": 1},
+        "task_open": 5,
+        "task_overdue": 1,
+        "task_completed": 10,
+        "top_intents": {"wants_price": 20},
+        "top_objections": {"price": 5},
+        "top_locations": {"qarshi": 15},
+        "recommendations": ["Fix SLA"],
+    }
     defaults.update(kw)
     return defaults
 
@@ -105,47 +118,60 @@ class TestSanitize:
 class TestModel:
     def test_importable(self):
         from infrastructure.database.models.crm_daily_report import CRMDailyReportModel
+
         assert CRMDailyReportModel.__tablename__ == "crm_daily_reports"
+
 
 class TestMigration:
     def test_importable(self):
         import importlib
+
         mod = importlib.import_module(
             "infrastructure.database.migrations.versions."
             "20260526_1500_b3c4d5e6f7g8_add_crm_daily_reports"
         )
         assert callable(mod.upgrade)
 
+
 class TestSchedulerJob:
     def test_importable(self):
         from apps.scheduler.jobs.crm_daily_report_jobs import register_crm_daily_report_jobs
+
         assert callable(register_crm_daily_report_jobs)
 
     def test_job_registers(self):
         from unittest.mock import MagicMock
 
         from apps.scheduler.jobs.crm_daily_report_jobs import register_crm_daily_report_jobs
+
         scheduler = MagicMock()
         register_crm_daily_report_jobs(scheduler)
         scheduler.add_job.assert_called_once()
 
+
 class TestSettings:
     def test_default_false(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_daily_report_enabled"].default is False
 
     def test_delivery_disabled(self):
         from shared.config.settings import BusinessSettings
+
         assert BusinessSettings.model_fields["crm_daily_report_delivery_mode"].default == "disabled"
+
 
 class TestImmutability:
     def test_frozen(self):
         import pytest
+
         r = CRMDailyReportSnapshot()
         with pytest.raises(AttributeError):
             r.title = "x"  # type: ignore[misc]
 
+
 class TestSchedulerSmoke:
     def test_scheduler_imports(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None

@@ -1,6 +1,7 @@
 """
 UserService — manages Telegram user profiles.
 """
+
 from __future__ import annotations
 
 from core.domain.user import User

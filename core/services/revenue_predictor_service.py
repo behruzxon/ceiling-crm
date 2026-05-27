@@ -23,6 +23,7 @@ Usage::
     )
     # est.predicted_revenue_best == 2_640_000
 """
+
 from __future__ import annotations
 
 import math
@@ -44,11 +45,12 @@ from shared.constants.pricing import (
 
 # ── Cheapest / most expensive base prices for range bounds ───────────────────
 
-_MIN_PRICE_PER_M2 = min(_DESIGN_PRICES.values())   # 80_000
-_MAX_PRICE_PER_M2 = max(_DESIGN_PRICES.values())   # 140_000
+_MIN_PRICE_PER_M2 = min(_DESIGN_PRICES.values())  # 80_000
+_MAX_PRICE_PER_M2 = max(_DESIGN_PRICES.values())  # 140_000
 
 
 # ── Result dataclass ─────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class RevenueEstimate:
@@ -76,9 +78,9 @@ class RevenueEstimate:
 # ── Upsell recommendations by buyer type ─────────────────────────────────────
 
 _UPSELL_RECS: dict[str, str] = {
-    "quality_buyer":   "Premium tekstura + LED RGB yoritgich",
-    "fast_buyer":      "Karniz + qo'shimcha yoritgich",
-    "research_buyer":  "Avval qo'shimchalar katalogini yuboring",
+    "quality_buyer": "Premium tekstura + LED RGB yoritgich",
+    "fast_buyer": "Karniz + qo'shimcha yoritgich",
+    "research_buyer": "Avval qo'shimchalar katalogini yuboring",
     "price_sensitive": "Asosiy dizayn, qo'shimcha taklif qilmang",
 }
 
@@ -86,6 +88,7 @@ _DEFAULT_UPSELL = "LED yoritgich + karniz"
 
 
 # ── Addon bundles (estimated cost by buyer type) ─────────────────────────────
+
 
 def _estimate_addon_bundle(
     buyer_type: str | None,
@@ -96,23 +99,17 @@ def _estimate_addon_bundle(
     Uses canonical ``ADDON_PRICES`` from pricing_service.py.
     Perimeter is in linear meters (estimated from area).
     """
-    led_strip_m = float(ADDON_PRICES["led_strip"])      # 25_000 per m
-    led_rgb_m = float(ADDON_PRICES["led_rgb"])           # 40_000 per m
-    cornice_m = float(ADDON_PRICES["cornice"])           # 15_000 per m
-    spot_each = float(ADDON_PRICES["spot_holes"])        # 30_000 each
-    chandelier = float(ADDON_PRICES["chandelier_holes"]) # 50_000 each
-    rounding = float(ADDON_PRICES["profile_rounding"])   # 80_000 flat
-    two_level = float(ADDON_PRICES["two_level_step"])    # 200_000 flat
+    led_strip_m = float(ADDON_PRICES["led_strip"])  # 25_000 per m
+    led_rgb_m = float(ADDON_PRICES["led_rgb"])  # 40_000 per m
+    cornice_m = float(ADDON_PRICES["cornice"])  # 15_000 per m
+    spot_each = float(ADDON_PRICES["spot_holes"])  # 30_000 each
+    chandelier = float(ADDON_PRICES["chandelier_holes"])  # 50_000 each
+    rounding = float(ADDON_PRICES["profile_rounding"])  # 80_000 flat
+    two_level = float(ADDON_PRICES["two_level_step"])  # 200_000 flat
 
     if buyer_type == "quality_buyer":
         # LED RGB + cornice + 3 spots + 1 chandelier + rounding
-        cost = (
-            perimeter * led_rgb_m
-            + perimeter * cornice_m
-            + 3 * spot_each
-            + chandelier
-            + rounding
-        )
+        cost = perimeter * led_rgb_m + perimeter * cornice_m + 3 * spot_each + chandelier + rounding
         return round(cost), "high"
 
     if buyer_type == "fast_buyer":
@@ -169,9 +166,7 @@ def predict_lead_revenue(
                 "research_buyer": "Tadqiqotchi",
                 "price_sensitive": "Narxga sezgir",
             }
-            reasons.append(
-                f"Xaridor turi: {_bt_labels.get(buyer_type, buyer_type)}"
-            )
+            reasons.append(f"Xaridor turi: {_bt_labels.get(buyer_type, buyer_type)}")
         return RevenueEstimate(
             predicted_revenue_min=None,
             predicted_revenue_max=None,
@@ -188,9 +183,7 @@ def predict_lead_revenue(
 
     # ── Design price lookup ──────────────────────────────────────────
     if design_type:
-        design_price = _DESIGN_PRICES.get(
-            design_type.lower().strip(), _DEFAULT_PRICE_PER_M2
-        )
+        design_price = _DESIGN_PRICES.get(design_type.lower().strip(), _DEFAULT_PRICE_PER_M2)
         reasons.append(f"Dizayn: {design_type}")
     else:
         design_price = _DEFAULT_PRICE_PER_M2
@@ -228,8 +221,14 @@ def predict_lead_revenue(
 
     # Premium design interest → raise best
     if design_type and design_type.lower().strip() in (
-        "hi-tech", "hitech", "mramor", "naqsh", "kosmos",
-        "qora uf", "qora", "gulli",
+        "hi-tech",
+        "hitech",
+        "mramor",
+        "naqsh",
+        "kosmos",
+        "qora uf",
+        "qora",
+        "gulli",
     ):
         reasons.append("Premium dizayn qiziqishi")
 

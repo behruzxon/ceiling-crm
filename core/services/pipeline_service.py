@@ -8,6 +8,7 @@ Unlike CRMService, move_stage() bypasses ALLOWED_TRANSITIONS so that
 admins can freely re-assign any lead to any kanban column.
 Every move is still persisted to pipeline_stages + lead_actions + audit_logs.
 """
+
 from __future__ import annotations
 
 from core.domain.lead import Lead
@@ -22,32 +23,36 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 
 # ── Kanban stage constants ────────────────────────────────────────────────────
-KANBAN_NEW         = "new"
-KANBAN_HOT         = "hot"
+KANBAN_NEW = "new"
+KANBAN_HOT = "hot"
 KANBAN_MEASUREMENT = "measurement"
-KANBAN_WON         = "won"
-KANBAN_LOST        = "lost"
+KANBAN_WON = "won"
+KANBAN_LOST = "lost"
 
 KANBAN_STAGES: list[str] = [
-    KANBAN_NEW, KANBAN_HOT, KANBAN_MEASUREMENT, KANBAN_WON, KANBAN_LOST,
+    KANBAN_NEW,
+    KANBAN_HOT,
+    KANBAN_MEASUREMENT,
+    KANBAN_WON,
+    KANBAN_LOST,
 ]
 
 # Display label for each kanban stage (emoji + short name)
 KANBAN_DISPLAY: dict[str, str] = {
-    KANBAN_NEW:         "🔵 NEW",
-    KANBAN_HOT:         "🔥 HOT",
+    KANBAN_NEW: "🔵 NEW",
+    KANBAN_HOT: "🔥 HOT",
     KANBAN_MEASUREMENT: "📐 MEASUREMENT",
-    KANBAN_WON:         "🏆 WON",
-    KANBAN_LOST:        "❌ LOST",
+    KANBAN_WON: "🏆 WON",
+    KANBAN_LOST: "❌ LOST",
 }
 
 # When an admin moves a lead to a kanban column, record this pipeline stage
 KANBAN_MOVE_TARGET: dict[str, PipelineStage] = {
-    KANBAN_NEW:         PipelineStage.NEW,
-    KANBAN_HOT:         PipelineStage.CONTACTED,
+    KANBAN_NEW: PipelineStage.NEW,
+    KANBAN_HOT: PipelineStage.CONTACTED,
     KANBAN_MEASUREMENT: PipelineStage.MEASUREMENT,
-    KANBAN_WON:         PipelineStage.COMPLETED,
-    KANBAN_LOST:        PipelineStage.LOST,
+    KANBAN_WON: PipelineStage.COMPLETED,
+    KANBAN_LOST: PipelineStage.LOST,
 }
 
 
@@ -67,10 +72,10 @@ class PipelineService:
         action_repo: PostgresLeadActionRepository,
         audit_repo: PostgresAuditLogRepository,
     ) -> None:
-        self._leads     = lead_repo
-        self._pipeline  = pipeline_repo
-        self._actions   = action_repo
-        self._audit     = audit_repo
+        self._leads = lead_repo
+        self._pipeline = pipeline_repo
+        self._actions = action_repo
+        self._audit = audit_repo
 
     async def get_stage_counts(self) -> dict[str, int]:
         """Return lead counts grouped into 5 kanban stages.
@@ -90,9 +95,7 @@ class PipelineService:
         offset: int = 0,
     ) -> list[Lead]:
         """Return leads in a kanban stage bucket, newest-first."""
-        return await self._leads.get_leads_by_kanban_stage(
-            kanban_stage, limit=limit, offset=offset
-        )
+        return await self._leads.get_leads_by_kanban_stage(kanban_stage, limit=limit, offset=offset)
 
     async def move_stage(
         self,

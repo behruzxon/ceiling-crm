@@ -2,6 +2,7 @@
 Revision ID: a2b3c4d5e6f7
 Revises: z1a2b3c4d5e6
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -9,6 +10,7 @@ revision = "a2b3c4d5e6f7"
 down_revision = "z1a2b3c4d5e6"
 branch_labels = None
 depends_on = None
+
 
 def upgrade() -> None:
     op.create_table(
@@ -35,6 +37,7 @@ def upgrade() -> None:
     op.create_index("ix_task_contact_status", "crm_operator_tasks", ["contact_id", "status"])
     op.create_index("ix_task_status_due", "crm_operator_tasks", ["status", "due_at"])
     op.create_index("ix_task_priority_due", "crm_operator_tasks", ["priority", "due_at"])
+
 
 def downgrade() -> None:
     op.drop_index("ix_task_priority_due", table_name="crm_operator_tasks")

@@ -39,6 +39,7 @@ Usage::
     # result.tactic == "cheaper_alternative"
     # result.reply == "..."
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -138,10 +139,19 @@ _NEGOTIATION_REPLIES: dict[str, str] = {
 
 # ── Premium designs (shared with other modules) ─────────────────────────────
 
-_PREMIUM_DESIGNS: frozenset[str] = frozenset({
-    "hi-tech", "hitech", "mramor", "naqsh", "kosmos", "osmon",
-    "qora uf", "qora", "gulli",
-})
+_PREMIUM_DESIGNS: frozenset[str] = frozenset(
+    {
+        "hi-tech",
+        "hitech",
+        "mramor",
+        "naqsh",
+        "kosmos",
+        "osmon",
+        "qora uf",
+        "qora",
+        "gulli",
+    }
+)
 
 
 # ── Main analyzer ───────────────────────────────────────────────────────────
@@ -387,8 +397,11 @@ def _select_delay_tactic(
 
 _ROTATION_CHAINS: dict[str, list[str]] = {
     "price": [
-        "value_reframe", "cheaper_alternative", "package_simplify",
-        "urgency_close", "manager_escalation",
+        "value_reframe",
+        "cheaper_alternative",
+        "package_simplify",
+        "urgency_close",
+        "manager_escalation",
     ],
     "trust": ["trust_proof", "value_reframe", "manager_escalation"],
     "delay": ["soft_delay", "urgency_close", "package_simplify", "manager_escalation"],
@@ -396,8 +409,11 @@ _ROTATION_CHAINS: dict[str, list[str]] = {
 }
 
 _TYPE_TO_CHAIN: dict[str, str] = {
-    "expensive": "price", "compare": "price",
-    "trust": "trust", "delay": "delay", "angry": "angry",
+    "expensive": "price",
+    "compare": "price",
+    "trust": "trust",
+    "delay": "delay",
+    "angry": "angry",
 }
 
 

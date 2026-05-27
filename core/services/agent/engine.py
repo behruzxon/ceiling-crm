@@ -13,6 +13,7 @@ Import constraints
   - ``core.services.agent`` siblings only
   - NO imports from ``apps/`` or ``infrastructure/``
 """
+
 from __future__ import annotations
 
 from core.services.agent.base import AgentAction, AgentContext, AgentTrigger
@@ -35,6 +36,7 @@ log = get_logger(__name__)
 
 
 # ── Default rule set ──────────────────────────────────────────────────────────
+
 
 def _default_rules() -> list[AgentRule]:
     """Return the built-in rule set.

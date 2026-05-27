@@ -1,4 +1,5 @@
 """Step K tests: agent decision engine — state classification, action, scoring, safety."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -308,16 +309,19 @@ class TestAgentDecisionSchema:
 class TestDecisionFlags:
     def test_flag_default_false(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_decision_engine_enabled is False
 
     def test_log_only_default_true(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_decision_log_only is True
 
     def test_min_confidence_default_60(self) -> None:
         from shared.config.settings import BusinessSettings
+
         s = BusinessSettings()
         assert s.agent_decision_min_confidence == 60
 
@@ -328,6 +332,7 @@ class TestDecisionFlags:
 class TestNoRegression:
     def test_followup_service_build_message_unchanged(self) -> None:
         from core.services.followup_scheduler_service import FollowupSchedulerService
+
         for fu_type in ("catalog", "price", "abandoned_order"):
             text, buttons = FollowupSchedulerService.build_message(fu_type)
             assert text
@@ -335,5 +340,6 @@ class TestNoRegression:
 
     def test_stop_signal_still_works(self) -> None:
         from core.services.followup_scheduler_service import FollowupSchedulerService
+
         assert FollowupSchedulerService.is_stop_signal("kerak emas") is True
         assert FollowupSchedulerService.is_stop_signal("Salom") is False

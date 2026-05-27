@@ -1,4 +1,5 @@
 """Abstract repository interface for blocked_chats."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

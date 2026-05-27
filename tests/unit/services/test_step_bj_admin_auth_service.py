@@ -1,4 +1,5 @@
 """Tests for Step BJ — AdminAuthService."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -269,8 +270,11 @@ class TestBuildCookieSettings:
 
     def test_custom(self):
         c = svc.build_cookie_settings(
-            cookie_name="custom", ttl_hours=24,
-            secure=False, httponly=False, samesite="strict",
+            cookie_name="custom",
+            ttl_hours=24,
+            secure=False,
+            httponly=False,
+            samesite="strict",
         )
         assert c.name == "custom"
         assert c.max_age == 86400
@@ -338,6 +342,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_auth_service import SessionCreateResult
+
         r = SessionCreateResult(ok=True)
         with pytest.raises(AttributeError):
             r.ok = False  # type: ignore[misc]
@@ -346,6 +351,7 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_auth_service import SessionValidateResult
+
         r = SessionValidateResult()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]
@@ -354,12 +360,14 @@ class TestImmutability:
         import pytest
 
         from core.services.admin_auth_service import LoginAttemptResult
+
         r = LoginAttemptResult()
         with pytest.raises(AttributeError):
             r.ok = True  # type: ignore[misc]
 
     def test_cookie_settings_frozen(self):
         import pytest
+
         c = CookieSettings()
         with pytest.raises(AttributeError):
             c.name = "x"  # type: ignore[misc]

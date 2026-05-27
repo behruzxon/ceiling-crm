@@ -1,4 +1,5 @@
 """Tests for Step Y — AgentControlCenterService."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -59,61 +60,74 @@ class TestRolloutStage:
         assert r.label == "OFF"
 
     def test_log_only(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_response_orchestrator_log_only=True,
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_response_orchestrator_log_only=True,
+            )
+        )
         assert r.stage == "log_only"
 
     def test_dry_run(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_execution_sandbox_enabled=True,
-            agent_execution_mode="dry_run",
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_execution_sandbox_enabled=True,
+                agent_execution_mode="dry_run",
+            )
+        )
         assert r.stage == "dry_run"
 
     def test_canary(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_execution_sandbox_enabled=True,
-            agent_execution_mode="canary",
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_execution_sandbox_enabled=True,
+                agent_execution_mode="canary",
+            )
+        )
         assert r.stage == "canary"
 
     def test_approval_required(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_execution_queue_enabled=True,
-            agent_execution_mode="approval_required",
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_execution_queue_enabled=True,
+                agent_execution_mode="approval_required",
+            )
+        )
         assert r.stage == "approval_required"
 
     def test_approved_live_send(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_execution_live_sender_enabled=True,
-            agent_execution_auto_execute_approved=True,
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_execution_live_sender_enabled=True,
+                agent_execution_auto_execute_approved=True,
+            )
+        )
         assert r.stage == "approved_live_send"
 
     def test_custom_orch_no_log(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_response_orchestrator_enabled=True,
-            agent_response_orchestrator_log_only=False,
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_response_orchestrator_enabled=True,
+                agent_response_orchestrator_log_only=False,
+            )
+        )
         assert r.stage == "custom"
 
     def test_mixed(self):
-        r = svc.detect_rollout_stage(_biz(
-            agent_execution_sandbox_enabled=True,
-            agent_execution_mode="live",
-        ))
+        r = svc.detect_rollout_stage(
+            _biz(
+                agent_execution_sandbox_enabled=True,
+                agent_execution_mode="live",
+            )
+        )
         assert r.stage == "mixed"
 
     def test_labels_stable(self):
-        stages = ["off", "log_only", "dry_run", "canary",
-                  "approval_required", "approved_live_send"]
+        stages = ["off", "log_only", "dry_run", "canary", "approval_required", "approved_live_send"]
         for s in stages:
             assert isinstance(s, str)
 
@@ -133,9 +147,11 @@ class TestFeatureFlags:
         assert all(not f.enabled for f in flags)
 
     def test_some_on(self):
-        flags = svc.get_feature_flags_status(_biz(
-            agent_lead_signal_enabled=True,
-        ))
+        flags = svc.get_feature_flags_status(
+            _biz(
+                agent_lead_signal_enabled=True,
+            )
+        )
         enabled = [f for f in flags if f.enabled]
         assert len(enabled) >= 1
 
@@ -176,8 +192,7 @@ class TestPreflight:
 
     def test_canary_with_ids_green(self):
         r = svc.get_preflight_status(
-            _biz(agent_execution_mode="canary",
-                 agent_execution_canary_user_ids="123,456"),
+            _biz(agent_execution_mode="canary", agent_execution_canary_user_ids="123,456"),
             _settings(),
         )
         assert "canary" not in " ".join(r.blockers).lower()
@@ -226,29 +241,37 @@ class TestCanaryStatus:
         assert c.auto_execute is False
 
     def test_canary_with_ids(self):
-        c = svc.get_canary_status(_biz(
-            agent_execution_canary_user_ids="111,222,333",
-            agent_execution_mode="canary",
-        ))
+        c = svc.get_canary_status(
+            _biz(
+                agent_execution_canary_user_ids="111,222,333",
+                agent_execution_mode="canary",
+            )
+        )
         assert c.canary_user_count == 3
         assert c.mode == "canary"
 
     def test_approval_required(self):
-        c = svc.get_canary_status(_biz(
-            agent_execution_mode="approval_required",
-        ))
+        c = svc.get_canary_status(
+            _biz(
+                agent_execution_mode="approval_required",
+            )
+        )
         assert c.approval_required is True
 
     def test_batch_limit(self):
-        c = svc.get_canary_status(_biz(
-            agent_execution_live_sender_batch_limit=20,
-        ))
+        c = svc.get_canary_status(
+            _biz(
+                agent_execution_live_sender_batch_limit=20,
+            )
+        )
         assert c.batch_limit == 20
 
     def test_daily_cap(self):
-        c = svc.get_canary_status(_biz(
-            agent_execution_max_daily_per_user=5,
-        ))
+        c = svc.get_canary_status(
+            _biz(
+                agent_execution_max_daily_per_user=5,
+            )
+        )
         assert c.daily_cap == 5
 
 
@@ -302,6 +325,7 @@ class TestSnapshot:
 
     def test_snapshot_no_secrets(self):
         from dataclasses import asdict
+
         snap = svc.build_control_center_snapshot(_settings())
         text = str(asdict(snap))
         assert "sk-test" not in text
@@ -309,9 +333,12 @@ class TestSnapshot:
 
     def test_snapshot_canary_ids_not_raw(self):
         from dataclasses import asdict
-        snap = svc.build_control_center_snapshot(_settings(
-            biz_kw={"agent_execution_canary_user_ids": "12345,67890"},
-        ))
+
+        snap = svc.build_control_center_snapshot(
+            _settings(
+                biz_kw={"agent_execution_canary_user_ids": "12345,67890"},
+            )
+        )
         text = str(asdict(snap))
         assert "12345" not in text
         assert "67890" not in text
@@ -329,12 +356,14 @@ class TestSnapshot:
 class TestImmutability:
     def test_snapshot_frozen(self):
         import pytest
+
         snap = svc.build_control_center_snapshot(_settings())
         with pytest.raises(AttributeError):
             snap.health_status = "red"  # type: ignore[misc]
 
     def test_flag_frozen(self):
         import pytest
+
         flags = svc.get_feature_flags_status(_biz())
         with pytest.raises(AttributeError):
             flags[0].enabled = True  # type: ignore[misc]

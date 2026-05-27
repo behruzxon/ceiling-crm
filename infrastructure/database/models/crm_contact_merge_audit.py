@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for crm_contact_merge_audit."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,7 +24,9 @@ class CRMContactMergeAuditModel(Base):
     before_target_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     result_json: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        sa.TIMESTAMP(timezone=True), server_default=sa.func.now()
+    )
     merged_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     __table_args__ = (
         sa.Index("ix_merge_audit_source", "source_contact_id"),

@@ -5,6 +5,7 @@ Tests cover the in-memory fallback paths for:
 - is_flooding    (flood control sliding window)
 - incr_link_violations (link violation counter)
 """
+
 from __future__ import annotations
 
 from unittest.mock import patch

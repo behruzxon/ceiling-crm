@@ -1,4 +1,5 @@
 """Tests for Step BJ — AdminCSRFService."""
+
 from __future__ import annotations
 
 from core.services.admin_csrf_service import AdminCSRFService, CSRFValidateResult
@@ -150,6 +151,7 @@ class TestSanitizeCSRFError:
 class TestImmutability:
     def test_result_frozen(self):
         import pytest
+
         r = CSRFValidateResult(ok=True)
         with pytest.raises(AttributeError):
             r.ok = False  # type: ignore[misc]

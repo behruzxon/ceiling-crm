@@ -6,6 +6,7 @@ Sends admin alerts when leads ignore follow-ups.
 Triggers when followup_count >= threshold AND lead is warm/hot AND
 cooldown has elapsed since last escalation.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -91,7 +92,8 @@ class AdminEscalationService:
     @staticmethod
     def build_admin_alert(memory: AgentMemoryModel) -> str:
         temp_emoji = {"hot": "🔥", "warm": "🟡", "cold": "❄️"}.get(
-            memory.lead_temperature, "❓",
+            memory.lead_temperature,
+            "❓",
         )
         name = memory.full_name or "Noma'lum"
         phone = memory.phone_masked or "—"
@@ -102,8 +104,7 @@ class AdminEscalationService:
         last_event = memory.last_event_type or "—"
         fu_count = memory.followup_count
         last_fu = (
-            memory.last_followup_at.strftime("%d.%m %H:%M")
-            if memory.last_followup_at else "—"
+            memory.last_followup_at.strftime("%d.%m %H:%M") if memory.last_followup_at else "—"
         )
 
         return (

@@ -1,4 +1,5 @@
 """Tests for Step AP — Stage3CanaryReadinessService."""
+
 from __future__ import annotations
 
 from core.schemas.stage2_dryrun_report import (
@@ -13,12 +14,17 @@ svc = Stage3CanaryReadinessService
 
 def _report(**kw) -> Stage2DryRunReport:
     defaults = {
-        "generated_at": "2026-05-26T12:00:00", "since": "2026-05-26T00:00:00",
-        "until": "2026-05-26T12:00:00", "environment": "test",
-        "duration_minutes": 720, "total_payloads": 50,
-        "total_would_execute": 35, "total_blocked": 15,
+        "generated_at": "2026-05-26T12:00:00",
+        "since": "2026-05-26T00:00:00",
+        "until": "2026-05-26T12:00:00",
+        "environment": "test",
+        "duration_minutes": 720,
+        "total_payloads": 50,
+        "total_would_execute": 35,
+        "total_blocked": 15,
         "action_counts": {"send_user_reply": 25, "handoff_operator": 5},
-        "channel_counts": {"user_dm": 25}, "risk_counts": {"low": 40, "medium": 10},
+        "channel_counts": {"user_dm": 25},
+        "risk_counts": {"low": 40, "medium": 10},
         "block_reason_counts": {"stop_signal": 5},
         "no_send": Stage2NoSendSafetyMetrics(),
         "health_status": "green",
@@ -26,6 +32,7 @@ def _report(**kw) -> Stage2DryRunReport:
     }
     defaults.update(kw)
     return Stage2DryRunReport(**defaults)
+
 
 _IDS = {"agent_execution_canary_user_ids": "123,456"}
 
@@ -45,7 +52,8 @@ class TestReadyReport:
 class TestFailReport:
     def test_failed_dryrun(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(pass_fail=Stage2PassFailResult(passed=False, failures=["x"])), _IDS,
+            _report(pass_fail=Stage2PassFailResult(passed=False, failures=["x"])),
+            _IDS,
         )
         assert r.verdict == "not_ready"
 
@@ -53,19 +61,22 @@ class TestFailReport:
 class TestNoSendViolations:
     def test_actual_sent(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(no_send=Stage2NoSendSafetyMetrics(actual_sent_count=1)), _IDS,
+            _report(no_send=Stage2NoSendSafetyMetrics(actual_sent_count=1)),
+            _IDS,
         )
         assert r.verdict == "not_ready"
 
     def test_executed(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(no_send=Stage2NoSendSafetyMetrics(executed_records_count=1)), _IDS,
+            _report(no_send=Stage2NoSendSafetyMetrics(executed_records_count=1)),
+            _IDS,
         )
         assert r.verdict == "not_ready"
 
     def test_live_sender(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(no_send=Stage2NoSendSafetyMetrics(live_sender_executed=1)), _IDS,
+            _report(no_send=Stage2NoSendSafetyMetrics(live_sender_executed=1)),
+            _IDS,
         )
         assert r.verdict == "not_ready"
 
@@ -90,28 +101,41 @@ class TestCanarySettings:
         assert "missing_canary_user_ids" not in r.blockers
 
     def test_live_sender_enabled_blocker(self):
-        r = svc.evaluate_dryrun_to_canary(_report(), {
-            **_IDS, "agent_execution_live_sender_enabled": True,
-        })
+        r = svc.evaluate_dryrun_to_canary(
+            _report(),
+            {
+                **_IDS,
+                "agent_execution_live_sender_enabled": True,
+            },
+        )
         assert "live_sender_already_enabled" in r.blockers
 
     def test_auto_execute_blocker(self):
-        r = svc.evaluate_dryrun_to_canary(_report(), {
-            **_IDS, "agent_execution_auto_execute_approved": True,
-        })
+        r = svc.evaluate_dryrun_to_canary(
+            _report(),
+            {
+                **_IDS,
+                "agent_execution_auto_execute_approved": True,
+            },
+        )
         assert "auto_execute_already_enabled" in r.blockers
 
     def test_mode_live_blocker(self):
-        r = svc.evaluate_dryrun_to_canary(_report(), {
-            **_IDS, "agent_execution_mode": "live",
-        })
+        r = svc.evaluate_dryrun_to_canary(
+            _report(),
+            {
+                **_IDS,
+                "agent_execution_mode": "live",
+            },
+        )
         assert "execution_mode_live" in r.blockers
 
 
 class TestCriticalRisk:
     def test_critical_blocks(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(risk_counts={"low": 40, "critical": 1}), _IDS,
+            _report(risk_counts={"low": 40, "critical": 1}),
+            _IDS,
         )
         assert "critical_risk_payloads_exist" in r.blockers
 
@@ -123,25 +147,29 @@ class TestWarnings:
 
     def test_no_payloads(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(total_payloads=0, total_would_execute=0, total_blocked=0), _IDS,
+            _report(total_payloads=0, total_would_execute=0, total_blocked=0),
+            _IDS,
         )
         assert "no_payloads" in r.warnings
 
     def test_low_would_execute(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(total_payloads=50, total_would_execute=5), _IDS,
+            _report(total_payloads=50, total_would_execute=5),
+            _IDS,
         )
         assert "low_would_execute_ratio" in r.warnings
 
     def test_high_blocked(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(total_payloads=50, total_blocked=40), _IDS,
+            _report(total_payloads=50, total_blocked=40),
+            _IDS,
         )
         assert "high_blocked_ratio" in r.warnings
 
     def test_high_risk(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(risk_counts={"high": 15, "low": 35}, total_payloads=50), _IDS,
+            _report(risk_counts={"high": 15, "low": 35}, total_payloads=50),
+            _IDS,
         )
         assert "high_risk_ratio" in r.warnings
 
@@ -155,7 +183,8 @@ class TestWarnings:
 
     def test_no_operator(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(action_counts={"send_user_reply": 50}), _IDS,
+            _report(action_counts={"send_user_reply": 50}),
+            _IDS,
         )
         assert "no_operator_scenarios" in r.warnings
 
@@ -171,15 +200,20 @@ class TestScore:
 
     def test_warnings_reduce(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(health_status="yellow", duration_minutes=20), _IDS,
+            _report(health_status="yellow", duration_minutes=20),
+            _IDS,
         )
         assert r.readiness_score < 100
 
     def test_clamped(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(no_send=Stage2NoSendSafetyMetrics(
-                actual_sent_count=1, executed_records_count=1,
-            ), pass_fail=Stage2PassFailResult(passed=False)),
+            _report(
+                no_send=Stage2NoSendSafetyMetrics(
+                    actual_sent_count=1,
+                    executed_records_count=1,
+                ),
+                pass_fail=Stage2PassFailResult(passed=False),
+            ),
             _IDS,
         )
         assert 0 <= r.readiness_score <= 100
@@ -191,8 +225,9 @@ class TestScore:
 
     def test_conditional_70_89(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(health_status="yellow", total_payloads=15,
-                    action_counts={"send_user_reply": 15}),
+            _report(
+                health_status="yellow", total_payloads=15, action_counts={"send_user_reply": 15}
+            ),
             _IDS,
         )
         if 70 <= r.readiness_score < 90 and not r.blockers:
@@ -210,7 +245,8 @@ class TestRecommendations:
 
     def test_fail_recommends_fix(self):
         r = svc.evaluate_dryrun_to_canary(
-            _report(pass_fail=Stage2PassFailResult(passed=False, failures=["x"])), _IDS,
+            _report(pass_fail=Stage2PassFailResult(passed=False, failures=["x"])),
+            _IDS,
         )
         assert any("fail" in rec.lower() or "fix" in rec.lower() for rec in r.recommendations)
 
@@ -229,6 +265,7 @@ class TestEmpty:
 class TestImmutability:
     def test_frozen(self):
         import pytest
+
         r = svc.evaluate_dryrun_to_canary(_report(), _IDS)
         with pytest.raises(AttributeError):
             r.verdict = "x"  # type: ignore[misc]

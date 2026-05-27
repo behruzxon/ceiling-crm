@@ -6,6 +6,7 @@ Health and readiness endpoints for the REST API.
 GET /health          — quick liveness probe (no external calls, public)
 GET /api/v1/health   — detailed readiness check (DB + Redis, requires auth)
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

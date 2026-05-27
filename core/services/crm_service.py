@@ -1,6 +1,7 @@
 """
 CRMService — pipeline stage transitions and history.
 """
+
 from __future__ import annotations
 
 from core.domain.lead import Lead
@@ -32,27 +33,27 @@ ALLOWED_TRANSITIONS: dict[PipelineStage, list[PipelineStage]] = {
     ],
     PipelineStage.CONTACTED: [
         PipelineStage.MEASUREMENT,
-        PipelineStage.NEW,           # ← backward (undo)
+        PipelineStage.NEW,  # ← backward (undo)
         PipelineStage.LOST,
     ],
     PipelineStage.MEASUREMENT: [
         PipelineStage.QUOTE,
-        PipelineStage.CONTACTED,     # ← backward (undo)
+        PipelineStage.CONTACTED,  # ← backward (undo)
         PipelineStage.LOST,
     ],
     PipelineStage.QUOTE: [
         PipelineStage.DEAL,
-        PipelineStage.MEASUREMENT,   # ← backward (undo)
+        PipelineStage.MEASUREMENT,  # ← backward (undo)
         PipelineStage.LOST,
     ],
     PipelineStage.DEAL: [
         PipelineStage.INSTALLATION,
-        PipelineStage.QUOTE,         # ← backward (undo)
+        PipelineStage.QUOTE,  # ← backward (undo)
         PipelineStage.LOST,
     ],
     PipelineStage.INSTALLATION: [
         PipelineStage.COMPLETED,
-        PipelineStage.DEAL,          # ← backward (undo)
+        PipelineStage.DEAL,  # ← backward (undo)
         PipelineStage.LOST,
     ],
     PipelineStage.COMPLETED: [
@@ -129,12 +130,14 @@ class CRMService:
         )
 
         # Emit domain event
-        await self._events.emit(StageChanged(
-            lead_id=lead_id,
-            from_stage=current_stage.value,
-            to_stage=new_stage.value,
-            actor_id=actor_id,
-        ))
+        await self._events.emit(
+            StageChanged(
+                lead_id=lead_id,
+                from_stage=current_stage.value,
+                to_stage=new_stage.value,
+                actor_id=actor_id,
+            )
+        )
 
         # Return updated lead with new stage
         updated_lead = await self._leads.get_by_id(lead_id)

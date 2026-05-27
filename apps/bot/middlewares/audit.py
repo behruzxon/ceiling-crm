@@ -2,6 +2,7 @@
 Audit middleware.
 Records every significant handler action to the audit_log table.
 """
+
 from __future__ import annotations
 
 import asyncio

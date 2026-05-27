@@ -11,6 +11,7 @@ POST /api/v1/admin/agent/executions/{execution_id}/approve
 POST /api/v1/admin/agent/executions/{execution_id}/reject
 POST /api/v1/admin/agent/executions/{execution_id}/expire
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -37,6 +38,7 @@ async def get_control_center_status() -> dict:
     from core.services.agent_control_center_service import (
         AgentControlCenterService,
     )
+
     snapshot = AgentControlCenterService.build_control_center_snapshot()
     return _asdict(snapshot)
 
@@ -84,17 +86,19 @@ async def get_pending_executions(
         if isinstance(msg, str) and len(msg) > 100:
             safe_payload["message_text"] = msg[:100] + "..."
 
-        items.append({
-            "execution_id": r.execution_id,
-            "telegram_user_id": r.telegram_user_id,
-            "action": r.action,
-            "mode": r.mode,
-            "status": r.status,
-            "risk_level": r.risk_level,
-            "channel": r.channel,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-            "expires_at": r.expires_at.isoformat() if r.expires_at else None,
-        })
+        items.append(
+            {
+                "execution_id": r.execution_id,
+                "telegram_user_id": r.telegram_user_id,
+                "action": r.action,
+                "mode": r.mode,
+                "status": r.status,
+                "risk_level": r.risk_level,
+                "channel": r.channel,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "expires_at": r.expires_at.isoformat() if r.expires_at else None,
+            }
+        )
 
     return {"items": items, "count": len(items)}
 
@@ -115,6 +119,7 @@ class RejectRequest(BaseModel):
 
 def _check_approval_enabled() -> None:
     from shared.config import get_settings
+
     if not get_settings().business.agent_execution_api_approval_enabled:
         raise HTTPException(status_code=403, detail="API approval disabled")
 
@@ -127,6 +132,7 @@ async def get_execution_detail(
     from core.services.agent_execution_queue_service import (
         AgentExecutionQueueService,
     )
+
     svc = AgentExecutionQueueService(db)
     record = await svc.get_by_execution_id(execution_id)
     if record is None:
@@ -144,6 +150,7 @@ async def approve_execution(
     from core.services.agent_execution_queue_service import (
         AgentExecutionQueueService,
     )
+
     svc = AgentExecutionQueueService(db)
     ok, reason = await svc.approve(execution_id, admin_id=0)
     if not ok:
@@ -164,6 +171,7 @@ async def reject_execution(
     from core.services.agent_execution_queue_service import (
         AgentExecutionQueueService,
     )
+
     reason_text = (body.reason if body else "")[:300]
     svc = AgentExecutionQueueService(db)
     ok, reason = await svc.reject(execution_id, admin_id=0, reason=reason_text)
@@ -184,6 +192,7 @@ async def expire_execution(
     from core.services.agent_execution_queue_service import (
         AgentExecutionQueueService,
     )
+
     svc = AgentExecutionQueueService(db)
     ok, reason = await svc.expire(execution_id)
     if not ok:

@@ -14,6 +14,7 @@ Metrics returned per period (today / 7d / 30d):
 
 All lead metrics are queried in a single SQL aggregation pass.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -72,13 +73,11 @@ class StatsService:
         else:  # "30d"
             since = _since_days(30)
 
-        group_joins, new_leads, hot_leads, measurement, won, lost = (
-            await self._fetch_all(since)
-        )
+        group_joins, new_leads, hot_leads, measurement, won, lost = await self._fetch_all(since)
         conversion_pct = round(won / new_leads * 100, 1) if new_leads else 0.0
         join_to_lead = round(new_leads / group_joins * 100, 1) if group_joins else 0.0
-        lead_to_won  = round(won / new_leads * 100, 1)        if new_leads  else 0.0
-        join_to_won  = round(won / group_joins * 100, 1)      if group_joins else 0.0
+        lead_to_won = round(won / new_leads * 100, 1) if new_leads else 0.0
+        join_to_won = round(won / group_joins * 100, 1) if group_joins else 0.0
 
         return {
             "period": period,
@@ -94,9 +93,7 @@ class StatsService:
             "join_to_won_conversion": join_to_won,
         }
 
-    async def _fetch_all(
-        self, since: datetime
-    ) -> tuple[int, int, int, int, int, int]:
+    async def _fetch_all(self, since: datetime) -> tuple[int, int, int, int, int, int]:
         """Run join count + single-pass lead aggregation."""
         group_joins = await self._join_repo.count_joins(self._group_id, since)
 

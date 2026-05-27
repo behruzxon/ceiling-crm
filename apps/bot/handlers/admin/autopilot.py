@@ -6,6 +6,7 @@ at-risk leads, closing suggestions, and pipeline bottlenecks.
 
 Access: ADMIN / SUPERADMIN roles.
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -94,9 +95,7 @@ async def _analyze_leads(leads: list) -> dict:
         if last_ts:
             mins_inactive = max(0, (now_ts - int(last_ts)) // 60)
         else:
-            mins_inactive = int(
-                (datetime.now(UTC) - lead.updated_at).total_seconds() / 60
-            )
+            mins_inactive = int((datetime.now(UTC) - lead.updated_at).total_seconds() / 60)
 
         stage_str = (
             lead.current_stage.value
@@ -122,9 +121,7 @@ async def _analyze_leads(leads: list) -> dict:
             current_stage=stage_str,
         )
 
-        objection_resolved = bool(
-            mem.get("last_objection") and mem.get("last_negotiation_tactic")
-        )
+        objection_resolved = bool(mem.get("last_objection") and mem.get("last_negotiation_tactic"))
 
         # Build SignalVector
         sv = None
@@ -133,6 +130,7 @@ async def _analyze_leads(leads: list) -> dict:
                 build_signal_vector,
                 with_deal_probability,
             )
+
             sv = build_signal_vector(
                 lead_score=score,
                 health_score=ci.health_score,
@@ -158,8 +156,11 @@ async def _analyze_leads(leads: list) -> dict:
         dp_pct: int | None = None
         try:
             from shared.utils.deal_probability import evaluate_deal_probability
-            dp = evaluate_deal_probability(signal_vector=sv) if sv else \
-                evaluate_deal_probability(
+
+            dp = (
+                evaluate_deal_probability(signal_vector=sv)
+                if sv
+                else evaluate_deal_probability(
                     score=score,
                     closing_confidence=lead.closing_confidence,
                     phone_captured=bool(lead.phone),
@@ -168,6 +169,7 @@ async def _analyze_leads(leads: list) -> dict:
                     has_district=bool(lead.district),
                     follow_up_count=lead.follow_up_count or 0,
                 )
+            )
             dp_pct = dp.deal_probability_percent
             if sv:
                 sv = with_deal_probability(sv, dp_pct)
@@ -175,8 +177,10 @@ async def _analyze_leads(leads: list) -> dict:
             pass
 
         # NBA
-        nba = determine_next_best_action(signal_vector=sv) if sv else \
-            determine_next_best_action(
+        nba = (
+            determine_next_best_action(signal_vector=sv)
+            if sv
+            else determine_next_best_action(
                 score=score,
                 health_score=ci.health_score,
                 last_objection=mem.get("last_objection"),
@@ -193,18 +197,23 @@ async def _analyze_leads(leads: list) -> dict:
                 closing_attempted=bool(mem.get("last_closing_attempt")),
                 deal_probability_percent=dp_pct,
             )
+        )
         action_counter[nba.action] += 1
-        nba_list.append({
-            "lead": lead,
-            "nba": nba,
-            "score": score,
-            "health": ci.health_score,
-            "dp": dp_pct,
-        })
+        nba_list.append(
+            {
+                "lead": lead,
+                "nba": nba,
+                "score": score,
+                "health": ci.health_score,
+                "dp": dp_pct,
+            }
+        )
 
         # Opportunity
-        opp = detect_opportunity(signal_vector=sv) if sv else \
-            detect_opportunity(
+        opp = (
+            detect_opportunity(signal_vector=sv)
+            if sv
+            else detect_opportunity(
                 score=score,
                 health_score=ci.health_score,
                 last_objection=mem.get("last_objection"),
@@ -215,12 +224,15 @@ async def _analyze_leads(leads: list) -> dict:
                 closing_confidence=lead.closing_confidence,
                 deal_probability_percent=dp_pct,
             )
+        )
         if opp.detected:
             opportunities.append({"lead": lead, "opp": opp, "score": score})
 
         # At-risk
-        risk = detect_at_risk(signal_vector=sv) if sv else \
-            detect_at_risk(
+        risk = (
+            detect_at_risk(signal_vector=sv)
+            if sv
+            else detect_at_risk(
                 score=score,
                 health_score=ci.health_score,
                 last_objection=mem.get("last_objection"),
@@ -231,14 +243,21 @@ async def _analyze_leads(leads: list) -> dict:
                 closing_confidence=lead.closing_confidence,
                 current_stage=stage_str,
             )
+        )
         if risk.detected:
-            at_risk_leads.append({
-                "lead": lead, "risk": risk, "score": score,
-            })
+            at_risk_leads.append(
+                {
+                    "lead": lead,
+                    "risk": risk,
+                    "score": score,
+                }
+            )
 
         # Closing
-        closing = suggest_closing_tactic(signal_vector=sv) if sv else \
-            suggest_closing_tactic(
+        closing = (
+            suggest_closing_tactic(signal_vector=sv)
+            if sv
+            else suggest_closing_tactic(
                 score=score,
                 phone_captured=bool(lead.phone),
                 area_m2=float(lead.room_area) if lead.room_area else None,
@@ -249,10 +268,15 @@ async def _analyze_leads(leads: list) -> dict:
                 last_objection=mem.get("last_objection"),
                 closing_attempted=bool(mem.get("last_closing_attempt")),
             )
+        )
         if closing.should_close:
-            closing_leads.append({
-                "lead": lead, "closing": closing, "score": score,
-            })
+            closing_leads.append(
+                {
+                    "lead": lead,
+                    "closing": closing,
+                    "score": score,
+                }
+            )
 
     # Pipeline bottlenecks
     bottlenecks = analyze_pipeline_bottlenecks(dict(stage_counter))
@@ -300,9 +324,7 @@ def _format_autopilot_card(results: dict, total: int) -> str:
                 f"    \U0001f4a1 {nba.reason_uz}"
             )
             if nba.suggested_message_uz:
-                lines.append(
-                    f"    \U0001f4ac <code>{nba.suggested_message_uz[:80]}</code>"
-                )
+                lines.append(f"    \U0001f4ac <code>{nba.suggested_message_uz[:80]}</code>")
         lines.append("")
 
     # ── Opportunities ────────────────────────────────────────────
@@ -384,6 +406,7 @@ def _classify_temp(score: int) -> str:
 async def _load_lead_memory(user_id: int) -> dict:
     try:
         from apps.bot.handlers.private.ai_memory import _load_ai_memory
+
         return await _load_ai_memory(user_id) or {}
     except Exception:
         return {}
@@ -393,6 +416,7 @@ async def _get_lead_score(user_id: int) -> int:
     try:
         from infrastructure.cache.client import get_redis
         from infrastructure.cache.keys import CacheKeys
+
         raw = await get_redis().get(CacheKeys.ai_lead_score(user_id))
         return int(raw) if raw else 0
     except Exception:

@@ -4,6 +4,7 @@ Stage 4 APPROVAL_REQUIRED Readiness Check
 Verifies environment is safe for APPROVAL_REQUIRED (human-in-the-loop).
 Read-only — no mutations, no sends, no secret printing.
 """
+
 from __future__ import annotations
 
 import os

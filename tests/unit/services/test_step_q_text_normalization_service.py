@@ -1,4 +1,5 @@
 """Tests for Step Q — TextNormalizationService."""
+
 from __future__ import annotations
 
 from core.services.text_normalization_service import TextNormalizationService

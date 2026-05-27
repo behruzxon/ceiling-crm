@@ -5,6 +5,7 @@ Evaluates readiness to transition from DRY_RUN to CANARY.
 CANARY is the first real-send stage — stricter criteria.
 Pure functions — no I/O.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -26,10 +27,15 @@ class Stage3CanaryReadinessService:
         blockers = Stage3CanaryReadinessService.build_blockers(report, cs)
         warnings = Stage3CanaryReadinessService.build_warnings(report, cs)
         score = Stage3CanaryReadinessService.calculate_readiness_score(
-            blockers, warnings,
+            blockers,
+            warnings,
         )
         recs = Stage3CanaryReadinessService.build_recommendations(
-            report, blockers, warnings, score, cs,
+            report,
+            blockers,
+            warnings,
+            score,
+            cs,
         )
 
         if blockers:
@@ -98,6 +104,7 @@ class Stage3CanaryReadinessService:
         from core.services.agent_rollout_preset_service import (
             AgentRolloutPresetService,
         )
+
         preview = AgentRolloutPresetService.preview_preset("canary", settings)
         if not preview.allowed:
             blockers.append("canary_preset_blocked")

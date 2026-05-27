@@ -14,6 +14,7 @@ Usage:
 
 All methods are fire-and-forget: they never raise.
 """
+
 from __future__ import annotations
 
 import traceback

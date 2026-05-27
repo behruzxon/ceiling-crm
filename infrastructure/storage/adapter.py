@@ -2,6 +2,7 @@
 File storage adapter.
 Supports local filesystem and S3 backends.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -21,8 +22,8 @@ ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime"}
 ALLOWED_DOC_TYPES = {"application/pdf"}
 ALL_ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES | ALLOWED_DOC_TYPES
 
-MAX_IMAGE_SIZE = 20 * 1024 * 1024   # 20 MB
-MAX_VIDEO_SIZE = 50 * 1024 * 1024   # 50 MB
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50 MB
 
 
 class StorageAdapter(ABC):
@@ -142,7 +143,9 @@ class S3StorageAdapter(StorageAdapter):
         import asyncio
 
         client = self._get_client()
-        key = file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        key = (
+            file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        )
 
         await asyncio.get_event_loop().run_in_executor(
             None,
@@ -154,7 +157,9 @@ class S3StorageAdapter(StorageAdapter):
         import asyncio
 
         client = self._get_client()
-        key = file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        key = (
+            file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        )
 
         try:
             await asyncio.get_event_loop().run_in_executor(

@@ -16,6 +16,7 @@ Three functions are provided:
 * ``sanitize_ai_reply(reply)`` — returns None if the LLM reply appears to
   leak system-prompt internals.
 """
+
 from __future__ import annotations
 
 import re
@@ -79,8 +80,7 @@ _INJECTION_PATTERNS: tuple[re.Pattern[str], ...] = (
     ),
     # ── Uzbek ─────────────────────────────────────────────────────────────
     re.compile(
-        r"(oldingi|tizim)\s+(ko.?rsatma|qoida)larni\s+"
-        r"(e.?tiborsiz|unut|bekor)",
+        r"(oldingi|tizim)\s+(ko.?rsatma|qoida)larni\s+" r"(e.?tiborsiz|unut|bekor)",
         re.I,
     ),
     re.compile(r"(tizim\s+)?prompt(ni|ingni)\s+(ko.?rsat|ayt|chiqar)", re.I),

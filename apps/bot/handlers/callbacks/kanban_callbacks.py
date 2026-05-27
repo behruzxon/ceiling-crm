@@ -12,6 +12,7 @@ Handlers:
 
 Callback data keys always stay ≤ 64 bytes (Telegram limit).
 """
+
 from __future__ import annotations
 
 from zoneinfo import ZoneInfo
@@ -53,18 +54,21 @@ _PAGE_SIZE = 10
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _kanban_main_keyboard(counts: dict[str, int]) -> InlineKeyboardMarkup:
     """Main kanban board: one button per stage, showing live count."""
     buttons: list[list[InlineKeyboardButton]] = []
     for stage in KANBAN_STAGES:
         label = KANBAN_DISPLAY[stage]
         cnt = counts.get(stage, 0)
-        buttons.append([
-            InlineKeyboardButton(
-                text=f"{label} ({cnt})",
-                callback_data=f"kanban:stage:{stage}",
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{label} ({cnt})",
+                    callback_data=f"kanban:stage:{stage}",
+                )
+            ]
+        )
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -80,30 +84,38 @@ def _stage_list_keyboard(
     for lead in leads:
         score_tag = f" ⭐{lead.score}" if lead.score else ""
         name_short = lead.name[:18] + "…" if len(lead.name) > 18 else lead.name
-        buttons.append([
-            InlineKeyboardButton(
-                text=f"#{lead.id} | {name_short}{score_tag}",
-                callback_data=f"kanban:lead:{lead.id}:{kanban_stage}",
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"#{lead.id} | {name_short}{score_tag}",
+                    callback_data=f"kanban:lead:{lead.id}:{kanban_stage}",
+                )
+            ]
+        )
 
     nav_row: list[InlineKeyboardButton] = []
     if page > 0:
-        nav_row.append(InlineKeyboardButton(
-            text="◀️ Oldingi",
-            callback_data=f"kanban:pg:{kanban_stage}:{page - 1}",
-        ))
+        nav_row.append(
+            InlineKeyboardButton(
+                text="◀️ Oldingi",
+                callback_data=f"kanban:pg:{kanban_stage}:{page - 1}",
+            )
+        )
     if has_more:
-        nav_row.append(InlineKeyboardButton(
-            text="▶️ Keyingi",
-            callback_data=f"kanban:pg:{kanban_stage}:{page + 1}",
-        ))
+        nav_row.append(
+            InlineKeyboardButton(
+                text="▶️ Keyingi",
+                callback_data=f"kanban:pg:{kanban_stage}:{page + 1}",
+            )
+        )
     if nav_row:
         buttons.append(nav_row)
 
-    buttons.append([
-        InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
-    ])
+    buttons.append(
+        [
+            InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -114,30 +126,34 @@ def _lead_detail_keyboard(lead_id: int, from_stage: str) -> InlineKeyboardMarkup
         label = KANBAN_DISPLAY[stage]
         # Short emoji only to save space (5 buttons in one row)
         emoji = label.split()[0]
-        move_row.append(InlineKeyboardButton(
-            text=emoji,
-            callback_data=f"kanban:move:{lead_id}:{stage}",
-        ))
+        move_row.append(
+            InlineKeyboardButton(
+                text=emoji,
+                callback_data=f"kanban:move:{lead_id}:{stage}",
+            )
+        )
 
-    return InlineKeyboardMarkup(inline_keyboard=[
-        move_row,
-        [
-            InlineKeyboardButton(
-                text="👔 Manager belgilash",
-                callback_data=f"kanban:assign:{lead_id}",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="🔙 Orqaga",
-                callback_data=f"kanban:back:{from_stage}",
-            ),
-            InlineKeyboardButton(
-                text="🕓 Timeline",
-                callback_data=f"timeline:{lead_id}",
-            ),
-        ],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            move_row,
+            [
+                InlineKeyboardButton(
+                    text="👔 Manager belgilash",
+                    callback_data=f"kanban:assign:{lead_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Orqaga",
+                    callback_data=f"kanban:back:{from_stage}",
+                ),
+                InlineKeyboardButton(
+                    text="🕓 Timeline",
+                    callback_data=f"timeline:{lead_id}",
+                ),
+            ],
+        ]
+    )
 
 
 def _format_lead_card(lead) -> str:  # type: ignore[type-arg]
@@ -165,6 +181,7 @@ def _format_lead_card(lead) -> str:  # type: ignore[type-arg]
 
 # ── kanban:back ───────────────────────────────────────────────────────────────
 
+
 @router.callback_query(F.data == "kanban:back", RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_back(callback: CallbackQuery, **data: object) -> None:
     """Return to the main kanban board with refreshed counts."""
@@ -185,6 +202,7 @@ async def cb_kanban_back(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── kanban:back:{stage} ───────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("kanban:back:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_back_stage(callback: CallbackQuery, **data: object) -> None:
@@ -210,23 +228,27 @@ async def cb_kanban_back_stage(callback: CallbackQuery, **data: object) -> None:
     if not leads:
         await callback.message.edit_text(  # type: ignore[union-attr]
             f"{display} — lid topilmadi",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
-            ]]),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
+                    ]
+                ]
+            ),
         )
         await callback.answer()
         return
 
     keyboard = _stage_list_keyboard(leads, kanban_stage, page=0, has_more=has_more)
     await callback.message.edit_text(  # type: ignore[union-attr]
-        f"{display} — {len(leads)}{'+'if has_more else ''} lead\n\n"
-        "Lidni tanlang 👇",
+        f"{display} — {len(leads)}{'+'if has_more else ''} lead\n\n" "Lidni tanlang 👇",
         reply_markup=keyboard,
     )
     await callback.answer()
 
 
 # ── kanban:stage:{stage} ──────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("kanban:stage:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_stage(callback: CallbackQuery, **data: object) -> None:
@@ -253,23 +275,27 @@ async def cb_kanban_stage(callback: CallbackQuery, **data: object) -> None:
     if not leads:
         await callback.message.edit_text(  # type: ignore[union-attr]
             f"{display} — bu bosqichda lid topilmadi",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
-            ]]),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="🔙 Kanban", callback_data="kanban:back"),
+                    ]
+                ]
+            ),
         )
         await callback.answer()
         return
 
     keyboard = _stage_list_keyboard(leads, kanban_stage, page=0, has_more=has_more)
     await callback.message.edit_text(  # type: ignore[union-attr]
-        f"{display} — {len(leads)}{'+'if has_more else ''} lead\n\n"
-        "Lidni tanlang 👇",
+        f"{display} — {len(leads)}{'+'if has_more else ''} lead\n\n" "Lidni tanlang 👇",
         reply_markup=keyboard,
     )
     await callback.answer()
 
 
 # ── kanban:pg:{stage}:{page} ──────────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("kanban:pg:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_page(callback: CallbackQuery, **data: object) -> None:
@@ -305,14 +331,14 @@ async def cb_kanban_page(callback: CallbackQuery, **data: object) -> None:
 
     keyboard = _stage_list_keyboard(leads, kanban_stage, page=page, has_more=has_more)
     await callback.message.edit_text(  # type: ignore[union-attr]
-        f"{display} — sahifa {page + 1}\n\n"
-        "Lidni tanlang 👇",
+        f"{display} — sahifa {page + 1}\n\n" "Lidni tanlang 👇",
         reply_markup=keyboard,
     )
     await callback.answer()
 
 
 # ── kanban:lead:{id}[:{from_stage}] ──────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("kanban:lead:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_lead(callback: CallbackQuery, **data: object) -> None:
@@ -344,6 +370,7 @@ async def cb_kanban_lead(callback: CallbackQuery, **data: object) -> None:
 
 
 # ── kanban:move:{lead_id}:{stage} ────────────────────────────────────────────
+
 
 @router.callback_query(F.data.startswith("kanban:move:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_move(callback: CallbackQuery, **data: object) -> None:
@@ -414,6 +441,7 @@ async def cb_kanban_move(callback: CallbackQuery, **data: object) -> None:
 
 # ── kanban:assign:{lead_id} ───────────────────────────────────────────────────
 
+
 @router.callback_query(F.data.startswith("kanban:assign:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_assign(callback: CallbackQuery, **data: object) -> None:
     """Show a list of managers to assign to the lead."""
@@ -437,19 +465,23 @@ async def cb_kanban_assign(callback: CallbackQuery, **data: object) -> None:
         name = mgr.first_name
         if mgr.username:
             name += f" @{mgr.username}"
-        buttons.append([
-            InlineKeyboardButton(
-                text=f"👤 {name}",
-                callback_data=f"kanban:assign_mgr:{lead_id}:{mgr.id}",
-            )
-        ])
-
-    buttons.append([
-        InlineKeyboardButton(
-            text="🔙 Orqaga",
-            callback_data=f"kanban:lead:{lead_id}",
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"👤 {name}",
+                    callback_data=f"kanban:assign_mgr:{lead_id}:{mgr.id}",
+                )
+            ]
         )
-    ])
+
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 Orqaga",
+                callback_data=f"kanban:lead:{lead_id}",
+            )
+        ]
+    )
 
     await callback.message.edit_text(  # type: ignore[union-attr]
         f"👔 Lid #{lead_id} uchun menejerni tanlang:",
@@ -460,13 +492,14 @@ async def cb_kanban_assign(callback: CallbackQuery, **data: object) -> None:
 
 # ── kanban:assign_mgr:{lead_id}:{mgr_id} ─────────────────────────────────────
 
+
 @router.callback_query(F.data.startswith("kanban:assign_mgr:"), RoleFilter(*_MGMT_ROLES))
 async def cb_kanban_assign_mgr(callback: CallbackQuery, **data: object) -> None:
     """Assign a manager to the lead and return to the lead card."""
     parts = callback.data.split(":")  # type: ignore[union-attr]
     try:
         lead_id = int(parts[2])
-        mgr_id  = int(parts[3])
+        mgr_id = int(parts[3])
     except (IndexError, ValueError):
         await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
         return
@@ -476,9 +509,9 @@ async def cb_kanban_assign_mgr(callback: CallbackQuery, **data: object) -> None:
     factory = get_session_factory()
     async with factory() as session:
         try:
-            lead_repo   = get_lead_repo(session)
+            lead_repo = get_lead_repo(session)
             action_repo = get_lead_action_repo(session)
-            audit_repo  = get_audit_log_repo(session)
+            audit_repo = get_audit_log_repo(session)
 
             lead = await lead_repo.assign_manager(lead_id, mgr_id)
 

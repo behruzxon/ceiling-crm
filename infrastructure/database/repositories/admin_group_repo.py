@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractAdminGroupRepository."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa

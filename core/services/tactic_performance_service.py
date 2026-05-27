@@ -3,6 +3,7 @@ Tactic performance analytics — aggregates resolved outcome stats into per-tact
 
 Pure function, no side effects.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,7 +14,7 @@ class TacticPerformance:
     tactic_name: str
     event_type: str
     total_samples: int
-    success_rate: float         # (engaged + measurement_booked + converted) / total
+    success_rate: float  # (engaged + measurement_booked + converted) / total
     engaged_rate: float
     conversion_rate: float
     lost_rate: float
@@ -85,17 +86,19 @@ def build_tactic_performance(resolved_stats: list[dict]) -> TacticPerformanceRep
     for (event_type, tactic_name), g in grouped.items():
         t = g["total"] or 1
         success = g["engaged"] + g["measurement_booked"] + g["converted"]
-        tactics.append(TacticPerformance(
-            tactic_name=tactic_name,
-            event_type=event_type,
-            total_samples=g["total"],
-            success_rate=success / t,
-            engaged_rate=g["engaged"] / t,
-            conversion_rate=g["converted"] / t,
-            lost_rate=g["lost"] / t,
-            ignored_rate=g["ignored"] / t,
-            by_segment=g["by_segment"],
-        ))
+        tactics.append(
+            TacticPerformance(
+                tactic_name=tactic_name,
+                event_type=event_type,
+                total_samples=g["total"],
+                success_rate=success / t,
+                engaged_rate=g["engaged"] / t,
+                conversion_rate=g["converted"] / t,
+                lost_rate=g["lost"] / t,
+                ignored_rate=g["ignored"] / t,
+                by_segment=g["by_segment"],
+            )
+        )
 
     # Find best/worst per event type
     def _best(et: str) -> str | None:

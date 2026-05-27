@@ -15,6 +15,7 @@ Usage::
     # report.conversion_rate == 0.145
     # report.top_sources == [{"source": "group", "leads": 62, "won": 11}]
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -154,9 +155,15 @@ class SalesAnalytics:
 # ── Pipeline stage order (for funnel analysis) ───────────────────────────────
 
 _STAGE_ORDER = [
-    "NEW", "PACKAGE_SELECTED", "CONTACTED",
-    "MEASUREMENT", "QUOTE", "DEAL",
-    "INSTALLATION", "COMPLETED", "LOST",
+    "NEW",
+    "PACKAGE_SELECTED",
+    "CONTACTED",
+    "MEASUREMENT",
+    "QUOTE",
+    "DEAL",
+    "INSTALLATION",
+    "COMPLETED",
+    "LOST",
 ]
 
 _STAGE_LABELS: dict[str, str] = {
@@ -270,9 +277,7 @@ def build_sales_analytics(leads_data: list[dict]) -> SalesAnalytics:
 
     # ── Revenue summary ───────────────────────────────────────────────
     revenues = [
-        ld["predicted_revenue_best"]
-        for ld in leads_data
-        if ld.get("predicted_revenue_best")
+        ld["predicted_revenue_best"] for ld in leads_data if ld.get("predicted_revenue_best")
     ]
     total_revenue = sum(revenues) if revenues else 0
     avg_revenue = total_revenue // len(revenues) if revenues else 0
@@ -354,28 +359,47 @@ def build_sales_analytics(leads_data: list[dict]) -> SalesAnalytics:
 def _empty_analytics() -> SalesAnalytics:
     """Return an empty analytics report."""
     return SalesAnalytics(
-        total_leads=0, won_leads=0, lost_leads=0, active_leads=0,
-        conversion_rate=0.0, top_sources=[], buyer_type_stats=[],
-        best_buyer_type=None, top_objections=[],
+        total_leads=0,
+        won_leads=0,
+        lost_leads=0,
+        active_leads=0,
+        conversion_rate=0.0,
+        top_sources=[],
+        buyer_type_stats=[],
+        best_buyer_type=None,
+        top_objections=[],
         objection_severity_stats={"low": 0, "medium": 0, "high": 0},
-        objection_lost_correlation=[], tactic_stats=[], best_tactic=None,
-        stage_counts=[], largest_dropoff_stage=None, followup_stats={
-            "avg_followups_won": 0, "avg_followups_lost": 0,
-            "avg_followups_all": 0, "with_followup_pct": 0,
+        objection_lost_correlation=[],
+        tactic_stats=[],
+        best_tactic=None,
+        stage_counts=[],
+        largest_dropoff_stage=None,
+        followup_stats={
+            "avg_followups_won": 0,
+            "avg_followups_lost": 0,
+            "avg_followups_all": 0,
+            "with_followup_pct": 0,
         },
-        best_followup_type=None, followup_type_stats=[],
+        best_followup_type=None,
+        followup_type_stats=[],
         score_distribution={"hot": 0, "warm": 0, "cold": 0},
-        avg_score=0.0, total_estimated_revenue=0,
+        avg_score=0.0,
+        total_estimated_revenue=0,
         avg_revenue_per_lead=0,
         avg_health_score=0.0,
         health_distribution={"healthy": 0, "at_risk": 0, "critical": 0},
-        top_signals=[], cooling_count=0,
-        autopilot_action_distribution=[], opportunity_count=0,
-        at_risk_count=0, closing_ready_count=0,
+        top_signals=[],
+        cooling_count=0,
+        autopilot_action_distribution=[],
+        opportunity_count=0,
+        at_risk_count=0,
+        closing_ready_count=0,
         closing_readiness_distribution={"NOT_READY": 0, "NEAR_CLOSE": 0, "READY_TO_CLOSE": 0},
-        close_opportunity_count=0, close_loss_risk_count=0,
+        close_opportunity_count=0,
+        close_loss_risk_count=0,
         closing_tactic_distribution=[],
-        auto_reply_count=0, auto_escalation_count=0,
+        auto_reply_count=0,
+        auto_escalation_count=0,
         auto_reply_confidence_avg=0.0,
         recommendations=[],
     )
@@ -441,10 +465,7 @@ def _compute_objection_stats(leads_data: list[dict]) -> list[dict]:
         if obj:
             counter[obj] += 1
 
-    return [
-        {"type": t, "count": c}
-        for t, c in counter.most_common(5)
-    ]
+    return [{"type": t, "count": c} for t, c in counter.most_common(5)]
 
 
 def _compute_funnel_stats(
@@ -532,16 +553,8 @@ def _compute_tactic_stats(leads_data: list[dict]) -> list[dict]:
 
 def _compute_followup_stats(leads_data: list[dict]) -> dict:
     """Compute follow-up effectiveness stats."""
-    won_fus = [
-        ld.get("follow_up_count", 0)
-        for ld in leads_data
-        if _is_won(ld)
-    ]
-    lost_fus = [
-        ld.get("follow_up_count", 0)
-        for ld in leads_data
-        if _is_lost(ld)
-    ]
+    won_fus = [ld.get("follow_up_count", 0) for ld in leads_data if _is_won(ld)]
+    lost_fus = [ld.get("follow_up_count", 0) for ld in leads_data if _is_lost(ld)]
     all_fus = [ld.get("follow_up_count", 0) for ld in leads_data]
     with_fu = sum(1 for f in all_fus if f > 0)
 
@@ -601,17 +614,14 @@ def _compute_conversation_health_stats(leads_data: list[dict]) -> dict:
             critical += 1
 
         # Count signals
-        for sig in (ld.get("conv_signals") or []):
+        for sig in ld.get("conv_signals") or []:
             signal_counter[sig] += 1
 
         if ld.get("conv_cooling"):
             cooling += 1
 
     avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else 0.0
-    top_signals = [
-        {"signal": sig, "count": cnt}
-        for sig, cnt in signal_counter.most_common(5)
-    ]
+    top_signals = [{"signal": sig, "count": cnt} for sig, cnt in signal_counter.most_common(5)]
 
     return {
         "avg_health": avg_health,
@@ -645,8 +655,7 @@ def _compute_autopilot_stats(leads_data: list[dict]) -> dict:
 
     return {
         "action_distribution": [
-            {"action": a, "count": c}
-            for a, c in action_counter.most_common(6)
+            {"action": a, "count": c} for a, c in action_counter.most_common(6)
         ],
         "opportunity_count": opportunity_count,
         "at_risk_count": at_risk_count,
@@ -683,8 +692,7 @@ def _compute_closing_stats(leads_data: list[dict]) -> dict:
         "opportunity_count": tier_counter.get("READY_TO_CLOSE", 0),
         "loss_risk_count": loss_risk_count,
         "tactic_distribution": [
-            {"tactic": t, "count": c}
-            for t, c in tactic_counter.most_common(6)
+            {"tactic": t, "count": c} for t, c in tactic_counter.most_common(6)
         ],
     }
 
@@ -739,8 +747,7 @@ def _build_recommendations(
     # Low conversion rate
     if conversion_rate < 0.15 and (won + lost) >= 5:
         recs.append(
-            "Konversiya past (%.0f%%) — closing CTAlarni kuchaytiring"
-            % (conversion_rate * 100)
+            "Konversiya past (%.0f%%) — closing CTAlarni kuchaytiring" % (conversion_rate * 100)
         )
 
     # Dominant objection
@@ -801,25 +808,25 @@ def _build_recommendations(
     total = won + lost + active
     if total > 0 and lost / total > 0.4:
         recs.append(
-            "Yo'qotish darajasi yuqori (%.0f%%) — sabab tahlilini o'tkazing"
-            % (lost / total * 100)
+            "Yo'qotish darajasi yuqori (%.0f%%) — sabab tahlilini o'tkazing" % (lost / total * 100)
         )
 
     # High severity objections need attention
     if objection_severity_stats:
         high = objection_severity_stats.get("high", 0)
         if high >= 3:
-            recs.append(
-                "%d ta yuqori darajali e'tiroz — menejer jalb qilishni ko'paytiring" % high
-            )
+            recs.append("%d ta yuqori darajali e'tiroz — menejer jalb qilishni ko'paytiring" % high)
 
     # Worst objection-to-lost correlation
     if objection_lost_correlation:
         worst = objection_lost_correlation[0]
         if worst["total"] >= 3 and worst["lost_rate"] >= 0.5:
             _type_names = {
-                "expensive": "Narx", "trust": "Ishonch", "delay": "Kechiktirish",
-                "compare": "Taqqoslash", "angry": "Norozilik",
+                "expensive": "Narx",
+                "trust": "Ishonch",
+                "delay": "Kechiktirish",
+                "compare": "Taqqoslash",
+                "angry": "Norozilik",
             }
             name = _type_names.get(worst["type"], worst["type"])
             recs.append(
@@ -830,6 +837,7 @@ def _build_recommendations(
     # Best tactic insight
     if best_tactic and best_tactic["won_rate"] >= 0.2:
         from core.services.negotiation_engine_service import TACTIC_LABELS
+
         tactic_label = TACTIC_LABELS.get(best_tactic["tactic"], best_tactic["tactic"])
         recs.append(
             "'%s' taktikasi eng samarali (%.0f%%) — "
@@ -841,12 +849,8 @@ def _build_recommendations(
         crit = conv_health.get("distribution", {}).get("critical", 0)
         cooling = conv_health.get("cooling_count", 0)
         if crit >= 3:
-            recs.append(
-                "%d ta lid kritik holatda — darhol aralashish kerak" % crit
-            )
+            recs.append("%d ta lid kritik holatda — darhol aralashish kerak" % crit)
         if cooling >= 5:
-            recs.append(
-                "%d ta lid sovumoqda — follow-up va reactivation boshlang" % cooling
-            )
+            recs.append("%d ta lid sovumoqda — follow-up va reactivation boshlang" % cooling)
 
     return recs[:5]  # Cap at 5 recommendations

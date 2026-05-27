@@ -1,4 +1,5 @@
 """Unit tests for the AI Sales Brain orchestration service."""
+
 from __future__ import annotations
 
 from core.services.ai_sales_brain_service import SalesBrainDecision, build_sales_brain
@@ -11,7 +12,11 @@ class TestBuildSalesBrainMinimal:
         result = build_sales_brain()
         assert isinstance(result, SalesBrainDecision)
         assert result.priority in (
-            "attack_now", "work_today", "nurture", "revive", "low_priority",
+            "attack_now",
+            "work_today",
+            "nurture",
+            "revive",
+            "low_priority",
         )
         assert 0 <= result.priority_score <= 100
         assert 0 <= result.win_probability <= 100
@@ -122,7 +127,9 @@ class TestBuildSalesBrainFollowUp:
 
     def test_followup_cap_reached(self):
         result = build_sales_brain(
-            score=5, lead_temperature="cold", follow_up_count=5,
+            score=5,
+            lead_temperature="cold",
+            follow_up_count=5,
         )
         # Follow-up cap reached -> no message type recommended
         assert result.recommended_message_type is None
@@ -133,10 +140,15 @@ class TestBuildSalesBrainBuyerType:
 
     def test_buyer_type_propagated(self):
         result = build_sales_brain(
-            score=60, phone_captured=True, closing_attempted=True,
+            score=60,
+            phone_captured=True,
+            closing_attempted=True,
         )
         assert result.buyer_type in (
-            "price_sensitive", "quality_buyer", "fast_buyer", "research_buyer",
+            "price_sensitive",
+            "quality_buyer",
+            "fast_buyer",
+            "research_buyer",
         )
         assert 0.0 <= result.buyer_confidence <= 1.0
 

@@ -2,6 +2,7 @@
 AI support handler.
 Routes ceiling-related questions to OpenAI with guardrails.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,10 +25,8 @@ router = Router(name="private:support")
 
 def _is_bot_admin(user_id: int) -> bool:
     settings = get_settings()
-    return (
-        settings.bot.admin_user_id is not None
-        and user_id == settings.bot.admin_user_id
-    )
+    return settings.bot.admin_user_id is not None and user_id == settings.bot.admin_user_id
+
 
 HELP_TEXT = (
     "🏠 <b>Ceiling CRM Bot</b>\n\n"
@@ -58,6 +57,7 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
     # ── Deep link: share_phone ──────────────────────────────────────────────
     if command.args == "share_phone":
         from apps.bot.handlers.private.operator import OperatorFlow, _contact_keyboard
+
         await state.clear()
         await state.set_state(OperatorFlow.waiting_for_contact)
         await message.answer(
@@ -71,54 +71,63 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
     # ── Deep links from group URL inline menu ───────────────────────────────
     if command.args == "zakaz":
         from apps.bot.handlers.private.order import cmd_order_start
+
         await state.clear()
         await cmd_order_start(message, state, **data)
         return
 
     if command.args == "price":
         from apps.bot.handlers.private.pricing import cmd_pricing_start
+
         await state.clear()
         await cmd_pricing_start(message, state, **data)
         return
 
     if command.args == "katalog":
         from apps.bot.handlers.private.catalog import cmd_catalog
+
         await state.clear()
         await cmd_catalog(message, state, **data)
         return
 
     if command.args == "paketlar":
         from apps.bot.handlers.private.packages import cmd_packages
+
         await state.clear()
         await cmd_packages(message, **data)
         return
 
     if command.args == "orders":
         from apps.bot.handlers.private.my_orders import cmd_my_orders
+
         await state.clear()
         await cmd_my_orders(message, **data)
         return
 
     if command.args == "operator":
         from apps.bot.handlers.private.operator import handle_operator_entry
+
         await state.clear()
         await handle_operator_entry(message, state, **data)
         return
 
     if command.args == "discounts":
         from apps.bot.handlers.private.promotions import cmd_promotions
+
         await state.clear()
         await cmd_promotions(message, **data)
         return
 
     if command.args == "ai":
         from apps.bot.handlers.private.ai_support import cmd_ai_start
+
         await state.clear()
         await cmd_ai_start(message, state, **data)
         return
 
     if command.args == "about":
         from apps.bot.handlers.private.about import cmd_about
+
         await state.clear()
         await cmd_about(message, **data)
         return
@@ -128,12 +137,14 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
     await clear_ai_conversation(user_id)
     log.info("start_private", chat_id=message.chat.id, chat_type=message.chat.type)
 
-    asyncio.create_task(emit_journey_event(
-        user_id=user_id,
-        event_type=JourneyEventType.STARTED_BOT,
-        event_data={"source": command.args or "direct"},
-        source_handler="support:cmd_start",
-    ))
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=user_id,
+            event_type=JourneyEventType.STARTED_BOT,
+            event_data={"source": command.args or "direct"},
+            source_handler="support:cmd_start",
+        )
+    )
 
     await message.answer(
         "🤖 VashPotolok AI Bot\n\n"

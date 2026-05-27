@@ -6,6 +6,7 @@ into a single unified sales decision.
 
 Pure function — no I/O, no DB, no Redis. Fully deterministic.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -127,9 +128,7 @@ def _build_reason_summary(
     fd: object,
     risk_flags: list[str],
 ) -> str:
-    bucket_label = BUCKET_LABELS.get(
-        rr.radar_bucket, rr.radar_bucket  # type: ignore[union-attr]
-    )
+    bucket_label = BUCKET_LABELS.get(rr.radar_bucket, rr.radar_bucket)  # type: ignore[union-attr]
     stage_label = STAGE_LABELS.get(
         cg.current_decision_stage, cg.current_decision_stage  # type: ignore[union-attr]
     )
@@ -156,10 +155,7 @@ def _pick_best_operator_reply(
     phone_captured: bool,
     closing_attempted: bool,
 ) -> str:
-    if (
-        cg.current_decision_stage == "close_ready"  # type: ignore[union-attr]
-        and phone_captured
-    ):
+    if cg.current_decision_stage == "close_ready" and phone_captured:  # type: ignore[union-attr]
         return oa.operator_reply_close  # type: ignore[union-attr]
 
     if ng.escalate_to_manager:  # type: ignore[union-attr]
@@ -344,6 +340,7 @@ def build_sales_brain(
     # ── Step 7: Deal Radar (uses SignalVector) ─────────────────────────────
     # Enrich SV with upstream results for radar
     from dataclasses import replace as _dc_replace
+
     sv_radar = _dc_replace(
         sv,
         predicted_revenue_best=re.predicted_revenue_best,
@@ -387,11 +384,18 @@ def build_sales_brain(
     )
 
     reason_summary = _build_reason_summary(
-        rr=rr, dp=dp, cg=cg, fd=fd, risk_flags=risk_flags,
+        rr=rr,
+        dp=dp,
+        cg=cg,
+        fd=fd,
+        risk_flags=risk_flags,
     )
 
     best_reply = _pick_best_operator_reply(
-        oa=oa, cg=cg, bp=bp, ng=ng,
+        oa=oa,
+        cg=cg,
+        bp=bp,
+        ng=ng,
         phone_captured=phone_captured,
         closing_attempted=closing_attempted,
     )
@@ -405,9 +409,7 @@ def build_sales_brain(
         stage=cg.current_decision_stage,
         trend=cg.engagement_trend,
         recommended_action=rr.recommended_immediate_action or dp.recommended_action,
-        recommended_message_type=(
-            fd.follow_up_type if fd.should_follow_up else None
-        ),
+        recommended_message_type=(fd.follow_up_type if fd.should_follow_up else None),
         recommended_operator_reply=best_reply,
         recommended_followup_delay_minutes=(
             fd.follow_up_delay_minutes if fd.should_follow_up else None
