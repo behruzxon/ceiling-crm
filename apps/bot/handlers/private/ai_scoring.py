@@ -190,6 +190,12 @@ _OBJECTION_COMPARE_KW: frozenset[str] = frozenset(
     {
         # Latin Uzbek — price comparison / discount requests
         "boshqada arzon",
+        "boshqalar arzon",
+        "boshqa joyda arzon",
+        "boshqa ustalar arzon",
+        "boshqasi arzon",
+        "raqobatchilar arzon",
+        "ular arzonroq",
         "arzonroq",
         "narxni tushir",
         "skidka",
@@ -198,11 +204,13 @@ _OBJECTION_COMPARE_KW: frozenset[str] = frozenset(
         "narxni pasaytir",
         # Russian
         "дешевле",
+        "другие дешевле",
         "скидка",
         "снизьте цену",
         "скидку",
         # Cyrillic Uzbek
         "арзонроқ",
+        "бошқалар арзон",
         "нархни тушир",
         "чегирма қил",
     }
