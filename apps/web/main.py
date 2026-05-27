@@ -199,6 +199,34 @@ async def admin_security(
     )
 
 
+@app.get("/crm/missed-leads", response_class=HTMLResponse)
+async def crm_missed_leads(
+    request: Request,
+    severity: str = Query("", max_length=20),
+    reason: str = Query("", max_length=50),
+):
+    """Missed Leads Dashboard."""
+    summary = await api_get("/api/v1/admin/crm/missed-leads/summary")
+    params: dict = {"limit": 50}
+    if severity:
+        params["severity"] = severity
+    if reason:
+        params["reason"] = reason
+    items = await api_get("/api/v1/admin/crm/missed-leads", params=params)
+    recs = await api_get("/api/v1/admin/crm/missed-leads/recommendations")
+    return templates.TemplateResponse(
+        "crm_missed_leads.html",
+        {
+            "request": request,
+            "summary": summary,
+            "items": items,
+            "recs": recs,
+            "severity_filter": severity,
+            "reason_filter": reason,
+        },
+    )
+
+
 @app.get("/crm/handoffs", response_class=HTMLResponse)
 async def crm_handoffs(
     request: Request,

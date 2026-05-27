@@ -97,6 +97,9 @@ def create_app() -> FastAPI:
     from apps.api.routes.admin_crm_handoffs import router as admin_crm_handoffs_router
 
     app.include_router(admin_crm_handoffs_router)
+    from apps.api.routes.admin_crm_missed_leads import router as admin_crm_missed_leads_router
+
+    app.include_router(admin_crm_missed_leads_router)
 
     return app
 

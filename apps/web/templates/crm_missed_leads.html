@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% set active_page = "missed_leads" %}
+{% block title %}Missed Leads — CeilingCRM{% endblock %}
+{% block page_title %}Missed Leads{% endblock %}
+{% block page_subtitle %}Yo'qolib ketishi mumkin bo'lgan mijozlarni nazorat qiling{% endblock %}
+{% block content %}
+<div class="vp-page">
+
+  <!-- KPI Cards -->
+  <div class="vp-kpi-grid" style="margin-bottom:20px;">
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label" style="color:#dc2626;">Critical</div>
+      <div class="vp-kpi-value" style="color:#dc2626;">{{ summary.critical|default(0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label" style="color:#f59e0b;">High</div>
+      <div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.high|default(0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Hot javobsiz</div>
+      <div class="vp-kpi-value">{{ summary.hot_unanswered|default(0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Operator kutmoqda</div>
+      <div class="vp-kpi-value">{{ summary.operator_waiting|default(0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Telefon ulashgan</div>
+      <div class="vp-kpi-value">{{ summary.phone_shared_no_followup|default(0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Eng uzoq kutish</div>
+      <div class="vp-kpi-value">{{ summary.oldest_wait_minutes|default(0) }} min</div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  {% set rec_list = (recs or {}).get("recommendations", []) %}
+  {% if rec_list %}
+  <div class="vp-card" style="margin-bottom:16px;">
+    <div class="vp-card-header"><div class="vp-card-title">Tavsiyalar</div></div>
+    {% for rec in rec_list %}
+    <div class="vp-alert {% if rec.priority == 'critical' %}vp-alert-danger{% elif rec.priority == 'high' %}vp-alert-warning{% else %}vp-alert-info{% endif %}" style="margin-bottom:6px;">
+      {{ rec.text }} ({{ rec.count }})
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="vp-card" style="margin-bottom:16px;">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <select class="vp-select" id="sevFilter" onchange="applyFilters()">
+        <option value="">Barcha darajalar</option>
+        <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
+        <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+      </select>
+      <select class="vp-select" id="reasonFilter" onchange="applyFilters()">
+        <option value="">Barcha sabablar</option>
+        <option value="hot_unanswered">Hot javobsiz</option>
+        <option value="operator_waiting">Operator kutmoqda</option>
+        <option value="phone_shared_no_followup">Telefon ulashgan</option>
+        <option value="price_interest_no_action">Narx so'ragan</option>
+        <option value="sla_critical">SLA critical</option>
+      </select>
+      <button class="vp-btn vp-btn-secondary" onclick="location.reload()">Yangilash</button>
+    </div>
+  </div>
+
+  <!-- Missed Leads Table -->
+  <div class="vp-card">
+    {% set ml_items = (items or {}).get("items", []) %}
+    {% if ml_items %}
+    <table class="vp-table">
+      <thead>
+        <tr>
+          <th>Daraja</th>
+          <th>Sabab</th>
+          <th>Kontakt</th>
+          <th>Telefon</th>
+          <th>Score</th>
+          <th>Kutish</th>
+          <th>Keyingi qadam</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ml_items %}
+        <tr>
+          <td>
+            {% if item.severity == 'critical' %}
+              <span class="vp-badge vp-badge-danger">Critical</span>
+            {% elif item.severity == 'high' %}
+              <span class="vp-badge vp-badge-warning">High</span>
+            {% elif item.severity == 'medium' %}
+              <span class="vp-badge vp-badge-info">Medium</span>
+            {% else %}
+              <span class="vp-badge vp-badge-neutral">Low</span>
+            {% endif %}
+          </td>
+          <td><span class="vp-badge vp-badge-neutral">{{ item.reason }}</span></td>
+          <td>{{ item.display_name or '—' }}</td>
+          <td>{{ item.phone_masked or '—' }}</td>
+          <td>{{ item.lead_score }}</td>
+          <td>{{ item.minutes_waiting }} min</td>
+          <td style="font-size:11px;">{{ item.next_action }}</td>
+          <td>
+            {% if item.contact_id %}
+            <a href="/crm/{{ item.contact_id }}" class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;">Ochish</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="vp-empty-state">
+      <div class="vp-empty-icon">✅</div>
+      Yo'qolayotgan leadlar yo'q — hammasi nazoratda
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+@media (max-width: 767px) {
+  .vp-table th:nth-child(4), .vp-table td:nth-child(4),
+  .vp-table th:nth-child(5), .vp-table td:nth-child(5) { display: none; }
+}
+</style>
+
+<script>
+function applyFilters() {
+  const s = document.getElementById('sevFilter').value;
+  const r = document.getElementById('reasonFilter').value;
+  let url = '/crm/missed-leads?';
+  if (s) url += 'severity=' + s + '&';
+  if (r) url += 'reason=' + r + '&';
+  location.href = url;
+}
+</script>
+{% endblock %}
