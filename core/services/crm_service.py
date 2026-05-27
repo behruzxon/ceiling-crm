@@ -1,6 +1,7 @@
 """
 CRMService — pipeline stage transitions and history.
 """
+
 from __future__ import annotations
 
 from core.domain.lead import Lead
@@ -18,15 +19,49 @@ from shared.logging import get_logger
 log = get_logger(__name__)
 
 # Allowed transitions — see architecture document Section 5.2
+# Forward transitions advance the pipeline; backward transitions (marked ←)
+# support the "Prev stage" button and stage corrections by admins.
 ALLOWED_TRANSITIONS: dict[PipelineStage, list[PipelineStage]] = {
-    PipelineStage.NEW:          [PipelineStage.CONTACTED, PipelineStage.LOST],
-    PipelineStage.CONTACTED:    [PipelineStage.MEASUREMENT, PipelineStage.LOST],
-    PipelineStage.MEASUREMENT:  [PipelineStage.QUOTE, PipelineStage.CONTACTED, PipelineStage.LOST],
-    PipelineStage.QUOTE:        [PipelineStage.DEAL, PipelineStage.MEASUREMENT, PipelineStage.LOST],
-    PipelineStage.DEAL:         [PipelineStage.INSTALLATION, PipelineStage.LOST],
-    PipelineStage.INSTALLATION: [PipelineStage.COMPLETED, PipelineStage.LOST],
-    PipelineStage.COMPLETED:    [],
-    PipelineStage.LOST:         [PipelineStage.NEW],
+    PipelineStage.NEW: [
+        PipelineStage.PACKAGE_SELECTED,
+        PipelineStage.CONTACTED,
+        PipelineStage.LOST,
+    ],
+    PipelineStage.PACKAGE_SELECTED: [
+        PipelineStage.CONTACTED,
+        PipelineStage.LOST,
+    ],
+    PipelineStage.CONTACTED: [
+        PipelineStage.MEASUREMENT,
+        PipelineStage.NEW,  # ← backward (undo)
+        PipelineStage.LOST,
+    ],
+    PipelineStage.MEASUREMENT: [
+        PipelineStage.QUOTE,
+        PipelineStage.CONTACTED,  # ← backward (undo)
+        PipelineStage.LOST,
+    ],
+    PipelineStage.QUOTE: [
+        PipelineStage.DEAL,
+        PipelineStage.MEASUREMENT,  # ← backward (undo)
+        PipelineStage.LOST,
+    ],
+    PipelineStage.DEAL: [
+        PipelineStage.INSTALLATION,
+        PipelineStage.QUOTE,  # ← backward (undo)
+        PipelineStage.LOST,
+    ],
+    PipelineStage.INSTALLATION: [
+        PipelineStage.COMPLETED,
+        PipelineStage.DEAL,  # ← backward (undo)
+        PipelineStage.LOST,
+    ],
+    PipelineStage.COMPLETED: [
+        PipelineStage.INSTALLATION,  # ← backward (correction only)
+    ],
+    PipelineStage.LOST: [
+        PipelineStage.NEW,
+    ],
 }
 
 
@@ -95,12 +130,14 @@ class CRMService:
         )
 
         # Emit domain event
-        await self._events.emit(StageChanged(
-            lead_id=lead_id,
-            from_stage=current_stage.value,
-            to_stage=new_stage.value,
-            actor_id=actor_id,
-        ))
+        await self._events.emit(
+            StageChanged(
+                lead_id=lead_id,
+                from_stage=current_stage.value,
+                to_stage=new_stage.value,
+                actor_id=actor_id,
+            )
+        )
 
         # Return updated lead with new stage
         updated_lead = await self._leads.get_by_id(lead_id)

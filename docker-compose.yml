@@ -1,17 +1,17 @@
-version: "3.9"
-
 services:
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15.6-alpine
     restart: unless-stopped
     env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Host port 15432 → container 5432 (for local dev tools: pgAdmin, alembic).
+    # All app services still connect via Docker network (service name "postgres").
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,10 +22,12 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.2-alpine
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # No host port binding — avoids conflicts with other projects.
+    # All app services connect via Docker network (service name "redis").
+    # To access from host (e.g. redis-cli), uncomment:
+    #   ports: ["16379:6379"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,14 +42,13 @@ services:
       context: .
       dockerfile: deploy/docker/Dockerfile
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
     environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
-      PAYMENT_CARD_NUMBER: ${PAYMENT_CARD_NUMBER}
-      PAYMENT_CARD_HOLDER: ${PAYMENT_CARD_HOLDER}
-      PAYMENT_BANK_NAME: ${PAYMENT_BANK_NAME}
-      BOT_ADMIN_USER_ID: ${BOT_ADMIN_USER_ID}
     volumes:
       - .:/app
     ports:
@@ -59,20 +60,30 @@ services:
       redis:
         condition: service_healthy
     command: python -m apps.bot.main
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',9090)); s.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   worker:
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
     environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
-      PAYMENT_CARD_NUMBER: ${PAYMENT_CARD_NUMBER}
-      PAYMENT_CARD_HOLDER: ${PAYMENT_CARD_HOLDER}
-      PAYMENT_BANK_NAME: ${PAYMENT_BANK_NAME}
-      BOT_ADMIN_USER_ID: ${BOT_ADMIN_USER_ID}
     volumes:
       - .:/app
     depends_on:
@@ -81,6 +92,105 @@ services:
       redis:
         condition: service_healthy
     command: celery -A infrastructure.queue.app worker -l info
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A infrastructure.queue.app inspect ping --timeout 5 2>/dev/null | grep -q OK"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # APScheduler process: follow-up reminders, analytics, cache jobs.
+  # NOTE: broadcast_scheduler_not_implemented — scheduled broadcasts are no-op until implemented.
+  scheduler:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m apps.scheduler.main
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── REST API (read-only, consumed by web dashboard) ──────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Web Dashboard (SSR, calls API server-side) ─────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      API_BASE_URL: "http://api:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8001"
+    depends_on:
+      - api
+    command: uvicorn apps.web.main:app --host 0.0.0.0 --port 8001 --reload
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:

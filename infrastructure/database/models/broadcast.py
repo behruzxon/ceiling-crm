@@ -1,4 +1,5 @@
 """SQLAlchemy ORM model for broadcasts table."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,8 +19,7 @@ class BroadcastModel(Base):
 
     # ── Segment ──────────────────────────────────────────────────────────────
     segment_type: Mapped[str] = mapped_column(
-        sa.Enum(SegmentType, name="segment_type",
-                values_callable=lambda x: [e.value for e in x]),
+        sa.Enum(SegmentType, name="segment_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default=SegmentType.ALL_PRIVATE.value,
     )
@@ -27,8 +27,7 @@ class BroadcastModel(Base):
 
     # ── Payload ───────────────────────────────────────────────────────────────
     payload_type: Mapped[str] = mapped_column(
-        sa.Enum(PayloadType, name="payload_type",
-                values_callable=lambda x: [e.value for e in x]),
+        sa.Enum(PayloadType, name="payload_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default=PayloadType.TEXT.value,
     )
@@ -46,21 +45,20 @@ class BroadcastModel(Base):
 
     # ── Status & counters ─────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(
-        sa.Enum(BroadcastStatus, name="broadcast_status",
-                values_callable=lambda x: [e.value for e in x]),
+        sa.Enum(
+            BroadcastStatus, name="broadcast_status", values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=False,
         server_default=BroadcastStatus.DRAFT.value,
     )
     total: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     sent_count: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     failed_count: Mapped[int] = mapped_column(sa.Integer, server_default="0")
-    finished_at: Mapped[datetime | None] = mapped_column(
-        sa.TIMESTAMP(timezone=True), nullable=True
-    )
+    finished_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
 
     # ── Meta ──────────────────────────────────────────────────────────────────
     created_by: Mapped[int] = mapped_column(
-        sa.BigInteger, sa.ForeignKey("users.id"), nullable=False
+        sa.BigInteger, sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True), server_default=sa.func.now()

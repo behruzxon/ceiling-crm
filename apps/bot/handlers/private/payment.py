@@ -15,6 +15,7 @@ Flow
 Admin receives a photo/document message with [✅ Tasdiqlash] [❌ Rad etish] buttons.
 Those callbacks are handled in apps.bot.handlers.callbacks.payment_callbacks.
 """
+
 from __future__ import annotations
 
 from aiogram import Bot, F, Router
@@ -42,12 +43,14 @@ router = Router(name="private:payment")
 
 # ── FSM ──────────────────────────────────────────────────────────────────────
 
+
 class PaymentSubmitFSM(StatesGroup):
     waiting_amount = State()
-    waiting_proof  = State()
+    waiting_proof = State()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fmt_card(number: str | None) -> str:
     """Format raw digit string as '8600 1234 5678 1234'."""
@@ -81,16 +84,18 @@ async def _notify_admin(
         f"Summa: <b>{amount_fmt} so'm</b>"
     )
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(
-                text="✅ Tasdiqlash",
-                callback_data=f"pay:a:{payment_id}:{user_id}",
-            ),
-            InlineKeyboardButton(
-                text="❌ Rad etish",
-                callback_data=f"pay:r:{payment_id}:{user_id}",
-            ),
-        ]]
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Tasdiqlash",
+                    callback_data=f"pay:a:{payment_id}:{user_id}",
+                ),
+                InlineKeyboardButton(
+                    text="❌ Rad etish",
+                    callback_data=f"pay:r:{payment_id}:{user_id}",
+                ),
+            ]
+        ]
     )
 
     try:
@@ -115,6 +120,7 @@ async def _notify_admin(
 
 # ── Entry: show requisites + ask amount ──────────────────────────────────────
 
+
 @router.message(F.chat.type == "private", F.text == "💳 To'lov qilish")
 async def cmd_payment_start(message: Message, state: FSMContext, **data: object) -> None:
     user_id: int = message.from_user.id if message.from_user else 0
@@ -124,8 +130,7 @@ async def cmd_payment_start(message: Message, state: FSMContext, **data: object)
 
     if not leads:
         await message.answer(
-            "📭 Hali buyurtma yo'q.\n"
-            "Avval buyurtma bering.",
+            "📭 Hali buyurtma yo'q.\n" "Avval buyurtma bering.",
             reply_markup=my_orders_keyboard(),
         )
         return
@@ -151,6 +156,7 @@ async def cmd_payment_start(message: Message, state: FSMContext, **data: object)
 
 # ── Step 1: amount ────────────────────────────────────────────────────────────
 
+
 @router.message(StateFilter(PaymentSubmitFSM.waiting_amount), F.text, ~F.text.startswith("/"))
 async def handle_payment_amount(message: Message, state: FSMContext, **data: object) -> None:
     raw = (message.text or "").strip().replace(" ", "").replace(",", "")
@@ -165,6 +171,7 @@ async def handle_payment_amount(message: Message, state: FSMContext, **data: obj
 
 # ── Step 2a: proof — photo ─────────────────────────────────────────────────────
 
+
 @router.message(StateFilter(PaymentSubmitFSM.waiting_proof), F.photo)
 async def handle_payment_proof_photo(message: Message, state: FSMContext, **data: object) -> None:
     # Telegram provides photos sorted by size; last = highest resolution
@@ -174,8 +181,11 @@ async def handle_payment_proof_photo(message: Message, state: FSMContext, **data
 
 # ── Step 2b: proof — document ─────────────────────────────────────────────────
 
+
 @router.message(StateFilter(PaymentSubmitFSM.waiting_proof), F.document)
-async def handle_payment_proof_document(message: Message, state: FSMContext, **data: object) -> None:
+async def handle_payment_proof_document(
+    message: Message, state: FSMContext, **data: object
+) -> None:
     if not message.document:
         await message.answer("❌ Fayl topilmadi. Qayta yuboring:")
         return
@@ -185,12 +195,14 @@ async def handle_payment_proof_document(message: Message, state: FSMContext, **d
 
 # ── Step 2 fallback ───────────────────────────────────────────────────────────
 
+
 @router.message(StateFilter(PaymentSubmitFSM.waiting_proof))
 async def handle_payment_proof_fallback(message: Message, **data: object) -> None:
     await message.answer("📎 Iltimos, chek rasmini yoki PDF yuboring.")
 
 
 # ── Shared: persist + notify ──────────────────────────────────────────────────
+
 
 async def _save_and_confirm(
     message: Message,
@@ -203,8 +215,6 @@ async def _save_and_confirm(
     lead_id: int = fsm["lead_id"]
     amount: int = fsm["amount"]
     user_id: int = message.from_user.id if message.from_user else 0
-
-    await state.clear()
 
     payment_id: int | None = None
     try:
@@ -224,13 +234,22 @@ async def _save_and_confirm(
         log.info("payment_submitted", payment_id=payment_id, user_id=user_id, lead_id=lead_id)
     except Exception:
         log.exception("payment_submit_failed", user_id=user_id, lead_id=lead_id)
+    finally:
+        await state.clear()
+
+    if payment_id is None:
+        await message.answer(
+            "❌ Texnik xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+            reply_markup=my_orders_keyboard(),
+        )
+        return
 
     await message.answer(
         "✅ Qabul qilindi. Tasdiqlangach xabar beramiz.",
         reply_markup=my_orders_keyboard(),
     )
 
-    if payment_id and message.bot:
+    if message.bot:
         await _notify_admin(
             message.bot,
             payment_id=payment_id,

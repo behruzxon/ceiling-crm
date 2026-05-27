@@ -11,6 +11,7 @@ Changes:
               total, finished_at columns
 - New table: admin_groups (chat_id PK, title, added_at)
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -30,11 +31,16 @@ def upgrade() -> None:
 
     # ── 2. Create new enum types ──────────────────────────────────────────────
     segment_type = sa.Enum(
-        "all_private", "lead_stage", "admin_groups",
+        "all_private",
+        "lead_stage",
+        "admin_groups",
         name="segment_type",
     )
     payload_type = sa.Enum(
-        "text", "photo", "video", "document",
+        "text",
+        "photo",
+        "video",
+        "document",
         name="payload_type",
     )
     segment_type.create(op.get_bind(), checkfirst=True)

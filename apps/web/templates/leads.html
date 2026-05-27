@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% set active_page = "leads" %}
+
+{% block title %}Leads - Systemax CRM{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h1 style="font-size:24px;font-weight:700;color:#1e293b;margin:0;">Leads</h1>
+            {% if data and data._error is not defined %}
+            <span style="font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:3px 12px;border-radius:12px;">{{ data.total | fmt_number }}</span>
+            {% endif %}
+        </div>
+        <p style="font-size:14px;color:#64748b;margin-top:4px;">Mijozlar va kelgan arizalar</p>
+    </div>
+    {% if data and data._error is not defined and data.total_pages %}
+    <div style="font-size:13px;color:#94a3b8;">Page {{ data.page }} of {{ data.total_pages }}</div>
+    {% endif %}
+</div>
+
+{% if data and data._error is not defined %}
+
+<!-- Toolbar -->
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;max-width:320px;position:relative;">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;">&#9906;</span>
+        <input type="text" placeholder="Search leads..." disabled
+               style="width:100%;padding:8px 12px 8px 34px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#94a3b8;background:#f8fafc;cursor:not-allowed;outline:none;font-family:inherit;">
+    </div>
+    <button disabled style="padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#94a3b8;background:#f8fafc;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;">&#9660;</span> Stage
+    </button>
+    <button disabled style="padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#94a3b8;background:#f8fafc;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;">&#9660;</span> Status
+    </button>
+</div>
+
+<!-- Desktop Table -->
+<div class="leads-table-desktop" style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">ID</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Name</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Phone</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">District</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Stage</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Score</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Created</th>
+                    <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Follow-up</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in data["items"] %}
+                <tr class="leads-row" style="border-bottom:1px solid #f1f5f9;transition:background 0.1s;">
+                    <td style="padding:12px 16px;font-size:13px;color:#94a3b8;font-variant-numeric:tabular-nums;">#{{ lead.id }}</td>
+                    <td style="padding:12px 16px;">
+                        <div style="font-size:13px;font-weight:600;color:#1e293b;">{{ lead.name }}</div>
+                        {% if lead.lead_status %}
+                        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">{{ lead.lead_status }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px;font-size:13px;color:#475569;font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:-0.02em;">{{ lead.phone or '—' }}</td>
+                    <td style="padding:12px 16px;font-size:13px;color:#475569;">{{ lead.district or '—' }}</td>
+                    <td style="padding:12px 16px;">
+                        {% set stage = lead.current_stage|lower if lead.current_stage else '' %}
+                        {% if stage == 'new' %}
+                            {% set sbg = '#dbeafe' %}{% set stxt = '#1d4ed8' %}{% set slbl = 'New' %}
+                        {% elif stage == 'contacted' %}
+                            {% set sbg = '#fef3c7' %}{% set stxt = '#b45309' %}{% set slbl = 'Contacted' %}
+                        {% elif stage == 'package_selected' %}
+                            {% set sbg = '#e0f2fe' %}{% set stxt = '#0369a1' %}{% set slbl = 'Package' %}
+                        {% elif stage == 'measurement' %}
+                            {% set sbg = '#ede9fe' %}{% set stxt = '#6d28d9' %}{% set slbl = 'Measurement' %}
+                        {% elif stage == 'quote' or stage == 'quote_sent' %}
+                            {% set sbg = '#e0e7ff' %}{% set stxt = '#4338ca' %}{% set slbl = 'Quote' %}
+                        {% elif stage == 'deal_closed' %}
+                            {% set sbg = '#d1fae5' %}{% set stxt = '#065f46' %}{% set slbl = 'Deal' %}
+                        {% elif stage == 'installation' %}
+                            {% set sbg = '#ccfbf1' %}{% set stxt = '#115e59' %}{% set slbl = 'Install' %}
+                        {% elif stage == 'completed' %}
+                            {% set sbg = '#d1fae5' %}{% set stxt = '#065f46' %}{% set slbl = 'Completed' %}
+                        {% elif stage == 'lost' %}
+                            {% set sbg = '#fee2e2' %}{% set stxt = '#991b1b' %}{% set slbl = 'Lost' %}
+                        {% else %}
+                            {% set sbg = '#f1f5f9' %}{% set stxt = '#475569' %}{% set slbl = lead.current_stage or '—' %}
+                        {% endif %}
+                        <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:{{ sbg }};color:{{ stxt }};white-space:nowrap;">{{ slbl }}</span>
+                    </td>
+                    <td style="padding:12px 16px;">
+                        {% if lead.score is not none %}
+                        {% if lead.score >= 60 %}
+                            {% set scbg = '#fef2f2' %}{% set sctxt = '#dc2626' %}
+                        {% elif lead.score >= 30 %}
+                            {% set scbg = '#fffbeb' %}{% set sctxt = '#d97706' %}
+                        {% else %}
+                            {% set scbg = '#f8fafc' %}{% set sctxt = '#94a3b8' %}
+                        {% endif %}
+                        <span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600;background:{{ scbg }};color:{{ sctxt }};font-variant-numeric:tabular-nums;">{{ lead.score }}</span>
+                        {% else %}
+                        <span style="font-size:13px;color:#cbd5e1;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px;font-size:12px;color:#94a3b8;white-space:nowrap;font-variant-numeric:tabular-nums;">{{ lead.created_at[:10] if lead.created_at else '—' }}</td>
+                    <td style="padding:12px 16px;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;">
+                        {% if lead.next_follow_up_at %}
+                        <span style="color:#4f46e5;">{{ lead.next_follow_up_at[:10] }}</span>
+                        {% else %}
+                        <span style="color:#cbd5e1;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="padding:64px 24px;text-align:center;">
+                        <div style="font-size:36px;margin-bottom:12px;opacity:0.25;">&#9782;</div>
+                        <div style="font-size:15px;font-weight:600;color:#64748b;">No leads found</div>
+                        <div style="font-size:13px;color:#94a3b8;margin-top:4px;">New leads will appear here after Telegram bot captures them.</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Mobile Card View -->
+<div class="leads-cards-mobile" style="display:none;flex-direction:column;gap:12px;">
+    {% for lead in data["items"] %}
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:600;color:#1e293b;">{{ lead.name }}</div>
+            <span style="font-size:11px;color:#94a3b8;">#{{ lead.id }}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            {% set stage = lead.current_stage|lower if lead.current_stage else '' %}
+            {% if stage == 'new' %}
+                {% set sbg = '#dbeafe' %}{% set stxt = '#1d4ed8' %}{% set slbl = 'New' %}
+            {% elif stage == 'contacted' %}
+                {% set sbg = '#fef3c7' %}{% set stxt = '#b45309' %}{% set slbl = 'Contacted' %}
+            {% elif stage == 'package_selected' %}
+                {% set sbg = '#e0f2fe' %}{% set stxt = '#0369a1' %}{% set slbl = 'Package' %}
+            {% elif stage == 'measurement' %}
+                {% set sbg = '#ede9fe' %}{% set stxt = '#6d28d9' %}{% set slbl = 'Measurement' %}
+            {% elif stage == 'quote' or stage == 'quote_sent' %}
+                {% set sbg = '#e0e7ff' %}{% set stxt = '#4338ca' %}{% set slbl = 'Quote' %}
+            {% elif stage == 'deal_closed' %}
+                {% set sbg = '#d1fae5' %}{% set stxt = '#065f46' %}{% set slbl = 'Deal' %}
+            {% elif stage == 'installation' %}
+                {% set sbg = '#ccfbf1' %}{% set stxt = '#115e59' %}{% set slbl = 'Install' %}
+            {% elif stage == 'completed' %}
+                {% set sbg = '#d1fae5' %}{% set stxt = '#065f46' %}{% set slbl = 'Completed' %}
+            {% elif stage == 'lost' %}
+                {% set sbg = '#fee2e2' %}{% set stxt = '#991b1b' %}{% set slbl = 'Lost' %}
+            {% else %}
+                {% set sbg = '#f1f5f9' %}{% set stxt = '#475569' %}{% set slbl = lead.current_stage or '—' %}
+            {% endif %}
+            <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:{{ sbg }};color:{{ stxt }};">{{ slbl }}</span>
+            {% if lead.score is not none %}
+            {% if lead.score >= 60 %}
+                {% set scbg = '#fef2f2' %}{% set sctxt = '#dc2626' %}
+            {% elif lead.score >= 30 %}
+                {% set scbg = '#fffbeb' %}{% set sctxt = '#d97706' %}
+            {% else %}
+                {% set scbg = '#f8fafc' %}{% set sctxt = '#94a3b8' %}
+            {% endif %}
+            <span style="display:inline-block;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;background:{{ scbg }};color:{{ sctxt }};">Score: {{ lead.score }}</span>
+            {% endif %}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#64748b;">
+            <div>
+                <span style="color:#94a3b8;">Phone: </span>
+                <span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:#475569;">{{ lead.phone or '—' }}</span>
+            </div>
+            <div>
+                <span style="color:#94a3b8;">District: </span>
+                <span style="color:#475569;">{{ lead.district or '—' }}</span>
+            </div>
+            <div>
+                <span style="color:#94a3b8;">Created: </span>
+                <span style="color:#475569;">{{ lead.created_at[:10] if lead.created_at else '—' }}</span>
+            </div>
+            {% if lead.room_area %}
+            <div>
+                <span style="color:#94a3b8;">Area: </span>
+                <span style="color:#475569;">{{ lead.room_area }} m&sup2;</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="background:#fff;border-radius:12px;padding:48px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;text-align:center;">
+        <div style="font-size:36px;margin-bottom:12px;opacity:0.25;">&#9782;</div>
+        <div style="font-size:15px;font-weight:600;color:#64748b;">No leads found</div>
+        <div style="font-size:13px;color:#94a3b8;margin-top:4px;">New leads will appear here after Telegram bot captures them.</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if data.total_pages > 1 %}
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;">
+    {% if data.has_prev %}
+    <a href="/leads?page={{ page - 1 }}&page_size={{ page_size }}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:500;color:#4f46e5;background:#fff;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;transition:background 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.04);"
+       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+        &#8592; Previous
+    </a>
+    {% else %}
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:500;color:#cbd5e1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:not-allowed;">
+        &#8592; Previous
+    </span>
+    {% endif %}
+
+    <span style="padding:8px 16px;font-size:13px;font-weight:500;color:#64748b;">
+        Page <strong style="color:#1e293b;">{{ data.page }}</strong> of <strong style="color:#1e293b;">{{ data.total_pages }}</strong>
+    </span>
+
+    {% if data.has_next %}
+    <a href="/leads?page={{ page + 1 }}&page_size={{ page_size }}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:500;color:#4f46e5;background:#fff;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;transition:background 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.04);"
+       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+        Next &#8594;
+    </a>
+    {% else %}
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:500;color:#cbd5e1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:not-allowed;">
+        Next &#8594;
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- Responsive styles -->
+<style>
+    .leads-row:hover { background: #f8fafc; }
+    @media (max-width: 767px) {
+        .leads-table-desktop { display: none !important; }
+        .leads-cards-mobile { display: flex !important; }
+    }
+</style>
+{% endblock %}

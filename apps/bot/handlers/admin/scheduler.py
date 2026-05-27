@@ -2,10 +2,13 @@
 Admin scheduler management handler.
 View and manage scheduled appointments and jobs.
 """
+
 from __future__ import annotations
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+
 from apps.bot.filters.role import RoleFilter
 from shared.constants.enums import UserRole
 

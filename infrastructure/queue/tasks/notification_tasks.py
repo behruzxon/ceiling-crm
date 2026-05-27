@@ -1,5 +1,7 @@
 """Celery tasks for async notifications."""
+
 from __future__ import annotations
+
 from infrastructure.queue.app import celery_app
 
 

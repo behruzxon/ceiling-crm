@@ -42,14 +42,14 @@ log = get_logger(__name__)
 _main_pool: ConnectionPool | None = None
 _sessions_pool: ConnectionPool | None = None
 
-APP_KEY_PREFIX = "ccrm:"     # global namespace prefix for all cache keys
+APP_KEY_PREFIX = "ccrm:"  # global namespace prefix for all cache keys
 
 
 def _build_pool(url: str, max_connections: int = 50) -> ConnectionPool:
     return aioredis.ConnectionPool.from_url(
         url,
         max_connections=max_connections,
-        decode_responses=True,     # always work with str, not bytes
+        decode_responses=True,  # always work with str, not bytes
         socket_keepalive=True,
         socket_connect_timeout=5,
         health_check_interval=30,
@@ -82,9 +82,14 @@ class CacheClient:
     Thin wrapper around Redis with:
     - Automatic key prefixing
     - JSON serialisation / deserialisation
+    - Retry on transient connection errors
     - Structured logging on errors
     - Type-safe helpers
     """
+
+    _RETRYABLE = (ConnectionError, TimeoutError, OSError)
+    _MAX_RETRIES = 3
+    _BASE_DELAY = 1.0
 
     def __init__(self, pool: ConnectionPool, prefix: str = APP_KEY_PREFIX) -> None:
         self._redis: Redis = Redis(connection_pool=pool)
@@ -94,42 +99,70 @@ class CacheClient:
         """Prepend namespace prefix to a raw key."""
         return f"{self._prefix}{key}"
 
+    async def _safe_exec(self, coro_func: Any, *args: Any, **kwargs: Any) -> Any:
+        """Execute a Redis coroutine with retry on transient errors."""
+        import asyncio as _asyncio
+
+        delay = self._BASE_DELAY
+        last_exc: BaseException | None = None
+        for attempt in range(1, self._MAX_RETRIES + 2):
+            try:
+                return await coro_func(*args, **kwargs)
+            except self._RETRYABLE as exc:
+                last_exc = exc
+                if attempt > self._MAX_RETRIES:
+                    log.warning(
+                        "redis_retry_exhausted",
+                        operation=getattr(coro_func, "__name__", "unknown"),
+                        attempts=attempt,
+                        error=str(exc),
+                    )
+                    raise
+                log.info(
+                    "redis_retry",
+                    operation=getattr(coro_func, "__name__", "unknown"),
+                    attempt=attempt,
+                    delay=delay,
+                    error=str(exc),
+                )
+                await _asyncio.sleep(delay)
+                delay *= 2
+        raise last_exc  # type: ignore[misc]
+
     # ── Raw passthrough ───────────────────────────────────────────────────
 
     async def get(self, key: str) -> str | None:
-        return await self._redis.get(self._key(key))
+        return await self._safe_exec(self._redis.get, self._key(key))
 
     async def set(
         self,
         key: str,
         value: str,
         ttl: int | None = None,
-        nx: bool = False,           # SET if Not eXists
+        nx: bool = False,  # SET if Not eXists
     ) -> bool:
-        result = await self._redis.set(
-            self._key(key), value, ex=ttl, nx=nx
-        )
+        result = await self._safe_exec(self._redis.set, self._key(key), value, ex=ttl, nx=nx)
         return bool(result)
 
     async def delete(self, *keys: str) -> int:
         prefixed = [self._key(k) for k in keys]
-        return await self._redis.delete(*prefixed)
+        return await self._safe_exec(self._redis.delete, *prefixed)
 
     async def exists(self, *keys: str) -> int:
         prefixed = [self._key(k) for k in keys]
-        return await self._redis.exists(*prefixed)
+        return await self._safe_exec(self._redis.exists, *prefixed)
 
     async def expire(self, key: str, ttl: int) -> bool:
-        return bool(await self._redis.expire(self._key(key), ttl))
+        return bool(await self._safe_exec(self._redis.expire, self._key(key), ttl))
 
     async def ttl(self, key: str) -> int:
-        return await self._redis.ttl(self._key(key))
+        return await self._safe_exec(self._redis.ttl, self._key(key))
 
     async def incr(self, key: str, amount: int = 1) -> int:
-        return await self._redis.incrby(self._key(key), amount)
+        return await self._safe_exec(self._redis.incrby, self._key(key), amount)
 
     async def keys(self, pattern: str) -> list[str]:
-        raw: list[str] = await self._redis.keys(self._key(pattern))
+        raw: list[str] = await self._safe_exec(self._redis.keys, self._key(pattern))
         prefix_len = len(self._prefix)
         return [k[prefix_len:] for k in raw]
 
@@ -160,16 +193,16 @@ class CacheClient:
     # ── Hash helpers ──────────────────────────────────────────────────────
 
     async def hset(self, key: str, mapping: dict[str, str]) -> int:
-        return await self._redis.hset(self._key(key), mapping=mapping)  # type: ignore[arg-type]
+        return await self._safe_exec(self._redis.hset, self._key(key), mapping=mapping)  # type: ignore[arg-type]
 
     async def hget(self, key: str, field: str) -> str | None:
-        return await self._redis.hget(self._key(key), field)
+        return await self._safe_exec(self._redis.hget, self._key(key), field)
 
     async def hgetall(self, key: str) -> dict[str, str]:
-        return await self._redis.hgetall(self._key(key))
+        return await self._safe_exec(self._redis.hgetall, self._key(key))
 
     async def hdel(self, key: str, *fields: str) -> int:
-        return await self._redis.hdel(self._key(key), *fields)
+        return await self._safe_exec(self._redis.hdel, self._key(key), *fields)
 
     # ── Rate limiting (sliding window counter) ────────────────────────────
 
@@ -188,6 +221,7 @@ class CacheClient:
         key = self._key(f"rl:{identifier}")
         pipe = self._redis.pipeline()
         import time
+
         now = int(time.time())
         window_start = now - window_seconds
         pipe.zremrangebyscore(key, 0, window_start)
@@ -198,6 +232,23 @@ class CacheClient:
         count: int = results[2]
         remaining = max(0, max_requests - count)
         return count <= max_requests, remaining
+
+    # ── Sorted-set helpers (used by CTA inactivity feature) ──────────────
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        """ZADD wrapper with automatic key prefixing."""
+        return await self._safe_exec(self._redis.zadd, self._key(key), mapping)  # type: ignore[arg-type]
+
+    async def zrangebyscore(self, key: str, min_score: float, max_score: float) -> list[str]:
+        """Return members with scores in [min_score, max_score]."""
+        result: list[str] = await self._safe_exec(
+            self._redis.zrangebyscore, self._key(key), min_score, max_score
+        )
+        return result
+
+    async def zrem(self, key: str, *members: str) -> int:
+        """Remove one or more members from a sorted set."""
+        return await self._safe_exec(self._redis.zrem, self._key(key), *members)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 

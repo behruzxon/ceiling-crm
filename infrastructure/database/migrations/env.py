@@ -22,24 +22,28 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from infrastructure.database.models.admin_group import AdminGroupModel  # noqa: F401
+from infrastructure.database.models.ai_conversation import AiConversationModel  # noqa: F401
+from infrastructure.database.models.ai_memory import AiMemoryModel  # noqa: F401
+from infrastructure.database.models.appointment import AppointmentModel  # noqa: F401
+from infrastructure.database.models.audit_log import AuditLogModel  # noqa: F401
+from infrastructure.database.models.blocked_chat import BlockedChatModel  # noqa: F401
+from infrastructure.database.models.broadcast import BroadcastModel  # noqa: F401
+from infrastructure.database.models.group import GroupModel  # noqa: F401
+from infrastructure.database.models.group_join_event import GroupJoinEventModel  # noqa: F401
+from infrastructure.database.models.group_settings import GroupSettingsModel  # noqa: F401
+from infrastructure.database.models.lead import LeadModel  # noqa: F401
+from infrastructure.database.models.lead_action import LeadActionModel  # noqa: F401
+from infrastructure.database.models.payment import PaymentModel  # noqa: F401
+from infrastructure.database.models.pipeline_stage import PipelineStageModel  # noqa: F401
+from infrastructure.database.models.quote import QuoteModel  # noqa: F401
+from infrastructure.database.models.system_error import SystemErrorModel  # noqa: F401
+from infrastructure.database.models.user import UserModel  # noqa: F401
+from infrastructure.database.models.warranty import WarrantyModel  # noqa: F401
+
 # ── Import all models so Alembic can detect schema changes ────────────────
 # IMPORTANT: add each new model import here when creating it.
 from infrastructure.database.session import Base  # noqa: F401 — Base metadata
-from infrastructure.database.models.user import UserModel  # noqa: F401
-from infrastructure.database.models.lead import LeadModel  # noqa: F401
-from infrastructure.database.models.group import GroupModel  # noqa: F401
-from infrastructure.database.models.pipeline_stage import PipelineStageModel  # noqa: F401
-from infrastructure.database.models.audit_log import AuditLogModel  # noqa: F401
-from infrastructure.database.models.quote import QuoteModel  # noqa: F401
-from infrastructure.database.models.appointment import AppointmentModel  # noqa: F401
-from infrastructure.database.models.broadcast import BroadcastModel  # noqa: F401
-from infrastructure.database.models.ai_memory import AiMemoryModel  # noqa: F401
-from infrastructure.database.models.ai_conversation import AiConversationModel  # noqa: F401
-from infrastructure.database.models.group_settings import GroupSettingsModel  # noqa: F401
-from infrastructure.database.models.payment import PaymentModel  # noqa: F401
-from infrastructure.database.models.warranty import WarrantyModel  # noqa: F401
-from infrastructure.database.models.admin_group import AdminGroupModel  # noqa: F401
-
 from shared.config import get_settings
 
 # ── Alembic Config ─────────────────────────────────────────────────────────

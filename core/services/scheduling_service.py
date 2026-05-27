@@ -1,8 +1,11 @@
 """
 SchedulingService — appointment creation and installer assignment.
 """
+
 from __future__ import annotations
+
 from datetime import datetime
+
 from core.domain.appointment import Appointment
 from core.repositories.appointment_repo import AbstractAppointmentRepository
 from shared.constants.enums import AppointmentType

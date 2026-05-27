@@ -1,8 +1,12 @@
 """Quote domain model."""
+
 from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, Field, computed_field
+
 from shared.constants.enums import CeilingCategory
 
 
@@ -15,6 +19,7 @@ class QuoteAddonDetail(BaseModel):
 
 class Quote(BaseModel):
     """Price quote calculated for a lead."""
+
     model_config = {"frozen": True}
 
     id: int
@@ -26,7 +31,7 @@ class Quote(BaseModel):
     addons_detail: list[QuoteAddonDetail] = Field(default_factory=list)
     discount_pct: Decimal = Decimal("0")
     currency: str = "UZS"
-    is_accepted: bool | None = None         # None = pending
+    is_accepted: bool | None = None  # None = pending
     created_by: int
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

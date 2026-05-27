@@ -1,12 +1,17 @@
 """Appointment domain model."""
+
 from __future__ import annotations
+
 from datetime import datetime
+
 from pydantic import BaseModel, Field
+
 from shared.constants.enums import AppointmentStatus, AppointmentType
 
 
 class Appointment(BaseModel):
     """Measurement or installation appointment."""
+
     model_config = {"frozen": True}
 
     id: int

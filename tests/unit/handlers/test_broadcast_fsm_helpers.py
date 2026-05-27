@@ -3,37 +3,40 @@
 Tests cover the segment/payload mapping dicts used by the FSM handler —
 pure dict lookups, no I/O or FSM state needed.
 """
+
 from __future__ import annotations
 
 import pytest
 
 from shared.constants.enums import PayloadType, SegmentType
 
-
 # These mirror the private dicts in broadcasts.py; we import them here to
 # avoid importing the full handler module (which has heavy aiogram deps).
 
 _SEGMENT_TYPE_MAP: dict[str, SegmentType] = {
-    "all":    SegmentType.ALL_PRIVATE,
-    "stage":  SegmentType.LEAD_STAGE,
+    "all": SegmentType.ALL_PRIVATE,
+    "stage": SegmentType.LEAD_STAGE,
     "groups": SegmentType.ADMIN_GROUPS,
 }
 
 _PAYLOAD_TYPE_MAP: dict[str, PayloadType] = {
-    "text":     PayloadType.TEXT,
-    "photo":    PayloadType.PHOTO,
-    "video":    PayloadType.VIDEO,
+    "text": PayloadType.TEXT,
+    "photo": PayloadType.PHOTO,
+    "video": PayloadType.VIDEO,
     "document": PayloadType.DOCUMENT,
 }
 
 
 class TestSegmentTypeMapping:
 
-    @pytest.mark.parametrize("key,expected", [
-        ("all",    SegmentType.ALL_PRIVATE),
-        ("stage",  SegmentType.LEAD_STAGE),
-        ("groups", SegmentType.ADMIN_GROUPS),
-    ])
+    @pytest.mark.parametrize(
+        "key,expected",
+        [
+            ("all", SegmentType.ALL_PRIVATE),
+            ("stage", SegmentType.LEAD_STAGE),
+            ("groups", SegmentType.ADMIN_GROUPS),
+        ],
+    )
     def test_known_keys_resolve(self, key: str, expected: SegmentType) -> None:
         assert _SEGMENT_TYPE_MAP[key] == expected
 
@@ -47,12 +50,15 @@ class TestSegmentTypeMapping:
 
 class TestPayloadTypeMapping:
 
-    @pytest.mark.parametrize("key,expected", [
-        ("text",     PayloadType.TEXT),
-        ("photo",    PayloadType.PHOTO),
-        ("video",    PayloadType.VIDEO),
-        ("document", PayloadType.DOCUMENT),
-    ])
+    @pytest.mark.parametrize(
+        "key,expected",
+        [
+            ("text", PayloadType.TEXT),
+            ("photo", PayloadType.PHOTO),
+            ("video", PayloadType.VIDEO),
+            ("document", PayloadType.DOCUMENT),
+        ],
+    )
     def test_known_keys_resolve(self, key: str, expected: PayloadType) -> None:
         assert _PAYLOAD_TYPE_MAP[key] == expected
 

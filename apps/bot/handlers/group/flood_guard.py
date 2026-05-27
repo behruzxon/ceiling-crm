@@ -8,6 +8,7 @@ _moderation.py, which uses Redis sorted sets with an in-memory fallback.
 
 Threshold: > 5 messages in 10 seconds → flooding.
 """
+
 from __future__ import annotations
 
 from apps.bot.handlers.group._moderation import is_flooding

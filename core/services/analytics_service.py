@@ -1,8 +1,11 @@
 """
 AnalyticsService — business metrics and reporting.
 """
+
 from __future__ import annotations
+
 from datetime import date
+
 from shared.logging import get_logger
 
 log = get_logger(__name__)

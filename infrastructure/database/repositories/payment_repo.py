@@ -1,7 +1,8 @@
 """PostgreSQL implementation of AbstractPaymentRepository."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,13 +70,33 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         await self._session.refresh(model)
         return self._to_domain(model)
 
-    async def update_status(self, id: int, status: PaymentStatus) -> Payment:
-        model = await self._session.get(PaymentModel, id)
+    async def update_status(
+        self,
+        id: int,
+        status: PaymentStatus,
+        *,
+        expected_status: PaymentStatus | None = None,
+    ) -> Payment:
+        if expected_status is not None:
+            # Lock the row and verify current status atomically.
+            result = await self._session.execute(
+                sa.select(PaymentModel).where(PaymentModel.id == id).with_for_update()
+            )
+            model = result.scalar_one_or_none()
+        else:
+            model = await self._session.get(PaymentModel, id)
+
         if model is None:
             raise ValueError(f"Payment {id} not found")
+
+        if expected_status is not None and model.status != expected_status:
+            raise ValueError(
+                f"Payment {id} status is '{model.status}', expected '{expected_status.value}'"
+            )
+
         model.status = status
         if status == PaymentStatus.PAID and model.paid_at is None:
-            model.paid_at = datetime.now(tz=timezone.utc)
+            model.paid_at = datetime.now(tz=UTC)
         await self._session.flush()
         # onupdate=func.now() expires `updated_at` server-side after flush;
         # refresh fetches the new value via an awaited SELECT, avoiding
@@ -98,7 +119,5 @@ class PostgresPaymentRepository(AbstractPaymentRepository):
         return self._to_domain(model)
 
     async def delete(self, id: int) -> bool:
-        result = await self._session.execute(
-            sa.delete(PaymentModel).where(PaymentModel.id == id)
-        )
+        result = await self._session.execute(sa.delete(PaymentModel).where(PaymentModel.id == id))
         return result.rowcount > 0

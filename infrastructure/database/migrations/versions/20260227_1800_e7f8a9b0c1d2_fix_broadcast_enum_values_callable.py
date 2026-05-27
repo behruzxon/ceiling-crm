@@ -28,10 +28,8 @@ lowercase values.  This migration is a no-op; it exists solely to:
   1. Record the fix at the correct position in the revision chain.
   2. Allow ``alembic upgrade head`` to succeed without errors.
 """
+
 from __future__ import annotations
-
-from alembic import op
-
 
 # revision identifiers, used by Alembic.
 revision = "e7f8a9b0c1d2"

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile:*)",
+      "Bash(docker compose restart:*)",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(wc -l:*)",
+      "Bash(python -c:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(APP_ENV=development python -m pytest:*)",
+      "Bash(python -m ruff check:*)",
+      "Bash(APP_ENV=development python:*)",
+      "Bash(pip install:*)",
+      "Bash(echo:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker info:*)",
+      "Bash(docker compose stop:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(curl:*)",
+      "Bash(pytest:*)"
+    ]
+  }
+}

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% set active_page = "crm" %}
+{% block title %}CRM Inbox — Vashpotolok{% endblock %}
+{% block page_title %}CRM Inbox{% endblock %}
+{% block page_subtitle %}Real vaqtga yaqin kuzatuv{% endblock %}
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="vp-kpi-grid" id="liveAlertBar">
+    <div class="vp-kpi-card" id="badgeCritical" style="display:none;border-top:3px solid #ef4444;">
+        <div class="vp-kpi-label">Critical</div>
+        <div class="vp-kpi-value" style="color:#dc2626;" id="countCritical">0</div>
+    </div>
+    <div class="vp-kpi-card" id="badgeHotUnanswered" style="display:none;border-top:3px solid #f97316;">
+        <div class="vp-kpi-label">Hot javobsiz</div>
+        <div class="vp-kpi-value" style="color:#ea580c;" id="countHotUnanswered">0</div>
+    </div>
+    <div class="vp-kpi-card" id="badgeUnanswered" style="display:none;border-top:3px solid #6366f1;">
+        <div class="vp-kpi-label">Javobsiz</div>
+        <div class="vp-kpi-value" style="color:#4f46e5;" id="countUnanswered">0</div>
+    </div>
+    <div class="vp-kpi-card" id="badgeOperator" style="display:none;border-top:3px solid #3b82f6;">
+        <div class="vp-kpi-label">Operator kerak</div>
+        <div class="vp-kpi-value" style="color:#2563eb;" id="countOperator">0</div>
+    </div>
+    <div class="vp-kpi-card" id="badgeDanger" style="display:none;border-top:3px solid #f59e0b;">
+        <div class="vp-kpi-label">Danger</div>
+        <div class="vp-kpi-value" style="color:#d97706;" id="countDanger">0</div>
+    </div>
+    <div class="vp-kpi-card" id="badgeWarning" style="display:none;border-top:3px solid #eab308;">
+        <div class="vp-kpi-label">Warning</div>
+        <div class="vp-kpi-value" style="color:#ca8a04;" id="countWarning">0</div>
+    </div>
+</div>
+
+<!-- Controls Bar -->
+<div class="vp-card" style="padding:10px 14px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;" id="alertControls">
+        <label class="vp-toggle-label"><input type="checkbox" id="toggleNotifications"> Notification</label>
+        <label class="vp-toggle-label"><input type="checkbox" id="toggleSound"> Sound</label>
+        <button id="btnRequestPermission" type="button" class="vp-btn vp-btn-ghost" style="padding:3px 10px;font-size:11px;">Ruxsat</button>
+        <span id="permissionStatus" style="font-size:11px;color:#94a3b8;">—</span>
+        <span id="notifDeniedWarning" style="display:none;font-size:11px;color:#dc2626;">Rad etilgan</span>
+        <span id="liveLastUpdated" style="margin-left:auto;font-size:11px;color:#94a3b8;"></span>
+        <button id="btnShortcutHelp" type="button" class="vp-btn vp-btn-ghost" style="padding:3px 8px;font-size:11px;" title="Shortcuts">?</button>
+    </div>
+</div>
+
+<!-- Shortcut Popover -->
+<div id="shortcutHelpPopover" class="vp-card" style="display:none;margin-bottom:12px;padding:10px 14px;font-size:12px;color:#475569;">
+    <strong>Shortcuts:</strong>
+    <span class="vp-kbd">/</span> Qidirish
+    <span class="vp-kbd">1</span> Critical
+    <span class="vp-kbd">2</span> Hot
+    <span class="vp-kbd">3</span> Operator
+    <span class="vp-kbd">4</span> Javobsiz
+    <span class="vp-kbd">r</span> Yangilash
+    <span class="vp-kbd">n</span> Keyingi
+    <span class="vp-kbd">Esc</span> Tozalash
+</div>
+
+<!-- Quick Filters -->
+<div id="quickFilterBar" style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+    <button class="qf-chip" data-filter="critical">Critical</button>
+    <button class="qf-chip" data-filter="hot">Hot</button>
+    <button class="qf-chip" data-filter="operator_needed">Operator kerak</button>
+    <button class="qf-chip" data-filter="unanswered">Javobsiz</button>
+    <button class="qf-chip" data-filter="overdue">Overdue</button>
+    <button class="qf-chip" data-filter="price_interested">Narx so'ragan</button>
+    <button id="btnClearFilters" class="qf-chip qf-clear" style="display:none;">Tozalash</button>
+</div>
+
+<!-- Latest Alerts -->
+<div id="latestAlertsPanel" class="vp-card" style="display:none;margin-bottom:16px;">
+    <div class="vp-card-header"><div class="vp-card-title">Oxirgi alertlar</div></div>
+    <div id="latestAlertsList" style="display:flex;flex-direction:column;gap:4px;"></div>
+    <div id="latestAlertsEmpty" class="vp-empty-state" style="display:none;padding:16px;">Hozircha alert yo'q</div>
+</div>
+
+<!-- Search + Filters -->
+<div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <input id="crmSearch" type="text" class="vp-input" placeholder="Qidirish  /  ..." style="width:220px;" value="{{ q }}">
+    <select id="crmStatusFilter" class="vp-select">
+        <option value="">Barcha status</option>
+        {% for s in ["new","active","browsing","price_interested","hot","operator_needed","order_started","won","lost","stopped"] %}
+        <option value="{{ s }}" {{ 'selected' if status == s else '' }}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <select id="crmTempFilter" class="vp-select">
+        <option value="">Barcha temp</option>
+        <option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option>
+    </select>
+    <label class="vp-toggle-label"><input type="checkbox" id="hideStoppedToggle" checked> Stopped yashirish</label>
+</div>
+
+<!-- Loading -->
+<div id="crmLoadingState" class="vp-empty-state" style="display:none;">Yuklanmoqda...</div>
+<!-- Error -->
+<div id="crmFetchError" class="vp-alert vp-alert-danger" style="display:none;">Live summary yuklashda xatolik</div>
+
+<!-- Contact List -->
+{% set items = (data or {}).get("items", []) %}
+{% if items %}
+<div class="vp-card" style="padding:0;overflow:hidden;">
+<div style="overflow-x:auto;">
+<table class="vp-table" id="crmContactsTable">
+    <thead><tr>
+        <th>Ism</th><th>Username</th><th>Status</th><th>Temp</th><th>Score</th><th>Oxirgi</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for c in items %}
+    <tr class="crm-row" data-status="{{ c.lead_status }}" data-temp="{{ c.temperature or '' }}">
+        <td style="font-weight:500;">{{ c.first_name or "—" }}</td>
+        <td style="color:#64748b;">{{ c.username or "—" }}</td>
+        <td><span class="vp-badge {% if c.lead_status == 'hot' %}vp-badge-hot{% elif c.lead_status == 'operator_needed' %}vp-badge-info{% elif c.lead_status in ('won',) %}vp-badge-success{% elif c.lead_status in ('lost','stopped') %}vp-badge-neutral{% else %}vp-badge-neutral{% endif %}">{{ c.lead_status }}</span></td>
+        <td>{% if c.temperature == 'hot' %}<span class="vp-badge vp-badge-hot">hot</span>{% elif c.temperature == 'warm' %}<span class="vp-badge vp-badge-warning">warm</span>{% elif c.temperature == 'cold' %}<span class="vp-badge vp-badge-neutral">cold</span>{% else %}—{% endif %}</td>
+        <td><strong>{{ c.lead_score }}</strong></td>
+        <td style="font-size:11px;color:#94a3b8;">{{ (c.last_seen_at or "")[:16] }}</td>
+        <td style="white-space:nowrap;">
+            <a href="/crm/{{ c.id }}" class="vp-btn vp-btn-ghost" style="padding:3px 10px;font-size:11px;">Ochish</a>
+            <button class="qa-btn vp-btn vp-btn-ghost" data-action="copy-id" data-value="{{ c.telegram_user_id or c.id }}" style="padding:3px 6px;font-size:11px;">ID</button>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% else %}
+<div id="crmEmptyState" class="vp-card">
+    <div class="vp-empty-state">
+        <div style="font-size:28px;opacity:0.4;margin-bottom:8px;">&#128203;</div>
+        Kontaktlar hali yo'q yoki filter bo'yicha topilmadi.
+    </div>
+</div>
+{% endif %}
+
+<style>
+.critical-pulse { animation: pulse-red 1.5s ease-in-out 3; }
+@keyframes pulse-red { 0%,100%{border-top-color:#ef4444;} 50%{border-top-color:#fca5a5;background:#fef2f2;} }
+.qf-chip { padding:5px 12px; border:1px solid #e2e8f0; border-radius:9999px; font-size:12px; font-weight:500; cursor:pointer; background:#fff; color:#475569; transition:all 0.15s; }
+.qf-chip:hover { background:#f8fafc; border-color:#cbd5e1; }
+.qf-chip.active { background:#eef2ff; border-color:#6366f1; color:#4338ca; font-weight:600; }
+.qf-clear { background:#f1f5f9; color:#64748b; }
+.crm-row.hidden-by-filter { display: none; }
+.vp-toggle-label { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:#475569; }
+.vp-kbd { display:inline-block; padding:1px 5px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; font-family:monospace; font-size:11px; margin:0 2px; }
+@media (max-width: 768px) {
+    .vp-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .vp-table { font-size: 11px; }
+    .vp-table th, .vp-table td { padding: 6px 8px; }
+    .qf-chip { font-size: 11px; padding: 4px 10px; }
+}
+</style>
+
+<script>
+(function() {
+    var POLL_INTERVAL = 15000;
+    var LIVE_SUMMARY_URL = "/api/v1/admin/crm/inbox/live-summary?max_alerts=5";
+    var NOTIF_COOLDOWN_MS = 60000;
+    var SOUND_COOLDOWN_MS = 30000;
+    var NOTIFY_SEVERITIES = ["critical", "danger"];
+    var prevCritical = -1;
+    var prevAlertKeys = {};
+    var lastNotifTime = 0;
+    var lastSoundTime = 0;
+    var activeQF = "";
+    var lastUpdatedEl = document.getElementById("liveLastUpdated");
+    var notifToggle = document.getElementById("toggleNotifications");
+    var soundToggle = document.getElementById("toggleSound");
+    var permBtn = document.getElementById("btnRequestPermission");
+    var permStatus = document.getElementById("permissionStatus");
+    var deniedWarn = document.getElementById("notifDeniedWarning");
+    var shortcutHelpBtn = document.getElementById("btnShortcutHelp");
+    var shortcutPopover = document.getElementById("shortcutHelpPopover");
+    var clearFiltersBtn = document.getElementById("btnClearFilters");
+    var hideStoppedToggle = document.getElementById("hideStoppedToggle");
+
+    function loadPrefs() {
+        if (notifToggle) notifToggle.checked = localStorage.getItem("crm_notifications_enabled") === "true";
+        if (soundToggle) soundToggle.checked = localStorage.getItem("crm_sound_enabled") === "true";
+        updatePermissionDisplay(); applyHideStopped();
+    }
+    function saveNotifPref() { localStorage.setItem("crm_notifications_enabled", notifToggle.checked ? "true" : "false"); }
+    function saveSoundPref() { localStorage.setItem("crm_sound_enabled", soundToggle.checked ? "true" : "false"); }
+    function updatePermissionDisplay() {
+        if (!permStatus) return;
+        if (typeof Notification === "undefined") { permStatus.textContent = "not supported"; return; }
+        permStatus.textContent = Notification.permission;
+        if (deniedWarn) deniedWarn.style.display = Notification.permission === "denied" ? "inline" : "none";
+    }
+    function requestPermission() {
+        if (typeof Notification === "undefined") return;
+        if (Notification.permission !== "default") { updatePermissionDisplay(); return; }
+        Notification.requestPermission().then(function() { updatePermissionDisplay(); });
+    }
+    function isNotifEnabled() { return notifToggle && notifToggle.checked && typeof Notification !== "undefined" && Notification.permission === "granted"; }
+    function isSoundEnabled() { return soundToggle && soundToggle.checked; }
+    function playBeep() {
+        try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); var gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880; gain.gain.value = 0.15; osc.start(); osc.stop(ctx.currentTime + 0.15); } catch(e) {}
+    }
+    function sendNotification(title, body, contactId) {
+        var now = Date.now(); if (now - lastNotifTime < NOTIF_COOLDOWN_MS) return; lastNotifTime = now;
+        try { var n = new Notification(title, { body: body, tag: "crm-alert" }); n.onclick = function() { window.focus(); if (contactId) window.location.href = "/crm/" + contactId; }; } catch(e) {}
+    }
+    function triggerSound() { var now = Date.now(); if (now - lastSoundTime < SOUND_COOLDOWN_MS) return; lastSoundTime = now; playBeep(); }
+    function checkAlertTriggers(data) {
+        var alerts = data.latest_alerts || []; var newCritical = data.critical_count || 0;
+        var shouldNotify = false; var notifTitle = "CRM Alert"; var notifBody = ""; var notifContactId = 0;
+        if (prevCritical >= 0 && newCritical > prevCritical) { shouldNotify = true; notifTitle = "Critical CRM alert"; notifBody = newCritical + " ta critical alert mavjud"; }
+        for (var i = 0; i < alerts.length; i++) { var a = alerts[i]; if (NOTIFY_SEVERITIES.indexOf(a.severity) === -1) continue; var key = (a.contact_id || 0) + ":" + (a.alert_type || ""); if (!prevAlertKeys[key]) { shouldNotify = true; notifTitle = "CRM: " + (a.severity || "alert"); notifBody = (a.title || "") + (a.unanswered_minutes ? " (" + a.unanswered_minutes + " min)" : ""); notifContactId = a.contact_id || 0; break; } }
+        var currentKeys = {}; for (var j = 0; j < alerts.length; j++) { currentKeys[(alerts[j].contact_id || 0) + ":" + (alerts[j].alert_type || "")] = true; } prevAlertKeys = currentKeys;
+        if (shouldNotify) { if (isNotifEnabled()) sendNotification(notifTitle, notifBody, notifContactId); if (isSoundEnabled()) triggerSound(); }
+    }
+    function updateBadge(id, countId, value) {
+        var badge = document.getElementById(id); var countEl = document.getElementById(countId);
+        if (!badge || !countEl) return; countEl.textContent = String(value); badge.style.display = value > 0 ? "" : "none";
+    }
+    function renderAlerts(alerts) {
+        var panel = document.getElementById("latestAlertsPanel"); var list = document.getElementById("latestAlertsList");
+        if (!panel || !list) return; list.textContent = "";
+        if (!alerts || alerts.length === 0) { panel.style.display = "none"; return; }
+        panel.style.display = "block";
+        for (var i = 0; i < alerts.length; i++) {
+            var a = alerts[i]; var div = document.createElement("div");
+            div.style.cssText = "padding:8px 12px;border-radius:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;";
+            var sev = a.severity || "info";
+            if (sev === "critical") div.style.background = "#fef2f2"; else if (sev === "danger") div.style.background = "#fff7ed"; else if (sev === "warning") div.style.background = "#fefce8"; else div.style.background = "#f0f9ff";
+            var left = document.createElement("span"); left.textContent = (a.title || "") + (a.unanswered_minutes ? " (" + a.unanswered_minutes + " min)" : "");
+            var right = document.createElement("a"); right.href = "/crm/" + (a.contact_id || 0); right.textContent = "Ochish"; right.style.cssText = "color:#4f46e5;font-size:11px;font-weight:500;";
+            div.appendChild(left); div.appendChild(right); list.appendChild(div);
+        }
+    }
+    function fetchLiveSummary() {
+        fetch(LIVE_SUMMARY_URL, { credentials: "same-origin" })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                updateBadge("badgeCritical", "countCritical", data.critical_count || 0);
+                updateBadge("badgeDanger", "countDanger", data.danger_count || 0);
+                updateBadge("badgeWarning", "countWarning", data.warning_count || 0);
+                updateBadge("badgeUnanswered", "countUnanswered", data.unanswered_count || 0);
+                updateBadge("badgeHotUnanswered", "countHotUnanswered", data.hot_unanswered_count || 0);
+                updateBadge("badgeOperator", "countOperator", data.operator_needed_count || 0);
+                renderAlerts(data.latest_alerts || []); checkAlertTriggers(data);
+                var newCritical = data.critical_count || 0;
+                if (prevCritical >= 0 && newCritical > prevCritical) { var badge = document.getElementById("badgeCritical"); if (badge) { badge.classList.remove("critical-pulse"); void badge.offsetWidth; badge.classList.add("critical-pulse"); } }
+                prevCritical = newCritical;
+                if (lastUpdatedEl) { var d = new Date(); lastUpdatedEl.textContent = "Yangilangan: " + d.toLocaleTimeString(); }
+                var errEl = document.getElementById("crmFetchError"); if (errEl) errEl.style.display = "none";
+            })
+            .catch(function() {
+                if (lastUpdatedEl) lastUpdatedEl.textContent = "Ulanishda xatolik";
+                var errEl = document.getElementById("crmFetchError"); if (errEl) errEl.style.display = "block";
+            });
+    }
+    function applyQuickFilter(filter) {
+        var chips = document.querySelectorAll(".qf-chip:not(.qf-clear)");
+        if (activeQF === filter) { activeQF = ""; } else { activeQF = filter; }
+        for (var i = 0; i < chips.length; i++) { if (chips[i].getAttribute("data-filter") === activeQF) chips[i].classList.add("active"); else chips[i].classList.remove("active"); }
+        if (clearFiltersBtn) clearFiltersBtn.style.display = activeQF ? "inline" : "none";
+        applyClientFilter();
+    }
+    function applyClientFilter() {
+        var rows = document.querySelectorAll(".crm-row");
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i]; var status = row.getAttribute("data-status") || ""; var temp = row.getAttribute("data-temp") || ""; var show = true;
+            if (activeQF === "hot" && temp !== "hot") show = false;
+            if (activeQF === "operator_needed" && status !== "operator_needed") show = false;
+            if (activeQF === "price_interested" && status !== "price_interested") show = false;
+            if (activeQF === "critical" && temp !== "hot") show = false;
+            if (hideStoppedToggle && hideStoppedToggle.checked && (status === "stopped" || status === "lost")) show = false;
+            if (show) row.classList.remove("hidden-by-filter"); else row.classList.add("hidden-by-filter");
+        }
+    }
+    function applyHideStopped() { applyClientFilter(); }
+    var chips = document.querySelectorAll(".qf-chip:not(.qf-clear)");
+    for (var ci = 0; ci < chips.length; ci++) { chips[ci].addEventListener("click", function() { applyQuickFilter(this.getAttribute("data-filter")); }); }
+    if (clearFiltersBtn) clearFiltersBtn.addEventListener("click", function() { activeQF = ""; applyQuickFilter(""); });
+    if (hideStoppedToggle) hideStoppedToggle.addEventListener("change", applyHideStopped);
+    var qaButtons = document.querySelectorAll(".qa-btn[data-action='copy-id']");
+    for (var qi = 0; qi < qaButtons.length; qi++) { qaButtons[qi].addEventListener("click", function() { var val = this.getAttribute("data-value") || ""; if (navigator.clipboard) { navigator.clipboard.writeText(val); this.textContent = "OK"; var btn = this; setTimeout(function() { btn.textContent = "ID"; }, 1500); } }); }
+    if (shortcutHelpBtn) shortcutHelpBtn.addEventListener("click", function() { if (shortcutPopover) shortcutPopover.style.display = shortcutPopover.style.display === "none" ? "block" : "none"; });
+    document.addEventListener("keydown", function(e) {
+        var tag = (e.target.tagName || "").toLowerCase(); if (tag === "input" || tag === "textarea" || tag === "select") return;
+        if (e.key === "/") { e.preventDefault(); var s = document.getElementById("crmSearch"); if (s) s.focus(); }
+        else if (e.key === "1") applyQuickFilter("critical"); else if (e.key === "2") applyQuickFilter("hot");
+        else if (e.key === "3") applyQuickFilter("operator_needed"); else if (e.key === "4") applyQuickFilter("unanswered");
+        else if (e.key === "r") fetchLiveSummary();
+        else if (e.key === "n") { var first = document.querySelector(".crm-row:not(.hidden-by-filter) a[href^='/crm/']"); if (first) window.location.href = first.href; }
+        else if (e.key === "Escape") { activeQF = ""; applyQuickFilter(""); var s = document.getElementById("crmSearch"); if (s) { s.value = ""; s.blur(); } if (shortcutPopover) shortcutPopover.style.display = "none"; }
+    });
+    if (notifToggle) notifToggle.addEventListener("change", saveNotifPref);
+    if (soundToggle) soundToggle.addEventListener("change", saveSoundPref);
+    if (permBtn) permBtn.addEventListener("click", requestPermission);
+    loadPrefs(); fetchLiveSummary(); setInterval(fetchLiveSummary, POLL_INTERVAL);
+})();
+</script>
+{% endblock %}

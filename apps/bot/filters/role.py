@@ -2,6 +2,7 @@
 Role-based access filter.
 Usage: @router.message(Command("x"), RoleFilter(UserRole.ADMIN))
 """
+
 from __future__ import annotations
 
 from aiogram.filters import BaseFilter
@@ -20,7 +21,9 @@ class RoleFilter(BaseFilter):
     def __init__(self, *required_roles: UserRole) -> None:
         self.required_roles = frozenset(required_roles)
 
-    async def __call__(self, event: TelegramObject, db_user: User | None = None, **data: object) -> bool:
+    async def __call__(
+        self, event: TelegramObject, db_user: User | None = None, **data: object
+    ) -> bool:
         if db_user is None:
             return False
         return db_user.role in self.required_roles

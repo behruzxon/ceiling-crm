@@ -2,9 +2,12 @@
 Group category filter.
 Passes only for updates from groups with the specified category.
 """
+
 from __future__ import annotations
+
 from aiogram.filters import BaseFilter
 from aiogram.types import TelegramObject
+
 from shared.constants.enums import CeilingCategory
 
 

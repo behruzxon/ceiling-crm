@@ -23,8 +23,10 @@ Business rules (isolated in _calculate, not in handlers)
              → informational LED strip promo message (price unchanged)
   Safe input: dimension > 20 m triggers a one-shot confirmation prompt
 """
+
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
 
@@ -34,39 +36,31 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from apps.bot.handlers.private.operator import start_operator_flow
-from apps.bot.keyboards.main_menu import main_menu_keyboard
+from apps.bot.keyboards.main_menu import (
+    BTN_OPERATOR,
+    BTN_PRICE,
+    MAIN_MENU_BUTTONS,
+    main_menu_keyboard,
+)
 from apps.bot.keyboards.pricing import DESIGN_BY_KEY, after_quote_keyboard, design_keyboard
 from apps.bot.states.lead_capture import LeadCaptureStates
 from apps.bot.states.pricing import PricingStates
+from core.services.journey_event_service import emit_journey_event
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_service
-from shared.constants.enums import CeilingCategory, LeadSource
+from shared.constants.enums import CeilingCategory, JourneyEventType, LeadSource
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:pricing")
 
-# Matches "🧮 Narx kalkulyator" regardless of VS-16 variation selector (\uFE0F)
-# that Telegram keyboards may append to the emoji, and tolerates extra whitespace.
-_PRICE_BTN_RE: re.Pattern[str] = re.compile(r"\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator", re.IGNORECASE)
-
-# Matches any main-menu reply-keyboard button (VS-16 tolerant).
-# Used to intercept button taps that arrive while a pricing FSM state is active.
-_MENU_BTN_RE: re.Pattern[str] = re.compile(
-    r"📂\uFE0F?\s*Katalog"
-    r"|\U0001F9EE\uFE0F?\s*Narx\s*kalkulyator"
-    r"|📋\uFE0F?\s*Buyurtma"
-    r"|📞\uFE0F?\s*Operator",
-    re.IGNORECASE,
-)
-
 # Matches "LENGTHxWIDTH" (or *, ×, ga, spaces) with optional decimal commas/dots.
 # Group 1 = length, Group 2 = width.
 # Examples: "5ga4", "5*4", "5 x 4", "5 4", "5,2x3,3", "5.2 * 3.3"
 _TWO_DIMS_RE: re.Pattern[str] = re.compile(
-    r"^\s*([0-9]+(?:[.,][0-9]+)?)"           # first number
-    r"(?:\s*(?:x|×|\*|ga)\s*|\s+)"           # separator: keyword/symbol OR whitespace
-    r"([0-9]+(?:[.,][0-9]+)?)\s*$",           # second number
+    r"^\s*([0-9]+(?:[.,][0-9]+)?)"  # first number
+    r"(?:\s*(?:x|×|\*|ga)\s*|\s+)"  # separator: keyword/symbol OR whitespace
+    r"([0-9]+(?:[.,][0-9]+)?)\s*$",  # second number
     re.IGNORECASE,
 )
 
@@ -86,7 +80,7 @@ LED_PROMO_DESIGN: str = "gulli"
 # ─── Business logic (pure, no I/O) ───────────────────────────────────────────
 
 _TIERS: tuple[tuple[float, int], ...] = (
-    (40.0,              10),  # area > 40 m²             → 10 %
+    (40.0, 10),  # area > 40 m²             → 10 %
     (DISCOUNT_THRESHOLD, 5),  # area > DISCOUNT_THRESHOLD →  5 %
 )
 
@@ -109,7 +103,8 @@ class _Quote:
         """Return HTML-formatted price breakdown for Telegram."""
         discount_line = (
             f"\n🎁 Chegirma ({self.discount_pct}%): −{self.discount_amount:,} UZS"
-            if self.discount_pct else ""
+            if self.discount_pct
+            else ""
         )
         return (
             "📊 <b>Hisob-kitob natijasi</b>\n\n"
@@ -192,6 +187,7 @@ def _led_promo_eligible(area: float, design_key: str) -> bool:
 
 # ─── Shared entry-point helper ────────────────────────────────────────────────
 
+
 async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
     """Reset FSM and send the length prompt.
 
@@ -209,14 +205,21 @@ async def start_pricing_flow(reply_to: Message, state: FSMContext) -> None:
 
 # ─── Entry points ─────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text.regexp(_PRICE_BTN_RE))
-@router.message(F.chat.type == "private", Command("price"))
-async def cmd_pricing_start(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_PRICE)
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), Command("price"))
+async def cmd_pricing_start(message: Message, state: FSMContext, **data: object) -> None:
     """Clear any running FSM and begin the pricing flow."""
-    log.debug("pricing_start_triggered", user_id=message.from_user and message.from_user.id)
+    uid = message.from_user.id if message.from_user else 0
+    log.debug("pricing_start_triggered", user_id=uid)
     await start_pricing_flow(message, state)
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=uid,
+            event_type=JourneyEventType.USED_PRICE_CALCULATOR,
+            source_handler="pricing:cmd_pricing_start",
+        )
+    )
 
 
 # ─── Menu-button escape (waiting_for_length / waiting_for_width) ─────────────
@@ -224,22 +227,20 @@ async def cmd_pricing_start(
 # button while a pricing state is active clears FSM and routes correctly
 # instead of showing "invalid number".
 
+
 @router.message(
     StateFilter(PricingStates.waiting_for_length, PricingStates.waiting_for_width),
-    F.text.regexp(_MENU_BTN_RE),
+    F.text.in_(MAIN_MENU_BUTTONS),
 )
-async def handle_pricing_menu_escape(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_pricing_menu_escape(message: Message, state: FSMContext, **data: object) -> None:
     """Clear pricing FSM and handle the tapped main-menu button."""
     await state.clear()
-    text = message.text or ""
-    if re.search(r"📞", text):
+    if message.text == BTN_OPERATOR:
         # Hand off to the operator flow (start_operator_flow clears + sets state).
         await start_operator_flow(message, state)
     else:
-        # For Katalog / Narx / Buyurtma: clear state and let the user
-        # re-tap the button — show main menu so they can do so.
+        # For any other main-menu button: clear state and show the menu so
+        # the user can tap again.
         await message.answer(
             "Hisoblash bekor qilindi.",
             reply_markup=main_menu_keyboard(),
@@ -248,10 +249,9 @@ async def handle_pricing_menu_escape(
 
 # ─── Step 1 : length ─────────────────────────────────────────────────────────
 
+
 @router.message(StateFilter(PricingStates.waiting_for_length), F.text, ~F.text.startswith("/"))
-async def handle_length(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_length(message: Message, state: FSMContext, **data: object) -> None:
     """Parse length (and optionally width) from the user's message.
 
     Fast path: if the text contains two valid dimensions (e.g. "5x4", "5 4",
@@ -311,10 +311,9 @@ async def handle_length(
 
 # ─── Step 2 : width → compute area → ask design ──────────────────────────────
 
+
 @router.message(StateFilter(PricingStates.waiting_for_width), F.text, ~F.text.startswith("/"))
-async def handle_width(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_width(message: Message, state: FSMContext, **data: object) -> None:
     """Validate width, compute area, and present the design-selection keyboard.
 
     If the value exceeds 20 m (likely a typo), a one-shot confirmation prompt
@@ -323,9 +322,7 @@ async def handle_width(
     fsm = await state.get_data()
     width = _parse_dimension(message.text)
     if width is None:
-        await message.answer(
-            "Son kiriting (masalan: <code>3.8</code>) yoki /cancel bosing."
-        )
+        await message.answer("Son kiriting (masalan: <code>3.8</code>) yoki /cancel bosing.")
         return
 
     if width > 20 and not fsm.get("_warned_width"):
@@ -350,8 +347,8 @@ async def handle_width(
 
 # ─── Step 3 : design selected → calculate → persist → display ─────────────────
 
+
 @router.callback_query(
-    F.message.chat.type == "private",
     StateFilter(PricingStates.choosing_design),
     F.data.startswith("design:"),
 )
@@ -422,6 +419,20 @@ async def handle_design_callback(
     )
     await state.set_state(PricingStates.confirming_action)
 
+    asyncio.create_task(
+        emit_journey_event(
+            user_id=user.id,
+            event_type=JourneyEventType.PRICE_CALCULATED,
+            event_data={
+                "area_m2": area,
+                "design": key,
+                "price": quote.final_total,
+                "currency": "UZS",
+            },
+            source_handler="pricing:handle_design_callback",
+        )
+    )
+
     if callback.message is None:
         return  # edge case: inline message already deleted
 
@@ -441,13 +452,12 @@ async def handle_design_callback(
 
 # ─── Step 4 : post-quote actions ─────────────────────────────────────────────
 
+
 @router.message(
     StateFilter(PricingStates.confirming_action),
     F.text == "📦 Buyurtma berish",
 )
-async def handle_order(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_order(message: Message, state: FSMContext, **data: object) -> None:
     """
     Hand off to the lead-capture FSM.
     Pre-fill the calculated area so lead_capture.py can use it.
@@ -456,18 +466,15 @@ async def handle_order(
     await state.set_state(LeadCaptureStates.waiting_for_name)
     await state.update_data(pre_filled_area=fsm.get("area"))
     await message.answer(
-        "📋 <b>Buyurtma rasmiylashtirish</b>\n\n"
-        "Ismingizni kiriting:",
+        "📋 <b>Buyurtma rasmiylashtirish</b>\n\n" "Ismingizni kiriting:",
     )
 
 
 @router.message(
     StateFilter(PricingStates.confirming_action),
-    F.text == "📞 Operator",
+    F.text == "☎️ Operator",
 )
-async def handle_operator(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_operator(message: Message, state: FSMContext, **data: object) -> None:
     """Hand off to the operator contact-request flow."""
     await start_operator_flow(message, state)
 
@@ -476,22 +483,17 @@ async def handle_operator(
     StateFilter(PricingStates.confirming_action),
     F.text == "🔄 Qayta hisoblash",
 )
-async def handle_recalc(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_recalc(message: Message, state: FSMContext, **data: object) -> None:
     """Restart the pricing flow from scratch."""
     await state.clear()
     await state.set_state(PricingStates.waiting_for_length)
     await message.answer(
-        "📐 Xona <b>uzunligini</b> metrda kiriting:\n"
-        "<i>Masalan: <code>5.2</code></i>",
+        "📐 Xona <b>uzunligini</b> metrda kiriting:\n" "<i>Masalan: <code>5.2</code></i>",
     )
 
 
 @router.message(StateFilter(PricingStates.confirming_action))
-async def handle_confirming_fallback(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_confirming_fallback(message: Message, state: FSMContext, **data: object) -> None:
     """Catch-all: reprompt if user sends unexpected input after seeing quote."""
     await message.answer(
         "Iltimos, quyidagi tugmalardan birini tanlang:",

@@ -1,4 +1,5 @@
 """Business logic for tracked admin groups."""
+
 from __future__ import annotations
 
 from core.repositories.admin_group_repo import AbstractAdminGroupRepository
@@ -17,6 +18,11 @@ class AdminGroupService:
         """Record (or refresh the title of) a group where the bot is admin."""
         await self._repo.upsert(chat_id, title)
         log.info("admin_group_upserted", chat_id=chat_id, title=title)
+
+    async def remove_admin_group(self, chat_id: int) -> None:
+        """Remove a group from the tracked list (bot demoted, kicked, or left)."""
+        await self._repo.remove(chat_id)
+        log.info("admin_group_removed", chat_id=chat_id)
 
     async def list_all_chat_ids(self) -> list[int]:
         """Return all admin-group chat IDs for broadcast delivery."""

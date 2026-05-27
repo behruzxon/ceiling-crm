@@ -1,4 +1,5 @@
 """Abstract repository interface for warranty records."""
+
 from __future__ import annotations
 
 from abc import abstractmethod

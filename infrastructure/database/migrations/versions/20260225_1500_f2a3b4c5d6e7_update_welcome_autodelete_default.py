@@ -8,6 +8,7 @@ Changes the column DEFAULT from 45 s to 3600 s (1 hour).
 Existing rows are NOT updated — only new groups created after this
 migration will receive the 1-hour default.
 """
+
 from __future__ import annotations
 
 from alembic import op

@@ -2,15 +2,16 @@
 Locale middleware.
 Detects user language preference and injects translator function.
 """
+
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
 from shared.config import get_settings
-
 
 # Lazy-loaded message dictionaries
 _messages_cache: dict[str, dict[str, str]] = {}
@@ -45,6 +46,7 @@ def _load_messages(locale: str) -> dict[str, str]:
 
 def _make_translator(messages: dict[str, str]) -> Callable[..., str]:
     """Create a translator function that looks up keys in the messages dict."""
+
     def translate(key: str, **kwargs: object) -> str:
         template = messages.get(key, key)
         if kwargs:
@@ -53,6 +55,7 @@ def _make_translator(messages: dict[str, str]) -> Callable[..., str]:
             except (KeyError, IndexError):
                 return template
         return template
+
     return translate
 
 

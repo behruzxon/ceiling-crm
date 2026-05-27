@@ -23,6 +23,7 @@ DM log target
 BOT_ADMIN_USER_ID is available in settings for future log forwarding
 (C3-2+).  Not used yet — no moderation actions in this revision.
 """
+
 from __future__ import annotations
 
 from aiogram import Bot, F, Router
@@ -39,10 +40,12 @@ log = get_logger(__name__)
 router = Router(name="group:admin")
 
 # Telegram statuses that count as group admin.
-_ADMIN_STATUSES: frozenset[str] = frozenset({
-    ChatMemberStatus.ADMINISTRATOR,
-    ChatMemberStatus.CREATOR,
-})
+_ADMIN_STATUSES: frozenset[str] = frozenset(
+    {
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.CREATOR,
+    }
+)
 
 
 async def _is_chat_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
@@ -56,6 +59,7 @@ async def _is_chat_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
 
 
 # ─── /admin command ───────────────────────────────────────────────────────────
+
 
 @router.message(
     Command("admin"),
@@ -90,6 +94,7 @@ async def cmd_group_admin(message: Message, bot: Bot, **data: object) -> None:
 
 # ─── Toggle callbacks ─────────────────────────────────────────────────────────
 
+
 @router.callback_query(F.data.startswith("gs:toggle:"))
 async def handle_toggle(callback: CallbackQuery, bot: Bot, **data: object) -> None:
     """Toggle one boolean setting and refresh the keyboard in-place."""
@@ -122,6 +127,7 @@ async def handle_toggle(callback: CallbackQuery, bot: Bot, **data: object) -> No
 
 
 # ─── Close button ─────────────────────────────────────────────────────────────
+
 
 @router.callback_query(F.data == "gs:close")
 async def handle_close(callback: CallbackQuery, bot: Bot, **data: object) -> None:

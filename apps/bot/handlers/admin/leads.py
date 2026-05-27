@@ -2,6 +2,7 @@
 Admin lead management handler.
 View and manage all leads from admin group.
 """
+
 from __future__ import annotations
 
 from aiogram import Router

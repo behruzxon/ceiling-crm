@@ -20,9 +20,10 @@ Usage:
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import logging.config
-import sys
+import uuid
 from typing import Any
 
 import structlog
@@ -30,15 +31,40 @@ from structlog.types import EventDict, Processor
 
 from shared.config import get_settings
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Context variables for per-request tracing
+# ─────────────────────────────────────────────────────────────────────────────
+
+request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_id", default=None
+)
+user_id_var: contextvars.ContextVar[int | None] = contextvars.ContextVar("user_id", default=None)
+
+
+def bind_request_context(*, user_id: int | None = None) -> str:
+    """Set request_id (uuid4) and optional user_id for current async context.
+
+    Returns the generated request_id.
+    """
+    rid = uuid.uuid4().hex[:12]
+    request_id_var.set(rid)
+    if user_id is not None:
+        user_id_var.set(user_id)
+    return rid
+
+
+def clear_request_context() -> None:
+    """Reset context vars at end of request."""
+    request_id_var.set(None)
+    user_id_var.set(None)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Custom processors
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def drop_color_message_key(
-    _logger: Any, _method: str, event_dict: EventDict
-) -> EventDict:
+def drop_color_message_key(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
     """
     Remove the 'color_message' key injected by uvicorn.
     Keeps JSON output clean when running behind uvicorn.
@@ -47,18 +73,25 @@ def drop_color_message_key(
     return event_dict
 
 
-def add_app_info(
-    _logger: Any, _method: str, event_dict: EventDict
-) -> EventDict:
+def add_app_info(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
     """Inject static application metadata into every log record."""
     settings = get_settings()
     event_dict["app_env"] = settings.app_env
     return event_dict
 
 
-def rename_event_key(
-    _logger: Any, _method: str, event_dict: EventDict
-) -> EventDict:
+def add_request_context(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
+    """Inject per-request request_id and user_id from contextvars."""
+    rid = request_id_var.get()
+    if rid is not None:
+        event_dict["request_id"] = rid
+    uid = user_id_var.get()
+    if uid is not None:
+        event_dict["user_id"] = uid
+    return event_dict
+
+
+def rename_event_key(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
     """Rename 'event' to 'message' for ELK/Loki compatibility."""
     event_dict["message"] = event_dict.pop("event", "")
     return event_dict
@@ -67,6 +100,7 @@ def rename_event_key(
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared processor chain
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _build_shared_processors(is_dev: bool) -> list[Processor]:
     """Build the shared processor chain, choosing the right exception formatter."""
@@ -82,6 +116,7 @@ def _build_shared_processors(is_dev: bool) -> list[Processor]:
             ]
         ),
         add_app_info,
+        add_request_context,
         drop_color_message_key,
     ]
     # In production, convert tracebacks to dicts for JSON serialisation.
@@ -143,13 +178,13 @@ def configure_logging() -> None:
                 "structlog": {
                     "()": structlog.stdlib.ProcessorFormatter,
                     "processors": [
-                      structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                      rename_event_key,
-                      renderer,
+                        structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                        rename_event_key,
+                        renderer,
                     ],
                     "foreign_pre_chain": [
-                      structlog.stdlib.add_log_level,
-                      *shared_processors,
+                        structlog.stdlib.add_log_level,
+                        *shared_processors,
                     ],
                 }
             },

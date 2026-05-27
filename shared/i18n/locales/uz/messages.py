@@ -1,4 +1,5 @@
 """Uzbek message strings. All user-facing text must be here."""
+
 MESSAGES = {
     "welcome_group": (
         "👋 <b>Xush kelibsiz!</b>\n\n"

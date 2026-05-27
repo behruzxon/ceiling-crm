@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% set active_page = "crm" %}
+{% block title %}{{ (contact or {}).get("first_name", "Contact") }} — CRM{% endblock %}
+{% block page_title %}Kontakt{% endblock %}
+{% block page_subtitle %}{{ (contact or {}).get("first_name", "") }} {{ (contact or {}).get("last_name", "") }}{% endblock %}
+{% block content %}
+{% set c = contact or {} %}
+{% set msgs = (messages or {}).get("items", []) %}
+{% set md = c.get("metadata") or {} %}
+
+<!-- Back link -->
+<a href="/crm" class="vp-btn vp-btn-ghost" style="margin-bottom:16px;font-size:12px;">&#8592; CRM Inbox</a>
+
+<!-- Contact Header -->
+<div class="vp-card contact-hero" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+            <div style="font-size:18px;font-weight:700;color:#0f172a;">{{ c.get("first_name", "—") }} {{ c.get("last_name", "") }}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                @{{ c.get("username") or "—" }}
+                <span style="color:#cbd5e1;margin:0 4px;">|</span>
+                ID: {{ c.get("telegram_user_id") or c.get("id", "—") }}
+            </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span class="vp-badge {% if c.get('lead_status') == 'hot' %}vp-badge-hot{% elif c.get('lead_status') == 'operator_needed' %}vp-badge-info{% elif c.get('lead_status') in ('won',) %}vp-badge-success{% elif c.get('lead_status') in ('lost','stopped') %}vp-badge-neutral{% else %}vp-badge-neutral{% endif %}">{{ c.get("lead_status", "new") }}</span>
+            {% if c.get("temperature") %}<span class="vp-badge {% if c.temperature == 'hot' %}vp-badge-hot{% elif c.temperature == 'warm' %}vp-badge-warning{% else %}vp-badge-neutral{% endif %}">{{ c.temperature }}</span>{% endif %}
+            <span class="vp-badge vp-badge-info">Score: {{ c.get("lead_score", 0) }}</span>
+            {% if c.get("last_message_at") %}<span style="font-size:11px;color:#94a3b8;">Oxirgi: {{ (c.last_message_at or "")[:16] }}</span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Main Grid -->
+<div class="contact-grid">
+    <!-- Left: Timeline + Reply -->
+    <div class="contact-main">
+        <!-- SLA Hero -->
+        <div id="slaBadge" class="vp-card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-size:11px;color:#94a3b8;">SLA holati</div>
+                <div id="slaStatusText" style="font-size:18px;font-weight:700;color:#475569;">—</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:11px;color:#94a3b8;">Keyingi qadam</div>
+                <div id="nextActionText" style="font-size:13px;font-weight:500;color:#334155;">—</div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div id="chatTimeline" class="vp-card" style="min-height:300px;margin-bottom:16px;">
+            <div class="vp-card-header"><div class="vp-card-title">Suhbat tarixi</div><span style="font-size:11px;color:#94a3b8;">{{ msgs|length }} xabar</span></div>
+            {% if msgs %}
+            <div class="timeline">
+                {% for m in msgs|reverse %}
+                <div class="timeline-item {% if m.direction == 'inbound' %}timeline-item-user{% elif m.sender_type == 'operator' %}timeline-item-operator{% else %}timeline-item-bot{% endif %}">
+                    <div class="timeline-meta">
+                        <span class="vp-badge {% if m.direction == 'inbound' %}vp-badge-neutral{% elif m.sender_type == 'operator' %}vp-badge-info{% else %}vp-badge-success{% endif %}" style="font-size:10px;">{{ m.sender_type or "system" }}</span>
+                        <span style="font-size:10px;color:#94a3b8;">{{ (m.created_at or "")[:16] }}</span>
+                    </div>
+                    <div class="timeline-text">{{ m.text or "[media]" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="vp-empty-state">Xabarlar hali yo'q</div>
+            {% endif %}
+        </div>
+
+        <!-- Operator Reply -->
+        <div id="operatorReplySection" class="vp-card" style="margin-bottom:16px;">
+            <div class="vp-card-header"><div class="vp-card-title">Javob yozish</div></div>
+            <div id="replyDisabledNotice" class="vp-alert vp-alert-warning" style="margin-bottom:8px;">
+                Operator reply hozir o'chirilgan. Settings orqali yoqiladi.
+            </div>
+            <textarea id="replyTextarea" class="vp-textarea" placeholder="Xabar yozing..." style="width:100%;height:80px;margin-bottom:8px;"></textarea>
+            <div id="replyBlockers" class="vp-alert vp-alert-danger" style="display:none;"></div>
+            <div id="replyWarnings" class="vp-alert vp-alert-warning" style="display:none;"></div>
+            <div style="display:flex;gap:8px;">
+                <button id="previewBtn" onclick="previewReply()" class="vp-btn vp-btn-secondary">Preview</button>
+                <button id="sendBtn" onclick="sendReply()" class="vp-btn vp-btn-primary" disabled>Yuborish</button>
+            </div>
+            <div id="replyConfirmWarn" class="vp-alert vp-alert-danger" style="display:none;margin-top:8px;">
+                Bu xabar Telegram orqali real mijozga yuboriladi!
+            </div>
+            <div id="replyResult" style="display:none;margin-top:6px;font-size:12px;"></div>
+        </div>
+
+        <!-- Reply Audit -->
+        <div id="replyAuditSection" style="margin-bottom:16px;">
+            <details>
+                <summary style="cursor:pointer;font-size:12px;color:#64748b;">Yuborish tarixi</summary>
+                <div id="replyAuditLog" style="font-size:11px;color:#94a3b8;margin-top:4px;"><em>API orqali ko'riladi</em></div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="contact-sidebar">
+        <!-- Customer 360 -->
+        <div class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header"><div class="vp-card-title">Mijoz ma'lumotlari</div></div>
+            <div class="profile-fields">
+                <div class="profile-field"><span class="profile-label">Telefon</span><span class="profile-value">{{ c.get("phone") or "Kiritilmagan" }}</span></div>
+                <div class="profile-field"><span class="profile-label">Tuman</span><span class="profile-value">{{ md.get("district") or c.get("district") or "Kiritilmagan" }}</span></div>
+                <div class="profile-field"><span class="profile-label">Maydon</span><span class="profile-value">{% if md.get("area_m2") %}{{ md.area_m2 }} m2{% else %}Kiritilmagan{% endif %}</span></div>
+                <div class="profile-field"><span class="profile-label">Potolok turi</span><span class="profile-value">{{ md.get("ceiling_type") or "Kiritilmagan" }}</span></div>
+                <div class="profile-field"><span class="profile-label">Til</span><span class="profile-value">{{ c.get("language_code") or "—" }}</span></div>
+                <div class="profile-field"><span class="profile-label">Manba</span><span class="profile-value">{{ c.get("source") or "—" }}</span></div>
+                <div class="profile-field"><span class="profile-label">Yaratilgan</span><span class="profile-value">{{ (c.get("created_at") or "")[:10] or "—" }}</span></div>
+            </div>
+        </div>
+
+        <!-- Operator Checklist -->
+        <div id="operatorChecklist" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header"><div class="vp-card-title">Checklist</div><span class="checklist-progress" style="font-size:11px;color:#64748b;">{{ [c.get("phone"), md.get("area_m2"), md.get("district"), md.get("ceiling_type"), c.get("lead_status") not in (None, "new", "")]|select|list|length }}/5</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                <div class="checklist-item {% if c.get('phone') %}checklist-done{% endif %}">
+                    <span class="checklist-icon">{{ "&#10003;" if c.get("phone") else "&#9675;" }}</span> Telefon
+                </div>
+                <div class="checklist-item {% if md.get('area_m2') %}checklist-done{% endif %}">
+                    <span class="checklist-icon">{{ "&#10003;" if md.get("area_m2") else "&#9675;" }}</span> Maydon (m2)
+                </div>
+                <div class="checklist-item {% if md.get('district') %}checklist-done{% endif %}">
+                    <span class="checklist-icon">{{ "&#10003;" if md.get("district") else "&#9675;" }}</span> Tuman
+                </div>
+                <div class="checklist-item {% if md.get('ceiling_type') %}checklist-done{% endif %}">
+                    <span class="checklist-icon">{{ "&#10003;" if md.get("ceiling_type") else "&#9675;" }}</span> Potolok turi
+                </div>
+                <div class="checklist-item {% if c.get('lead_status') not in (None, 'new', '') %}checklist-done{% endif %}">
+                    <span class="checklist-icon">{{ "&#10003;" if c.get("lead_status") not in (None, "new", "") else "&#9675;" }}</span> Status
+                </div>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div id="tagsSection" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header"><div class="vp-card-title">Teglar</div></div>
+            <div style="font-size:12px;color:#94a3b8;">API orqali boshqariladi</div>
+        </div>
+
+        <!-- Notes -->
+        <div id="notesSection" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header"><div class="vp-card-title">Eslatmalar</div></div>
+            <textarea id="noteInput" class="vp-textarea" placeholder="Eslatma yozing..." style="width:100%;height:60px;margin-bottom:6px;"></textarea>
+            <button onclick="addNote()" class="vp-btn vp-btn-primary" style="font-size:11px;">Saqlash</button>
+        </div>
+
+        <!-- AI Trace Viewer -->
+        <div id="aiTraceSection" class="vp-card">
+            <div class="vp-card-header">
+                <div class="vp-card-title">AI Trace Viewer</div>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">AI foydalanuvchi xabarini qanday tushunganini ko'rsatadi</div>
+            {% set ai_data = c.get("ai_trace_summary") or {} %}
+            {% if ai_data %}
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                {% if ai_data.get("last_intent") %}
+                <span class="vp-badge vp-badge-info">Intent: {{ ai_data.last_intent }}</span>
+                {% endif %}
+                {% if ai_data.get("last_price_estimate") %}
+                <span class="vp-badge vp-badge-success">Narx hisoblangan</span>
+                {% endif %}
+                {% if ai_data.get("handoff_requested") %}
+                <span class="vp-badge vp-badge-warning">Handoff</span>
+                {% endif %}
+                {% if ai_data.get("last_objection") %}
+                <span class="vp-badge vp-badge-hot">{{ ai_data.last_objection }}</span>
+                {% endif %}
+                {% if ai_data.get("safety_status") == "safe" %}
+                <span class="vp-badge vp-badge-success">Xavfsiz</span>
+                {% elif ai_data.get("safety_status") %}
+                <span class="vp-badge vp-badge-danger">{{ ai_data.safety_status }}</span>
+                {% endif %}
+                <span class="vp-badge vp-badge-neutral">LOG_ONLY</span>
+            </div>
+            <div style="font-size:11px;color:#64748b;">
+                {% if ai_data.get("area_m2") %}Maydon: {{ ai_data.area_m2 }} m² | {% endif %}
+                {% if ai_data.get("design_type") %}Dizayn: {{ ai_data.design_type }} | {% endif %}
+                {% if ai_data.get("lead_score") %}Score: {{ ai_data.lead_score }}{% endif %}
+            </div>
+            {% else %}
+            <div class="vp-empty-state" style="padding:16px 8px;">
+                <div style="font-size:11px;">Hali AI trace yo'q.<br>Stage 1 LOG_ONLY yoqilganda qarorlar ko'rinadi.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.contact-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(280px,360px); gap: 20px; }
+.contact-main { min-width: 0; }
+.contact-sidebar { min-width: 0; }
+.contact-hero { border-left: 4px solid #4f46e5; }
+
+.profile-fields { display: flex; flex-direction: column; gap: 8px; }
+.profile-field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f8fafc; }
+.profile-label { color: #64748b; font-weight: 500; }
+.profile-value { color: #1e293b; text-align: right; }
+
+.checklist-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; padding: 3px 0; }
+.checklist-item.checklist-done { color: #059669; }
+.checklist-icon { font-size: 14px; width: 18px; text-align: center; }
+.checklist-progress { font-weight: 600; }
+
+.timeline { display: flex; flex-direction: column; gap: 8px; }
+.timeline-item { padding: 10px 12px; border-radius: 10px; max-width: 85%; }
+.timeline-item-user { background: #f0f9ff; border-left: 3px solid #3b82f6; align-self: flex-start; }
+.timeline-item-bot { background: #f0fdf4; border-left: 3px solid #10b981; align-self: flex-start; }
+.timeline-item-operator { background: #eef2ff; border-left: 3px solid #6366f1; align-self: flex-start; }
+.timeline-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.timeline-text { font-size: 13px; color: #1e293b; line-height: 1.5; word-break: break-word; }
+
+@media (max-width: 1024px) {
+    .contact-grid { grid-template-columns: 1fr; }
+    .contact-sidebar { order: -1; }
+}
+@media (max-width: 768px) {
+    .timeline-item { max-width: 100%; }
+}
+</style>
+
+<script>
+let _replyAllowed = false;
+async function previewReply() {
+    const text = document.getElementById('replyTextarea').value.trim();
+    if (!text) return;
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/reply/preview', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        const d = await r.json();
+        _replyAllowed = d.allowed;
+        document.getElementById('sendBtn').disabled = !d.allowed;
+        var bEl = document.getElementById('replyBlockers');
+        if (d.blockers && d.blockers.length) { bEl.style.display = 'block'; bEl.textContent = 'Bloklangan: ' + d.blockers.join(', '); }
+        else { bEl.style.display = 'none'; }
+        var wEl = document.getElementById('replyWarnings');
+        if (d.warnings && d.warnings.length) { wEl.style.display = 'block'; wEl.textContent = 'Ogohlantirish: ' + d.warnings.join(', '); }
+        else { wEl.style.display = 'none'; }
+        if (d.allowed) { document.getElementById('replyConfirmWarn').style.display = 'block'; }
+    } catch(e) { document.getElementById('replyBlockers').style.display = 'block'; document.getElementById('replyBlockers').textContent = 'Xato: ' + e.message; }
+}
+async function sendReply() {
+    if (!_replyAllowed) return;
+    if (!confirm('Bu xabar real mijozga yuboriladi. Davom etasizmi?')) return;
+    const text = document.getElementById('replyTextarea').value.trim();
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/reply/send', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text, confirm: true})
+        });
+        const d = await r.json();
+        const el = document.getElementById('replyResult');
+        el.style.display = 'block';
+        el.style.color = d.status === 'sent' ? '#10b981' : '#ef4444';
+        el.textContent = d.status === 'sent' ? 'Yuborildi!' : 'Status: ' + d.status;
+        if (d.status === 'sent') { document.getElementById('replyTextarea').value = ''; _replyAllowed = false; document.getElementById('sendBtn').disabled = true; }
+    } catch(e) { document.getElementById('replyResult').style.display = 'block'; document.getElementById('replyResult').textContent = 'Xato: ' + e.message; }
+}
+async function addNote() {
+    const text = document.getElementById('noteInput').value.trim();
+    if (!text) return;
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/notes', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        if (r.ok) { document.getElementById('noteInput').value = ''; }
+    } catch(e) {}
+}
+</script>
+{% endblock %}

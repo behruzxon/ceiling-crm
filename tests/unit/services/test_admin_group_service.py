@@ -3,10 +3,12 @@
 Service is tested by mocking the repo (AsyncMock).
 Repo upsert/list logic is exercised via the service boundary.
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from core.repositories.admin_group_repo import AbstractAdminGroupRepository
 from core.services.admin_group_service import AdminGroupService

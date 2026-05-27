@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% set active_page = "analytics" %}
+
+{% block title %}Analytics - Systemax CRM{% endblock %}
+
+{% block content %}
+<!-- Page Header + Period Selector -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;">
+    <div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h1 style="font-size:24px;font-weight:700;color:#1e293b;margin:0;">Analytics</h1>
+            <span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:3px 10px;border-radius:12px;">Read-only Reports</span>
+        </div>
+        <p style="font-size:14px;color:#64748b;margin-top:4px;">Sotuv, konversiya va mijozlar tahlili</p>
+    </div>
+
+    <!-- Period Selector -->
+    <div style="display:flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+        {% for p in ['today', 'week', 'month', 'all'] %}
+        <a href="/analytics?period={{ p }}"
+           style="padding:6px 14px;font-size:13px;font-weight:500;border-radius:7px;text-decoration:none;transition:background 0.15s;
+                  {% if period == p %}background:#4f46e5;color:#fff;{% else %}color:#64748b;{% endif %}">
+            {{ p | capitalize }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if data and data._error is not defined %}
+
+<!-- KPI Cards -->
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px;" class="analytics-kpi-grid">
+    <!-- Total -->
+    <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #4f46e5;">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Total Leads</div>
+        <div style="font-size:26px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ data.total_leads | fmt_number }}</div>
+    </div>
+    <!-- Won -->
+    <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #10b981;">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Won</div>
+        <div style="font-size:26px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;">{{ data.won_leads | fmt_number }}</div>
+    </div>
+    <!-- Lost -->
+    <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #ef4444;">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Lost</div>
+        <div style="font-size:26px;font-weight:700;color:#dc2626;font-variant-numeric:tabular-nums;">{{ data.lost_leads | fmt_number }}</div>
+    </div>
+    <!-- Active -->
+    <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #0ea5e9;">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Active</div>
+        <div style="font-size:26px;font-weight:700;color:#0284c7;font-variant-numeric:tabular-nums;">{{ data.active_leads | fmt_number }}</div>
+    </div>
+    <!-- Conversion -->
+    <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #8b5cf6;">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Conversion</div>
+        <div style="font-size:26px;font-weight:700;color:#7c3aed;font-variant-numeric:tabular-nums;">{{ data.conversion_rate | fmt_percent }}</div>
+    </div>
+</div>
+
+<!-- Main Grid Row 1: Source + Funnel -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="analytics-2col-grid">
+
+    <!-- Source Performance -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Source Performance</h2>
+        {% if data.top_sources %}
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:2px solid #e2e8f0;">
+                    <th style="padding:8px 0;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Source</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Leads</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Won</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in data.top_sources %}
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:10px 0;font-size:13px;font-weight:500;color:#1e293b;">{{ s.source }}</td>
+                    <td style="padding:10px 0;text-align:right;font-size:13px;color:#475569;font-variant-numeric:tabular-nums;">{{ s.leads }}</td>
+                    <td style="padding:10px 0;text-align:right;font-size:13px;color:#059669;font-weight:600;font-variant-numeric:tabular-nums;">{{ s.won }}</td>
+                    <td style="padding:10px 0;text-align:right;">
+                        <span style="font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:2px 8px;border-radius:8px;">{{ s.rate | fmt_percent }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No source data available for this period</div>
+        {% endif %}
+    </div>
+
+    <!-- Pipeline Funnel -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Pipeline Funnel</h2>
+        {% if data.stage_counts %}
+        {% set stage_max = data.stage_counts | map(attribute='count') | max %}
+        {% set stage_colors = {'new': '#3b82f6', 'contacted': '#f59e0b', 'measurement': '#8b5cf6', 'quote_sent': '#6366f1', 'deal_closed': '#10b981', 'installation': '#14b8a6', 'completed': '#059669', 'lost': '#ef4444', 'package_selected': '#0ea5e9'} %}
+        {% set stage_labels = {'new': 'New', 'contacted': 'Contacted', 'measurement': 'Measurement', 'quote_sent': 'Quote', 'deal_closed': 'Deal', 'installation': 'Install', 'completed': 'Completed', 'lost': 'Lost', 'package_selected': 'Package'} %}
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            {% for sc in data.stage_counts %}
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:12px;font-weight:500;color:#64748b;">{{ stage_labels[sc.stage] if sc.stage in stage_labels else sc.stage }}</span>
+                    <span style="font-size:12px;font-weight:600;color:#1e293b;font-variant-numeric:tabular-nums;">{{ sc.count }}</span>
+                </div>
+                <div style="height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;background:{{ stage_colors[sc.stage] if sc.stage in stage_colors else '#94a3b8' }};border-radius:4px;width:{% if stage_max %}{{ ((sc.count / stage_max) * 100) | int }}%{% else %}0%{% endif %};min-width:{% if sc.count %}2px{% else %}0{% endif %};transition:width 0.3s;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if data.largest_dropoff_stage %}
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;align-items:center;gap:6px;">
+            <span style="color:#f59e0b;font-size:14px;">&#9888;</span>
+            <span style="font-size:12px;color:#92400e;">Largest dropoff at <strong>{{ stage_labels[data.largest_dropoff_stage] if data.largest_dropoff_stage in stage_labels else data.largest_dropoff_stage }}</strong></span>
+        </div>
+        {% endif %}
+        {% else %}
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No funnel data available for this period</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Main Grid Row 2: Score + Follow-up -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="analytics-2col-grid">
+
+    <!-- Score Distribution -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Score Distribution</h2>
+        {% if data.score_distribution %}
+        {% set sd = data.score_distribution %}
+        {% set total_scored = sd.hot + sd.warm + sd.cold %}
+
+        <!-- Hot -->
+        <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Hot (60+)</span>
+                </div>
+                <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.hot }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.hot / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
+            </div>
+            <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                <div style="height:100%;background:#ef4444;border-radius:4px;width:{% if total_scored %}{{ ((sd.hot / total_scored) * 100) | int }}%{% else %}0%{% endif %};min-width:{% if sd.hot %}2px{% else %}0{% endif %};"></div>
+            </div>
+        </div>
+
+        <!-- Warm -->
+        <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Warm (30-59)</span>
+                </div>
+                <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.warm }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.warm / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
+            </div>
+            <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                <div style="height:100%;background:#f59e0b;border-radius:4px;width:{% if total_scored %}{{ ((sd.warm / total_scored) * 100) | int }}%{% else %}0%{% endif %};min-width:{% if sd.warm %}2px{% else %}0{% endif %};"></div>
+            </div>
+        </div>
+
+        <!-- Cold -->
+        <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Cold (0-29)</span>
+                </div>
+                <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.cold }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.cold / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
+            </div>
+            <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                <div style="height:100%;background:#3b82f6;border-radius:4px;width:{% if total_scored %}{{ ((sd.cold / total_scored) * 100) | int }}%{% else %}0%{% endif %};min-width:{% if sd.cold %}2px{% else %}0{% endif %};"></div>
+            </div>
+        </div>
+
+        <div style="padding-top:10px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;">
+            <span style="font-size:12px;color:#94a3b8;">Average score</span>
+            <span style="font-size:13px;font-weight:600;color:#4f46e5;">{{ data.avg_score | fmt_number }}</span>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No score data available for this period</div>
+        {% endif %}
+    </div>
+
+    <!-- Follow-up Performance -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Follow-up Performance</h2>
+        {% if data.followup_stats %}
+        {% set fs = data.followup_stats %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:#ecfdf5;border-radius:10px;padding:14px;">
+                <div style="font-size:11px;font-weight:600;color:#064e3b;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (Won)</div>
+                <div style="font-size:22px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_won | fmt_number }}</div>
+            </div>
+            <div style="background:#fef2f2;border-radius:10px;padding:14px;">
+                <div style="font-size:11px;font-weight:600;color:#7f1d1d;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (Lost)</div>
+                <div style="font-size:22px;font-weight:700;color:#dc2626;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_lost | fmt_number }}</div>
+            </div>
+            <div style="background:#f8fafc;border-radius:10px;padding:14px;">
+                <div style="font-size:11px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (All)</div>
+                <div style="font-size:22px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_all | fmt_number }}</div>
+            </div>
+            <div style="background:#eef2ff;border-radius:10px;padding:14px;">
+                <div style="font-size:11px;font-weight:600;color:#3730a3;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">With Follow-up</div>
+                <div style="font-size:22px;font-weight:700;color:#4f46e5;font-variant-numeric:tabular-nums;">{{ fs.with_followup_pct | fmt_percent }}</div>
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No follow-up data available for this period</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Main Grid Row 3: Revenue + Recommendations -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="analytics-2col-grid">
+
+    <!-- Revenue Summary -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Revenue Summary</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Est. Total Revenue</div>
+                <div style="font-size:22px;font-weight:700;color:#d97706;font-variant-numeric:tabular-nums;">{{ data.total_estimated_revenue | fmt_number }}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px;">UZS</div>
+            </div>
+            <div>
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg per Lead</div>
+                <div style="font-size:22px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ data.avg_revenue_per_lead | fmt_number }}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px;">UZS</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Recommendations</h2>
+        {% if data.recommendations %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            {% for rec in data.recommendations %}
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fef3c7;">
+                <span style="color:#f59e0b;font-size:14px;flex-shrink:0;margin-top:1px;">&#9679;</span>
+                <span style="font-size:13px;color:#78350f;line-height:1.4;">{{ rec }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:24px 0;">
+            <div style="font-size:24px;margin-bottom:8px;">&#10003;</div>
+            <div style="font-size:13px;color:#64748b;">No critical recommendations right now</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">Everything looks healthy</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div style="text-align:center;padding:80px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">&#9652;</div>
+    <h2 style="font-size:18px;font-weight:600;color:#64748b;margin:0 0 8px;">No analytics data available</h2>
+    <p style="font-size:14px;color:#94a3b8;max-width:400px;margin:0 auto;">Data will appear after leads and pipeline activity grow.</p>
+</div>
+{% endif %}
+
+<!-- Responsive overrides -->
+<style>
+    @media (max-width: 1279px) {
+        .analytics-kpi-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+        }
+    }
+    @media (max-width: 767px) {
+        .analytics-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+        .analytics-2col-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 479px) {
+        .analytics-kpi-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    .chart-bar-container { display: flex; flex-direction: column; gap: 6px; }
+    .chart-bar-row { display: flex; align-items: center; gap: 8px; }
+    .chart-bar-label { font-size: 11px; color: #64748b; min-width: 100px; text-align: right; }
+    .chart-bar-track { flex: 1; height: 18px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; min-width: 2px; }
+    .chart-bar-value { font-size: 11px; font-weight: 600; color: #1e293b; min-width: 36px; }
+</style>
+
+<!-- Visual Charts Section -->
+<div style="margin-top:28px;">
+    <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Visual Charts</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="analytics-2col-grid" id="chartsGrid">
+
+        <!-- Temperature Chart -->
+        <div class="vp-card" id="chartTemperature">
+            <div class="vp-card-header"><div class="vp-card-title">Lead Temperature</div></div>
+            <div class="chart-bar-container" id="tempBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Hot</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#ef4444;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Warm</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Cold</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Intent Chart -->
+        <div class="vp-card" id="chartIntent">
+            <div class="vp-card-header"><div class="vp-card-title">Intent Breakdown</div></div>
+            <div class="chart-bar-container" id="intentBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Price</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#4f46e5;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Operator</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Catalog</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Order</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Missed Severity Chart -->
+        <div class="vp-card" id="chartMissed">
+            <div class="vp-card-header"><div class="vp-card-title">Missed Leads Severity</div></div>
+            <div class="chart-bar-container" id="missedBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Critical</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#dc2626;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">High</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Medium</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+        <!-- Handoff Status Chart -->
+        <div class="vp-card" id="chartHandoff">
+            <div class="vp-card-header"><div class="vp-card-title">Handoff Status</div></div>
+            <div class="chart-bar-container" id="handoffBars">
+                <div class="chart-bar-row"><span class="chart-bar-label">Open</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Assigned</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#8b5cf6;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Contacted</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
+                <div class="chart-bar-row"><span class="chart-bar-label">Resolved</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quick Links -->
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/crm/missed-leads" class="vp-btn vp-btn-ghost" style="font-size:12px;">Missed Leads Dashboard</a>
+        <a href="/crm/handoffs" class="vp-btn vp-btn-ghost" style="font-size:12px;">Handoff Queue</a>
+    </div>
+</div>
+
+<script>
+(async function loadCharts() {
+    try {
+        const r = await fetch('/api/v1/admin/crm/analytics/charts?days=30');
+        if (!r.ok) return;
+        const d = await r.json();
+        function renderBars(containerId, data) {
+            if (!data || !data.points) return;
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const max = Math.max(...data.points.map(p => p.value), 1);
+            const rows = el.querySelectorAll('.chart-bar-row');
+            data.points.forEach((p, i) => {
+                if (rows[i]) {
+                    const fill = rows[i].querySelector('.chart-bar-fill');
+                    const val = rows[i].querySelector('.chart-bar-value');
+                    if (fill) fill.style.width = Math.max((p.value / max) * 100, 2) + '%';
+                    if (val) val.textContent = p.value;
+                }
+            });
+        }
+        renderBars('tempBars', d.lead_temperature);
+        renderBars('intentBars', d.intent_breakdown);
+        renderBars('missedBars', d.missed_severity);
+        renderBars('handoffBars', d.handoff_status);
+    } catch(e) {}
+})();
+</script>
+{% endblock %}

@@ -3,9 +3,11 @@ Group context middleware.
 Resolves which ceiling category group the update came from.
 Injects data["category"] and data["group_db"] for all handlers.
 """
+
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject

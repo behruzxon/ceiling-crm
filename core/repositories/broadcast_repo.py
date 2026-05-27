@@ -1,7 +1,10 @@
 """Broadcast repository interface."""
+
 from __future__ import annotations
+
 from abc import abstractmethod
 from datetime import datetime
+
 from core.domain.broadcast import Broadcast, SegmentFilter
 from core.repositories.base import BaseRepository
 from shared.constants.enums import BroadcastStatus, PayloadType, SegmentType

@@ -3,6 +3,7 @@
 One row per Telegram group/supergroup.  Rows are created on first /admin
 call with all columns defaulting to the values defined here.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -19,9 +20,7 @@ class GroupSettingsModel(Base):
     chat_id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True)
 
     # ── Moderation toggles ────────────────────────────────────────────────
-    welcome_enabled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default="true"
-    )
+    welcome_enabled: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default="true")
     welcome_autodelete_seconds: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, server_default="3600"
     )
@@ -31,12 +30,8 @@ class GroupSettingsModel(Base):
     link_block_enabled: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, server_default="true"
     )
-    flood_enabled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default="false"
-    )
-    logs_enabled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default="true"
-    )
+    flood_enabled: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default="false")
+    logs_enabled: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default="true")
 
     updated_at: Mapped[datetime] = mapped_column(
         sa.TIMESTAMP(timezone=True),

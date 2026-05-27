@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% set active_page = "security" %}
+{% block title %}Xavfsizlik auditi — CeilingCRM{% endblock %}
+{% block page_title %}Security{% endblock %}
+{% block page_subtitle %}Login, session, permission va suspicious activity monitoring{% endblock %}
+{% block content %}
+<div class="space-y-6">
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Failed login</div>
+      <div class="text-2xl font-bold text-red-600">{{ data.login_metrics.failed|default(0) }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Blocked login</div>
+      <div class="text-2xl font-bold text-red-800">{{ data.login_metrics.blocked|default(0) }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Aktiv sessiyalar</div>
+      <div class="text-2xl font-bold text-green-600">{{ data.session_metrics.active|default(0) }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Ruxsat rad etilgan</div>
+      <div class="text-2xl font-bold text-yellow-600">{{ data.denied_metrics.total_denied|default(0) }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Muhim actionlar</div>
+      <div class="text-2xl font-bold text-blue-600">{{ data.sensitive_metrics.total|default(0) }}</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Shubhali holatlar</div>
+      <div class="text-2xl font-bold {% if data.suspicious|length > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ data.suspicious|length }}</div>
+    </div>
+  </div>
+
+  <!-- Login Attempts -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Login urinishlari</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div><span class="text-gray-500">Jami:</span> <strong>{{ data.login_metrics.total|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Muvaffaqiyatli:</span> <strong class="text-green-600">{{ data.login_metrics.successful|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Xato:</span> <strong class="text-red-600">{{ data.login_metrics.failed|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Failure rate:</span> <strong>{{ "%.0f"|format((data.login_metrics.failure_rate|default(0)) * 100) }}%</strong></div>
+    </div>
+    {% if data.login_metrics.top_failed_ips %}
+    <div class="mt-2">
+      <h3 class="text-sm font-medium text-gray-700 mb-1">Top failed IP lar:</h3>
+      <ul class="text-sm text-gray-600">
+        {% for ip, count in data.login_metrics.top_failed_ips %}
+        <li>{{ ip }} — {{ count }} marta</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Active Sessions -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Aktiv sessiyalar</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div><span class="text-gray-500">Active:</span> <strong class="text-green-600">{{ data.session_metrics.active|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Expired:</span> <strong>{{ data.session_metrics.expired|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Revoked:</span> <strong>{{ data.session_metrics.revoked|default(0) }}</strong></div>
+      <div><span class="text-gray-500">Bugun yaratilgan:</span> <strong>{{ data.session_metrics.created_today|default(0) }}</strong></div>
+    </div>
+    {% if data.session_metrics.stale|default(0) > 0 %}
+    <div class="mt-2 text-sm text-yellow-600">{{ data.session_metrics.stale }} ta stale session (24+ soat harakatsiz)</div>
+    {% endif %}
+  </div>
+
+  <!-- Permission Denied -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Ruxsat rad etilgan</h2>
+    <div><span class="text-gray-500">Jami:</span> <strong>{{ data.denied_metrics.total_denied|default(0) }}</strong></div>
+    {% if data.denied_metrics.by_actor %}
+    <div class="mt-2">
+      <h3 class="text-sm font-medium text-gray-700 mb-1">Actorlar:</h3>
+      <ul class="text-sm text-gray-600">
+        {% for actor, count in data.denied_metrics.by_actor %}
+        <li>{{ actor }} — {{ count }} marta</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sensitive Actions -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Muhim actionlar</h2>
+    <div><span class="text-gray-500">Jami:</span> <strong>{{ data.sensitive_metrics.total|default(0) }}</strong></div>
+    {% if data.sensitive_metrics.by_action %}
+    <div class="mt-2">
+      <h3 class="text-sm font-medium text-gray-700 mb-1">Actionlar:</h3>
+      <ul class="text-sm text-gray-600">
+        {% for action, count in data.sensitive_metrics.by_action %}
+        <li>{{ action }} — {{ count }} marta</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Suspicious Activity -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Shubhali holatlar</h2>
+    {% if data.suspicious %}
+    <div class="space-y-2">
+      {% for item in data.suspicious %}
+      <div class="flex items-start gap-2 p-2 rounded {% if item.severity == 'high' %}bg-red-50{% elif item.severity == 'medium' %}bg-yellow-50{% else %}bg-blue-50{% endif %}">
+        <span class="px-2 py-0.5 rounded text-xs font-medium {% if item.severity == 'high' %}bg-red-200 text-red-800{% elif item.severity == 'medium' %}bg-yellow-200 text-yellow-800{% else %}bg-blue-200 text-blue-800{% endif %}">{{ item.severity }}</span>
+        <span class="text-sm">{{ item.description }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-sm text-green-600">Shubhali holat aniqlanmadi</div>
+    {% endif %}
+  </div>
+
+  <!-- Recommendations -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3">Tavsiyalar</h2>
+    {% if data.recommendations %}
+    <div class="space-y-2">
+      {% for rec in data.recommendations %}
+      <div class="p-2 rounded {% if rec.priority == 'high' %}bg-red-50{% elif rec.priority == 'medium' %}bg-yellow-50{% else %}bg-green-50{% endif %}">
+        <div class="font-medium text-sm">{{ rec.title }}</div>
+        <div class="text-sm text-gray-600">{{ rec.description }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="text-xs text-gray-400">Yaratilgan: {{ data.generated_at|default("") }} | Davr: {{ data.period_hours|default(24) }} soat</div>
+</div>
+{% endblock %}

@@ -15,10 +15,10 @@ RBAC: MANAGER | ADMIN | SUPERADMIN
 Works in both DM and admin group chats.
 Timezone: Asia/Tashkent for display.
 """
+
 from __future__ import annotations
 
 import re
-from datetime import timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -146,7 +146,7 @@ async def cmd_opstats(message: Message, **data: object) -> None:
             )
         leaderboard_text = "\n".join(lb_lines)
     else:
-        leaderboard_text = f"👥 <b>Top operatorlar</b>\n<i>Ma'lumot yo'q</i>"
+        leaderboard_text = "👥 <b>Top operatorlar</b>\n<i>Ma'lumot yo'q</i>"
 
     # ── First response section ───────────────────────────────────────────────
     avg_rt = _fmt_seconds(resp.get("avg_seconds"))
@@ -174,10 +174,7 @@ async def cmd_opstats(message: Message, **data: object) -> None:
     )
 
     divider = "\n\n" + "─" * 32 + "\n\n"
-    header = (
-        f"📈 <b>Operator statistika</b>\n"
-        f"📅 Oxirgi {days} kun  |  {now_tz} (Tashkent)\n"
-    )
+    header = f"📈 <b>Operator statistika</b>\n" f"📅 Oxirgi {days} kun  |  {now_tz} (Tashkent)\n"
     await message.answer(
         header + divider + leaderboard_text + divider + response_text + divider + funnel_text
     )
@@ -245,8 +242,7 @@ async def cmd_lead_card(message: Message, **data: object) -> None:
     lead_id = _parse_lead_id_from_text(message.text)
     if lead_id is None:
         await message.answer(
-            "❓ Lid raqamini kiriting:\n"
-            "<code>/lead 42</code>  yoki  <code>/lead_42</code>"
+            "❓ Lid raqamini kiriting:\n" "<code>/lead 42</code>  yoki  <code>/lead_42</code>"
         )
         return
 

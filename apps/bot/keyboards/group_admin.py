@@ -1,4 +1,5 @@
 """Inline keyboard for the group /admin settings panel."""
+
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -22,11 +23,11 @@ def group_admin_keyboard(settings: GroupSettings) -> InlineKeyboardMarkup:
     """Build the settings panel keyboard reflecting current toggle states."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [_btn("Xush kelibsiz xabari", "welcome_enabled",  settings.welcome_enabled)],
-            [_btn("Captcha",              "captcha_enabled",   settings.captcha_enabled)],
-            [_btn("Havola bloklash",      "link_block_enabled", settings.link_block_enabled)],
-            [_btn("Flood himoya",         "flood_enabled",     settings.flood_enabled)],
-            [_btn("Loglar",               "logs_enabled",      settings.logs_enabled)],
+            [_btn("Xush kelibsiz xabari", "welcome_enabled", settings.welcome_enabled)],
+            [_btn("Captcha", "captcha_enabled", settings.captcha_enabled)],
+            [_btn("Havola bloklash", "link_block_enabled", settings.link_block_enabled)],
+            [_btn("Flood himoya", "flood_enabled", settings.flood_enabled)],
+            [_btn("Loglar", "logs_enabled", settings.logs_enabled)],
             [InlineKeyboardButton(text="❌ Yopish", callback_data="gs:close")],
         ]
     )

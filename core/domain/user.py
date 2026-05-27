@@ -1,15 +1,20 @@
 """User domain model."""
+
 from __future__ import annotations
+
 from datetime import datetime
+
 from pydantic import BaseModel, Field
+
 from shared.constants.enums import UserRole
 
 
 class User(BaseModel):
     """Immutable domain representation of a Telegram user."""
+
     model_config = {"frozen": True}
 
-    id: int                                    # Telegram user_id
+    id: int  # Telegram user_id
     username: str | None = None
     first_name: str
     last_name: str | None = None

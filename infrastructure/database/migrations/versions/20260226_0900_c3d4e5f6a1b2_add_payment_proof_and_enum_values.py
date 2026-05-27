@@ -12,6 +12,7 @@ Changes:
 Note: ALTER TYPE ... ADD VALUE is transactional on PostgreSQL 12+.
       If running on PostgreSQL < 12, apply manually outside a transaction.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

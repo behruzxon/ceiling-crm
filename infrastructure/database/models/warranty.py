@@ -4,6 +4,7 @@ One warranty per lead (UNIQUE constraint on lead_id).
 issued_at + expires_at are bare DATE columns — no time-zone needed for
 calendar-based validity (15-year warranty from installation date).
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -38,6 +39,6 @@ class WarrantyModel(Base):
     )
 
     __table_args__ = (
-        sa.Index("ix_warranties_lead",       "lead_id"),
-        sa.Index("ix_warranties_expires_at",  "expires_at"),
+        sa.Index("ix_warranties_lead", "lead_id"),
+        sa.Index("ix_warranties_expires_at", "expires_at"),
     )

@@ -1,7 +1,10 @@
 """
 LeadService — lead creation and management.
 """
+
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from core.domain.lead import Lead, LeadAddons
 from core.events.bus import EventBus, LeadCreated
@@ -10,6 +13,9 @@ from core.repositories.pipeline_repo import AbstractPipelineRepository
 from shared.constants.enums import CeilingCategory, LeadSource, PipelineStage
 from shared.exceptions.base import NotFoundError
 from shared.logging import get_logger
+
+if TYPE_CHECKING:
+    from infrastructure.database.repositories.lead_action_repo import PostgresLeadActionRepository
 
 log = get_logger(__name__)
 
@@ -25,10 +31,12 @@ class LeadService:
         lead_repo: AbstractLeadRepository,
         pipeline_repo: AbstractPipelineRepository,
         event_bus: EventBus,
+        action_repo: PostgresLeadActionRepository | None = None,
     ) -> None:
         self._leads = lead_repo
         self._pipeline = pipeline_repo
         self._events = event_bus
+        self._actions = action_repo
 
     async def create_lead(
         self,
@@ -46,7 +54,7 @@ class LeadService:
     ) -> Lead:
         """
         Create a new lead and initialise it in the NEW pipeline stage.
-        Emits LeadCreated event.
+        Logs lead_created action. Emits LeadCreated event.
         """
         # Build domain object (id=0 placeholder, DB assigns real ID)
         lead = Lead(
@@ -74,6 +82,15 @@ class LeadService:
             note="Lead created",
         )
 
+        # Timeline: record lead_created action
+        if self._actions is not None:
+            await self._actions.insert(
+                created_lead.id,
+                user_id,
+                "lead_created",
+                payload={"source": source.value, "category": category.value},
+            )
+
         log.info(
             "lead_created",
             lead_id=created_lead.id,
@@ -83,12 +100,14 @@ class LeadService:
         )
 
         # Emit domain event
-        await self._events.emit(LeadCreated(
-            lead_id=created_lead.id,
-            user_id=user_id,
-            category=category.value,
-            source=source.value,
-        ))
+        await self._events.emit(
+            LeadCreated(
+                lead_id=created_lead.id,
+                user_id=user_id,
+                category=category.value,
+                source=source.value,
+            )
+        )
 
         return created_lead
 
@@ -112,3 +131,43 @@ class LeadService:
     async def search_leads(self, **filters: object) -> list[Lead]:
         """Flexible lead search delegated to repository."""
         return await self._leads.search(**filters)
+
+    async def select_package(
+        self,
+        user_id: int,
+        package_type: str,
+        first_name: str,
+        score_delta: int,
+        lead_status: str,
+    ) -> Lead:
+        """Record that a user selected a package.
+
+        Upserts the lead (create or update), then inserts a PACKAGE_SELECTED
+        pipeline stage record.  Does NOT go through CRMService transition
+        validation — package selection is an entry-point action, not a
+        pipeline-internal move.
+        """
+        lead = await self._leads.upsert_package_lead(
+            user_id=user_id,
+            package_type=package_type,
+            first_name=first_name,
+            score_delta=score_delta,
+            lead_status=lead_status,
+        )
+
+        await self._pipeline.insert_stage(
+            lead_id=lead.id,
+            stage=PipelineStage.PACKAGE_SELECTED,
+            changed_by=user_id,
+            note=f"Paket tanlandi: {package_type}",
+        )
+
+        log.info(
+            "package_selected",
+            lead_id=lead.id,
+            user_id=user_id,
+            package_type=package_type,
+            lead_status=lead_status,
+            score_delta=score_delta,
+        )
+        return lead

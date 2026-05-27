@@ -2,13 +2,13 @@
 Unit tests for link detection logic (C3-3) — link_guard.has_link().
 Uses lightweight MagicMock objects to avoid aiogram type instantiation.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from aiogram.enums import MessageEntityType
+
 from apps.bot.handlers.group.link_guard import has_link
 
 
@@ -46,10 +46,15 @@ class TestHasLinkNegative:
 
     def test_user_mention_entity_not_blocked(self) -> None:
         """Regular @username Telegram MENTION entities must pass through."""
-        assert has_link(_msg(
-            text="@ali bu yerda",
-            entities=[_entity(MessageEntityType.MENTION)],
-        )) is False
+        assert (
+            has_link(
+                _msg(
+                    text="@ali bu yerda",
+                    entities=[_entity(MessageEntityType.MENTION)],
+                )
+            )
+            is False
+        )
 
     def test_short_text_no_link(self) -> None:
         assert has_link(_msg(text="Narx qancha?")) is False
@@ -65,16 +70,26 @@ class TestHasLinkNegative:
 
 class TestHasLinkPositive:
     def test_url_entity_in_text(self) -> None:
-        assert has_link(_msg(
-            text="Check http://spam.com",
-            entities=[_entity(MessageEntityType.URL)],
-        )) is True
+        assert (
+            has_link(
+                _msg(
+                    text="Check http://spam.com",
+                    entities=[_entity(MessageEntityType.URL)],
+                )
+            )
+            is True
+        )
 
     def test_text_link_entity(self) -> None:
-        assert has_link(_msg(
-            text="Click here",
-            entities=[_entity(MessageEntityType.TEXT_LINK)],
-        )) is True
+        assert (
+            has_link(
+                _msg(
+                    text="Click here",
+                    entities=[_entity(MessageEntityType.TEXT_LINK)],
+                )
+            )
+            is True
+        )
 
     def test_https_bare_in_text(self) -> None:
         assert has_link(_msg(text="visit https://example.com for details")) is True
@@ -89,10 +104,15 @@ class TestHasLinkPositive:
         assert has_link(_msg(text="join t.me/spamchannel now")) is True
 
     def test_url_entity_in_caption(self) -> None:
-        assert has_link(_msg(
-            caption="spam",
-            caption_entities=[_entity(MessageEntityType.URL)],
-        )) is True
+        assert (
+            has_link(
+                _msg(
+                    caption="spam",
+                    caption_entities=[_entity(MessageEntityType.URL)],
+                )
+            )
+            is True
+        )
 
     def test_https_in_caption(self) -> None:
         assert has_link(_msg(caption="https://spam.com")) is True
@@ -102,10 +122,15 @@ class TestHasLinkPositive:
 
     def test_mixed_entities_url_wins(self) -> None:
         """If URL entity is present alongside MENTION, still blocked."""
-        assert has_link(_msg(
-            text="@user check https://spam.com",
-            entities=[
-                _entity(MessageEntityType.MENTION),
-                _entity(MessageEntityType.URL),
-            ],
-        )) is True
+        assert (
+            has_link(
+                _msg(
+                    text="@user check https://spam.com",
+                    entities=[
+                        _entity(MessageEntityType.MENTION),
+                        _entity(MessageEntityType.URL),
+                    ],
+                )
+            )
+            is True
+        )

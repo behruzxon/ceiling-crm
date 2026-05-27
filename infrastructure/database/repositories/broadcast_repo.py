@@ -1,7 +1,8 @@
 """PostgreSQL implementation of AbstractBroadcastRepository (v2)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,22 +28,24 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         return Broadcast(
             id=model.id,
             title=model.title,
-            segment_type=model.segment_type
-            if isinstance(model.segment_type, str)
-            else model.segment_type.value,
+            segment_type=(
+                model.segment_type
+                if isinstance(model.segment_type, str)
+                else model.segment_type.value
+            ),
             lead_stage=model.lead_stage,
-            payload_type=model.payload_type
-            if isinstance(model.payload_type, str)
-            else model.payload_type.value,
+            payload_type=(
+                model.payload_type
+                if isinstance(model.payload_type, str)
+                else model.payload_type.value
+            ),
             text=model.text,
             file_id=model.file_id,
             message_template=model.message_template or "",
             media_file_id=model.media_file_id,
             media_type=model.media_type,
             scheduled_at=model.scheduled_at,
-            status=BroadcastStatus(model.status)
-            if isinstance(model.status, str)
-            else model.status,
+            status=BroadcastStatus(model.status) if isinstance(model.status, str) else model.status,
             total=model.total,
             sent_count=model.sent_count,
             failed_count=model.failed_count,
@@ -71,19 +74,14 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
     # ── legacy methods ────────────────────────────────────────────────────
 
     async def get_due_broadcasts(self, as_of: datetime) -> list[Broadcast]:
-        stmt = (
-            sa.select(BroadcastModel)
-            .where(
-                BroadcastModel.status == BroadcastStatus.SCHEDULED.value,
-                BroadcastModel.scheduled_at <= as_of,
-            )
+        stmt = sa.select(BroadcastModel).where(
+            BroadcastModel.status == BroadcastStatus.SCHEDULED.value,
+            BroadcastModel.scheduled_at <= as_of,
         )
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
 
-    async def update_counts(
-        self, broadcast_id: int, sent_delta: int, failed_delta: int
-    ) -> None:
+    async def update_counts(self, broadcast_id: int, sent_delta: int, failed_delta: int) -> None:
         stmt = (
             sa.update(BroadcastModel)
             .where(BroadcastModel.id == broadcast_id)
@@ -114,7 +112,7 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         lead_stage: str | None = None,
     ) -> int:
         """Insert a new PENDING broadcast and return its ID."""
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        ts = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
         title = f"Rassilka {segment_type.value} {ts}"
 
         # message_template is a legacy NOT NULL column; populate it from the
@@ -169,8 +167,15 @@ class PostgresBroadcastRepository(AbstractBroadcastRepository):
         await self._session.execute(stmt)
 
     async def get_all_private_user_ids(self) -> list[int]:
-        """Return IDs of all non-blocked users."""
-        stmt = sa.select(UserModel.id).where(UserModel.is_blocked.is_(False))
+        """Return IDs of all non-blocked private users.
+
+        The id > 0 guard filters out any corrupted rows (groups / channels /
+        service bots) that may have been stored before the AuthMiddleware fix.
+        """
+        stmt = sa.select(UserModel.id).where(
+            UserModel.is_blocked.is_(False),
+            UserModel.id > 0,
+        )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

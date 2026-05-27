@@ -1,7 +1,10 @@
 """Appointment repository interface."""
+
 from __future__ import annotations
+
 from abc import abstractmethod
-from datetime import date, datetime
+from datetime import date
+
 from core.domain.appointment import Appointment
 from core.repositories.base import BaseRepository
 from shared.constants.enums import AppointmentType

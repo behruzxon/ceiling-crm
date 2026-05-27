@@ -1,6 +1,9 @@
 """Integration tests for database connectivity (requires running PG)."""
+
 from __future__ import annotations
+
 import pytest
+
 from infrastructure.database.session import check_database_health
 
 

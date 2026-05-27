@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — CeilingCRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', system-ui, sans-serif; }</style>
+</head>
+<body style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);">
+<div class="max-w-md w-full space-y-8 px-4" style="background:#fff;border-radius:16px;padding:40px 32px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div class="text-center">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:#4f46e5;border-radius:12px;margin-bottom:12px;">
+            <span style="color:#fff;font-weight:700;font-size:22px;">S</span>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">CeilingCRM Admin</h2>
+        <p class="mt-1 text-sm text-gray-500">Admin dashboard kirish</p>
+    </div>
+    {% if not session_auth_enabled %}
+    <div class="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+        <div class="text-sm text-yellow-700">
+            Session auth hozircha yoqilmagan. Mavjud HTTP Basic Auth orqali kirishingiz mumkin.
+        </div>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="rounded-lg bg-red-50 border border-red-200 p-4">
+        <div class="text-sm text-red-700">{{ error }}</div>
+    </div>
+    {% endif %}
+    {% if session_auth_enabled %}
+    <form class="mt-6 space-y-5" action="/login" method="POST">
+        <div>
+            <label for="admin_id" class="block text-sm font-medium text-gray-700 mb-1">Admin ID</label>
+            <input id="admin_id" name="admin_id" type="text" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="Admin ID" autocomplete="username">
+        </div>
+        <div>
+            <label for="secret" class="block text-sm font-medium text-gray-700 mb-1">Token</label>
+            <input id="secret" name="secret" type="password" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="Token / Secret" autocomplete="current-password">
+        </div>
+        <button type="submit"
+                class="w-full py-2 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Kirish
+        </button>
+    </form>
+    {% endif %}
+    <div class="text-center text-xs text-gray-400 mt-8">Vashpotolok AI CRM Platform v1.0</div>
+</div>
+</body>
+</html>

@@ -4,9 +4,8 @@ Tests cover _parse_two_dimensions (fast path), _parse_dimension (single value),
 and _led_promo_eligible (LED strip promotion rule).
 No I/O or FSM — pure function tests only.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from apps.bot.handlers.private.pricing import (
     LED_PROMO_DESIGN,
@@ -16,8 +15,8 @@ from apps.bot.handlers.private.pricing import (
     _parse_two_dimensions,
 )
 
-
 # ─── _parse_two_dimensions ────────────────────────────────────────────────────
+
 
 class TestParseTwoDimensions:
     def test_ga_separator(self) -> None:
@@ -75,6 +74,7 @@ class TestParseTwoDimensions:
 
 # ─── Area computation via fast path ──────────────────────────────────────────
 
+
 class TestAreaFromPair:
     def test_area_5x4(self) -> None:
         result = _parse_two_dimensions("5ga4")
@@ -98,6 +98,7 @@ class TestAreaFromPair:
 
 
 # ─── _parse_dimension (single value) ─────────────────────────────────────────
+
 
 class TestParseDimension:
     def test_integer(self) -> None:
@@ -129,6 +130,7 @@ class TestParseDimension:
 
 
 # ─── _led_promo_eligible ──────────────────────────────────────────────────────
+
 
 class TestLedPromoEligible:
     def test_exact_threshold_gulli(self) -> None:

@@ -2,11 +2,12 @@
 File storage adapter.
 Supports local filesystem and S3 backends.
 """
+
 from __future__ import annotations
 
-import os
 import uuid
 from abc import ABC, abstractmethod
+from datetime import UTC
 from pathlib import Path
 
 import aiofiles
@@ -21,8 +22,8 @@ ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime"}
 ALLOWED_DOC_TYPES = {"application/pdf"}
 ALL_ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES | ALLOWED_DOC_TYPES
 
-MAX_IMAGE_SIZE = 20 * 1024 * 1024   # 20 MB
-MAX_VIDEO_SIZE = 50 * 1024 * 1024   # 50 MB
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50 MB
 
 
 class StorageAdapter(ABC):
@@ -52,11 +53,20 @@ class LocalStorageAdapter(StorageAdapter):
         self._base_path = base_path or settings.storage.local_path
         self._base_path.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _sanitize_filename(filename: str) -> str:
+        """Strip directory components and reject hidden/empty filenames."""
+        safe = Path(filename).name
+        if not safe or safe.startswith("."):
+            safe = "upload"
+        return safe
+
     def _generate_path(self, filename: str) -> Path:
         """Generate unique path: uploads/YYYY/MM/uuid_filename."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        filename = self._sanitize_filename(filename)
+        now = datetime.now(UTC)
         subdir = self._base_path / str(now.year) / f"{now.month:02d}"
         subdir.mkdir(parents=True, exist_ok=True)
         unique_name = f"{uuid.uuid4().hex[:8]}_{filename}"
@@ -111,7 +121,8 @@ class S3StorageAdapter(StorageAdapter):
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> str:
         import asyncio
 
-        key = f"uploads/{uuid.uuid4().hex[:8]}_{filename}"
+        safe_name = LocalStorageAdapter._sanitize_filename(filename)
+        key = f"uploads/{uuid.uuid4().hex[:8]}_{safe_name}"
         client = self._get_client()
 
         await asyncio.get_event_loop().run_in_executor(
@@ -132,7 +143,9 @@ class S3StorageAdapter(StorageAdapter):
         import asyncio
 
         client = self._get_client()
-        key = file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        key = (
+            file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        )
 
         await asyncio.get_event_loop().run_in_executor(
             None,
@@ -144,7 +157,9 @@ class S3StorageAdapter(StorageAdapter):
         import asyncio
 
         client = self._get_client()
-        key = file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        key = (
+            file_path.split(".amazonaws.com/")[-1] if ".amazonaws.com/" in file_path else file_path
+        )
 
         try:
             await asyncio.get_event_loop().run_in_executor(

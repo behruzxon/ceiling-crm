@@ -2,6 +2,7 @@
 Lead card inline keyboard callbacks.
 Handles button presses on lead cards sent to admin group.
 """
+
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -9,7 +10,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_action_repo, get_lead_service, get_user_service
-from shared.constants.enums import UserRole
 from shared.exceptions.base import NotFoundError
 from shared.utils.formatting import bold
 
@@ -19,7 +19,11 @@ router = Router(name="callbacks:leads")
 @router.callback_query(F.data.startswith("lead:view:"))
 async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
     """Show full lead details."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:
@@ -55,7 +59,11 @@ async def cb_view_lead(callback: CallbackQuery, **data: object) -> None:
 @router.callback_query(F.data.startswith("lead:assign:"))
 async def cb_assign_lead(callback: CallbackQuery, **data: object) -> None:
     """Show manager selection keyboard for lead assignment."""
-    lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    try:
+        lead_id = int(callback.data.split(":")[-1])  # type: ignore[union-attr]
+    except (ValueError, IndexError):
+        await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+        return
 
     factory = get_session_factory()
     async with factory() as session:
@@ -67,10 +75,12 @@ async def cb_assign_lead(callback: CallbackQuery, **data: object) -> None:
             return
 
         buttons = [
-            [InlineKeyboardButton(
-                text=f"👤 {m.full_name}",
-                callback_data=f"lead:do_assign:{lead_id}:{m.id}",
-            )]
+            [
+                InlineKeyboardButton(
+                    text=f"👤 {m.full_name}",
+                    callback_data=f"lead:do_assign:{lead_id}:{m.id}",
+                )
+            ]
             for m in managers
         ]
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)

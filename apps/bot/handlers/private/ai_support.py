@@ -4,595 +4,753 @@ AI-powered free-text handler for private DM chats.
 Pipeline
 --------
   Incoming text (no active FSM state)
-    ├─ Dimension pair found (e.g. "5x4", "5м 4м") → jump to pricing FSM at design step
-    ├─ Single bare number (e.g. "5")               → start pricing FSM at width step
-    └─ General question                            → OpenAI JSON reply + intent keyboard
+    |- Dimension pair found (e.g. "5x4", "5m 4m") -> jump to pricing FSM at design step
+    |- Single bare number (e.g. "5")               -> start pricing FSM at width step
+    +- General question                            -> OpenAI JSON reply + intent keyboard
 
-Memory pipeline (all DB ops are non-fatal)
-  1. Load  : ai_user_memory.profile + ai_conversations.{last_messages, summary}
-  2. Build : context block from profile + summary → second system message
-  3. Call  : pass last 8 stored messages + current as conversation turns
-  4. Store : append pair, trim to 12; upsert both tables
-             every 10 turns → regenerate summary via separate AI call
-  5. Fail  : if OpenAI unavailable, still store user message; reply with failsafe
+This file contains ONLY router handlers and wiring.  All business logic
+has been extracted into sibling modules:
 
-OpenAI response schema
-  {
-    "intent":    "price|catalog|operator|measurement|faq|objection|other",
-    "reply":     "<Uzbek reply text>",
-    "extracted": {
-      "interested_design": null,
-      "last_dimensions":   null,
-      "location":          null
-    }
-  }
-
-Anti-repetition
-  - No greeting when conversation history exists
-  - Company intro suppressed after turn 1 (unless user asks)
-  - CTA phrases rotate; last_intent stored in profile so AI picks a different one
+  ai_states.py              - FSM states, keyboards, text constants
+  ai_detection.py           - Intent / trigger detection, text parsing
+  ai_memory.py              - Redis AI memory + stats
+  ai_scoring.py             - Lead scoring + objection detection / handling
+  ai_openai.py              - OpenAI integration + conversation DB helpers
+  ai_notifications.py       - Admin notification orchestration
+  ai_followups.py           - Async delayed follow-up tasks
+  ai_pricing_helpers.py     - Price display helpers
+  ai_support_agent.py       - Agent pipeline (orchestrator + lead signal)
+  ai_support_auto_reply.py  - Auto-reply decision layer + rate limiting
 """
+
 from __future__ import annotations
 
-import json
+import asyncio
 import re
-from pathlib import Path
 from typing import Any
 
-import sqlalchemy as sa
 from aiogram import F, Router
-from aiogram.filters import StateFilter
+from aiogram.enums import ChatAction
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup, default_state
+from aiogram.fsm.state import default_state
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    KeyboardButton,
     Message,
-    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
 )
 
-from openai import AsyncOpenAI
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from apps.bot.ai.system_prompt import _parse_ai_scoring
+from apps.bot.handlers.private.ai_detection import (  # noqa: F401
+    _GENERIC_CONFIRMATIONS,
+    _build_smart_catalog_response,
+    _catalog_link_kb,
+    _detect_catalog_context,
+    _detect_room_type,
+    _is_catalog_request,
+    _is_greeting,
+    _is_measurement_request,
+    _is_price_query,
+    _normalize_room,
+    _parse_area,
+    _room_design_text,
+    detect_district,
+    is_valid_name,
+    normalize_name,
+    parse_combo,
+)
+from apps.bot.handlers.private.ai_followups import (
+    _photo_followup_task,
+    _refresh_ai_followup_nonce,
+    _schedule_ai_followup,
+    _schedule_catalog_followup,
+)
+from apps.bot.handlers.private.ai_memory import (  # noqa: F401
+    _ai_stats_count_user,
+    _ai_stats_incr,
+    _build_greeting_from_memory,
+    _load_ai_memory,
+    _save_ai_memory,
+    _update_ai_memory_from_interaction,
+)
+from apps.bot.handlers.private.ai_notifications import (
+    _notify_ai_lead_collected,
+    _notify_phone_captured,
+    _notify_warm_interest,
+    _update_lead_ai_scoring,
+)
+from apps.bot.handlers.private.ai_openai import (
+    _build_context_block,
+    _call_ai,
+    _load_context,
+    _persist_exchange,
+    _store_user_message_only,
+    clear_ai_conversation,  # noqa: F401 — re-exported for support.py
+)
+from apps.bot.handlers.private.ai_pricing_helpers import (
+    _show_price_upsell,
+)
+from apps.bot.handlers.private.ai_scoring import (  # noqa: F401
+    _add_lead_score,
+    _get_lead_score,
+    _handle_objection,
+    classify_score,
+    detect_objection,
+    detect_objection_full,
+)
 
+# ── Sibling module imports ──────────────────────────────────────────────────
+from apps.bot.handlers.private.ai_states import (  # noqa: F401
+    _AI_HELP_TEXT,
+    _AI_MODE_STATUS,
+    _AI_OPERATOR_PROMPT,
+    _AI_PRICE_PROMPT,
+    _AI_QUICK_BUTTONS,
+    _AI_RATE_LIMIT_TEXT,
+    _AI_RESET_SUCCESS,
+    _AI_ROOM_ADVICE_PROMPT,
+    _AI_UNAVAILABLE_TEXT,
+    _CANCEL_PHONE,
+    _CATALOG_INTRO,
+    _CATALOG_SOFT_CTA,
+    _EXIT_TEXTS,
+    _FAILSAFE_KB,
+    _FAILSAFE_TEXT,
+    _NEUTRAL_REPLY,
+    _PRICE_ASK_DESIGN_TEXT,
+    BTN_AI_CATALOG,
+    BTN_AI_HELP,
+    BTN_AI_OPERATOR,
+    BTN_AI_PRICE,
+    BTN_AI_RESET,
+    AiSupportStates,
+    _ai_keyboard,
+    _phone_request_keyboard,
+)
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
-from apps.bot.keyboards.main_menu import main_menu_keyboard
-from apps.bot.keyboards.pricing import design_keyboard
-from apps.bot.states.pricing import PricingStates
-from infrastructure.database.models.ai_conversation import AiConversationModel
+from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
 from shared.logging import get_logger
+from shared.utils.phone import extract_phone_from_text
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
 
 
-# ── Explicit AI-mode FSM ──────────────────────────────────────────────────────
-
-class AiSupportStates(StatesGroup):
-    waiting_for_ai_question = State()
-
-
-_EXIT_TEXTS: frozenset[str] = frozenset({"⬅️ Menyu"})
-
-
-def _ai_keyboard() -> ReplyKeyboardMarkup:
-    """Persistent exit button shown throughout the AI chat session."""
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="⬅️ Menyu")]],
-        resize_keyboard=True,
-    )
-
-
-# ── Tuneable constants ────────────────────────────────────────────────────────
-
-_MAX_MESSAGES = 12           # rolling window size stored in ai_conversations
-_HISTORY_TO_SEND = 8         # how many messages to pass to OpenAI per call
-_SUMMARY_EVERY_N_TURNS = 10  # regenerate summary every N user turns
-
-# ── Knowledge base (read once at import) ─────────────────────────────────────
-
-_KB_PATH = Path(__file__).parents[4] / "shared" / "knowledge" / "uz.md"
-_KNOWLEDGE_BASE: str = _KB_PATH.read_text(encoding="utf-8") if _KB_PATH.exists() else ""
-
-# ── Static system prompt ──────────────────────────────────────────────────────
-
-_SYSTEM_PROMPT = f"""
-Sen "Natijnoy Potolok" kompaniyasining tajribali savdo menejeri va botdagi yordamchisissan (ism: Zulfiya).
-Kompaniya Qashqadaryo viloyatida stretch shiftlar o'rnatish bilan shug'ullanadi.
-
-ASOSIY QOIDALAR:
-- Faqat o'zbek tilida javob ber.
-- Qisqa, ishonchli, samimiy javob ber (3–5 jumla). Keraksiz matn qo'shma.
-- Faqat stretch shiftlar mavzusida gapir. Boshqa mavzularda: "Bu savolga javob bera olmayman, lekin shift haqida yordam bera olaman."
-- Har doim suhbatni oldinga yuritmaga harakat qil — javobni savol bilan tugat.
-
-SAVDO STRATEGIYASI (eng muhim):
-
-1. NARX SO'RASA → avval xona o'lchamlarini so'ra, keyin aniq hisoblash ayt.
-   Misol: "Xona o'lchamini bilsam, aniq narxni hisoblab beraman. Uzunlik va kenglik (masalan, 4×5 m)?"
-   O'lcham olgach — narxni hisoblash va chegirmani eslatib ber.
-
-2. IKKILANAYOTGANDA → bepul o'lchov taklifini qil (majburiyat yo'q, xavf yo'q).
-   Misol: "Usta bepul kelib o'lchaydi — hech qanday majburiyat yo'q. Bugunmi yoki ertami qulay?"
-
-3. HAR JAVOBDAN KEYIN → quyidagilardan birini so'ra (agar noma'lum bo'lsa):
-   - Xona o'lchamlari (uzunlik × kenglik)
-   - Xona turi (zal, yotoqxona, oshxona)
-   - Joylashuv (tuman)
-   - Dizayn qiziqishi
-
-4. CHEGIRMA → o'lcham olgach avtomatik eslatib ber: 20 m²dan → 5%, 40 m²dan → 10%.
-
-E'TIROZLARGA JAVOB (to'liq skript):
-
-- "Qimmat" / "Arzonroq yo'qmi":
-  → "Eng arzon variant — Odnotonniy (80 000 UZS/m²). 15 yillik kafolat va yashirin to'lov yo'qligi bilan narx oqlangan.
-     O'lchamingizni aytsangiz, chegirma bilan aniq raqamni hisoblab beraman."
-
-- "O'ylab ko'raman" / "Keyinroq":
-  → "Albatta! Faqat bir taklif — usta bepul kelib o'lchaydi, narx hisoblanadi, majburiyat yo'q.
-     Aniq raqamlar bilan o'ylash osonroq. Bugun vaqtingiz bormi?"
-
-- "Boshqa kompaniya arzonroq":
-  → "Raqobatchilar bilan taqqoslash uchun farqlarni ko'ring: 15 yillik kafolat, yashirin to'lov yo'q, mahalliy tez xizmat.
-     Bepul o'lchamizdan foydalaning — keyin qaror qilasiz."
-
-- "Vaqtim yo'q":
-  → "O'lchov 30 daqiqa oladi. Qaysi vaqt qulay — ertalab yoki kechqurun?"
-
-TAKRORLASHNI OLDINI OLISH:
-- Suhbat tarixi mavjud bo'lsa (CONTEXT blokida ko'rsatilsa), "Assalomu alaykum" bilan boshlama.
-- "Natijnoy Potolok" va "6 yildan beri" iboralarini faqat birinchi suhbatda yoki
-  foydalanuvchi kompaniya haqida so'raganda ishlatib o'tish.
-- CTA iborasini doim farqli qil — quyidagilardan navbatma-navbat tanlang:
-    "O'lchamingizni ayting, hisoblaylik." |
-    "Bepul o'lchovga yuboring — majburiyat yo'q." |
-    "Katalogda yoqadigan dizayn bor — ochaymi?" |
-    "Operatorimiz tez javob beradi — ulaymi?"
-  Oxirgi CTA (CONTEXT blokida "Oxirgi CTA turi" sifatida ko'rsatiladi) qaysi bo'lsa,
-  boshqa birini tanlang.
-
-SHAXSIYLASHTIRISH (CONTEXT mavjud bo'lsa):
-- interested_design → bir marta tabiiy tilga ol:
-    "Siz avval [dizayn] ni ko'zda tutgandingiz — hali ham shu dizaynmidim?"
-- last_dimensions → o'lchami o'zgarmadimi deb tasdiqlashni so'ra:
-    "Xona o'lchami hali ham [o'lcham] m?"
-- location → Qashqadaryo hududida xizmat borliqini tabiiy eslatib o'tish.
-
-JAVOB FORMATI — faqat to'g'ri JSON, hech qanday qo'shimcha matn yo'q:
-{{
-  "intent": "price|catalog|operator|measurement|faq|objection|other",
-  "reply": "...",
-  "extracted": {{
-    "interested_design": null,
-    "last_dimensions": null,
-    "location": null
-  }}
-}}
-
-intent qiymatlari:
-  price       — foydalanuvchi narx so'ramoqda
-  catalog     — dizayn yoki katalog ko'rmoqchi
-  operator    — operatorga murojaat qilmoqchi
-  measurement — bepul o'lchov haqida so'ramoqda
-  faq         — tez-tez so'raladigan savol (kafolat, o'rnatish muddati va h.k.)
-  objection   — "qimmat" yoki narxga e'tiroz
-  other       — boshqa
-
---- BILIMLAR BAZASI ---
-{_KNOWLEDGE_BASE}
-""".strip()
-
-# Prompt for the cheap summary regeneration call
-_SUMMARY_SYSTEM = (
-    "Quyidagi suhbatni o'zbek tilida 2-4 jumlada qisqartir. "
-    "Foydalanuvchining asosiy qiziqishi, so'ragan ma'lumotlari va "
-    "muhim fikrlarini yozib qo'y. Faqat matn yoz, JSON shart emas."
+# Extracted module imports (agent pipeline + auto-reply)
+from apps.bot.handlers.private.ai_support_agent import (  # noqa: F401, E402
+    _process_lead_signal,
+    _run_orchestrator,
+)
+from apps.bot.handlers.private.ai_support_auto_reply import (  # noqa: F401, E402
+    _check_ai_rate_limit,
+    _detect_simple_intent,
+    _reset_auto_reply_counter,
+    _try_auto_reply,
 )
 
-# ── Dimension extraction ──────────────────────────────────────────────────────
-
-# Pair: "5x4", "5*4", "5×4", "5.2x3.8", "5m x 4m", "5м 4м"
-_PAIR_RE: re.Pattern[str] = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(?:m|м)?\s*[xX×*]\s*(\d+(?:[.,]\d+)?)\s*(?:m|м)?"
-    r"|(?<!\d)(\d+(?:[.,]\d+)?)\s+(?:m|м)\s+(\d+(?:[.,]\d+)?)\s*(?:m|м)?(?!\d)",
-    re.IGNORECASE,
-)
-# Bare number — whole message is just a number
-_SINGLE_RE: re.Pattern[str] = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*$")
+# ── Explicit AI mode — entry ────────────────────────────────────────────────
 
 
-def _parse_dim(s: str) -> float | None:
-    try:
-        v = float(s.replace(",", "."))
-    except (ValueError, AttributeError):
-        return None
-    return v if 0 < v <= 50 else None
-
-
-def _extract_dims(text: str) -> tuple[float, float] | tuple[float, None] | None:
-    """
-    Returns:
-      (length, width) — dimension pair found
-      (length, None)  — single bare number in a very short message
-      None            — no dimension detected
-    """
-    m = _PAIR_RE.search(text)
-    if m:
-        a = m.group(1) or m.group(3)
-        b = m.group(2) or m.group(4)
-        length, width = _parse_dim(a or ""), _parse_dim(b or "")
-        if length and width:
-            return length, width
-
-    if len(text.strip()) <= 6:
-        m2 = _SINGLE_RE.match(text)
-        if m2:
-            v = _parse_dim(m2.group(1))
-            if v:
-                return v, None
-
-    return None
-
-
-# ── OpenAI client (lazy singleton) ───────────────────────────────────────────
-
-_openai_client: AsyncOpenAI | None = None
-
-
-def _get_client() -> AsyncOpenAI:
-    global _openai_client
-    if _openai_client is None:
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_AI)
+async def cmd_ai_start(message: Message, state: FSMContext, **data: object) -> None:
+    """Enter dedicated AI chat mode (private only; redirect groups to DM)."""
+    if message.from_user is None:
+        return
+    if message.chat.type != "private":
         settings = get_settings()
-        # AI_API_KEY overrides OPENAI_API_KEY when set
-        api_key = (
-            settings.ai.api_key.get_secret_value()
-            if settings.ai.api_key
-            else settings.openai.api_key.get_secret_value()
-        )
-        _openai_client = AsyncOpenAI(api_key=api_key)
-    return _openai_client
-
-
-# ── Context builder ───────────────────────────────────────────────────────────
-
-def _build_context_block(
-    profile: dict[str, Any],
-    summary: str | None,
-) -> str | None:
-    """
-    Build the per-request dynamic context injected as a second system message.
-    Returns None when there is nothing useful to inject.
-    """
-    parts: list[str] = []
-
-    profile_parts: list[str] = []
-    if design := profile.get("interested_design"):
-        profile_parts.append(f"qiziqayotgan dizayn: {design}")
-    if dims := profile.get("last_dimensions"):
-        profile_parts.append(f"so'nggi o'lcham: {dims}")
-    if location := profile.get("location"):
-        profile_parts.append(f"joylashuv: {location}")
-    if profile_parts:
-        parts.append("Profil: " + "; ".join(profile_parts))
-
-    if summary:
-        parts.append(f"Suhbat qisqartmasi: {summary}")
-
-    # Last intent informs CTA rotation
-    if last_intent := profile.get("last_intent"):
-        parts.append(f"Oxirgi CTA turi: {last_intent}")
-
-    if not parts:
-        return None
-
-    return "--- FOYDALANUVCHI KONTEKSTI ---\n" + "\n".join(parts)
-
-
-# ── DB helpers (all non-fatal) ────────────────────────────────────────────────
-
-async def _load_context(
-    user_id: int,
-) -> tuple[dict[str, Any], list[dict[str, str]], str | None]:
-    """
-    Load profile + conversation from DB.
-    Returns (profile, messages, summary) — empty defaults on any error.
-    """
-    try:
-        factory = get_session_factory()
-        async with factory() as session:
-            mem = await session.get(AiMemoryModel, user_id)
-            profile: dict[str, Any] = mem.profile if mem else {}
-
-            conv = await session.get(AiConversationModel, user_id)
-            messages: list[dict[str, str]] = conv.last_messages if conv else []
-            summary: str | None = conv.summary if conv else None
-
-        return profile, messages, summary
-    except Exception:
-        log.warning("ai_context_load_failed", user_id=user_id)
-        return {}, [], None
-
-
-async def _regenerate_summary(messages: list[dict[str, str]]) -> str:
-    """
-    Summarise the conversation in 2-4 lines.
-    Raises on failure — caller decides whether to log and continue.
-    """
-    client = _get_client()
-    settings = get_settings()
-    history_text = "\n".join(
-        f"{'Foydalanuvchi' if m['role'] == 'user' else 'Zulfiya'}: {m['text']}"
-        for m in messages
-    )
-    resp = await client.chat.completions.create(
-        model=settings.ai.model,
-        temperature=0.1,
-        max_tokens=150,
-        messages=[
-            {"role": "system", "content": _SUMMARY_SYSTEM},
-            {"role": "user",   "content": history_text},
-        ],
-    )
-    return (resp.choices[0].message.content or "").strip()
-
-
-async def _persist_exchange(
-    *,
-    user_id: int,
-    user_text: str,
-    assistant_text: str,
-    intent: str,
-    extracted: dict[str, Any],
-    current_profile: dict[str, Any],
-    current_messages: list[dict[str, str]],
-    current_summary: str | None,
-) -> None:
-    """
-    Upsert ai_user_memory + ai_conversations after a successful AI exchange.
-    Every _SUMMARY_EVERY_N_TURNS turns the conversation summary is regenerated.
-    All exceptions are swallowed — DB failure must never break the chat.
-    """
-    try:
-        new_messages = (
-            current_messages
-            + [
-                {"role": "user",      "text": user_text},
-                {"role": "assistant", "text": assistant_text},
+        bot_username = settings.bot.username or "bot"
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="💬 Madina bilan suhbat",
+                        url=f"https://t.me/{bot_username}?start=ai",
+                    )
+                ]
             ]
-        )[-_MAX_MESSAGES:]
+        )
+        await message.answer(
+            "🤖 AI yordamchisi faqat shaxsiy chatda ishlaydi. "
+            "Quyidagi tugma orqali bot bilan to'g'ridan-to'g'ri yozing:",
+            reply_markup=kb,
+        )
+        return
+    user_id = message.from_user.id
+    _mem = await _load_ai_memory(user_id)
 
-        turn_count = int(current_profile.get("turn_count", 0)) + 1
-
-        # Optionally regenerate summary
-        new_summary = current_summary
-        if turn_count % _SUMMARY_EVERY_N_TURNS == 0:
-            try:
-                new_summary = await _regenerate_summary(new_messages)
-                log.info("ai_summary_regenerated", user_id=user_id, turn=turn_count)
-            except Exception:
-                log.warning("ai_summary_regen_failed", user_id=user_id)
-
-        # Merge AI-extracted profile fields (skip null / falsy values)
-        new_profile: dict[str, Any] = {**current_profile}
-        for field in ("interested_design", "last_dimensions", "location"):
-            value = extracted.get(field)
-            if value:
-                new_profile[field] = value
-        new_profile["last_intent"] = intent
-        new_profile["turn_count"] = turn_count
-
-        factory = get_session_factory()
-        async with factory() as session:
-            # ── ai_conversations upsert ───────────────────────────────────
-            conv_values: dict[str, Any] = {
-                "user_id": user_id,
-                "last_messages": new_messages,
-            }
-            conv_set: dict[str, Any] = {
-                "last_messages": new_messages,
-                "updated_at": sa.func.now(),
-            }
-            if new_summary:
-                conv_values["summary"] = new_summary
-                if new_summary != current_summary:
-                    conv_set["summary"] = new_summary
-
-            await session.execute(
-                pg_insert(AiConversationModel)
-                .values(**conv_values)
-                .on_conflict_do_update(
-                    index_elements=["user_id"],
-                    set_=conv_set,
-                )
-            )
-
-            # ── ai_user_memory upsert ─────────────────────────────────────
-            await session.execute(
-                pg_insert(AiMemoryModel)
-                .values(user_id=user_id, profile=new_profile)
-                .on_conflict_do_update(
-                    index_elements=["user_id"],
-                    set_={
-                        "profile": new_profile,
-                        "updated_at": sa.func.now(),
-                    },
-                )
-            )
-            await session.commit()
-
-    except Exception:
-        log.warning("ai_persist_exchange_failed", user_id=user_id)
-
-
-async def clear_ai_conversation(user_id: int) -> None:
-    """
-    Reset the active conversation thread for a user (called on /start).
-
-    Clears last_messages and summary in ai_conversations so the next AI
-    interaction starts a fresh thread.  Does NOT touch ai_user_memory —
-    the user's profile, design interests, dimensions, and location are kept.
-    Non-fatal: any DB error is logged and swallowed.
-    """
-    try:
-        factory = get_session_factory()
-        async with factory() as session:
-            await session.execute(
-                pg_insert(AiConversationModel)
-                .values(user_id=user_id, last_messages=[], summary=None)
-                .on_conflict_do_update(
-                    index_elements=["user_id"],
-                    set_={
-                        "last_messages": [],
-                        "summary": None,
-                        "updated_at": sa.func.now(),
-                    },
-                )
-            )
-            await session.commit()
-        log.info("ai_conversation_cleared", user_id=user_id)
-    except Exception:
-        log.warning("ai_conversation_clear_failed", user_id=user_id)
-
-
-async def _store_user_message_only(
-    *,
-    user_id: int,
-    user_text: str,
-    current_messages: list[dict[str, str]],
-) -> None:
-    """
-    Persist the user's message even when the AI call fails so the next
-    successful reply has conversation context.
-    """
-    try:
-        new_messages = (
-            current_messages + [{"role": "user", "text": user_text}]
-        )[-_MAX_MESSAGES:]
-
-        factory = get_session_factory()
-        async with factory() as session:
-            await session.execute(
-                pg_insert(AiConversationModel)
-                .values(user_id=user_id, last_messages=new_messages)
-                .on_conflict_do_update(
-                    index_elements=["user_id"],
-                    set_={
-                        "last_messages": new_messages,
-                        "updated_at": sa.func.now(),
-                    },
-                )
-            )
-            await session.commit()
-    except Exception:
-        log.warning("ai_user_msg_store_failed", user_id=user_id)
-
-
-# ── OpenAI call ───────────────────────────────────────────────────────────────
-
-async def _call_ai(
-    user_text: str,
-    history: list[dict[str, str]],
-    context_block: str | None,
-) -> dict[str, Any]:
-    """
-    Build the messages array (system + context + history + current),
-    call OpenAI, and return the parsed JSON dict.
-    """
-    settings = get_settings()
-    client = _get_client()
-
-    messages: list[dict[str, str]] = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-    ]
-    # Dynamic context: profile data + summary + last intent (anti-repetition)
-    if context_block:
-        messages.append({"role": "system", "content": context_block})
-
-    # Inject stored conversation history as real chat turns
-    for msg in history[-_HISTORY_TO_SEND:]:
-        messages.append({"role": msg["role"], "content": msg["text"]})
-
-    # Current user message is NOT yet in history
-    messages.append({"role": "user", "content": user_text})
-
-    resp = await client.chat.completions.create(
-        model=settings.ai.model,
-        temperature=0.3,
-        max_tokens=512,
-        response_format={"type": "json_object"},
-        messages=messages,
-    )
-    raw = resp.choices[0].message.content or "{}"
-    return json.loads(raw)
-
-
-# ── Intent keyboards ──────────────────────────────────────────────────────────
-
-_PRICE_BTN = InlineKeyboardButton(
-    text="💰 Narxni hisoblash", callback_data="ai:start_price"
-)
-_CATALOG_BTN = InlineKeyboardButton(
-    text="📂 Katalogga qarang", callback_data="ai:show_catalog"
-)
-
-_INTENT_KEYBOARDS: dict[str, InlineKeyboardMarkup | None] = {
-    "price":       InlineKeyboardMarkup(inline_keyboard=[[_PRICE_BTN]]),
-    "measurement": InlineKeyboardMarkup(inline_keyboard=[[_PRICE_BTN]]),
-    "objection":   InlineKeyboardMarkup(inline_keyboard=[[_PRICE_BTN]]),
-    "catalog":     InlineKeyboardMarkup(inline_keyboard=[[_CATALOG_BTN]]),
-    "operator":    None,
-    "faq":         InlineKeyboardMarkup(inline_keyboard=[[_PRICE_BTN], [_CATALOG_BTN]]),
-    "other":       InlineKeyboardMarkup(inline_keyboard=[[_PRICE_BTN], [_CATALOG_BTN]]),
-}
-
-_FAILSAFE_TEXT = (
-    "⚠️ Kechirasiz, texnik nosozlik yuz berdi.\n\n"
-    "Operatorga murojaat qilishingiz yoki narxni hisoblashingiz mumkin:"
-)
-_FAILSAFE_KB = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [_PRICE_BTN],
-        [InlineKeyboardButton(
-            text="📞 Operator bilan bog'lanish",
-            url="https://t.me/ceiling_manager",
-        )],
-    ]
-)
-
-_CATALOG_INTRO = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
-
-
-# ── Explicit AI mode — entry / exit / question ────────────────────────────────
-
-@router.message(F.chat.type == "private", F.text == "🤖 AI yordam")
-async def cmd_ai_start(
-    message: Message, state: FSMContext, **data: object
-) -> None:
-    """Enter dedicated AI chat mode."""
     await state.clear()
-    await state.set_state(AiSupportStates.waiting_for_ai_question)
+
+    if _mem.get("name"):
+        await state.set_state(AiSupportStates.waiting_for_ai_question)
+        await state.update_data(user_name=_mem["name"])
+        await message.answer(_build_greeting_from_memory(_mem), reply_markup=_ai_keyboard())
+        return
+
+    await state.set_state(AiSupportStates.waiting_for_name)
     await message.answer(
-        "🤖 <b>AI yordam</b>\n\nSavolingizni yozing:",
+        "Salom! 👋\n\n"
+        "Men Madina — VashPotolok kompaniyasining AI mutaxassisiman. 🤖\n"
+        "Sizga natijnoy potolok bo'yicha maslahat beraman.\n\n"
+        "Masalan men sizga yordam bera olaman:\n\n"
+        "💰 Potolok narxini hisoblash\n"
+        "🎨 Dizayn variantlarini tanlash\n"
+        "📐 Xona uchun eng yaxshi potolok turini tavsiya qilish\n"
+        "🧾 Zakaz qoldirish yoki operator bilan bog'lash\n\n"
+        "Avval tanishib olaylik 🙂\n\n"
+        "Ismingiz nima?",
         reply_markup=_ai_keyboard(),
     )
+
+
+# ── Name collection ─────────────────────────────────────────────────────────
+
+_NAME_REJECT_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "zakaz",
+        "buyurtma",
+        "narx",
+        "qancha",
+        "nech",
+        "pul",
+        "katalog",
+        "rasm",
+        "dizayn",
+        "variant",
+        "operator",
+        "telefon",
+        "aloqa",
+        "tuman",
+        "m2",
+        "kv",
+        "kvadrat",
+    }
+)
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_name),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_name_input(message: Message, state: FSMContext, **data: object) -> None:
+    """Collect user's name; if input is not a name, handle intent instead."""
+    text = (message.text or "").strip()
+
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+
+    if is_valid_name(text):
+        name = normalize_name(text)
+        await state.set_state(AiSupportStates.waiting_for_ai_question)
+        await state.update_data(user_name=name)
+        if message.from_user:
+            asyncio.create_task(
+                _update_ai_memory_from_interaction(
+                    message.from_user.id, text=text, fsm_data={"user_name": name}
+                )
+            )
+        await message.answer(
+            f"Juda yaxshi, {name} 🙂\n\n"
+            "Sizga tezroq yordam berishim uchun kichkina savol:\n\n"
+            "Potolok qaysi xona uchun kerak?\n\n"
+            "🏠 Mehmonxona\n"
+            "🛏 Yotoqxona\n"
+            "🍳 Oshxona\n"
+            "🚿 Hammom\n\n"
+            "Va taxminan xona **necha m²**?",
+            reply_markup=_ai_keyboard(),
+        )
+        return
+
+    await state.set_state(AiSupportStates.waiting_for_ai_question)
+
+    if _is_measurement_request(text):
+        from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
+        await start_measurement_flow(message, state)
+        return
+
+    await handle_ai_question(message, state, **data)
+
+    if await state.get_state() == AiSupportStates.waiting_for_ai_question.state:
+        await message.answer(
+            "Aytgancha, ismingizni ham yozib yuboring 🙂",
+            reply_markup=_ai_keyboard(),
+        )
+
+
+# ── District collection ─────────────────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_district),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_district_input(message: Message, state: FSMContext, **data: object) -> None:
+    """Collect district, then ask for phone number."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+    await state.update_data(price_district=text)
+    await state.set_state(AiSupportStates.waiting_for_phone)
+    kb = _phone_request_keyboard() if message.chat.type == "private" else _ai_keyboard()
+    await message.answer(
+        "Zakazni rasmiylashtirish uchun telefon raqamingizni yuboring 🙂",
+        reply_markup=kb,
+    )
+
+
+# ── Phone collection (contact share) ────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_phone),
+    F.contact,
+)
+async def handle_phone_contact(message: Message, state: FSMContext, **data: object) -> None:
+    """Handle Telegram contact share."""
+    contact = message.contact
+    if contact is None or not contact.phone_number:
+        await message.answer(
+            "Telefon raqamni shunday yozing:\n90xxxxxxx yoki +99890xxxxxxx",
+            reply_markup=_phone_request_keyboard(),
+        )
+        return
+
+    raw = contact.phone_number
+    _digits = re.sub(r"\D", "", raw)
+    if len(_digits) == 12 and _digits.startswith("998"):
+        phone = f"+{_digits}"
+    elif len(_digits) == 9:
+        phone = f"+998{_digits}"
+    elif len(_digits) == 10 and _digits.startswith("0"):
+        phone = f"+998{_digits[1:]}"
+    else:
+        phone = None
+
+    if phone is None:
+        await message.answer(
+            "Telefon raqamni shunday yozing:\n90xxxxxxx yoki +99890xxxxxxx",
+            reply_markup=_phone_request_keyboard(),
+        )
+        return
+
+    await _complete_phone_step(message, state, phone)
+
+
+# ── Phone step completion (shared by contact and text input) ─────────────────
+
+
+async def _complete_phone_step(message: Message, state: FSMContext, phone: str) -> None:
+    """Shared success path for both contact-share and manual phone entry."""
+    fsm_data = await state.get_data()
+    _phone_user_id = message.from_user.id if message.from_user else 0
+    _lead_score = 0
+    if _phone_user_id:
+        _lead_score = await _add_lead_score(_phone_user_id, 40)
+    await state.update_data(price_phone=phone)
+    await state.set_state(AiSupportStates.waiting_for_ai_question)
+    await message.answer(
+        "Rahmat 🙂\n"
+        "Ma'lumotlaringiz qabul qilindi.\n"
+        "Mutaxassisimiz tez orada siz bilan bog'lanadi.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await message.answer("Boshqa savollaringiz bormi?", reply_markup=_ai_keyboard())
+    asyncio.create_task(_ai_stats_incr("phones_received"))
+    asyncio.create_task(_ai_stats_incr(f"lead_{classify_score(_lead_score)}"))
+    if _phone_user_id:
+        _fsm_snap = dict(fsm_data)
+
+        async def _mark_phone_captured(uid: int = _phone_user_id, snap: dict = _fsm_snap) -> None:
+            mem = await _load_ai_memory(uid)
+            mem["phone_captured"] = True
+            if not mem.get("district") and snap.get("price_district"):
+                mem["district"] = snap["price_district"]
+            if not mem.get("area_m2") and snap.get("price_area"):
+                mem["area_m2"] = snap["price_area"]
+            await _save_ai_memory(uid, mem)
+            try:
+                from infrastructure.cache.client import get_redis
+                from infrastructure.cache.keys import CacheKeys, CacheTTL
+
+                redis = get_redis()
+                fu_state = (await redis.get_json(CacheKeys.ai_followup_state(uid))) or {}
+                fu_state["lead_created"] = True
+                await redis.set_json(
+                    CacheKeys.ai_followup_state(uid),
+                    fu_state,
+                    ttl=CacheTTL.AI_FOLLOWUP_STATE,
+                )
+            except Exception:
+                pass
+
+        asyncio.create_task(_mark_phone_captured())
+
+    _ai_mem = await _load_ai_memory(_phone_user_id) if _phone_user_id else {}
+    _resolved_lead_id: int | None = None
+    if _phone_user_id:
+        try:
+            factory = get_session_factory()
+            async with factory() as _ld_sess:
+                from infrastructure.database.repositories.lead_repo import PostgresLeadRepository
+
+                _ld_list = await PostgresLeadRepository(_ld_sess).list_by_user(
+                    _phone_user_id, limit=1
+                )
+                if _ld_list:
+                    _resolved_lead_id = _ld_list[0].id
+        except Exception:
+            pass
+    asyncio.create_task(
+        _notify_ai_lead_collected(
+            phone=phone,
+            district=fsm_data.get("price_district") or "",
+            area=fsm_data.get("price_area"),
+            room=fsm_data.get("price_room"),
+            design=fsm_data.get("price_design"),
+            name=fsm_data.get("price_name") or fsm_data.get("user_name"),
+            from_user=message.from_user,
+            score=_lead_score,
+            last_message=fsm_data.get("last_user_message") or "",
+            lead_id=_resolved_lead_id,
+            last_objection=_ai_mem.get("last_objection"),
+            closing_attempted=bool(_ai_mem.get("last_closing_attempt")),
+            closing_action=_ai_mem.get("last_closing_attempt"),
+            intent=_ai_mem.get("last_intent"),
+            closing_confidence=None,
+            negotiation_tactic=_ai_mem.get("last_negotiation_tactic"),
+            negotiation_escalated=bool(_ai_mem.get("negotiation_escalated")),
+            last_activity_ts=_ai_mem.get("updated_at"),
+            memory_created_at=_ai_mem.get("created_at"),
+        )
+    )
+
+
+# ── Phone collection (text input) ───────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_phone),
+    F.text,
+    ~F.text.startswith("/"),
+)
+async def handle_phone_input(message: Message, state: FSMContext, **data: object) -> None:
+    """Collect phone (manual text entry), confirm, and fire admin notification."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+    if text == _CANCEL_PHONE:
+        await state.set_state(AiSupportStates.waiting_for_ai_question)
+        await message.answer(
+            "Mayli, keyinroq ham bo'ladi 🙂 Boshqa savollaringiz bormi?",
+            reply_markup=_ai_keyboard(),
+        )
+        return
+    _digits = re.sub(r"\D", "", text)
+    if len(_digits) == 12 and _digits.startswith("998"):
+        phone = f"+{_digits}"
+    elif len(_digits) == 9:
+        phone = f"+998{_digits}"
+    elif len(_digits) == 10 and _digits.startswith("0"):
+        phone = f"+998{_digits[1:]}"
+    else:
+        phone = None
+    if phone is None:
+        await message.answer(
+            "Telefon raqamni shunday yozing:\n90xxxxxxx yoki +99890xxxxxxx",
+            reply_markup=(
+                _phone_request_keyboard() if message.chat.type == "private" else _ai_keyboard()
+            ),
+        )
+        return
+    await _complete_phone_step(message, state, phone)
+
+
+# ── AI exit handlers ────────────────────────────────────────────────────────
 
 
 @router.message(
     StateFilter(AiSupportStates.waiting_for_ai_question),
     F.text.in_(_EXIT_TEXTS),
 )
-async def handle_ai_exit(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_exit(message: Message, state: FSMContext, **data: object) -> None:
     """Exit AI mode and return to main menu."""
     await state.clear()
     await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+
+
+@router.message(StateFilter(AiSupportStates.waiting_for_ai_question), Command("ai_off"))
+async def handle_ai_off(message: Message, state: FSMContext, **data: object) -> None:
+    """Exit AI mode via /ai_off command."""
+    await state.clear()
+    await message.answer("🤖 AI rejim o'chirildi.", reply_markup=main_menu_keyboard())
+
+
+# ── /ai_help & /ai_reset commands ──────────────────────────────────────────
+
+
+@router.message(Command("ai_help"))
+async def cmd_ai_help(message: Message, state: FSMContext, **data: object) -> None:
+    """Show AI capabilities and usage examples."""
+    await message.answer(_AI_HELP_TEXT, parse_mode="HTML", reply_markup=_ai_keyboard())
+
+
+@router.message(Command("ai_reset"))
+async def cmd_ai_reset(message: Message, state: FSMContext, **data: object) -> None:
+    """Clear AI conversation memory (keeps CRM data)."""
+    if message.from_user is None:
+        return
+    try:
+        await clear_ai_conversation(message.from_user.id)
+        await state.clear()
+        await state.set_state(AiSupportStates.waiting_for_ai_question)
+    except Exception:
+        pass
+    await message.answer(_AI_RESET_SUCCESS, reply_markup=_ai_keyboard())
+
+
+# ── Quick button handlers ──────────────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_HELP,
+)
+async def handle_ai_help_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """Quick button: show AI help."""
+    await cmd_ai_help(message, state, **data)
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_RESET,
+)
+async def handle_ai_reset_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """Quick button: reset AI memory."""
+    await cmd_ai_reset(message, state, **data)
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_PRICE,
+)
+async def handle_ai_price_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """Quick button: prompt for pricing input."""
+    await message.answer(
+        _AI_PRICE_PROMPT,
+        parse_mode="HTML",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+# ── Deterministic price calculator (wired in Step CO) ──────────────────
+
+
+async def _try_price_calculator(
+    message: Message,
+    state: FSMContext,
+    text: str,
+    user_id: int,
+) -> bool:
+    """Try deterministic price calculation. Returns True if handled."""
+    try:
+        from core.services.price_calculator_service import (
+            PriceCalculatorService,
+        )
+
+        svc = PriceCalculatorService()
+        resp = svc.extract_and_respond(text)
+        if resp.estimate is not None:
+            await message.answer(
+                resp.user_text,
+                parse_mode="HTML",
+                reply_markup=_ai_keyboard(),
+            )
+            if resp.memory_payload and user_id:
+                try:
+                    fsm_data = await state.get_data()
+                    fsm_data["last_price_estimate"] = resp.memory_payload
+                    await state.update_data(**fsm_data)
+                except Exception:
+                    pass
+            return True
+    except Exception:
+        pass
+    return False
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_CATALOG,
+)
+async def handle_ai_catalog_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """Quick button: show catalog."""
+    await message.answer(_CATALOG_INTRO, parse_mode="HTML", reply_markup=catalog_list_keyboard())
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_for_ai_question),
+    F.text == BTN_AI_OPERATOR,
+)
+async def handle_ai_operator_btn(message: Message, state: FSMContext, **data: object) -> None:
+    """Quick button: operator handoff with queue recording."""
+    user_id = message.from_user.id if message.from_user else 0
+    msg = await _try_operator_handoff(user_id, source="ai_button")
+    await message.answer(msg, reply_markup=_ai_keyboard())
+
+
+async def _try_operator_handoff(
+    user_id: int,
+    *,
+    source: str = "ai_button",
+    reason: str = "operator_requested",
+) -> str:
+    """Create handoff queue entry and return safe user message."""
+    try:
+        from core.services.crm_operator_handoff_service import (
+            build_user_message,
+        )
+        from shared.config import get_settings
+
+        settings = get_settings()
+        if not settings.business.crm_operator_handoff_queue_enabled:
+            return _AI_OPERATOR_PROMPT
+        has_phone = False
+        try:
+            from apps.bot.handlers.private.ai_memory import (
+                _load_ai_memory,
+            )
+
+            mem = await _load_ai_memory(user_id) or {}
+            has_phone = bool(mem.get("phone_captured"))
+        except Exception:
+            pass
+        return build_user_message(has_phone=has_phone)
+    except Exception:
+        return _AI_OPERATOR_PROMPT
+
+
+# ── Photo funnel handlers ───────────────────────────────────────────────────
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_photo),
+    F.photo,
+    F.chat.type == "private",
+)
+async def handle_photo_received(message: Message, state: FSMContext, **data: object) -> None:
+    """Photo received -> ask room type."""
+    await state.set_state(AiSupportStates.waiting_room)
+    await message.answer(
+        "📸 Rasm qabul qilindi ✅\n\n"
+        "Bu qanday xona? (masalan: mehmonxona/zal/terassa, oshxona, dush/hammom, spalniy)",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_photo),
+    F.text,
+    ~F.text.startswith("/"),
+    F.chat.type == "private",
+)
+async def handle_photo_state_text(message: Message, state: FSMContext, **data: object) -> None:
+    """Non-photo message while waiting for photo -> re-prompt."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+    await message.answer(
+        "📸 Iltimos, xonangizni rasmini yuboring.",
+        reply_markup=_ai_keyboard(),
+    )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_room),
+    F.text,
+    ~F.text.startswith("/"),
+    F.chat.type == "private",
+)
+async def handle_room_input(message: Message, state: FSMContext, **data: object) -> None:
+    """Detect room type -> send recommendations + catalog button + ask area."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+
+    room = _detect_room_type(text)
+    await state.update_data(price_room=room)
+
+    await message.answer(_room_design_text(room), reply_markup=_catalog_link_kb())
+    await message.answer(
+        "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
+        reply_markup=_ai_keyboard(),
+    )
+
+    await state.set_state(AiSupportStates.waiting_area_photo)
+
+    fsm_data = await state.get_data()
+    if not fsm_data.get("photo_followup_scheduled") and message.bot and message.from_user:
+        await state.update_data(photo_followup_scheduled=True)
+        asyncio.create_task(
+            _photo_followup_task(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                storage=state.storage,
+                state_key=state.key,
+            )
+        )
+
+
+@router.message(
+    StateFilter(AiSupportStates.waiting_area_photo),
+    F.text,
+    ~F.text.startswith("/"),
+    F.chat.type == "private",
+)
+async def handle_area_photo_input(message: Message, state: FSMContext, **data: object) -> None:
+    """Collect area in photo funnel -> ask district immediately."""
+    text = (message.text or "").strip()
+    if text in _EXIT_TEXTS:
+        await state.clear()
+        await message.answer("Asosiy menyuga qaytdingiz.", reply_markup=main_menu_keyboard())
+        return
+
+    area = _parse_area(text)
+    if area is not None:
+        await state.update_data(price_area=area)
+        await state.set_state(AiSupportStates.waiting_for_district)
+        await message.answer(
+            f"✅ {area:g} m² qabul qilindi.\n\n"
+            "Usta kelib bepul o'lchov qilib beradi! 🙂\n\n"
+            "Qaysi tumandasiz?",
+            reply_markup=_ai_keyboard(),
+        )
+    else:
+        await message.answer(
+            "Masalan: 20 m² yoki 5x3 formatda yozing.",
+            reply_markup=_ai_keyboard(),
+        )
+
+
+# ── Explicit AI question handler ────────────────────────────────────────────
 
 
 @router.message(
@@ -601,12 +759,140 @@ async def handle_ai_exit(
     ~F.text.startswith("/"),
     ~F.text.in_(_EXIT_TEXTS),
 )
-async def handle_ai_question(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_question(message: Message, state: FSMContext, **data: object) -> None:
     """Answer questions with the AI service while in explicit AI mode."""
-    text = message.text or ""
+    text = _normalize_room(message.text or "")
     user_id = message.from_user.id if message.from_user else 0
+
+    asyncio.create_task(_ai_stats_incr("messages_total"))
+    if user_id:
+        asyncio.create_task(_ai_stats_count_user(user_id))
+        asyncio.create_task(_process_lead_signal(user_id, text))
+        asyncio.create_task(_run_orchestrator(user_id, text))
+
+    if user_id and _is_greeting(text):
+        _mem = await _load_ai_memory(user_id)
+        if _mem.get("name"):
+            await message.answer(_build_greeting_from_memory(_mem), reply_markup=_ai_keyboard())
+            return
+
+    if message.bot and user_id and message.chat.type == "private":
+        _nonce = await _refresh_ai_followup_nonce(user_id)
+        _schedule_ai_followup(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            user_id=user_id,
+            nonce=_nonce,
+            storage=state.storage,
+            state_key=state.key,
+        )
+
+    await state.update_data(last_user_message=text[:200])
+
+    if _is_measurement_request(text):
+        asyncio.create_task(_ai_stats_incr("orders_started"))
+        if user_id:
+            asyncio.create_task(_add_lead_score(user_id, 25))
+        from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
+        await start_measurement_flow(message, state)
+        return
+
+    if _is_catalog_request(text):
+        if user_id:
+            asyncio.create_task(_add_lead_score(user_id, 5))
+        room, design = _detect_catalog_context(text)
+        await message.answer(
+            _build_smart_catalog_response(room, design),
+            reply_markup=_catalog_link_kb(),
+        )
+        await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
+        fsm_data = await state.get_data()
+        asyncio.create_task(
+            _notify_warm_interest(
+                topic=room or design or "katalog / dizayn",
+                from_user=message.from_user,
+                name=fsm_data.get("user_name"),
+            )
+        )
+        if message.bot and message.from_user:
+            _schedule_catalog_followup(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                user_id=message.from_user.id,
+                storage=state.storage,
+                state_key=state.key,
+            )
+        return
+
+    _norm = (message.text or "").lower().strip()
+    if _norm in _GENERIC_CONFIRMATIONS:
+        await message.answer(_NEUTRAL_REPLY)
+        return
+
+    _obj_det = detect_objection_full(text)
+    if _obj_det:
+        await _handle_objection(
+            _obj_det.objection_type, message, state, user_id, severity=_obj_det.severity
+        )
+        return
+
+    _combo = parse_combo(text)
+    _price_area = _combo["area"]
+    if _is_price_query(text) or _price_area is not None:
+        if _price_area is not None and _combo["design"]:
+            if user_id:
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
+            if await _try_price_calculator(message, state, text, user_id):
+                return
+        if _price_area is not None:
+            if user_id:
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
+            await _show_price_upsell(
+                message,
+                state,
+                _price_area,
+                district=_combo["district"],
+                design=_combo["design"],
+            )
+        elif _combo["district"]:
+            if user_id:
+                asyncio.create_task(_add_lead_score(user_id, 10))
+            await state.update_data(price_district=_combo["district"])
+            await message.answer(
+                f"📍 Tuman: {_combo['district']}\n\n"
+                "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
+                reply_markup=_ai_keyboard(),
+            )
+        else:
+            if user_id:
+                asyncio.create_task(_add_lead_score(user_id, 10))
+            if _combo["design"]:
+                await message.answer(
+                    "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
+                    reply_markup=_ai_keyboard(),
+                )
+            else:
+                await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # ── Auto-reply check (skip OpenAI if template matches) ─────────
+    if user_id and await _try_auto_reply(message, state, user_id, text):
+        return
+
+    if user_id and not await _check_ai_rate_limit(user_id):
+        await message.answer(
+            _AI_RATE_LIMIT_TEXT,
+            reply_markup=_ai_keyboard(),
+        )
+        return
+
+    if message.bot:
+        await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
     profile, history, summary = await _load_context(user_id)
     context_block = _build_context_block(profile, summary)
@@ -616,17 +902,34 @@ async def handle_ai_question(
         intent = str(result.get("intent", "other"))
         reply_text = str(result.get("reply", "")).strip()
         extracted: dict[str, Any] = result.get("extracted") or {}
+        lead_temperature, closing_confidence = _parse_ai_scoring(result)
         if not reply_text:
             raise ValueError("empty AI reply")
     except Exception:
         log.exception("ai_call_failed", user_id=user_id)
-        await _store_user_message_only(
-            user_id=user_id, user_text=text, current_messages=history
-        )
+        await _store_user_message_only(user_id=user_id, user_text=text, current_messages=history)
         await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
         return
 
+    # Reset consecutive auto-reply counter after OpenAI response
+    asyncio.create_task(_reset_auto_reply_counter(user_id))
+
     await message.answer(reply_text, reply_markup=_ai_keyboard())
+
+    try:
+        from apps.bot.handlers.private.sales_closer import attempt_close
+
+        _closer_score = await _get_lead_score(user_id)
+        await attempt_close(
+            message,
+            state,
+            user_id,
+            intent=intent,
+            score=_closer_score,
+            closing_confidence=closing_confidence,
+        )
+    except Exception:
+        pass
 
     await _persist_exchange(
         user_id=user_id,
@@ -637,59 +940,216 @@ async def handle_ai_question(
         current_profile=profile,
         current_messages=history,
         current_summary=summary,
+        lead_temperature=lead_temperature,
+        closing_confidence=closing_confidence,
     )
-    log.info("ai_reply_sent", user_id=user_id, intent=intent, mode="explicit")
+    if lead_temperature is not None or closing_confidence is not None:
+        asyncio.create_task(
+            _update_lead_ai_scoring(
+                user_id=user_id,
+                lead_temperature=lead_temperature,
+                closing_confidence=closing_confidence,
+            )
+        )
+    _fsm_for_mem = await state.get_data()
+    asyncio.create_task(
+        _update_ai_memory_from_interaction(
+            user_id,
+            text=text,
+            fsm_data=_fsm_for_mem,
+            first_name=message.from_user.first_name if message.from_user else None,
+        )
+    )
+    log.info(
+        "ai_reply_sent",
+        user_id=user_id,
+        intent=intent,
+        lead_temperature=lead_temperature,
+        closing_confidence=closing_confidence,
+        mode="explicit",
+    )
 
 
-# ── Passive handler (default_state catch-all) ─────────────────────────────────
+# ── Passive handler (default_state catch-all) ───────────────────────────────
+
 
 @router.message(
     F.chat.type == "private",
     F.text,
-    ~F.text.startswith("/"),   # never intercept commands (/start, /help, /cancel …)
+    ~F.text.startswith("/"),
     StateFilter(default_state),
 )
-async def handle_ai_message(
-    message: Message, state: FSMContext, **data: object
-) -> None:
+async def handle_ai_message(message: Message, state: FSMContext, **data: object) -> None:
     """Route free-text DMs: dimension shortcut or AI reply with persistent memory."""
     text = message.text or ""
     user_id = message.from_user.id if message.from_user else 0
 
-    # ── Dimension shortcut — skip AI, jump straight into pricing FSM ──────
-    dims = _extract_dims(text)
-    if dims is not None:
-        length, width = dims
-        if width is not None:
-            area = round(length * width, 2)
-            await state.set_state(PricingStates.choosing_design)
-            await state.update_data(length=length, width=width, area=area)
-            await message.answer(
-                f"✅ O'lcham aniqlandi: <b>{length} × {width} m</b>  "
-                f"|  Maydon: <b>{area:.2f} m²</b>\n\n"
-                "Qaysi dizaynni tanlaysiz?",
-                reply_markup=design_keyboard(),
+    asyncio.create_task(_ai_stats_incr("messages_total"))
+    if user_id:
+        asyncio.create_task(_ai_stats_count_user(user_id))
+        asyncio.create_task(_process_lead_signal(user_id, text))
+        asyncio.create_task(_run_orchestrator(user_id, text))
+
+    if user_id and _is_greeting(text):
+        _mem = await _load_ai_memory(user_id)
+        if _mem.get("name"):
+            await message.answer(_build_greeting_from_memory(_mem), reply_markup=_ai_keyboard())
+            return
+
+    detected_phone = extract_phone_from_text(text)
+    if detected_phone:
+        try:
+            factory = get_session_factory()
+            async with factory() as session:
+                mem = await session.get(AiMemoryModel, user_id)
+                _profile_for_phone: dict[str, Any] = mem.profile if mem else {}
+        except Exception:
+            _profile_for_phone = {}
+
+        if not _profile_for_phone.get("phone"):
+            asyncio.create_task(
+                _notify_phone_captured(
+                    phone=detected_phone,
+                    profile=_profile_for_phone,
+                    from_user=message.from_user,
+                    chat_type=message.chat.type,
+                    chat_id=message.chat.id,
+                )
             )
-        else:
-            await state.set_state(PricingStates.waiting_for_width)
-            await state.update_data(length=length)
-            await message.answer(
-                f"✅ Uzunlik: <b>{length} m</b>\n\n"
-                "Xona <b>kengligini</b> metrda kiriting:\n"
-                "<i>Masalan: <code>3.8</code></i>",
+
+    if message.bot and user_id and message.chat.type == "private":
+        _nonce = await _refresh_ai_followup_nonce(user_id)
+        _schedule_ai_followup(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            user_id=user_id,
+            nonce=_nonce,
+            storage=state.storage,
+            state_key=state.key,
+        )
+
+    if _is_measurement_request(text):
+        asyncio.create_task(_ai_stats_incr("orders_started"))
+        if user_id:
+            asyncio.create_task(_add_lead_score(user_id, 25))
+        from apps.bot.handlers.private.measurement_lead import start_measurement_flow
+
+        await start_measurement_flow(message, state)
+        return
+
+    if _is_catalog_request(text):
+        if user_id:
+            asyncio.create_task(_add_lead_score(user_id, 5))
+        room, design = _detect_catalog_context(text)
+        await message.answer(
+            _build_smart_catalog_response(room, design),
+            reply_markup=_catalog_link_kb(),
+        )
+        await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
+        asyncio.create_task(
+            _notify_warm_interest(
+                topic=room or design or "katalog / dizayn",
+                from_user=message.from_user,
+            )
+        )
+        if message.bot and message.from_user:
+            _schedule_catalog_followup(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                user_id=message.from_user.id,
+                storage=state.storage,
+                state_key=state.key,
             )
         return
 
-    # ── Load conversation context ─────────────────────────────────────────
+    # ── Stop-word detection: disable agent follow-ups ───────────────────
+    from core.services.followup_scheduler_service import FollowupSchedulerService as _FuSvc
+
+    if _FuSvc.is_stop_signal(text):
+        log.info("stop_signal_received", user_id=user_id, text=text[:30])
+        try:
+            from core.services.agent_memory_service import AgentMemoryService as _MemSvc
+
+            _stop_factory = get_session_factory()
+            async with _stop_factory() as _stop_sess:
+                await _MemSvc(_stop_sess).disable_followup(user_id, "user_opted_out")
+                await _FuSvc(_stop_sess).cancel_all_pending(user_id, "user_opted_out")
+                await _stop_sess.commit()
+        except Exception:
+            log.warning("stop_signal_handler_error", user_id=user_id)
+        await message.answer("Tushunarli 😊 Sizga boshqa xabar yubormaymiz.")
+        return
+
+    _norm = (message.text or "").lower().strip()
+    if _norm in _GENERIC_CONFIRMATIONS:
+        await message.answer(_NEUTRAL_REPLY)
+        return
+
+    _obj_det = detect_objection_full(text)
+    if _obj_det:
+        await _handle_objection(
+            _obj_det.objection_type, message, state, user_id, severity=_obj_det.severity
+        )
+        return
+
+    _combo = parse_combo(text)
+    area = _combo["area"]
+    if _is_price_query(text) or area is not None:
+        if area is not None:
+            if user_id:
+                asyncio.create_task(
+                    _add_lead_score(user_id, 15 + (10 if _combo["district"] else 0))
+                )
+            await _show_price_upsell(
+                message,
+                state,
+                area,
+                district=_combo["district"],
+                design=_combo["design"],
+            )
+        elif _combo["district"]:
+            if user_id:
+                asyncio.create_task(_add_lead_score(user_id, 10))
+            await state.update_data(price_district=_combo["district"])
+            await message.answer(
+                f"📍 Tuman: {_combo['district']}\n\n"
+                "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
+                reply_markup=_ai_keyboard(),
+            )
+        else:
+            if user_id:
+                asyncio.create_task(_add_lead_score(user_id, 10))
+            if _combo["design"]:
+                await message.answer(
+                    "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
+                    reply_markup=_ai_keyboard(),
+                )
+            else:
+                await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # ── Auto-reply check (skip OpenAI if template matches) ─────────
+    if user_id and await _try_auto_reply(message, state, user_id, text):
+        return
+
+    if user_id and not await _check_ai_rate_limit(user_id):
+        await message.answer(
+            _AI_RATE_LIMIT_TEXT,
+        )
+        return
+
+    if message.bot:
+        await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+
     profile, history, summary = await _load_context(user_id)
     context_block = _build_context_block(profile, summary)
 
-    # ── OpenAI reply ──────────────────────────────────────────────────────
     try:
         result = await _call_ai(text, history, context_block)
         intent = str(result.get("intent", "other"))
         reply_text = str(result.get("reply", "")).strip()
         extracted: dict[str, Any] = result.get("extracted") or {}
+        lead_temperature, closing_confidence = _parse_ai_scoring(result)
         if not reply_text:
             raise ValueError("empty AI reply")
     except Exception:
@@ -702,9 +1162,26 @@ async def handle_ai_message(
         await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
         return
 
-    await message.answer(reply_text, reply_markup=_INTENT_KEYBOARDS.get(intent))
+    # Reset consecutive auto-reply counter after OpenAI response
+    asyncio.create_task(_reset_auto_reply_counter(user_id))
 
-    # ── Persist exchange (non-fatal) ──────────────────────────────────────
+    await message.answer(reply_text)
+
+    try:
+        from apps.bot.handlers.private.sales_closer import attempt_close
+
+        _closer_score = await _get_lead_score(user_id)
+        await attempt_close(
+            message,
+            state,
+            user_id,
+            intent=intent,
+            score=_closer_score,
+            closing_confidence=closing_confidence,
+        )
+    except Exception:
+        pass
+
     await _persist_exchange(
         user_id=user_id,
         user_text=text,
@@ -714,16 +1191,40 @@ async def handle_ai_message(
         current_profile=profile,
         current_messages=history,
         current_summary=summary,
+        lead_temperature=lead_temperature,
+        closing_confidence=closing_confidence,
     )
-    log.info("ai_reply_sent", user_id=user_id, intent=intent)
+    if lead_temperature is not None or closing_confidence is not None:
+        asyncio.create_task(
+            _update_lead_ai_scoring(
+                user_id=user_id,
+                lead_temperature=lead_temperature,
+                closing_confidence=closing_confidence,
+            )
+        )
+    _fsm_for_mem = await state.get_data()
+    asyncio.create_task(
+        _update_ai_memory_from_interaction(
+            user_id,
+            text=text,
+            fsm_data=_fsm_for_mem,
+            first_name=message.from_user.first_name if message.from_user else None,
+        )
+    )
+    log.info(
+        "ai_reply_sent",
+        user_id=user_id,
+        intent=intent,
+        lead_temperature=lead_temperature,
+        closing_confidence=closing_confidence,
+    )
 
 
-# ── Inline-button callbacks ───────────────────────────────────────────────────
+# ── Inline-button callbacks ─────────────────────────────────────────────────
+
 
 @router.callback_query(F.data == "ai:start_price")
-async def cb_start_price(
-    callback: CallbackQuery, state: FSMContext, **data: object
-) -> None:
+async def cb_start_price(callback: CallbackQuery, state: FSMContext, **data: object) -> None:
     """Kick off the pricing FSM from an AI-generated inline button."""
     await callback.answer()
     if callback.message:

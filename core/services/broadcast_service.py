@@ -1,6 +1,7 @@
 """
 BroadcastService — audience segmentation and broadcast orchestration.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

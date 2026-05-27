@@ -10,9 +10,8 @@ Displays company info with a four-button CTA inline keyboard:
   - 📞 Operator         → contact_operator (handled by promotions.py)
   - ✅ Zakaz berish     → order_start    (handled by promotions.py)
 """
-from __future__ import annotations
 
-import re
+from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.types import (
@@ -23,15 +22,11 @@ from aiogram.types import (
 )
 
 from apps.bot.keyboards.catalog import catalog_list_keyboard
+from apps.bot.keyboards.main_menu import BTN_ABOUT
 from shared.logging import get_logger
 
 log = get_logger(__name__)
 router = Router(name="private:about")
-
-# VS-16 tolerant match for the "⭐ Biz haqimizda" main-menu button.
-_ABOUT_BTN_RE: re.Pattern[str] = re.compile(
-    r"⭐\uFE0F?\s*Biz\s*haqimizda", re.IGNORECASE
-)
 
 _ABOUT_TEXT: str = (
     "⭐ BIZ HAQIMIZDA\n\n"
@@ -56,17 +51,18 @@ _CATALOG_INTRO: str = "📂 <b>Katalog</b>\n\nBo'limni tanlang:"
 def _about_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📂 Katalog",           callback_data="open_catalog")],
-            [InlineKeyboardButton(text="🧮 Narx kalkulyator",  callback_data="open_pricing")],
-            [InlineKeyboardButton(text="📞 Operator",          callback_data="contact_operator")],
-            [InlineKeyboardButton(text="✅ Zakaz berish",      callback_data="order_start")],
+            [InlineKeyboardButton(text="📂 Katalog", callback_data="open_catalog")],
+            [InlineKeyboardButton(text="🧮 Narx kalkulyator", callback_data="open_pricing")],
+            [InlineKeyboardButton(text="📞 Operator", callback_data="contact_operator")],
+            [InlineKeyboardButton(text="✅ Zakaz berish", callback_data="order_start")],
         ]
     )
 
 
 # ─── Entry handler ────────────────────────────────────────────────────────────
 
-@router.message(F.chat.type == "private", F.text.regexp(_ABOUT_BTN_RE))
+
+@router.message(F.chat.type.in_({"private", "group", "supergroup"}), F.text == BTN_ABOUT)
 async def cmd_about(message: Message, **data: object) -> None:
     """Display the About Us page with CTA inline keyboard."""
     log.debug("about_opened", user_id=message.from_user and message.from_user.id)
@@ -77,7 +73,8 @@ async def cmd_about(message: Message, **data: object) -> None:
 # open_pricing / order_start / contact_operator are registered in promotions.py
 # and will be matched there first (promotions_router is included before about_router).
 
-@router.callback_query(F.message.chat.type == "private", F.data == "open_catalog")
+
+@router.callback_query(F.data == "open_catalog")
 async def cb_open_catalog(callback: CallbackQuery, **data: object) -> None:
     """Open the ceiling catalog inline keyboard."""
     await callback.answer()

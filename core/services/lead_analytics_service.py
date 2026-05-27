@@ -7,6 +7,7 @@ Wired by infrastructure/di.py::get_lead_analytics_service(session).
 Does not import infrastructure directly — uses duck-typed Any repos so the
 core layer stays free of infrastructure dependencies.
 """
+
 from __future__ import annotations
 
 from typing import Any

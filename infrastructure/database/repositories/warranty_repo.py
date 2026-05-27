@@ -1,4 +1,5 @@
 """PostgreSQL implementation of AbstractWarrantyRepository."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -70,7 +71,5 @@ class PostgresWarrantyRepository(AbstractWarrantyRepository):
         return self._to_domain(model)
 
     async def delete(self, id: int) -> bool:
-        result = await self._session.execute(
-            sa.delete(WarrantyModel).where(WarrantyModel.id == id)
-        )
+        result = await self._session.execute(sa.delete(WarrantyModel).where(WarrantyModel.id == id))
         return result.rowcount > 0

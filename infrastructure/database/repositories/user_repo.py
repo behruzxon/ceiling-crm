@@ -1,7 +1,8 @@
 """PostgreSQL implementation of AbstractUserRepository."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -49,29 +50,44 @@ class PostgresUserRepository(AbstractUserRepository):
         return self._to_domain(model) if model else None
 
     async def upsert(self, user: User) -> User:
-        """INSERT ... ON CONFLICT DO UPDATE for Telegram user."""
-        stmt = insert(UserModel).values(
-            id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone,
-            language_code=user.language_code,
-            role=user.role.value,
-            source=user.source,
-            is_blocked=user.is_blocked,
-            last_seen_at=datetime.now(timezone.utc),
-        ).on_conflict_do_update(
-            index_elements=["id"],
-            set_={
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "language_code": user.language_code,
-                "last_seen_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            },
-        ).returning(UserModel)
+        """INSERT ... ON CONFLICT DO UPDATE for Telegram user.
+
+        Raises ValueError for non-positive IDs (groups / channels / service
+        entities) so the bug is caught loudly at the repository boundary even
+        if a future caller bypasses the AuthMiddleware guard.
+        """
+        if user.id <= 0:
+            raise ValueError(
+                f"upsert() called with non-positive user id={user.id}. "
+                "Only private Telegram users (id > 0) may be stored in `users`."
+            )
+        stmt = (
+            insert(UserModel)
+            .values(
+                id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                phone=user.phone,
+                language_code=user.language_code,
+                role=user.role.value,
+                source=user.source,
+                is_blocked=user.is_blocked,
+                last_seen_at=datetime.now(UTC),
+            )
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "language_code": user.language_code,
+                    "last_seen_at": datetime.now(UTC),
+                    "updated_at": datetime.now(UTC),
+                },
+            )
+            .returning(UserModel)
+        )
 
         result = await self._session.execute(stmt)
         model = result.scalar_one()
@@ -89,9 +105,7 @@ class PostgresUserRepository(AbstractUserRepository):
 
     async def count_active(self) -> int:
         """Count all non-blocked users."""
-        stmt = select(func.count()).select_from(UserModel).where(
-            UserModel.is_blocked.is_(False)
-        )
+        stmt = select(func.count()).select_from(UserModel).where(UserModel.is_blocked.is_(False))
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
@@ -127,7 +141,7 @@ class PostgresUserRepository(AbstractUserRepository):
                 role=entity.role.value,
                 source=entity.source,
                 is_blocked=entity.is_blocked,
-                updated_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(UTC),
             )
             .returning(UserModel)
         )
@@ -140,7 +154,7 @@ class PostgresUserRepository(AbstractUserRepository):
         stmt = (
             update(UserModel)
             .where(UserModel.id == id)
-            .values(is_blocked=True, updated_at=datetime.now(timezone.utc))
+            .values(is_blocked=True, updated_at=datetime.now(UTC))
         )
         result = await self._session.execute(stmt)
         return result.rowcount > 0
