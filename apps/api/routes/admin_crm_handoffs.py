@@ -55,9 +55,7 @@ async def handoff_summary(
             sa.func.count()
             .filter(CRMOperatorHandoffModel.priority == "urgent")
             .label("total_urgent"),
-            sa.func.count()
-            .filter(CRMOperatorHandoffModel.priority == "high")
-            .label("total_high"),
+            sa.func.count().filter(CRMOperatorHandoffModel.priority == "high").label("total_high"),
         ).select_from(CRMOperatorHandoffModel)
     )
     row = result.one()
@@ -78,9 +76,7 @@ async def handoff_queue(
     offset: int = Query(default=0, ge=0),
     db=Depends(get_db),
 ) -> dict:
-    q = sa.select(CRMOperatorHandoffModel).order_by(
-        CRMOperatorHandoffModel.created_at.desc()
-    )
+    q = sa.select(CRMOperatorHandoffModel).order_by(CRMOperatorHandoffModel.created_at.desc())
     if status:
         q = q.where(CRMOperatorHandoffModel.status == status)
     if priority:

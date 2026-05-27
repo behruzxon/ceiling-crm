@@ -1,4 +1,5 @@
 """Tests for Step CR — Stage 1 Final Apply Pack."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -131,16 +132,19 @@ class TestNoSecrets:
 class TestSmoke:
     def test_bot(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_price(self):
         from core.services.price_calculator_service import (
             PriceCalculatorService,
         )
+
         assert PriceCalculatorService is not None
 
     def test_handoff(self):
         from core.services.crm_operator_handoff_service import (
             build_user_message,
         )
+
         assert callable(build_user_message)

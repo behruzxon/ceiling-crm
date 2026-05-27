@@ -1,4 +1,5 @@
 """Tests for Step CP — Agent Quality Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -85,6 +86,7 @@ class TestServiceImport:
         from core.services.agent_quality_simulator_service import (
             AgentQualitySimulatorService,
         )
+
         assert AgentQualitySimulatorService is not None
 
     def test_schemas(self):
@@ -93,6 +95,7 @@ class TestServiceImport:
             AgentScenario,
             AgentScenarioResult,
         )
+
         assert AgentScenario is not None
         assert AgentScenarioResult is not None
         assert AgentQualityReport is not None

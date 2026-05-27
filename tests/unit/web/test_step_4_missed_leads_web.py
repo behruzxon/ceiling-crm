@@ -1,4 +1,5 @@
 """Tests for Step 4 — Missed Leads Web Page."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -140,8 +141,10 @@ class TestDocExists:
 class TestSmoke:
     def test_api(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_web(self):
         from apps.web.main import app
+
         assert app is not None

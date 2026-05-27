@@ -1,4 +1,5 @@
 """Tests for Step CQ — Objection Phrase Fix."""
+
 from __future__ import annotations
 
 from apps.bot.handlers.private.ai_scoring import (
@@ -78,8 +79,10 @@ class TestSeverity:
 class TestSmoke:
     def test_bot_imports(self):
         from apps.bot.handlers.private import ai_support
+
         assert ai_support is not None
 
     def test_dispatcher(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None

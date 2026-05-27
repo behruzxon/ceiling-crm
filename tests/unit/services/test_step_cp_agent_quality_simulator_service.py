@@ -1,4 +1,5 @@
 """Tests for Step CP — Agent Quality Simulator Service."""
+
 from __future__ import annotations
 
 from core.schemas.agent_quality_simulator import (

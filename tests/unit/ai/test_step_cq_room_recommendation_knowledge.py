@@ -1,4 +1,5 @@
 """Tests for Step CQ — Room Recommendation Knowledge."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -76,7 +77,7 @@ class TestSafety:
     def test_no_fake_media(self):
         c = _uz()
         section_start = c.find("Xona bo'yicha")
-        section = c[section_start:section_start + 800] if section_start >= 0 else ""
+        section = c[section_start : section_start + 800] if section_start >= 0 else ""
         assert "rasm yuboram" not in section.lower()
 
     def test_no_guarantee_availability(self):
@@ -86,7 +87,7 @@ class TestSafety:
     def test_no_final_price(self):
         c = _uz()
         section_start = c.find("Xona bo'yicha")
-        section = c[section_start:section_start + 800] if section_start >= 0 else ""
+        section = c[section_start : section_start + 800] if section_start >= 0 else ""
         assert "aniq narx" not in section.lower()
 
     def test_no_token(self):

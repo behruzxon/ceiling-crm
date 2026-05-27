@@ -1,4 +1,5 @@
 """Tests for Step 2 — Handoff Queue Web Page."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -137,10 +138,12 @@ class TestSafety:
 class TestAPISmoke:
     def test_api_imports(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_web_imports(self):
         from apps.web.main import app
+
         assert app is not None
 
 

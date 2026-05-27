@@ -1,4 +1,5 @@
 """Tests for Ultra Deep Project Audit Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,7 +36,9 @@ class TestAuditDoc:
         assert "AI" in _r("109_ULTRA_DEEP_PROJECT_AUDIT.md")
 
     def test_web_audit(self):
-        assert "Web" in _r("109_ULTRA_DEEP_PROJECT_AUDIT.md") or "CRM" in _r("109_ULTRA_DEEP_PROJECT_AUDIT.md")
+        assert "Web" in _r("109_ULTRA_DEEP_PROJECT_AUDIT.md") or "CRM" in _r(
+            "109_ULTRA_DEEP_PROJECT_AUDIT.md"
+        )
 
     def test_db_audit(self):
         c = _r("109_ULTRA_DEEP_PROJECT_AUDIT.md")
@@ -124,10 +127,7 @@ class TestGoNoGo:
 class TestNoSecrets:
     def test_not_deployed(self):
         for n in ["109", "110", "111", "112"]:
-            fn = [
-                f for f in Path(_D).iterdir()
-                if f.name.startswith(n)
-            ]
+            fn = [f for f in Path(_D).iterdir() if f.name.startswith(n)]
             if fn:
                 c = fn[0].read_text(encoding="utf-8")
                 assert "deployed to production" not in c.lower()
@@ -165,24 +165,30 @@ class TestNoSecrets:
 class TestSmoke:
     def test_bot(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_price(self):
         from core.services.price_calculator_service import PriceCalculatorService
+
         assert PriceCalculatorService is not None
 
     def test_handoff(self):
         from core.services.crm_operator_handoff_service import build_user_message
+
         assert callable(build_user_message)
 
     def test_simulator(self):
         from core.services.agent_quality_simulator_service import AgentQualitySimulatorService
+
         assert AgentQualitySimulatorService is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None
 
     def test_api(self):
         from apps.api.main import app
+
         assert app is not None

@@ -1,4 +1,5 @@
 """Tests for Step 4 — Missed Leads Service."""
+
 from __future__ import annotations
 
 from core.schemas.crm_missed_leads import (

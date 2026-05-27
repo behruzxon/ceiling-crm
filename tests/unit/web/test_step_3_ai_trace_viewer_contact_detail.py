@@ -1,4 +1,5 @@
 """Tests for Step 3 — AI Trace Viewer in Contact Detail."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -113,8 +114,10 @@ class TestDocExists:
 class TestSmoke:
     def test_web_imports(self):
         from apps.web.main import app
+
         assert app is not None
 
     def test_api_imports(self):
         from apps.api.main import app
+
         assert app is not None

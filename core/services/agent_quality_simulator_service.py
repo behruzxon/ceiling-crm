@@ -1,4 +1,5 @@
 """Deterministic agent quality simulator — no external API calls."""
+
 from __future__ import annotations
 
 import re
@@ -10,21 +11,23 @@ from core.schemas.agent_quality_simulator import (
 )
 
 _TOKEN_RE = re.compile(r"sk-[a-zA-Z0-9]{8,}", re.I)
-_FORBIDDEN_CLAIMS = frozenset({
-    "eng arzon",
-    "aniq narx",
-    "final narx",
-    "bugun qilamiz",
-    "bugun kelamiz",
-    "bugun keladi",
-    "hozir qo'ng'iroq",
-    "hozir darhol",
-    "100% kafolat",
-    "100% chegirma",
-    "yozib qo'ydim",
-    "usta boradi",
-    "maxsus chegirma",
-})
+_FORBIDDEN_CLAIMS = frozenset(
+    {
+        "eng arzon",
+        "aniq narx",
+        "final narx",
+        "bugun qilamiz",
+        "bugun kelamiz",
+        "bugun keladi",
+        "hozir qo'ng'iroq",
+        "hozir darhol",
+        "100% kafolat",
+        "100% chegirma",
+        "yozib qo'ydim",
+        "usta boradi",
+        "maxsus chegirma",
+    }
+)
 
 
 class AgentQualitySimulatorService:
@@ -109,12 +112,14 @@ class AgentQualitySimulatorService:
         return violations
 
     def run_suite(
-        self, scenarios: list[AgentScenario],
+        self,
+        scenarios: list[AgentScenario],
     ) -> list[AgentScenarioResult]:
         return [self.run_scenario(s) for s in scenarios]
 
     def build_quality_report(
-        self, results: list[AgentScenarioResult],
+        self,
+        results: list[AgentScenarioResult],
     ) -> AgentQualityReport:
         if not results:
             return AgentQualityReport()
@@ -135,9 +140,7 @@ class AgentQualitySimulatorService:
                     f"{r.scenario.text} ({r.scenario.category}): {r.score}/5",
                 )
 
-        cat_avg = {
-            k: sum(v) / len(v) for k, v in cat_scores.items()
-        }
+        cat_avg = {k: sum(v) / len(v) for k, v in cat_scores.items()}
 
         return AgentQualityReport(
             total_scenarios=total,

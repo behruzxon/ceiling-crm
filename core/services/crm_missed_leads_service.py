@@ -1,8 +1,8 @@
 """Missed leads detection — pure functions, no DB I/O."""
+
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from core.schemas.crm_missed_leads import (
     MissedLeadItem,
@@ -95,27 +95,35 @@ def build_recommendations(
 ) -> list[MissedLeadRecommendation]:
     recs = []
     if summary.critical > 0:
-        recs.append(MissedLeadRecommendation(
-            text="Avval critical hot leadlarga javob bering",
-            priority="critical",
-            count=summary.critical,
-        ))
+        recs.append(
+            MissedLeadRecommendation(
+                text="Avval critical hot leadlarga javob bering",
+                priority="critical",
+                count=summary.critical,
+            )
+        )
     if summary.operator_waiting > 0:
-        recs.append(MissedLeadRecommendation(
-            text="Telefon qoldirganlarni operatorga belgilang",
-            priority="high",
-            count=summary.operator_waiting,
-        ))
+        recs.append(
+            MissedLeadRecommendation(
+                text="Telefon qoldirganlarni operatorga belgilang",
+                priority="high",
+                count=summary.operator_waiting,
+            )
+        )
     if summary.phone_shared_no_followup > 0:
-        recs.append(MissedLeadRecommendation(
-            text="Telefon ulashganlarni kuzatib boring",
-            priority="high",
-            count=summary.phone_shared_no_followup,
-        ))
+        recs.append(
+            MissedLeadRecommendation(
+                text="Telefon ulashganlarni kuzatib boring",
+                priority="high",
+                count=summary.phone_shared_no_followup,
+            )
+        )
     if summary.high > 0:
-        recs.append(MissedLeadRecommendation(
-            text="Narx so'raganlarga taxminiy hisob yuboring",
-            priority="medium",
-            count=summary.high,
-        ))
+        recs.append(
+            MissedLeadRecommendation(
+                text="Narx so'raganlarga taxminiy hisob yuboring",
+                priority="medium",
+                count=summary.high,
+            )
+        )
     return recs

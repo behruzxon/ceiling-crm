@@ -1,4 +1,5 @@
 """Analytics chart builder — pure functions, no DB I/O."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -115,10 +116,7 @@ def build_top_chart(
     title: str = "Top",
 ) -> ChartSeries:
     limited = sorted(items, key=lambda x: x[1], reverse=True)[:MAX_TOP_ITEMS]
-    points = [
-        ChartPoint(label=name, value=count, color="#4f46e5")
-        for name, count in limited
-    ]
+    points = [ChartPoint(label=name, value=count, color="#4f46e5") for name, count in limited]
     return ChartSeries(
         title=title,
         points=points,
@@ -140,10 +138,12 @@ def build_all_charts(
         missed_severity=build_missed_severity_chart(missed_severity),
         handoff_status=build_handoff_chart(handoff_status),
         top_districts=build_top_chart(
-            districts or [], "Top Districts",
+            districts or [],
+            "Top Districts",
         ),
         top_ceiling_types=build_top_chart(
-            ceiling_types or [], "Top Ceiling Types",
+            ceiling_types or [],
+            "Top Ceiling Types",
         ),
     )
 
@@ -152,8 +152,5 @@ def chart_series_to_dict(series: ChartSeries) -> dict[str, Any]:
     return {
         "title": series.title,
         "total": series.total,
-        "points": [
-            {"label": p.label, "value": p.value, "color": p.color}
-            for p in series.points
-        ],
+        "points": [{"label": p.label, "value": p.value, "color": p.color} for p in series.points],
     }

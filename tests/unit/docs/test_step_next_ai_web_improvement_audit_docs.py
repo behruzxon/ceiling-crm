@@ -1,4 +1,5 @@
 """Tests for Deep Improvement Audit Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path

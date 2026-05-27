@@ -1,4 +1,5 @@
 """Missed leads API endpoints — read-only, no sends."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
@@ -49,4 +50,8 @@ async def missed_leads_recommendations() -> dict:
 
     summary = MissedLeadSummary()
     recs = build_recommendations(summary)
-    return {"recommendations": [{"text": r.text, "priority": r.priority, "count": r.count} for r in recs]}
+    return {
+        "recommendations": [
+            {"text": r.text, "priority": r.priority, "count": r.count} for r in recs
+        ]
+    }

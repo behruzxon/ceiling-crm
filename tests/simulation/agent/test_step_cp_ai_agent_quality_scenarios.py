@@ -1,4 +1,5 @@
 """Tests for Step CP — AI Agent Quality Scenarios (100 scenarios)."""
+
 from __future__ import annotations
 
 from core.schemas.agent_quality_simulator import AgentScenario

@@ -1,4 +1,5 @@
 """Tests for Step 2 — Handoff Queue API."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,10 +14,12 @@ def _src() -> str:
 class TestModuleImports:
     def test_importable(self):
         from apps.api.routes import admin_crm_handoffs
+
         assert admin_crm_handoffs is not None
 
     def test_router(self):
         from apps.api.routes.admin_crm_handoffs import router
+
         assert router is not None
 
     def test_registered_in_main(self):
@@ -107,10 +110,12 @@ class TestSafety:
 class TestSmoke:
     def test_api_app(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_model_import(self):
         from infrastructure.database.models.crm_operator_handoff import (
             CRMOperatorHandoffModel,
         )
+
         assert CRMOperatorHandoffModel is not None

@@ -100,7 +100,9 @@ def create_app() -> FastAPI:
     from apps.api.routes.admin_crm_missed_leads import router as admin_crm_missed_leads_router
 
     app.include_router(admin_crm_missed_leads_router)
-    from apps.api.routes.admin_crm_analytics_charts import router as admin_crm_analytics_charts_router
+    from apps.api.routes.admin_crm_analytics_charts import (
+        router as admin_crm_analytics_charts_router,
+    )
 
     app.include_router(admin_crm_analytics_charts_router)
 

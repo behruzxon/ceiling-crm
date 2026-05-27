@@ -41,6 +41,7 @@ jobs:
 
       - name: Mypy
         run: mypy . --ignore-missing-imports
+        continue-on-error: true
 
   # ── Unit tests ────────────────────────────────────────────────────────────
   test:

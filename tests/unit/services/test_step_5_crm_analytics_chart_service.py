@@ -1,4 +1,5 @@
 """Tests for Step 5 — Analytics Chart Service."""
+
 from __future__ import annotations
 
 from core.schemas.crm_analytics_charts import (
@@ -154,6 +155,7 @@ class TestChartSeriesToDict:
     def test_no_token(self):
         d = chart_series_to_dict(build_temperature_chart({"hot": 1}))
         import json
+
         txt = json.dumps(d)
         assert "sk-" not in txt
         assert "phone" not in txt.lower()

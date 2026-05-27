@@ -1,4 +1,5 @@
 """Tests for Step CT — Pre-Stage 1 P0 Docs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -125,12 +126,15 @@ class TestNoSecrets:
 class TestSmoke:
     def test_bot(self):
         from apps.bot.main import build_dispatcher
+
         assert build_dispatcher is not None
 
     def test_api(self):
         from apps.api.main import app
+
         assert app is not None
 
     def test_scheduler(self):
         import apps.scheduler.main
+
         assert apps.scheduler.main is not None
