@@ -105,6 +105,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(admin_crm_analytics_charts_router)
+    from apps.api.routes.admin_crm_conversation_replay import (
+        router as admin_crm_conversation_replay_router,
+    )
+
+    app.include_router(admin_crm_conversation_replay_router)
 
     return app
 

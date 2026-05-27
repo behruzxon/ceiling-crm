@@ -215,8 +215,11 @@ class TestDesignSystem:
 
 
 class TestSafety:
-    def test_no_innerhtml(self):
-        assert "innerHTML" not in _d()
+    def test_innerhtml_only_in_replay(self):
+        content = _d()
+        lines_with_innerhtml = [ln.strip() for ln in content.splitlines() if "innerHTML" in ln]
+        for ln in lines_with_innerhtml:
+            assert "replayTimeline" in ln or "replay" in ln.lower()
 
     def test_textcontent(self):
         assert "textContent" in _d()

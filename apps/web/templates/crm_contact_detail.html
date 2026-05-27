@@ -47,6 +47,30 @@
             </div>
         </div>
 
+        <!-- Conversation Replay -->
+        <div id="conversationReplay" class="vp-card" style="margin-bottom:16px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Conversation Replay</div>
+                <span id="replayEventCount" style="font-size:11px;color:#94a3b8;">yuklanmoqda...</span>
+            </div>
+            <div id="replaySummary" style="display:none;margin-bottom:12px;">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                    <span class="vp-badge vp-badge-neutral" id="replayTotalBadge"></span>
+                    <span class="vp-badge vp-badge-info" id="replayUserBadge"></span>
+                    <span class="vp-badge vp-badge-success" id="replayBotBadge"></span>
+                    <span class="vp-badge vp-badge-warning" id="replayPriceBadge" style="display:none;"></span>
+                    <span class="vp-badge vp-badge-hot" id="replayObjectionBadge" style="display:none;"></span>
+                    <span class="vp-badge vp-badge-info" id="replayHandoffBadge" style="display:none;"></span>
+                    <span class="vp-badge vp-badge-danger" id="replayStopBadge" style="display:none;"></span>
+                </div>
+                <div id="replayNextAction" style="font-size:12px;font-weight:500;color:#334155;padding:6px 10px;background:#f8fafc;border-radius:6px;"></div>
+            </div>
+            <div id="replayTimeline" class="replay-timeline"></div>
+            <div id="replayEmpty" class="vp-empty-state" style="padding:20px 8px;">
+                <div style="font-size:12px;">Hali replay uchun yetarli voqea yo'q.</div>
+            </div>
+        </div>
+
         <!-- Timeline -->
         <div id="chatTimeline" class="vp-card" style="min-height:300px;margin-bottom:16px;">
             <div class="vp-card-header"><div class="vp-card-title">Suhbat tarixi</div><span style="font-size:11px;color:#94a3b8;">{{ msgs|length }} xabar</span></div>
@@ -219,9 +243,89 @@
 @media (max-width: 768px) {
     .timeline-item { max-width: 100%; }
 }
+
+.replay-timeline { display: flex; flex-direction: column; gap: 0; position: relative; }
+.replay-timeline::before { content: ""; position: absolute; left: 15px; top: 8px; bottom: 8px; width: 2px; background: #e2e8f0; }
+.replay-event { display: flex; gap: 12px; padding: 8px 0; position: relative; }
+.replay-event-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; z-index: 1; border: 2px solid #fff; }
+.replay-event-icon-user { background: #dbeafe; color: #2563eb; }
+.replay-event-icon-bot { background: #d1fae5; color: #059669; }
+.replay-event-icon-ai { background: #ede9fe; color: #7c3aed; }
+.replay-event-icon-operator { background: #e0e7ff; color: #4338ca; }
+.replay-event-icon-system { background: #f1f5f9; color: #64748b; }
+.replay-event-body { flex: 1; min-width: 0; }
+.replay-event-title { font-size: 12px; font-weight: 600; color: #1e293b; }
+.replay-event-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+.replay-event-preview { font-size: 11px; color: #475569; background: #f8fafc; padding: 4px 8px; border-radius: 4px; margin-top: 4px; word-break: break-word; max-height: 60px; overflow: hidden; }
+.replay-event-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.replay-event-time { font-size: 10px; color: #94a3b8; }
+.replay-event-severity { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
+.replay-severity-warning { background: #fef3c7; color: #92400e; }
+.replay-severity-info { background: #dbeafe; color: #1e40af; }
+.replay-severity-danger { background: #fee2e2; color: #991b1b; }
+
+@media (max-width: 768px) {
+    .replay-event { padding: 6px 0; }
+}
 </style>
 
 <script>
+const REPLAY_ICON_MAP = {
+    user_message: '&#128100;', bot_reply: '&#129302;', ai_detected_intent: '&#129504;',
+    price_estimate: '&#128178;', objection_detected: '&#9888;', handoff_requested: '&#128222;',
+    handoff_status_changed: '&#128260;', phone_shared: '&#128241;', order_started: '&#128722;',
+    measurement_requested: '&#128207;', catalog_viewed: '&#128444;', stop_requested: '&#10060;',
+    operator_reply: '&#127911;', system_event: '&#9881;'
+};
+const ACTOR_CSS = { user: 'user', bot: 'bot', ai: 'ai', operator: 'operator', system: 'system' };
+async function loadReplay() {
+    try {
+        const r = await fetch('/api/v1/admin/crm/contacts/{{ c.get("id", 0) }}/conversation-replay');
+        if (!r.ok) { document.getElementById('replayEventCount').textContent = 'xato'; return; }
+        const d = await r.json();
+        renderReplay(d);
+    } catch(e) { document.getElementById('replayEventCount').textContent = 'yuklash xatosi'; }
+}
+function renderReplay(data) {
+    const s = data.summary || {};
+    const events = data.events || [];
+    document.getElementById('replayEventCount').textContent = s.total_events + ' voqea';
+    if (!events.length) { document.getElementById('replayEmpty').style.display = 'block'; document.getElementById('replayTimeline').style.display = 'none'; return; }
+    document.getElementById('replayEmpty').style.display = 'none';
+    document.getElementById('replaySummary').style.display = 'block';
+    document.getElementById('replayTotalBadge').textContent = 'Jami: ' + s.total_events;
+    document.getElementById('replayUserBadge').textContent = 'Mijoz: ' + s.user_messages;
+    document.getElementById('replayBotBadge').textContent = 'Bot: ' + s.bot_replies;
+    if (s.price_events > 0) { var pe = document.getElementById('replayPriceBadge'); pe.style.display = ''; pe.textContent = 'Narx: ' + s.price_events; }
+    if (s.objections > 0) { var oe = document.getElementById('replayObjectionBadge'); oe.style.display = ''; oe.textContent = "E'tiroz: " + s.objections; }
+    if (s.handoff_events > 0) { var he = document.getElementById('replayHandoffBadge'); he.style.display = ''; he.textContent = 'Handoff: ' + s.handoff_events; }
+    if (s.stop_events > 0) { var se = document.getElementById('replayStopBadge'); se.style.display = ''; se.textContent = 'Stop: ' + s.stop_events; }
+    document.getElementById('replayNextAction').textContent = s.recommended_next_action || '';
+    var html = '';
+    events.forEach(function(ev) {
+        var icon = REPLAY_ICON_MAP[ev.event_type] || '&#9679;';
+        var actorCss = ACTOR_CSS[ev.actor] || 'system';
+        var sevHtml = '';
+        if (ev.severity && ev.severity !== 'info') { sevHtml = '<span class="replay-event-severity replay-severity-' + (ev.severity === 'warning' ? 'warning' : 'danger') + '">' + ev.severity + '</span>'; }
+        else if (ev.severity === 'info') { sevHtml = '<span class="replay-event-severity replay-severity-info">info</span>'; }
+        var previewHtml = ev.message_preview ? '<div class="replay-event-preview">' + ev.message_preview + '</div>' : '';
+        html += '<div class="replay-event">' +
+            '<div class="replay-event-icon replay-event-icon-' + actorCss + '">' + icon + '</div>' +
+            '<div class="replay-event-body">' +
+            '<div class="replay-event-title">' + ev.title + '</div>' +
+            (ev.description ? '<div class="replay-event-desc">' + ev.description + '</div>' : '') +
+            previewHtml +
+            '<div class="replay-event-meta">' +
+            '<span class="replay-event-time">' + (ev.timestamp || '') + '</span>' +
+            sevHtml +
+            (ev.intent ? '<span class="vp-badge vp-badge-info" style="font-size:9px;">' + ev.intent + '</span>' : '') +
+            (ev.status ? '<span class="vp-badge vp-badge-neutral" style="font-size:9px;">' + ev.status + '</span>' : '') +
+            '</div></div></div>';
+    });
+    document.getElementById('replayTimeline').innerHTML = html;
+}
+document.addEventListener('DOMContentLoaded', loadReplay);
+
 let _replyAllowed = false;
 async function previewReply() {
     const text = document.getElementById('replyTextarea').value.trim();
