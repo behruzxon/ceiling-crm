@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% set active_page = "handoffs" %}
+{% block title %}Operator Digest — CeilingCRM{% endblock %}
+{% block page_title %}Daily Operator Digest{% endblock %}
+{% block page_subtitle %}Kunlik CRM holati va tavsiyalar — operator/admin uchun{% endblock %}
+{% block content %}
+<div class="vp-page">
+
+  <!-- Header strip -->
+  <div class="vp-card" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="digestSeverityBadge" class="vp-badge digest-severity">—</span>
+      <span id="digestGeneratedAt" style="font-size:11px;color:#94a3b8;"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="/crm/handoffs" class="vp-btn vp-btn-ghost" style="font-size:12px;">Handoffsga qaytish</a>
+      <button class="vp-btn vp-btn-secondary digest-refresh-btn" onclick="loadOperatorDigestStandalone()">Yangilash</button>
+      <button class="vp-btn vp-btn-ghost digest-send-btn" disabled
+              style="color:#94a3b8;cursor:not-allowed;"
+              title="Yuborish hozircha o'chiq">Yuborish (disabled)</button>
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="vp-kpi-grid" id="digestKpiGrid" style="margin-bottom:16px;">
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Open</div><div class="vp-kpi-value" id="kpiTotalOpen">—</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Telefon kutadi</div><div class="vp-kpi-value" id="kpiWaitingPhone">—</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Tayinlangan</div><div class="vp-kpi-value" id="kpiAssigned">—</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#dc2626;">Urgent</div><div class="vp-kpi-value" style="color:#dc2626;" id="kpiUrgent">—</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#f59e0b;">High</div><div class="vp-kpi-value" style="color:#f59e0b;" id="kpiHigh">—</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Bugun expired</div><div class="vp-kpi-value" id="kpiExpired">—</div></div>
+  </div>
+
+  <!-- Metrics card -->
+  <div class="vp-card" style="margin-bottom:16px;">
+    <div class="vp-card-header"><div class="vp-card-title">Metrikalar</div></div>
+    <div id="digestMetricsGrid" class="digest-grid">Yuklanmoqda...</div>
+  </div>
+
+  <!-- Recommendations card -->
+  <div class="vp-card" style="margin-bottom:16px;">
+    <div class="vp-card-header"><div class="vp-card-title">Tavsiyalar</div></div>
+    <div id="digestRecsList" class="digest-recs-list" style="font-size:13px;color:#475569;">Yuklanmoqda...</div>
+  </div>
+
+  <!-- Text preview card -->
+  <div class="vp-card">
+    <div class="vp-card-header">
+      <div class="vp-card-title">Matn preview (operator uchun)</div>
+      <span style="font-size:11px;color:#94a3b8;">internal, no send</span>
+    </div>
+    <pre id="digestTextPreview" style="font-size:12px;line-height:1.5;background:#f8fafc;border-radius:8px;padding:12px;overflow-x:auto;white-space:pre-wrap;margin:0;">Yuklanmoqda...</pre>
+  </div>
+
+</div>
+
+<style>
+.digest-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.digest-item { flex: 1 1 160px; padding: 8px 12px; border-radius: 6px; background: #f8fafc; border-left: 3px solid #e2e8f0; font-size: 12px; }
+.digest-item-label { color: #64748b; font-size: 11px; }
+.digest-item-value { font-size: 16px; font-weight: 600; color: #1e293b; }
+.digest-item-danger { border-left-color: #dc2626; }
+.digest-item-warning { border-left-color: #f59e0b; }
+.digest-item-success { border-left-color: #16a34a; }
+.digest-recs-list ol { padding-left: 18px; margin: 0; }
+.digest-recs-list li { margin: 4px 0; }
+.digest-severity { padding: 4px 10px; font-size: 12px; }
+.digest-severity-green { background: #dcfce7; color: #166534; }
+.digest-severity-yellow { background: #fef3c7; color: #92400e; }
+.digest-severity-red { background: #fee2e2; color: #991b1b; }
+
+@media (max-width: 767px) {
+  .digest-item { flex: 1 1 100%; }
+}
+</style>
+
+<script>
+async function loadOperatorDigestStandalone() {
+  var grid = document.getElementById('digestMetricsGrid');
+  var recsEl = document.getElementById('digestRecsList');
+  var textEl = document.getElementById('digestTextPreview');
+  var badge = document.getElementById('digestSeverityBadge');
+  var when = document.getElementById('digestGeneratedAt');
+  grid.textContent = 'Yuklanmoqda...';
+  recsEl.textContent = 'Yuklanmoqda...';
+  textEl.textContent = 'Yuklanmoqda...';
+  try {
+    var [dailyRes, previewRes] = await Promise.all([
+      fetch('/api/v1/admin/crm/operator-digest/daily?hours=24'),
+      fetch('/api/v1/admin/crm/operator-digest/preview?hours=24')
+    ]);
+    if (!dailyRes.ok) { grid.textContent = 'Yuklab bo\'lmadi'; recsEl.textContent = '—'; textEl.textContent = '—'; return; }
+    var d = await dailyRes.json();
+    var sev = d.severity || 'green';
+    badge.className = 'vp-badge digest-severity digest-severity-' + sev;
+    badge.textContent = sev.toUpperCase();
+    when.textContent = d.generated_at ? ('hisobot: ' + d.generated_at.replace('T', ' ').substring(0, 16)) : '';
+
+    var s = d.summary || {};
+    document.getElementById('kpiTotalOpen').textContent = s.total_open != null ? s.total_open : '—';
+    document.getElementById('kpiWaitingPhone').textContent = s.waiting_phone != null ? s.waiting_phone : '—';
+    document.getElementById('kpiAssigned').textContent = s.assigned != null ? s.assigned : '—';
+    document.getElementById('kpiUrgent').textContent = s.urgent_open != null ? s.urgent_open : '—';
+    document.getElementById('kpiHigh').textContent = s.high_open != null ? s.high_open : '—';
+    document.getElementById('kpiExpired').textContent = s.expired_today != null ? s.expired_today : '—';
+
+    var metrics = d.metrics || [];
+    var html = '';
+    metrics.forEach(function(m) {
+      var cls = 'digest-item';
+      if (m.severity === 'danger') cls += ' digest-item-danger';
+      else if (m.severity === 'warning') cls += ' digest-item-warning';
+      else if (m.severity === 'success') cls += ' digest-item-success';
+      html += '<div class="' + cls + '"><div class="digest-item-label">' + m.label + '</div><div class="digest-item-value">' + m.value + '</div></div>';
+    });
+    grid.innerHTML = html || '<div style="font-size:12px;color:#94a3b8;">Hozircha metrikalar yo\'q</div>';
+
+    var recs = d.recommendations || [];
+    if (recs.length) {
+      var rh = '<ol>';
+      recs.forEach(function(r) { rh += '<li>' + r.text + '</li>'; });
+      rh += '</ol>';
+      recsEl.innerHTML = rh;
+    } else {
+      recsEl.innerHTML = '<em style="color:#94a3b8;">Tavsiya yo\'q — navbat tinch.</em>';
+    }
+
+    if (previewRes.ok) {
+      var pv = await previewRes.json();
+      textEl.textContent = pv.text || '—';
+    } else {
+      textEl.textContent = '—';
+    }
+  } catch (e) {
+    grid.textContent = 'Xato: ' + e.message;
+    recsEl.textContent = '—';
+    textEl.textContent = '—';
+  }
+}
+document.addEventListener('DOMContentLoaded', loadOperatorDigestStandalone);
+</script>
+{% endblock %}

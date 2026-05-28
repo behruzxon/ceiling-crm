@@ -36,6 +36,7 @@
       <div class="vp-card-title">Daily Operator Digest</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <span id="digestSeverityBadge" class="vp-badge vp-badge-neutral digest-severity">—</span>
+        <a href="/crm/operator-digest" class="vp-btn vp-btn-ghost digest-open-btn" style="font-size:11px;padding:3px 8px;">To'liq ko'rish</a>
         <button class="vp-btn vp-btn-secondary digest-refresh-btn" style="font-size:11px;padding:3px 8px;" onclick="loadOperatorDigest()">Yangilash</button>
         <button class="vp-btn vp-btn-ghost digest-send-btn" style="font-size:11px;padding:3px 8px;color:#94a3b8;cursor:not-allowed;" disabled title="Yuborish hozircha o'chiq">Yuborish (disabled)</button>
       </div>
@@ -173,7 +174,7 @@
     {% else %}
     <div class="vp-empty-state">
       <div class="vp-empty-icon">📋</div>
-      Hozir operator so'rovlari yo'q
+      Hozir navbatda handoff yo'q
     </div>
     {% endif %}
   </div>

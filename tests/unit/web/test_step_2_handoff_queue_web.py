@@ -111,7 +111,8 @@ class TestActions:
 class TestEmptyState:
     def test_empty_message(self):
         c = _t("crm_handoffs.html")
-        assert "operator so'rovlari yo'q" in c.lower()
+        # Empty-state copy polished in Step 12 — accept either phrasing.
+        assert "operator so'rovlari yo'q" in c.lower() or "navbatda handoff yo'q" in c.lower()
 
     def test_vp_empty_state(self):
         assert "vp-empty-state" in _t("crm_handoffs.html")

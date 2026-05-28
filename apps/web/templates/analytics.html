@@ -297,6 +297,8 @@
 <!-- Visual Charts Section -->
 <div style="margin-top:28px;">
     <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Visual Charts</h2>
+    <div id="chartsLoading" style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Charts yuklanmoqda...</div>
+    <div id="chartsError" class="vp-alert vp-alert-warning" style="display:none;margin-bottom:8px;">Charts yuklab bo'lmadi.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="analytics-2col-grid" id="chartsGrid">
 
         <!-- Temperature Chart -->
@@ -352,10 +354,17 @@
 
 <script>
 (async function loadCharts() {
+    const loadingEl = document.getElementById('chartsLoading');
+    const errorEl = document.getElementById('chartsError');
     try {
         const r = await fetch('/api/v1/admin/crm/analytics/charts?days=30');
-        if (!r.ok) return;
+        if (!r.ok) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) errorEl.style.display = 'block';
+            return;
+        }
         const d = await r.json();
+        if (loadingEl) loadingEl.style.display = 'none';
         function renderBars(containerId, data) {
             if (!data || !data.points) return;
             const el = document.getElementById(containerId);
@@ -375,7 +384,10 @@
         renderBars('intentBars', d.intent_breakdown);
         renderBars('missedBars', d.missed_severity);
         renderBars('handoffBars', d.handoff_status);
-    } catch(e) {}
+    } catch(e) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'block';
+    }
 })();
 </script>
 {% endblock %}

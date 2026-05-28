@@ -253,6 +253,19 @@ async def crm_handoffs(
     )
 
 
+@app.get("/crm/operator-digest", response_class=HTMLResponse)
+async def crm_operator_digest(request: Request):
+    """Daily Operator Digest — internal CRM health summary.
+
+    Renders the standalone shell; the page fetches the digest JSON
+    from /api/v1/admin/crm/operator-digest/daily on load.
+    """
+    return templates.TemplateResponse(
+        "crm_operator_digest.html",
+        {"request": request},
+    )
+
+
 @app.get("/crm/campaigns", response_class=HTMLResponse)
 async def crm_campaigns(request: Request):
     """CRM Campaigns page — draft list and segment overview."""

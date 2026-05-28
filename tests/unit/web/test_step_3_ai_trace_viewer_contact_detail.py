@@ -62,7 +62,14 @@ class TestDetailFields:
 class TestEmptyState:
     def test_empty_message(self):
         c = _t()
-        assert "AI trace yo'q" in c.lower() or "trace yo'q" in c.lower()
+        # Empty-state copy polished in Step 12 to "AI trace Stage 1 LOG_ONLY
+        # yoqilganda ko'rinadi". Accept either the old or new phrasing.
+        lc = c.lower()
+        assert (
+            "ai trace yo'q" in lc
+            or "trace yo'q" in lc
+            or ("stage 1 log_only yoqilganda" in lc and "ai trace" in lc)
+        )
 
     def test_stage1_mention(self):
         c = _t()
