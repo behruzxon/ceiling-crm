@@ -22,6 +22,7 @@ from infrastructure.database.repositories.lead_repo import PostgresLeadRepositor
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
 from shared.logging import get_logger
+from shared.utils.phone import mask_phone
 
 log = get_logger(__name__)
 
@@ -183,7 +184,7 @@ class LeadNotificationService:
             f"🆕 <b>Yangi lid keldi!</b>\n\n"
             f"📋 Lid #{lead.id}\n"
             f"👤 {lead.name}\n"
-            f"📱 {lead.phone}\n"
+            f"📱 {mask_phone(lead.phone)}\n"
             f"📍 {lead.district}\n"
             f"🏷 {category_str}{dims}{temp_tag}{conf_tag}\n\n"
             f"/lead_{lead.id}"
@@ -197,7 +198,7 @@ class LeadNotificationService:
             f"🔥 <b>HOT LEAD!</b>{score_tag}\n\n"
             f"📋 Lid #{lead.id}\n"
             f"👤 {lead.name}\n"
-            f"📱 {lead.phone}\n"
+            f"📱 {mask_phone(lead.phone)}\n"
             f"📍 {lead.district}{pkg_tag}\n\n"
             f"/lead_{lead.id}"
         )
@@ -239,7 +240,7 @@ class LeadNotificationService:
             f"📐 <b>Bepul o'lchov so'rovi!</b>\n\n"
             f"📋 Lid #{lead.id}\n"
             f"👤 Ism: {lead.name}\n"
-            f"📱 Telefon: {lead.phone}\n"
+            f"📱 Telefon: {mask_phone(lead.phone)}\n"
             f"📍 Manzil: {lead.district}\n"
             f"🕐 Vaqt: {time_str}\n"
             f"📐 O'lcham: {dimensions or '—'}\n"
@@ -281,7 +282,7 @@ class LeadNotificationService:
 
         text = (
             f"📞 <b>Telefon raqam aniqlandi!</b>\n\n"
-            f"📱 {phone}\n"
+            f"📱 {mask_phone(phone)}\n"
             f"👤 {name_str}\n"
             f"🔗 {uname_str} | #{uid_str} | {chat_type}"
         )
@@ -362,7 +363,7 @@ class LeadNotificationService:
             lines.append(f"Username: @{username}")
         elif user_id:
             lines.append(f"Telegram: <a href='tg://user?id={user_id}'>{user_id}</a>")
-        lines.append(f"Tel: {phone}")
+        lines.append(f"Tel: {mask_phone(phone)}")
         if district:
             lines.append(f"Tuman: {district}")
         if area is not None:
