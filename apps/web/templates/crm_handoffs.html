@@ -47,6 +47,7 @@
         <option value="contacted" {% if status_filter == 'contacted' %}selected{% endif %}>Bog'lanildi</option>
         <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Hal qilindi</option>
         <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Bekor qilindi</option>
+        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Muddati o'tgan</option>
       </select>
       <select class="vp-select" id="priorityFilter" onchange="applyFilters()">
         <option value="">Barcha ustuvorlik</option>
@@ -111,6 +112,8 @@
               <span class="vp-badge vp-badge-success">Hal qilindi</span>
             {% elif item.status == 'cancelled' %}
               <span class="vp-badge vp-badge-neutral">Bekor</span>
+            {% elif item.status == 'expired' %}
+              <span class="vp-badge vp-badge-neutral expired-badge">Muddati o'tgan</span>
             {% else %}
               <span class="vp-badge vp-badge-neutral">{{ item.status }}</span>
             {% endif %}

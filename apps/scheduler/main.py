@@ -24,6 +24,7 @@ from apps.scheduler.jobs.conversation_intelligence_jobs import (
     register_conversation_intelligence_jobs,
 )
 from apps.scheduler.jobs.crm_daily_report_jobs import register_crm_daily_report_jobs
+from apps.scheduler.jobs.crm_handoff_expire_jobs import register_handoff_expire_jobs
 from apps.scheduler.jobs.followup_jobs import register_followup_jobs
 from apps.scheduler.jobs.outcome_resolver_jobs import register_outcome_resolver_jobs
 from apps.scheduler.jobs.sales_autopilot_jobs import register_sales_autopilot_jobs
@@ -83,6 +84,7 @@ async def run_scheduler() -> None:
     register_agent_execution_jobs(scheduler)
     register_approved_execution_sender_jobs(scheduler)
     register_crm_daily_report_jobs(scheduler)
+    register_handoff_expire_jobs(scheduler)
 
     scheduler.start()
     for job in scheduler.get_jobs():

@@ -250,6 +250,15 @@ class BusinessSettings(BaseSettings):
     crm_operator_handoff_expire_hours: int = Field(
         default=24, alias="CRM_OPERATOR_HANDOFF_EXPIRE_HOURS"
     )
+    crm_operator_handoff_auto_expire_enabled: bool = Field(
+        default=False, alias="CRM_OPERATOR_HANDOFF_AUTO_EXPIRE_ENABLED"
+    )
+    crm_operator_handoff_expire_batch_limit: int = Field(
+        default=100,
+        alias="CRM_OPERATOR_HANDOFF_EXPIRE_BATCH_LIMIT",
+        ge=1,
+        le=1000,
+    )
     crm_operator_handoff_admin_notify_enabled: bool = Field(
         default=False, alias="CRM_OPERATOR_HANDOFF_ADMIN_NOTIFY_ENABLED"
     )
