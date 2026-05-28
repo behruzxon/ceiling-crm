@@ -1,0 +1,265 @@
+{
+  "overall": "YELLOW",
+  "counts": {
+    "GREEN": 50,
+    "YELLOW": 1,
+    "RED": 0
+  },
+  "items": [
+    {
+      "status": "GREEN",
+      "name": "git_branch",
+      "detail": "main"
+    },
+    {
+      "status": "YELLOW",
+      "name": "git_status",
+      "detail": "uncommitted changes: 1 files"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:125_STAGE_1_READINESS_REVIEW_AFTER_FRESH_START.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:128_PRODUCTION_DEPLOYMENT_RUNBOOK.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:129_STAGE_1_LOCAL_DRY_RUN_CHECK.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:113_PRE_STAGE_1_P0_READINESS_RUNBOOK.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:114_STAGE_1_ENV_FLAG_MATRIX.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:124_HANDOFF_AUTO_EXPIRE_JOB.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:126_OPERATOR_NOTIFICATION_DIGEST.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "doc:127_FINAL_CRM_WEB_UX_POLISH.md",
+      "detail": "exists"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:apps/api",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:apps/web",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:apps/scheduler",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:apps/bot",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:core",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:infrastructure",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:deploy",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:scripts",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "dir:infrastructure/database/migrations/versions",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:docker-compose.yml",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:docker-compose.prod.yml",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:.env.example",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:alembic.ini",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:deploy/docker/Dockerfile",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "file:deploy/docker/entrypoint.sh",
+      "detail": "present"
+    },
+    {
+      "status": "GREEN",
+      "name": "critical_migration",
+      "detail": "add_crm_operator_handoff_requests"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:agent_execution_live_sender_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:agent_execution_auto_execute_approved",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:agent_execution_api_approval_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_campaign_send_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:agent_followups_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_operator_reply_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_operator_handoff_auto_expire_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_operator_handoff_admin_notify_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_operator_digest_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:crm_operator_digest_delivery_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:admin_security_actions_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "flag:admin_ip_block_enforcement_enabled",
+      "detail": "OFF"
+    },
+    {
+      "status": "GREEN",
+      "name": "gate:crm_campaign_send_dry_run_only",
+      "detail": "ON"
+    },
+    {
+      "status": "GREEN",
+      "name": "gate:agent_decision_log_only",
+      "detail": "ON"
+    },
+    {
+      "status": "GREEN",
+      "name": "gate:crm_campaign_send_require_confirmation",
+      "detail": "ON"
+    },
+    {
+      "status": "GREEN",
+      "name": "import:apps.api.main",
+      "detail": "ok"
+    },
+    {
+      "status": "GREEN",
+      "name": "import:apps.web.main",
+      "detail": "ok"
+    },
+    {
+      "status": "GREEN",
+      "name": "import:apps.scheduler.main",
+      "detail": "ok"
+    },
+    {
+      "status": "GREEN",
+      "name": "import:apps.bot.main.build_dispatcher",
+      "detail": "ok"
+    },
+    {
+      "status": "GREEN",
+      "name": "service:PricingService",
+      "detail": "importable"
+    },
+    {
+      "status": "GREEN",
+      "name": "service:CRMOperatorHandoffService",
+      "detail": "importable"
+    },
+    {
+      "status": "GREEN",
+      "name": "service:build_digest",
+      "detail": "importable"
+    },
+    {
+      "status": "GREEN",
+      "name": "service:build_replay",
+      "detail": "importable"
+    },
+    {
+      "status": "GREEN",
+      "name": "service:build_history",
+      "detail": "importable"
+    },
+    {
+      "status": "GREEN",
+      "name": ".env.example",
+      "detail": "placeholders only"
+    }
+  ]
+}
