@@ -25,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 
 from apps.web.api_client import api_get
 from apps.web.auth import require_dashboard_auth
+from apps.web.csrf_middleware import AdminCSRFMiddleware
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -34,6 +35,10 @@ app = FastAPI(
     redoc_url=None,
     dependencies=[Depends(require_dashboard_auth)],
 )
+
+# CSRF middleware is a no-op until ADMIN_CSRF_ENABLED=true (default OFF).
+# Wiring it here closes blocker §1.4 from doc 134 without altering current behavior.
+app.add_middleware(AdminCSRFMiddleware)
 
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 

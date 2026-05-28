@@ -16,6 +16,7 @@ from typing import Any
 from infrastructure.database.session import get_session_factory
 from infrastructure.di import get_lead_notification_service
 from shared.logging import get_logger
+from shared.utils.phone import mask_phone
 
 log = get_logger(__name__)
 
@@ -115,7 +116,7 @@ async def _notify_phone_captured(
             chat_id=chat_id,
         )
     except Exception:
-        log.warning("phone_capture_notify_failed", phone=phone)
+        log.warning("phone_capture_notify_failed", phone=mask_phone(phone))
 
 
 # ── AI lead collected (full intelligence stack) ─────────────────────────────
@@ -236,7 +237,7 @@ async def _notify_ai_lead_collected(
             conversation_health=conv_health,
         )
     except Exception:
-        log.warning("notify_ai_lead_collected_failed", phone=phone)
+        log.warning("notify_ai_lead_collected_failed", phone=mask_phone(phone))
 
 
 # ── Warm interest notification ──────────────────────────────────────────────
