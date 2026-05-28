@@ -30,6 +30,19 @@
     </div>
   </div>
 
+  <!-- Daily Operator Digest -->
+  <div id="operatorDigestCard" class="vp-card" style="margin-bottom:16px;">
+    <div class="vp-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="vp-card-title">Daily Operator Digest</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="digestSeverityBadge" class="vp-badge vp-badge-neutral digest-severity">—</span>
+        <button class="vp-btn vp-btn-secondary digest-refresh-btn" style="font-size:11px;padding:3px 8px;" onclick="loadOperatorDigest()">Yangilash</button>
+        <button class="vp-btn vp-btn-ghost digest-send-btn" style="font-size:11px;padding:3px 8px;color:#94a3b8;cursor:not-allowed;" disabled title="Yuborish hozircha o'chiq">Yuborish (disabled)</button>
+      </div>
+    </div>
+    <div id="digestContent" style="font-size:12px;color:#94a3b8;padding:8px 0;">Yuklanmoqda...</div>
+  </div>
+
   <!-- Operator Workload -->
   <div id="operatorWorkload" class="vp-card" style="margin-bottom:16px;">
     <div class="vp-card-header"><div class="vp-card-title">Operator yuklamasi</div></div>
@@ -168,6 +181,18 @@
 </div>
 
 <style>
+.digest-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.digest-item { flex: 1 1 140px; padding: 6px 10px; border-radius: 6px; background: #f8fafc; border-left: 3px solid #e2e8f0; font-size: 12px; }
+.digest-item-label { color: #64748b; font-size: 11px; }
+.digest-item-value { font-size: 16px; font-weight: 600; color: #1e293b; }
+.digest-item-danger { border-left-color: #dc2626; }
+.digest-item-warning { border-left-color: #f59e0b; }
+.digest-item-success { border-left-color: #16a34a; }
+.digest-recs { margin-top: 8px; font-size: 12px; color: #475569; }
+.digest-recs ol { padding-left: 18px; margin: 4px 0 0 0; }
+.digest-severity-green { background: #dcfce7; color: #166534; }
+.digest-severity-yellow { background: #fef3c7; color: #92400e; }
+.digest-severity-red { background: #fee2e2; color: #991b1b; }
 .workload-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .workload-item { flex: 1 1 200px; padding: 8px 12px; border-radius: 6px; background: #f8fafc; border-left: 3px solid #e2e8f0; font-size: 12px; }
 .workload-item-label { color: #64748b; font-size: 11px; }
@@ -246,6 +271,42 @@ async function loadWorkload() {
     document.getElementById('workloadContent').innerHTML = html;
   } catch(e) { document.getElementById('workloadContent').textContent = 'Xato: ' + e.message; }
 }
+async function loadOperatorDigest() {
+  var el = document.getElementById('digestContent');
+  var badge = document.getElementById('digestSeverityBadge');
+  el.textContent = 'Yuklanmoqda...';
+  try {
+    var r = await fetch('/api/v1/admin/crm/operator-digest/daily?hours=24');
+    if (!r.ok) { el.textContent = 'Yuklab bo\'lmadi'; return; }
+    var d = await r.json();
+    var sev = d.severity || 'green';
+    badge.className = 'vp-badge digest-severity digest-severity-' + sev;
+    badge.textContent = sev.toUpperCase();
+    var metrics = d.metrics || [];
+    var html = '<div class="digest-grid">';
+    metrics.slice(0, 9).forEach(function(m) {
+      var cls = 'digest-item';
+      if (m.severity === 'danger') cls += ' digest-item-danger';
+      else if (m.severity === 'warning') cls += ' digest-item-warning';
+      else if (m.severity === 'success') cls += ' digest-item-success';
+      html += '<div class="' + cls + '">' +
+        '<div class="digest-item-label">' + m.label + '</div>' +
+        '<div class="digest-item-value">' + m.value + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    var recs = d.recommendations || [];
+    if (recs.length) {
+      html += '<div class="digest-recs"><strong>Tavsiyalar:</strong><ol>';
+      recs.slice(0, 3).forEach(function(r) {
+        html += '<li>' + r.text + '</li>';
+      });
+      html += '</ol></div>';
+    }
+    el.innerHTML = html;
+  } catch(e) { el.textContent = 'Xato: ' + e.message; }
+}
 document.addEventListener('DOMContentLoaded', loadWorkload);
+document.addEventListener('DOMContentLoaded', loadOperatorDigest);
 </script>
 {% endblock %}

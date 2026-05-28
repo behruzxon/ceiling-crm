@@ -74,10 +74,21 @@ class TestNoSendButton:
             "Xabar yuborish",
             "Send to user",
             "Telegram yuborish",
-            "Yuborish",
         ]
         for tok in forbidden:
             assert tok not in template_src, f"forbidden send token found: {tok}"
+        # The Step 11 digest card may carry a 'Yuborish (disabled)' button, but
+        # any unqualified 'Yuborish' button must be disabled.
+        import re
+
+        for m in re.finditer(r"<button[^>]*>([^<]*Yuborish[^<]*)</button>", template_src):
+            button_open_tag = template_src[: m.start() + template_src[m.start() :].index(">") + 1]
+            # The opening tag for this match
+            opening = m.group(0)
+            assert "disabled" in opening or "(disabled)" in m.group(
+                1
+            ), f"send-like button without disabled: {m.group(0)[:120]}"
+            _ = button_open_tag  # silence unused
 
     def test_no_eta_text(self, template_src: str) -> None:
         # No fake ETA promises rendered.

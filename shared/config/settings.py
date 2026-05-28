@@ -259,6 +259,13 @@ class BusinessSettings(BaseSettings):
         ge=1,
         le=1000,
     )
+
+    # CRM Operator Daily Digest (Step 11)
+    crm_operator_digest_enabled: bool = Field(default=False, alias="CRM_OPERATOR_DIGEST_ENABLED")
+    crm_operator_digest_delivery_enabled: bool = Field(
+        default=False, alias="CRM_OPERATOR_DIGEST_DELIVERY_ENABLED"
+    )
+    crm_operator_digest_hour: int = Field(default=9, alias="CRM_OPERATOR_DIGEST_HOUR", ge=0, le=23)
     crm_operator_handoff_admin_notify_enabled: bool = Field(
         default=False, alias="CRM_OPERATOR_HANDOFF_ADMIN_NOTIFY_ENABLED"
     )
