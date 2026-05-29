@@ -257,6 +257,84 @@
             {% endif %}
         </div>
 
+        <!-- Manual Price Calculator (F3 — GET-only, no persistence) -->
+        {% set cr = calculator_result %}
+        <div id="manualPriceCalculatorPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Manual Price Calculator</div>
+                <span class="vp-badge vp-badge-info" style="font-size:10px;">taxminiy</span>
+            </div>
+            <form id="manualPriceCalculatorForm" method="get" action="/crm/{{ c.get('id') }}" style="display:flex;flex-direction:column;gap:8px;">
+                <label style="font-size:11px;color:#64748b;">
+                    Maydon (m²)
+                    <input id="calcAreaInput" type="number" name="calc_area" min="1" max="500" step="0.1"
+                           value="{{ calc_area }}" placeholder="masalan: 20"
+                           class="vp-input" style="width:100%;font-size:12px;padding:4px 8px;" />
+                </label>
+                <label style="font-size:11px;color:#64748b;">
+                    Dizayn
+                    <select id="calcDesignSelect" name="calc_design"
+                            class="vp-select" style="width:100%;font-size:12px;padding:4px 8px;">
+                        <option value="">— dizaynni tanlang —</option>
+                        {% for d_key, d_label in (calculator_designs or []) %}
+                        <option value="{{ d_key }}" {% if calc_design == d_key %}selected{% endif %}>{{ d_label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label style="font-size:11px;color:#64748b;">
+                    Qo'shimchalar (vergul bilan)
+                    <input id="calcAddonsInput" type="text" name="calc_addons"
+                           value="{{ calc_addons }}" placeholder="led_strip,cornice"
+                           class="vp-input" style="width:100%;font-size:12px;padding:4px 8px;" />
+                </label>
+                <div style="font-size:10px;color:#94a3b8;">
+                    Mavjud: {% for a_key, a_label in (calculator_addons or []) %}<code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;margin-right:2px;">{{ a_key }}</code>{% endfor %}
+                </div>
+                <button id="calcSubmitBtn" type="submit"
+                        class="vp-btn vp-btn-primary" style="font-size:12px;padding:5px 10px;">
+                    Hisoblash
+                </button>
+            </form>
+
+            {% if cr %}
+            {% if not cr.is_valid %}
+            <div id="calcError" class="vp-alert vp-alert-warning" style="margin-top:10px;font-size:12px;">
+                {{ cr.error }}
+            </div>
+            {% else %}
+            <div id="calcResultCard" style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;border-left:3px solid #10b981;">
+                <div style="font-size:11px;color:#94a3b8;letter-spacing:0.5px;">TAXMINIY HISOB</div>
+                <div id="calcResultTotal" style="font-size:18px;font-weight:700;color:#059669;">
+                    {{ cr.formatted_total }} so'm
+                </div>
+                <table style="width:100%;font-size:12px;margin-top:6px;color:#334155;">
+                    <tr><td style="color:#64748b;">Dizayn</td><td>{{ cr.design_title }}</td></tr>
+                    <tr><td style="color:#64748b;">Maydon</td><td>{{ cr.area_m2 }} m²</td></tr>
+                    <tr><td style="color:#64748b;">Narx / m²</td><td>{{ cr.formatted_rate }} so'm</td></tr>
+                    {% if cr.discount_percent > 0 %}
+                    <tr><td style="color:#64748b;">Chegirma</td><td>{{ cr.discount_percent }}%</td></tr>
+                    {% endif %}
+                    {% if cr.addon_lines %}
+                    <tr><td style="color:#64748b;vertical-align:top;">Qo'shimcha</td>
+                        <td>
+                            {% for line in cr.addon_lines %}
+                            <div style="font-size:11px;">{{ line.label }} ({{ line.quantity }}{{ line.unit }})</div>
+                            {% endfor %}
+                        </td></tr>
+                    {% endif %}
+                </table>
+                <div id="calcWarning" style="font-size:10px;color:#94a3b8;margin-top:6px;">
+                    &#9888; {{ cr.warning }}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div id="calcEmpty" class="vp-empty-state" style="padding:8px;margin-top:8px;font-size:11px;color:#94a3b8;">
+                Maydon va dizayn kiriting — taxminiy narx shu yerda ko'rinadi.
+            </div>
+            {% endif %}
+        </div>
+
         <!-- AI Trace Viewer -->
         <div id="aiTraceSection" class="vp-card">
             <div class="vp-card-header">

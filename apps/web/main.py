@@ -30,6 +30,11 @@ from apps.web.csrf_middleware import AdminCSRFMiddleware
 from core.services.agent_control_center_service import (
     build_agent_control_summary,
 )
+from core.services.contact_price_calculator_service import (
+    available_addons,
+    available_designs,
+    build_contact_price_estimate,
+)
 from core.services.operator_reply_suggestion_service import (
     build_operator_reply_suggestions,
 )
@@ -195,12 +200,25 @@ async def crm_contacts(
 
 
 @app.get("/crm/{contact_id}", response_class=HTMLResponse)
-async def crm_contact_detail(request: Request, contact_id: int):
+async def crm_contact_detail(
+    request: Request,
+    contact_id: int,
+    calc_area: str = Query("", max_length=20),
+    calc_design: str = Query("", max_length=40),
+    calc_addons: str = Query("", max_length=200),
+):
     contact = await api_get(f"/api/v1/admin/crm/contacts/{contact_id}")
     messages = await api_get(
         f"/api/v1/admin/crm/contacts/{contact_id}/messages",
         params={"limit": 100},
     )
+    calculator_result = None
+    if calc_area or calc_design or calc_addons:
+        calculator_result = build_contact_price_estimate(
+            area_m2=calc_area or None,
+            design_key=calc_design or None,
+            addons=calc_addons or None,
+        )
     feature_enabled = False
     try:
         from shared.config import get_settings
@@ -226,6 +244,12 @@ async def crm_contact_detail(request: Request, contact_id: int):
             "contact": contact,
             "messages": messages,
             "suggestion_result": suggestion_result,
+            "calculator_result": calculator_result,
+            "calculator_designs": available_designs(),
+            "calculator_addons": available_addons(),
+            "calc_area": calc_area,
+            "calc_design": calc_design,
+            "calc_addons": calc_addons,
         },
     )
 
