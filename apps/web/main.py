@@ -38,10 +38,13 @@ from core.services.contact_price_calculator_service import (
 from core.services.crm_next_best_action_service import (
     compute_next_best_action,
 )
+from core.services.docs_index_service import build_docs_index
 from core.services.lead_risk_service import explain_lead_risk
 from core.services.operator_reply_suggestion_service import (
     build_operator_reply_suggestions,
 )
+
+_DOCS_DIR = Path(__file__).resolve().parents[2] / "docs" / "AI_AGENT_SYSTEM"
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -284,6 +287,21 @@ async def admin_security(
     return templates.TemplateResponse(
         "security.html",
         {"request": request, "data": data, "hours": hours},
+    )
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def admin_help(request: Request):
+    """Admin Help / Docs index — read-only browse of docs/AI_AGENT_SYSTEM.
+
+    No API call, no DB read, no AI call. The dashboard auth dependency
+    on the FastAPI app still gates access — this route does not bypass
+    it.
+    """
+    docs_index = build_docs_index(_DOCS_DIR)
+    return templates.TemplateResponse(
+        "help.html",
+        {"request": request, "docs_index": docs_index},
     )
 
 

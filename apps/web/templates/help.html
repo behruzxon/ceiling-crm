@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% set active_page = "help" %}
+{% block title %}Admin Help / Docs — CeilingCRM{% endblock %}
+{% block page_title %}Admin Help / Docs{% endblock %}
+{% block page_subtitle %}docs/AI_AGENT_SYSTEM index — read-only{% endblock %}
+{% block content %}
+{% set idx = docs_index %}
+
+<div id="adminHelpSummaryCards" class="vp-kpi-grid" style="margin-bottom:16px;">
+    <div class="vp-card">
+        <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Total docs</div>
+        <div id="helpTotalDocs" style="font-size:28px;font-weight:700;color:#1e293b;">{{ (idx.total_docs if idx else 0) }}</div>
+    </div>
+    <div class="vp-card">
+        <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Groups</div>
+        <div id="helpGroupCount" style="font-size:28px;font-weight:700;color:#6366f1;">{{ ((idx.groups | length) if idx else 0) }}</div>
+    </div>
+    <div class="vp-card">
+        <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Generated</div>
+        <div id="helpGeneratedAt" style="font-size:14px;font-weight:600;color:#475569;margin-top:8px;">{{ (idx.generated_at if idx else "—") }}</div>
+    </div>
+</div>
+
+{% if not idx or not idx.groups %}
+<div id="helpEmptyState" class="vp-card vp-empty-state" style="margin-bottom:16px;">
+    <div style="font-size:13px;color:#94a3b8;">
+        {{ (idx.empty_reason if idx else "Docs index hozircha bo'sh.") }}
+    </div>
+</div>
+{% else %}
+{% for g in idx.groups %}
+<div class="vp-card helpGroupCard" data-area="{{ g.area }}" style="margin-bottom:16px;">
+    <div class="vp-card-header">
+        <div class="vp-card-title">{{ g.title }}</div>
+        <span class="vp-badge vp-badge-neutral" style="font-size:10px;">{{ g.entries | length }} ta</span>
+    </div>
+    <div class="helpGroupDescription" style="font-size:12px;color:#64748b;margin-bottom:10px;">{{ g.description }}</div>
+    <ul class="helpDocsList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">
+        {% for e in g.entries %}
+        <li class="helpDocItem" data-doc-id="{{ e.doc_id }}" style="padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid {{ '#10b981' if e.is_safe else '#ef4444' }};">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                <div class="helpDocTitle" style="font-size:13px;font-weight:600;color:#0f172a;">
+                    {% if e.doc_id %}<span style="color:#94a3b8;font-weight:500;">#{{ e.doc_id }}</span> {% endif %}{{ e.title }}
+                </div>
+                {% if e.is_safe %}
+                <span class="vp-badge vp-badge-success helpDocSafeBadge" style="font-size:10px;">safe</span>
+                {% else %}
+                <span class="vp-badge vp-badge-hot helpDocWarningBadge" style="font-size:10px;">redacted</span>
+                {% endif %}
+            </div>
+            {% if e.summary %}
+            <div class="helpDocSummary" style="font-size:12px;color:#475569;margin-top:4px;">{{ e.summary }}</div>
+            {% endif %}
+            {% if e.warning %}
+            <div class="helpDocWarningText" style="font-size:11px;color:#dc2626;margin-top:4px;">&#9888; {{ e.warning }}</div>
+            {% endif %}
+            <div style="font-size:10px;color:#94a3b8;margin-top:4px;">
+                <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">{{ e.filename }}</code>
+                <span style="margin-left:8px;">{{ e.size_bytes }} bayt</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endfor %}
+{% endif %}
+
+<p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:24px;">
+    Bu sahifa faqat ko'rish uchun. Hujjatlar disk fayllaridan jonli ravishda o'qiladi va sezgir markerlar avtomatik redact qilinadi.
+</p>
+{% endblock %}
