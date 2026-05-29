@@ -30,6 +30,9 @@ from apps.web.csrf_middleware import AdminCSRFMiddleware
 from core.services.agent_control_center_service import (
     build_agent_control_summary,
 )
+from core.services.operator_reply_suggestion_service import (
+    build_operator_reply_suggestions,
+)
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -198,9 +201,32 @@ async def crm_contact_detail(request: Request, contact_id: int):
         f"/api/v1/admin/crm/contacts/{contact_id}/messages",
         params={"limit": 100},
     )
+    feature_enabled = False
+    try:
+        from shared.config import get_settings
+
+        feature_enabled = bool(
+            getattr(
+                get_settings().business,
+                "operator_reply_suggestions_enabled",
+                False,
+            )
+        )
+    except Exception:
+        feature_enabled = False
+    suggestion_result = build_operator_reply_suggestions(
+        contact,
+        (messages or {}).get("items", []) if isinstance(messages, dict) else [],
+        feature_enabled=feature_enabled,
+    )
     return templates.TemplateResponse(
         "crm_contact_detail.html",
-        {"request": request, "contact": contact, "messages": messages},
+        {
+            "request": request,
+            "contact": contact,
+            "messages": messages,
+            "suggestion_result": suggestion_result,
+        },
     )
 
 
