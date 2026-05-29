@@ -38,6 +38,7 @@ from core.services.contact_price_calculator_service import (
 from core.services.crm_next_best_action_service import (
     compute_next_best_action,
 )
+from core.services.lead_risk_service import explain_lead_risk
 from core.services.operator_reply_suggestion_service import (
     build_operator_reply_suggestions,
 )
@@ -246,6 +247,11 @@ async def crm_contact_detail(
         calculator_result=calculator_result,
         suggestion_result=suggestion_result,
     )
+    lead_risk = explain_lead_risk(
+        contact,
+        messages,
+        next_best_action=next_best_action,
+    )
     return templates.TemplateResponse(
         "crm_contact_detail.html",
         {
@@ -260,6 +266,7 @@ async def crm_contact_detail(
             "calc_design": calc_design,
             "calc_addons": calc_addons,
             "next_best_action": next_best_action,
+            "lead_risk": lead_risk,
         },
     )
 
