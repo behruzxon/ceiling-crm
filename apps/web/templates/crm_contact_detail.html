@@ -191,6 +191,46 @@
             </div>
         </div>
 
+        <!-- Next Best Action (F4 — deterministic, read-only) -->
+        {% set nba = next_best_action %}
+        <div id="nextBestActionPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Next Best Action</div>
+                {% if nba and nba.action_key != "no_action" %}
+                {% set tone_class = "vp-badge-hot" if nba.badge_tone == "danger" else ("vp-badge-warning" if nba.badge_tone == "warning" else ("vp-badge-success" if nba.badge_tone == "success" else ("vp-badge-neutral" if nba.badge_tone == "neutral" else "vp-badge-info"))) %}
+                <span class="vp-badge {{ tone_class }}" id="nbaPriorityBadge" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">
+                    {{ nba.priority }}
+                </span>
+                {% else %}
+                <span class="vp-badge vp-badge-neutral" style="font-size:10px;">none</span>
+                {% endif %}
+            </div>
+            {% if not nba %}
+            <div id="nbaEmpty" class="vp-empty-state" style="padding:14px 8px;">
+                <div style="font-size:12px;color:#94a3b8;">Hozircha aniq keyingi harakat yo'q.</div>
+            </div>
+            {% else %}
+            <div id="nbaLabel" style="font-size:14px;font-weight:600;color:#0f172a;">{{ nba.label }}</div>
+            <div id="nbaReason" style="font-size:12px;color:#475569;margin-top:4px;">{{ nba.reason }}</div>
+            <div id="nbaConfidence" style="font-size:10px;color:#94a3b8;margin-top:6px;">
+                Ishonch: {{ nba.confidence }}/100
+            </div>
+            {% if nba.cta_url %}
+            <div style="margin-top:8px;">
+                <a id="nbaCtaButton" href="{{ nba.cta_url }}" class="vp-btn vp-btn-secondary" style="font-size:11px;padding:4px 10px;">
+                    {{ nba.cta_label or "Ko'rsatish" }}
+                </a>
+            </div>
+            {% endif %}
+            <div id="nbaSafetyNote" style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                &#9888; {{ nba.safety_note }}
+            </div>
+            {% if nba.empty_reason %}
+            <div style="margin-top:4px;font-size:10px;color:#94a3b8;">{{ nba.empty_reason }}</div>
+            {% endif %}
+            {% endif %}
+        </div>
+
         <!-- Operator AI Reply Suggestions (F2 — suggest-only, copy-only) -->
         {% set sr = suggestion_result %}
         <div id="operatorReplySuggestionsPanel" class="vp-card" style="margin-bottom:12px;">

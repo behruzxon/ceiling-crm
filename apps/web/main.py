@@ -35,6 +35,9 @@ from core.services.contact_price_calculator_service import (
     available_designs,
     build_contact_price_estimate,
 )
+from core.services.crm_next_best_action_service import (
+    compute_next_best_action,
+)
 from core.services.operator_reply_suggestion_service import (
     build_operator_reply_suggestions,
 )
@@ -237,6 +240,12 @@ async def crm_contact_detail(
         (messages or {}).get("items", []) if isinstance(messages, dict) else [],
         feature_enabled=feature_enabled,
     )
+    next_best_action = compute_next_best_action(
+        contact,
+        messages,
+        calculator_result=calculator_result,
+        suggestion_result=suggestion_result,
+    )
     return templates.TemplateResponse(
         "crm_contact_detail.html",
         {
@@ -250,6 +259,7 @@ async def crm_contact_detail(
             "calc_area": calc_area,
             "calc_design": calc_design,
             "calc_addons": calc_addons,
+            "next_best_action": next_best_action,
         },
     )
 
