@@ -18,6 +18,7 @@ Run locally::
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -26,6 +27,9 @@ from fastapi.templating import Jinja2Templates
 from apps.web.api_client import api_get
 from apps.web.auth import require_dashboard_auth
 from apps.web.csrf_middleware import AdminCSRFMiddleware
+from core.services.agent_control_center_service import (
+    build_agent_control_summary,
+)
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -146,6 +150,17 @@ async def agent_dashboard(
         params={"limit": 20},
     )
     control = await api_get("/api/v1/admin/agent/control/status")
+    summary = None
+    try:
+        from shared.config import get_settings
+
+        last_decision = (control or {}).get("last_decision")
+        summary = build_agent_control_summary(
+            get_settings(),
+            last_decision=last_decision if isinstance(last_decision, dict) else None,
+        )
+    except Exception:
+        summary = build_agent_control_summary(SimpleNamespace(business=SimpleNamespace()))
     return templates.TemplateResponse(
         "agent.html",
         {
@@ -153,6 +168,7 @@ async def agent_dashboard(
             "overview": overview,
             "pending": pending,
             "control": control,
+            "summary": summary,
             "hours": hours,
         },
     )

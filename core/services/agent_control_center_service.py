@@ -13,10 +13,20 @@ from typing import Any
 from core.schemas.agent_control_center import (
     AgentCanaryStatus,
     AgentControlCenterSnapshot,
+    AgentControlSummary,
     AgentFeatureFlagStatus,
+    AgentLastDecisionView,
     AgentPreflightStatus,
     AgentRolloutStageStatus,
     AgentSafetySummary,
+)
+
+_LAST_DECISION_SAFE_KEYS: tuple[str, ...] = (
+    "decision_id",
+    "timestamp",
+    "intent",
+    "safety_flags",
+    "execution_mode",
 )
 
 _FLAG_DEFS: list[tuple[str, str, str]] = [
@@ -234,3 +244,77 @@ class AgentControlCenterService:
             dangerous_combos=preflight.blockers,
             missing_configs=preflight.warnings,
         )
+
+
+def _safe_last_decision_view(
+    last_decision: dict[str, Any] | None,
+) -> AgentLastDecisionView | None:
+    if not last_decision:
+        return None
+    raw_flags = last_decision.get("safety_flags", ()) or ()
+    if isinstance(raw_flags, (list, tuple)):
+        safety_flags = tuple(str(f) for f in raw_flags)
+    else:
+        safety_flags = (str(raw_flags),)
+    return AgentLastDecisionView(
+        decision_id=str(last_decision.get("decision_id", "") or ""),
+        timestamp=str(last_decision.get("timestamp", "") or ""),
+        intent=str(last_decision.get("intent", "") or ""),
+        safety_flags=safety_flags,
+        execution_mode=str(last_decision.get("execution_mode", "") or ""),
+    )
+
+
+def build_agent_control_summary(
+    settings: Any,
+    last_decision: dict[str, Any] | None = None,
+) -> AgentControlSummary:
+    """Build a read-only summary for the Agent Control Center pill + card.
+
+    Pure function: takes the settings object (with ``.business`` attribute)
+    and an optional last_decision dict. Returns a frozen
+    ``AgentControlSummary``. Never reads prompts, tokens, or session
+    hashes from the input; only whitelisted decision keys are copied
+    into the view.
+    """
+    biz = getattr(settings, "business", None)
+    if biz is None:
+        biz = settings
+
+    orch_on = bool(getattr(biz, "agent_response_orchestrator_enabled", False))
+    engine_on = bool(getattr(biz, "agent_decision_engine_enabled", False))
+    overall_on = orch_on or engine_on
+
+    log_only = bool(
+        getattr(biz, "agent_response_orchestrator_log_only", True)
+        and getattr(biz, "agent_decision_log_only", True)
+    )
+
+    live_sender = bool(getattr(biz, "agent_execution_live_sender_enabled", False))
+    auto_exec = bool(getattr(biz, "agent_execution_auto_execute_approved", False))
+    live_send_safe = not (live_sender or auto_exec)
+
+    if not overall_on:
+        label = "ENGINE OFF"
+        color = "gray"
+    elif log_only:
+        label = "ENGINE ON · LOG_ONLY"
+        color = "blue"
+    elif live_send_safe:
+        label = "ENGINE ON · SAFE"
+        color = "green"
+    else:
+        label = "ENGINE ON · LIVE"
+        color = "red"
+
+    safe_text = "Safe / No live send" if live_send_safe else "LIVE SEND ACTIVE"
+
+    return AgentControlSummary(
+        engine_on=overall_on,
+        log_only=log_only,
+        live_send_safe=live_send_safe,
+        status_pill_label=label,
+        status_pill_color=color,
+        safe_text=safe_text,
+        last_decision=_safe_last_decision_view(last_decision),
+    )
