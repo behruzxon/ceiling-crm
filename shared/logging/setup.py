@@ -23,6 +23,7 @@ from __future__ import annotations
 import contextvars
 import logging
 import logging.config
+import re
 import uuid
 from typing import Any
 
@@ -30,6 +31,44 @@ import structlog
 from structlog.types import EventDict, Processor
 
 from shared.config import get_settings
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sensitive-value redaction (defense-in-depth against secret/PII in logs)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Applied to every string value in the event dict before rendering, so a stray
+# secret / phone in a log kwarg or event message is scrubbed. Combined with
+# show_locals=False on tracebacks (which removes the main leak vector — FSM
+# locals like price_phone surfacing in exception frames).
+_REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"sk-[A-Za-z0-9]{8,}"), "[redacted_key]"),
+    (re.compile(r"Bearer\s+[A-Za-z0-9._\-]{4,}", re.I), "[redacted_bearer]"),
+    (re.compile(r"\b\d{6,}:[A-Za-z0-9_\-]{20,}\b"), "[redacted_bot_token]"),
+    (re.compile(r"postgres(?:ql)?://[^\s\"']+", re.I), "[redacted_db_url]"),
+    (re.compile(r"redis://[^\s\"']+", re.I), "[redacted_redis_url]"),
+    (re.compile(r"\bBOT_TOKEN\b\s*[=:]\s*\S+", re.I), "BOT_TOKEN=[redacted]"),
+    (re.compile(r"\bOPENAI_API_KEY\b\s*[=:]\s*\S+", re.I), "OPENAI_API_KEY=[redacted]"),
+    (re.compile(r"\bDATABASE_URL\b\s*[=:]\s*\S+", re.I), "DATABASE_URL=[redacted]"),
+    # Phone numbers: Uzbek (+998 + 9 digits) and generic international with +.
+    (re.compile(r"\+?998\d{9}"), "[redacted_phone]"),
+    (re.compile(r"\+\d{10,15}"), "[redacted_phone]"),
+)
+
+
+def _redact_str(value: str) -> str:
+    out = value
+    for pattern, replacement in _REDACTION_PATTERNS:
+        out = pattern.sub(replacement, out)
+    return out
+
+
+def scrub_sensitive(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
+    """Redact secrets / phones from every string value in the event dict."""
+    for key, val in list(event_dict.items()):
+        if isinstance(val, str) and val:
+            event_dict[key] = _redact_str(val)
+    return event_dict
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Context variables for per-request tracing
@@ -118,13 +157,37 @@ def _build_shared_processors(is_dev: bool) -> list[Processor]:
         add_app_info,
         add_request_context,
         drop_color_message_key,
+        scrub_sensitive,
     ]
     # In production, convert tracebacks to dicts for JSON serialisation.
     # In dev, omit — ConsoleRenderer handles exc_info natively.
+    # show_locals=False: never include local variables (e.g. FSM price_phone)
+    # in rendered tracebacks — they previously leaked PII into logs.
     if not is_dev:
-        processors.append(structlog.processors.dict_tracebacks)
+        processors.append(
+            structlog.processors.ExceptionRenderer(
+                structlog.tracebacks.ExceptionDictTransformer(show_locals=False)
+            )
+        )
     processors.append(structlog.processors.UnicodeDecoder())
     return processors
+
+
+def _build_console_renderer() -> Processor:
+    """Dev console renderer with local variables disabled in tracebacks.
+
+    Uses rich (with ``show_locals=False``) when available, else falls back to
+    the stdlib-based ``plain_traceback`` — which never includes local variables
+    either. Both guarantee no FSM locals (e.g. price_phone) leak into logs.
+    """
+    formatter: Any
+    try:
+        import rich  # noqa: F401 — availability probe
+
+        formatter = structlog.dev.RichTracebackFormatter(show_locals=False)
+    except Exception:  # rich not installed → stdlib traceback, no locals
+        formatter = structlog.dev.plain_traceback
+    return structlog.dev.ConsoleRenderer(colors=True, exception_formatter=formatter)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -148,8 +211,8 @@ def configure_logging() -> None:
 
     # ── Renderer ──────────────────────────────────────────────────────────
     if is_dev:
-        # Human-readable colored output for local development
-        renderer: Processor = structlog.dev.ConsoleRenderer(colors=True)
+        # Human-readable colored output for local development (no locals in tracebacks)
+        renderer: Processor = _build_console_renderer()
     else:
         # Machine-parseable JSON for production log aggregators
         renderer = structlog.processors.JSONRenderer()

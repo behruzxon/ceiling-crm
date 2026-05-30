@@ -42,6 +42,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+from apps.bot.ai.system_prompt import INJECTION_REFUSAL as _INJECTION_REFUSAL
 from apps.bot.ai.system_prompt import _parse_ai_scoring
 from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _GENERIC_CONFIRMATIONS,
@@ -52,9 +53,12 @@ from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _detect_room_type,
     _is_catalog_request,
     _is_greeting,
+    _is_hard_stop,
+    _is_low_interest_stop,
     _is_measurement_request,
     _is_operator_request,
     _is_price_query,
+    _is_safety_block,
     _is_warranty_quality_question,
     _normalize_room,
     _parse_area,
@@ -691,6 +695,9 @@ async def _try_price_calculator(
 )
 async def handle_ai_catalog_btn(message: Message, state: FSMContext, **data: object) -> None:
     """Quick button: show catalog."""
+    from apps.bot.handlers.private.sales_dialogue_shadow import fire_shadow_for_message
+
+    await fire_shadow_for_message(message, state, live_route="catalog")
     await message.answer(_CATALOG_INTRO, parse_mode="HTML", reply_markup=catalog_list_keyboard())
 
 
@@ -703,6 +710,57 @@ async def handle_ai_operator_btn(message: Message, state: FSMContext, **data: ob
     user_id = message.from_user.id if message.from_user else 0
     msg = await _try_operator_handoff(user_id, source="ai_button")
     await message.answer(msg, reply_markup=_ai_keyboard())
+
+
+# ── Early stop / low-interest / safety guard (live-flow fix) ────────────────
+
+_LOW_INTEREST_REPLY = "Tushunarli 🙂 Shoshilmang — tayyor bo'lganingizda bemalol yozing."
+_HARD_STOP_REPLY = "Tushunarli 😊 Sizga boshqa xabar yubormaymiz. Kerak bo'lsa, yozing."
+
+
+async def _disable_followups_on_stop(user_id: int) -> None:
+    """Best-effort: disable agent follow-ups + cancel pending on a hard stop."""
+    if not user_id:
+        return
+    try:
+        from core.services.agent_memory_service import AgentMemoryService as _MemSvc
+        from core.services.followup_scheduler_service import FollowupSchedulerService as _FuSvc
+
+        factory = get_session_factory()
+        async with factory() as sess:
+            await _MemSvc(sess).disable_followup(user_id, "user_opted_out")
+            await _FuSvc(sess).cancel_all_pending(user_id, "user_opted_out")
+            await sess.commit()
+    except Exception:
+        log.warning("stop_signal_handler_error", user_id=user_id)
+
+
+async def _maybe_block_stop_or_safety(
+    message: Message, state: FSMContext, user_id: int, text: str
+) -> bool:
+    """Honour stop / low-interest and block injection BEFORE the objection /
+    price / OpenAI branches. Returns True if it handled the message.
+
+    Pure-detector driven; never produces an SDM reply, never calls OpenAI.
+    """
+    # 1) Stop / low-interest wins (finding #1: "kerakmas" must not become an
+    #    objection follow-up that asks for a phone).
+    if _is_low_interest_stop(text):
+        hard = _is_hard_stop(text)
+        if hard:
+            log.info("stop_signal_received", user_id=user_id, text=text[:30])
+            await _disable_followups_on_stop(user_id)
+        await message.answer(_HARD_STOP_REPLY if hard else _LOW_INTEREST_REPLY)
+        return True
+
+    # 2) Deterministic safety block (finding #2: injection / secret-extraction
+    #    must not reach the OpenAI path; evasive Uzbek forms included).
+    if _is_safety_block(text):
+        log.info("safety_block_prelLM", user_id=user_id)
+        await message.answer(_INJECTION_REFUSAL["reply"], reply_markup=_ai_keyboard())
+        return True
+
+    return False
 
 
 async def _try_operator_handoff(
@@ -878,6 +936,11 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
                 live_route="pre_route",
             )
         )
+
+    # Early stop / low-interest / safety guard (live-flow fix from shadow test).
+    # Honours opt-out and blocks injection BEFORE objection / price / OpenAI.
+    if await _maybe_block_stop_or_safety(message, state, user_id, text):
+        return
 
     if user_id and _is_greeting(text):
         _mem = await _load_ai_memory(user_id)
@@ -1141,6 +1204,11 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             )
         )
 
+    # Early stop / low-interest / safety guard (live-flow fix from shadow test).
+    # Honours opt-out and blocks injection BEFORE objection / price / OpenAI.
+    if await _maybe_block_stop_or_safety(message, state, user_id, text):
+        return
+
     if user_id and _is_greeting(text):
         _mem = await _load_ai_memory(user_id)
         if _mem.get("name"):
@@ -1228,23 +1296,7 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             )
         return
 
-    # ── Stop-word detection: disable agent follow-ups ───────────────────
-    from core.services.followup_scheduler_service import FollowupSchedulerService as _FuSvc
-
-    if _FuSvc.is_stop_signal(text):
-        log.info("stop_signal_received", user_id=user_id, text=text[:30])
-        try:
-            from core.services.agent_memory_service import AgentMemoryService as _MemSvc
-
-            _stop_factory = get_session_factory()
-            async with _stop_factory() as _stop_sess:
-                await _MemSvc(_stop_sess).disable_followup(user_id, "user_opted_out")
-                await _FuSvc(_stop_sess).cancel_all_pending(user_id, "user_opted_out")
-                await _stop_sess.commit()
-        except Exception:
-            log.warning("stop_signal_handler_error", user_id=user_id)
-        await message.answer("Tushunarli 😊 Sizga boshqa xabar yubormaymiz.")
-        return
+    # Stop / low-interest is now handled earlier by _maybe_block_stop_or_safety.
 
     _norm = (message.text or "").lower().strip()
     if _norm in _GENERIC_CONFIRMATIONS:

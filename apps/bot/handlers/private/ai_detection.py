@@ -840,6 +840,129 @@ def _is_greeting(text: str) -> bool:
     )
 
 
+# ── Stop / low-interest detection (live-flow fix from shadow test) ─────────────
+# Live gap found via shadow test: "kerakmas" in waiting_for_ai_question state was
+# routed to the angry-objection branch (which asks a follow-up) instead of a
+# polite stop. These detectors let the handlers honour stop / low-interest
+# BEFORE the objection branch.
+
+# Soft low-interest phrases (not a hard opt-out, but "don't push"): the customer
+# is browsing / postponing. NOTE: deliberately specific multi-word phrases so we
+# never catch "operator kerak" (no "emas"/"mas") or price/catalog asks.
+_LOW_INTEREST_TRIGGERS: tuple[str, ...] = (
+    "shunchaki soradim",
+    "shunchaki so'radim",
+    "shunchaki qaradim",
+    "shunchaki qarab turibman",
+    "keyinroq",
+    "keyin gaplashamiz",
+    "keyin aytaman",
+    "hozircha kerakmas",
+    "hozir kerakmas",
+    "hali kerakmas",
+    "hozircha shart emas",
+    "hozircha yo'q",
+)
+
+
+def _strip_trailing_punct(text: str) -> str:
+    """Lowercase + apostrophe-unify + strip trailing punctuation/whitespace."""
+    return _normalize_for_keyword_match_safe(text).strip().rstrip(".!?,؛… )")
+
+
+def _is_hard_stop(text: str) -> bool:
+    """True for an explicit opt-out (kerak emas / kerakmas / stop / ...), tolerant
+    of trailing punctuation and a leading clause (e.g. "hozir kerakmas")."""
+    norm = _strip_trailing_punct(text)
+    if not norm:
+        return False
+    try:
+        from core.services.followup_scheduler_service import _STOP_WORDS
+    except Exception:  # pragma: no cover - defensive
+        _STOP_WORDS = frozenset()
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    def _hit(s: str) -> bool:
+        return s in _STOP_WORDS or "kerakmas" in s or "kerak emas" in s
+
+    if _hit(norm):
+        return True
+    lat = latinize_uz_cyrillic(norm)
+    return lat != norm and _hit(lat)
+
+
+def _is_low_interest_stop(text: str) -> bool:
+    """True for a hard stop OR a soft low-interest signal — both should get a
+    polite low-pressure reply, never an objection rebuttal or a phone ask."""
+    if _is_hard_stop(text):
+        return True
+    norm = _strip_trailing_punct(text)
+    if any(t in norm for t in _LOW_INTEREST_TRIGGERS):
+        return True
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(norm)
+    return lat != norm and any(t in lat for t in _LOW_INTEREST_TRIGGERS)
+
+
+# ── Pre-LLM safety / secret-extraction detection (live-flow fix) ──────────────
+# Live gap: injection was only blocked deep inside _call_ai, and evasive Uzbek
+# phrasings that detect_prompt_injection misses (bot token / sen endi admin /
+# developer mode / bazadagi mijoz / instructionlarni unut) reached OpenAI. This
+# blocks them deterministically at the top of the handler.
+_SAFETY_BLOCK_TRIGGERS: tuple[str, ...] = (
+    "system prompt",
+    "tizim prompt",
+    "hidden prompt",
+    "yashirin prompt",
+    "promptni ko'rsat",
+    "promptni chiqar",
+    "promptingni ko'rsat",
+    "promptingni chiqar",
+    "bot token",
+    "bot tokenni",
+    "tokenni ber",
+    "tokenni chiqar",
+    "openai key",
+    "openai kalit",
+    "openai_api_key",
+    "api key",
+    "bot_token",
+    "database url",
+    "database_url",
+    "db url",
+    "admin parol",
+    "parolni ayt",
+    "developer mode",
+    "developer rejim",
+    "sen endi admin",
+    "sen admin",
+    "bazadagi mijoz",
+    "mijozlarni ko'rsat",
+    "mijozlar ro'yxat",
+    "telefonlarini chiqar",
+    "instructionlarni unut",
+    "oldingi instruction",
+    "qoidalarni unut",
+    "barcha qoidalarni unut",
+)
+
+
+def _is_safety_block(text: str) -> bool:
+    """Deterministic safety gate: known injection patterns OR secret-extraction /
+    jailbreak phrases (incl. evasive Uzbek forms the regex firewall misses)."""
+    from shared.utils.sanitize import detect_prompt_injection
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    if detect_prompt_injection(text):
+        return True
+    norm = _normalize_for_keyword_match_safe(text)
+    if any(t in norm for t in _SAFETY_BLOCK_TRIGGERS):
+        return True
+    lat = latinize_uz_cyrillic(norm)
+    return lat != norm and any(t in lat for t in _SAFETY_BLOCK_TRIGGERS)
+
+
 # ── Price intent detection ───────────────────────────────────────────────────
 
 _PRICE_KEYWORDS: frozenset[str] = frozenset(

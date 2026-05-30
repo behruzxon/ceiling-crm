@@ -117,4 +117,43 @@ async def maybe_log_sales_dialogue_shadow(
         log.warning("sales_dialogue_shadow_failed")
 
 
-__all__ = ["maybe_log_sales_dialogue_shadow"]
+async def fire_shadow_for_message(
+    message: Any,
+    state: Any,
+    *,
+    live_route: str,
+) -> None:
+    """Gated convenience wrapper for handler entry points (catalog, measurement).
+
+    Extracts text + FSM state from the message/state and forwards to
+    :func:`maybe_log_sales_dialogue_shadow` with the given ``live_route``. A
+    safe no-op when the flag is off (it does not even read FSM state then).
+    Never mutates state, never replies, never raises.
+    """
+    try:
+        if not get_settings().business.sales_dialogue_manager_shadow_enabled:
+            return
+        text = getattr(message, "text", None) or ""
+        from_user = getattr(message, "from_user", None)
+        chat = getattr(message, "chat", None)
+        user_id = from_user.id if from_user else None
+        chat_id = chat.id if chat else None
+        state_data: dict[str, Any] | None = None
+        if state is not None:
+            try:
+                state_data = await state.get_data()
+            except Exception:
+                state_data = None
+        await maybe_log_sales_dialogue_shadow(
+            text=text,
+            state_data=state_data,
+            user_id=user_id,
+            chat_id=chat_id,
+            live_route=live_route,
+        )
+    except Exception:
+        # Shadow must never affect the live flow.
+        log.warning("sales_dialogue_shadow_failed")
+
+
+__all__ = ["maybe_log_sales_dialogue_shadow", "fire_shadow_for_message"]
