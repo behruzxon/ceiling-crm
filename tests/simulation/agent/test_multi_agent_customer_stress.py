@@ -37,10 +37,12 @@ from typing import Any
 import pytest
 
 # Pure detection primitives — no network, no DB.
+# Operator detection lives in ai_detection now.
 from apps.bot.handlers.private.ai_detection import (
     _is_catalog_request,
     _is_greeting,
     _is_measurement_request,
+    _is_operator_request,
     _is_price_query,
     parse_combo,
 )
@@ -50,32 +52,6 @@ from core.services.followup_scheduler_service import FollowupSchedulerService
 from core.services.price_calculator_service import PriceCalculatorService
 from shared.utils.sanitize import detect_prompt_injection
 from shared.utils.text_normalization import latinize_uz_cyrillic
-
-# ── Operator detection (mirrors ai_support.py logic) ───────────────────
-
-_OPERATOR_HINTS: tuple[str, ...] = (
-    "operator",
-    "menejer",
-    "manager",
-    "konsultant",
-    "оператор",
-    "консультант",
-    "менеджер",
-    "opratr",  # common typo
-    "operatr",
-    "real human",
-    "odam bilan",
-    "tirik odam",
-)
-
-
-def _is_operator_request(text: str) -> bool:
-    lower = text.lower()
-    if any(h in lower for h in _OPERATOR_HINTS):
-        return True
-    lat = latinize_uz_cyrillic(lower)
-    return any(h in lat for h in _OPERATOR_HINTS)
-
 
 # ── Routing oracle (replicates ai_support.handle_ai_* decision tree) ──
 
@@ -686,6 +662,126 @@ def _safety_questions() -> list[Q]:  # ~80
     return items[:80]
 
 
+def _real_customer_language_questions() -> list[Q]:  # ~120 messy real-world
+    items: list[Q] = []
+    # Price-leaning short forms
+    for line in (
+        "nechi",
+        "nechpul",
+        "qancha boladi",
+        "qancha tushadi",
+        "guli nechi",
+        "gulidan nechi",
+        "mramr qancha",
+        "hi tek nechi",
+        "qora naqsh nechi",
+        "oddiy nechpul",
+        "odiy nechi",
+        "eng arzoni qanaqa",
+        "eng arzon",
+        "qancha",
+    ):
+        items.append(
+            Q(
+                "messy",
+                "real_customer_language",
+                line,
+                ("price_ask_area", "price_ask_design", "price_ask_clarify", "price_estimate"),
+                "medium",
+            )
+        )
+    # Catalog-leaning short forms / typos
+    for line in (
+        "katalk",
+        "katalok",
+        "katlog",
+        "ktalog",
+        "koraylik",
+        "rasm tashen",
+        "namunala bormi",
+        "katalog qani",
+        "guli rasm",
+        "gulli korsat",
+        "mramr korsat",
+        "oshxona uchun bormi",
+    ):
+        items.append(
+            Q(
+                "messy",
+                "real_customer_language",
+                line,
+                ("catalog_direct", "catalog_confirm", "catalog_generic"),
+                "medium",
+            )
+        )
+    # Measurement-leaning
+    for line in (
+        "kelib korila",
+        "kelib korsela",
+        "kelib o'lchab ketila",
+        "kelib olchab ketila",
+        "olchab ketila",
+        "usta jo'natila",
+        "usta jonatila",
+        "odam yuborila",
+        "manzilga kela olasizmi",
+        "ertaga kela olasizmi",
+        "bugun kelib korasizmi",
+        "uyga kelila",
+        "buyurtma qilaman",
+        "zakaz bermoqchiman",
+    ):
+        items.append(Q("messy", "real_customer_language", line, ("measurement",), "high"))
+    # Operator-leaning
+    for line in (
+        "odam bilan gaplashaman",
+        "tel qiling",
+        "aloqa qiling",
+        "operatorga ulang",
+        "jonli odam kerak",
+        "usta bilan gaplashay",
+        "admin bormi",
+        "tel nomer ber",
+        "qongiroq qiling",
+        "qo'ng'iroq qiling",
+        "opratr kerak",
+        "menjer keraq",
+        "позвоните мне",
+        "оператор керак",
+    ):
+        items.append(Q("messy", "real_customer_language", line, ("operator",), "high"))
+    # Objection / friction
+    for line in (
+        "qimmatku",
+        "qimmat ekanu",
+        "boshqalar arzon deyapti",
+        "chegirma bormi",
+        "aldab qoymaysizlarmi",
+        "kafolati bormi",
+    ):
+        items.append(
+            Q("messy", "real_customer_language", line, ("objection", "ai_fallback"), "medium")
+        )
+    # Low-interest / stop
+    for line in (
+        "shunchaki soradim",
+        "pul yoq",
+        "hali emas",
+        "kerakmas",
+        "kerak emas",
+        "hozir emas",
+    ):
+        items.append(Q("messy", "real_customer_language", line, ("stop",), "high"))
+    # Ambiguous fillers — should NOT auto-route to a wrong flow
+    for line in (
+        "qilamiz",
+        "boshlaymiz",
+        "ok bolaman",
+    ):
+        items.append(Q("messy", "real_customer_language", line, ("ai_fallback", "stop"), "low"))
+    return items[:120]
+
+
 def _all_questions() -> tuple[Q, ...]:
     return _expand_unique(
         _price_questions(),
@@ -698,6 +794,7 @@ def _all_questions() -> tuple[Q, ...]:
         _cyrillic_questions(),
         _typo_questions(),
         _safety_questions(),
+        _real_customer_language_questions(),
     )
 
 

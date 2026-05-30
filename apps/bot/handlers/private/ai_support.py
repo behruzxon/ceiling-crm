@@ -52,6 +52,7 @@ from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _is_catalog_request,
     _is_greeting,
     _is_measurement_request,
+    _is_operator_request,
     _is_price_query,
     _normalize_room,
     _parse_area,
@@ -978,6 +979,12 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
         return
 
+    # ── Operator handoff via free text (real-language pack) ─────────
+    if _is_operator_request(text):
+        msg = await _try_operator_handoff(user_id, source="ai_text", reason="operator_requested")
+        await message.answer(msg, reply_markup=_ai_keyboard())
+        return
+
     # ── Auto-reply check (skip OpenAI if template matches) ─────────
     if user_id and await _try_auto_reply(message, state, user_id, text):
         return
@@ -1233,6 +1240,12 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
                 )
             else:
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # ── Operator handoff via free text (real-language pack) ─────────
+    if _is_operator_request(text):
+        msg = await _try_operator_handoff(user_id, source="ai_text", reason="operator_requested")
+        await message.answer(msg, reply_markup=_ai_keyboard())
         return
 
     # ── Auto-reply check (skip OpenAI if template matches) ─────────

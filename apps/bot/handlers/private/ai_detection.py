@@ -75,7 +75,34 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "kelib koʻring",
         "kelinglar",
         "uyga keling",
+        "uyga kelila",
+        "uyga kelinglar",
         "manzilga keling",
+        # ── Real-customer messy phrasings (real-language pack) ────────────────────
+        "kelib korila",
+        "kelib korsela",
+        "kelib korila bering",
+        "kelib o'lchab ketila",
+        "kelib olchab ketila",
+        "olchab ketila",
+        "o'lchab ketila",
+        "ustani jo'natila",
+        "ustani jonatila",
+        "usta jo'natila",
+        "usta jonatila",
+        "usta yuborila",
+        "odam yuborila",
+        "odam jo'natila",
+        "odam jonatila",
+        "kela olasizmi",
+        "bugun kelib",
+        "ertaga kela olasizmi",
+        "bugun kela olasizmi",
+        "manzilga kela olasizmi",
+        "bermoqchiman",
+        "zakaz bermoqchiman",
+        "zakaz qilmoqchimiz",
+        "buyurtma bermoqchiman",
         # ── Cyrillic Uzbek / Russian — order / measurement ────────────────────────
         "заказ",
         "заказ олинг",
@@ -106,8 +133,67 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
 )
 
 
+_OPERATOR_TRIGGERS: frozenset[str] = frozenset(
+    {
+        # ── Latin Uzbek ─────────────────────────────────────────────────────────
+        "operator",
+        "operatorga ulang",
+        "menejer",
+        "manager",
+        "konsultant",
+        "admin bormi",
+        "admin chaqir",
+        "odam bilan gaplash",
+        "tirik odam",
+        "jonli odam",
+        "tel qil",
+        "tel nomer",
+        "tel raqam",
+        "tel beraman",
+        "aloqa qil",
+        "aloqaga chiq",
+        "qo'ng'iroq qil",
+        "qongiroq qil",
+        "qo'ng'iroq qiling",
+        "qongiroq qiling",
+        "usta bilan gaplash",
+        # Typos
+        "opratr",
+        "operatr",
+        "menjer",
+        # ── Cyrillic Uzbek / Russian ────────────────────────────────────────────
+        "оператор",
+        "менеджер",
+        "консультант",
+        "позвоните",
+        "перезвоните",
+        "позвоните мне",
+        "оператора",
+        "связь",
+        "связаться",
+    }
+)
+
+
+def _is_operator_request(text: str) -> bool:
+    """Heuristic operator-handoff detector for free-text messages.
+
+    Lower-cases + apostrophe-unifies the input and also tries the
+    Latin transliteration so Cyrillic phrases hit the Latin triggers.
+    """
+    lower = _normalize_for_keyword_match_safe(text)
+    if any(t in lower for t in _OPERATOR_TRIGGERS):
+        return True
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _OPERATOR_TRIGGERS)
+
+
 def _is_measurement_request(text: str) -> bool:
-    lower = text.lower()
+    lower = _normalize_for_keyword_match_safe(text)
     if any(t in lower for t in _MEASUREMENT_TRIGGERS):
         return True
     # Cyrillic fall-through: latinize the input and try again so
@@ -140,18 +226,48 @@ _CATALOG_TRIGGERS: frozenset[str] = frozenset(
         "foto",
         "surat",
         "namuna",
+        "namunala",
         "misol",
         "ko'rsat",
         "korsat",
+        "koraylik",
         "tashla",
         "yubor",
         "kanal",
         "link",
         "ishlar",
         "работы",
+        # ── Real-customer typos (added in real-language pack) ───────────────────
+        "katalk",
+        "katalok",
+        "katlog",
+        "ktalog",
+        # Design-name typos so "guli bormi" / "mramr korsat" still
+        # enter the catalog branch (which then asks the resolver +
+        # the price-intent guard keeps "guli nech pul" routed to
+        # price). NOTE: do NOT add bare "bormi" / "ko'raman" here —
+        # those words appear in warranty / objection messages too
+        # (e.g. "kafolat bormi") and would falsely route to catalog.
+        "guli",
+        "gul",
+        "gullili",
+        "mramr",
+        "marmar",
+        "xaytek",
+        "haytek",
+        "hi tek",
+        "hitek",
+        "kuxnya",
+        "kuhnya",
+        "kitchen",
+        "oshhona",
+        # Cyrillic design names
+        "гули",
+        "гулли",
+        "мармар",
+        "ошхона",
         # Design type names (Latin)
         "gulli",
-        "gullili",
         "mramor",
         "naqsh",
         "hi tech",
@@ -196,15 +312,23 @@ _CATALOG_TRIGGERS: frozenset[str] = frozenset(
         # Room types — Cyrillic
         "меҳмонхона",
         "ётоқхона",
-        "ошхона",
         "ҳаммом",
     }
 )
 
 
 def _is_catalog_request(text: str) -> bool:
-    lower = text.lower()
+    lower = _normalize_for_keyword_match_safe(text)
     return any(t in lower for t in _CATALOG_TRIGGERS)
+
+
+def _normalize_for_keyword_match_safe(text: str) -> str:
+    """Same as :func:`_normalize_for_keyword_match` but defined here so
+    early-loaded detectors can call it without a forward reference."""
+    out = text.lower()
+    for variant in ("‘", "’", "ʻ", "ʼ", "`"):
+        out = out.replace(variant, "'")
+    return out
 
 
 # ── Catalog context detection ────────────────────────────────────────────────
@@ -462,6 +586,18 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
         "qanchadan",
         "nechadan",
         "hisoblab ber",
+        # ── Real-customer messy short forms (added in real-language pack) ────────
+        "qancha",
+        "nechi",
+        "nechpul",
+        "qancha boladi",
+        "qancha bo'ladi",
+        "qancha tushadi",
+        "qancha tushyapti",
+        "eng arzon",
+        "eng arzoni",
+        "arzoni qanaqa",
+        "qaysi arzon",
         "narxini ayt",
         "narxini hisobla",
         "narxini chiqar",
@@ -512,7 +648,7 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
 
 
 def _is_price_query(text: str) -> bool:
-    lower = text.lower()
+    lower = _normalize_for_keyword_match_safe(text)
     return any(kw in lower for kw in _PRICE_KEYWORDS)
 
 

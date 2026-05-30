@@ -1,11 +1,26 @@
-> Status: ANALYSIS REPORT + P0-1 APPLIED. Deploy: NO. VPS: NO.
-> Flags: NOT ENABLED. Stage 1 LOG_ONLY: NOT APPLIED.
+> Status: ANALYSIS REPORT + P0-1 + REAL-LANGUAGE PACK APPLIED.
+> Deploy: NO. VPS: NO. Flags: NOT ENABLED. Stage 1 LOG_ONLY: NOT APPLIED.
 > No live OpenAI / Telegram calls — fully deterministic offline simulation.
 >
-> **Update (P0-1 fix landed):** measurement / order intent detection
-> hardened. order score jumped **24 → 100**, overall **88 → 92**.
-> Other categories unchanged. See §3 "P0 — must fix before production"
-> for the before/after table.
+> **Update (P0-1 + real-language pack landed):**
+>
+> | Metric | Before audit | After P0-1 | After real-language pack |
+> |---|---:|---:|---:|
+> | overall | 88 | 92 | **95** |
+> | price | 92 | 92 | **94** |
+> | catalog | 85 | 85 | **90** |
+> | operator | 100 | 100 | 100 |
+> | order/measurement | 24 | 100 | 100 |
+> | typo | 92 | 92 | **100** |
+> | real_customer_language | n/a | n/a | **100** |
+> | safety | 95 | 95 | 95 |
+> | messy persona | 75 | 87 | **94** |
+> | normal persona | 95 | 97 | **98** |
+> | cyrillic persona | 78 | 78 | **83** |
+>
+> All targets now met (messy ≥ 90, overall ≥ 93, safety ≥ 95,
+> price ≥ 92, catalog ≥ 88, measurement = 100). See §3 / §4 for the
+> historical findings preserved for the audit trail.
 
 # 143 — Multi-Agent Bot Stress Test Report
 
