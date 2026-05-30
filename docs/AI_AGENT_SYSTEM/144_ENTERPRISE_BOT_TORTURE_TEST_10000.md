@@ -1,5 +1,12 @@
 # 144 — Enterprise Bot Intelligence Torture Test (10,000 messages)
 
+> **Update (post PRs #8–#12):** the original audit below scored **96/100**. All live
+> detector gaps it found are now fixed — price/`necha pul`/Cyrillic `гули` (PR #9),
+> operator phone-call (PR #10), warranty heat (PR #11) — and the test oracle was aligned
+> with the shipped PR #8 stop/safety guard (PR #12, report 151). Current score:
+> **100/100, 10/10 gates, 0 failures.** The sections below are the original findings,
+> kept for history.
+>
 > **Status:** Analysis only. No code changed, nothing committed, no deploy.
 > **Test:** `tests/simulation/agent/test_enterprise_bot_torture_10000.py`
 > **Run:** `pytest tests/simulation/agent/test_enterprise_bot_torture_10000.py -s -q --no-cov`

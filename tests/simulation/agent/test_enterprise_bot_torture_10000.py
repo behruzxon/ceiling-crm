@@ -38,6 +38,19 @@ from dataclasses import dataclass
 
 import pytest
 
+# Shipped live-handler guard (PR #8): the live AI handlers honour stop /
+# low-interest and block injection BEFORE the generic routing tree, using these
+# pure detectors. The base ``_route`` oracle only used exact-match
+# ``is_stop_signal`` + regex-only ``detect_prompt_injection`` and therefore
+# under-reported stop-with-punctuation and evasive-injection cases that the live
+# bot already handles. We import the SAME production helpers (no duplicated
+# logic) and apply them first, so the torture score reflects true live
+# behaviour. This is a TEST-ONLY wrapper — no production code is changed.
+from apps.bot.handlers.private.ai_detection import (
+    _is_low_interest_stop,
+    _is_safety_block,
+)
+
 # Reuse the PROVEN routing oracle so this test stays consistent with the
 # already-accepted decision model (mirrors ai_support.handle_ai_*).
 from tests.simulation.agent.test_multi_agent_customer_stress import Routing, _route
@@ -1202,10 +1215,25 @@ class Outcome:
     reason: str = ""
 
 
+def _route_live(text: str) -> Routing:
+    """``_route`` aligned with the shipped live-handler guard (PR #8).
+
+    Applies the live stop / low-interest and pre-LLM safety checks first
+    (the exact production detectors), then delegates to the base oracle.
+    Pure / no I/O — only adds the punctuation-tolerant stop and evasive-
+    injection coverage the live bot already has.
+    """
+    if _is_low_interest_stop(text):
+        return Routing("stop")
+    if _is_safety_block(text):
+        return Routing("safety_blocked")
+    return _route(text)
+
+
 def evaluate(corpus: list[Msg]) -> list[Outcome]:
     out: list[Outcome] = []
     for m in corpus:
-        r = _route(m.user_message)
+        r = _route_live(m.user_message)
         ok = r.label in m.accept
         reason = "" if ok else f"got={r.label} expected={sorted(m.accept)}"
         out.append(Outcome(msg=m, actual=r, passed=ok, reason=reason))
