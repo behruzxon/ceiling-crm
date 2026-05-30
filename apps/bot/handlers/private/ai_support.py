@@ -782,7 +782,7 @@ def _classify_live_route(text: str) -> str:
     price_intent = _is_price_query(text) or _is_price_query(latin) or combo["area"] is not None
     if _is_warranty_quality_question(text) and not price_intent:
         return "warranty"
-    if _is_catalog_request(text) and not price_intent:
+    if _is_catalog_request(text) and not price_intent and not _is_operator_request(text):
         return "catalog"
     if detect_objection_full(text):
         return "objection"
@@ -1018,7 +1018,7 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
         return
 
-    if _is_catalog_request(text) and not _price_intent_present:
+    if _is_catalog_request(text) and not _price_intent_present and not _is_operator_request(text):
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
@@ -1301,7 +1301,7 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
         return
 
-    if _is_catalog_request(text) and not _price_intent_present:
+    if _is_catalog_request(text) and not _price_intent_present and not _is_operator_request(text):
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)

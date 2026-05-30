@@ -157,6 +157,21 @@ _OPERATOR_TRIGGERS: frozenset[str] = frozenset(
         "qo'ng'iroq qiling",
         "qongiroq qiling",
         "usta bilan gaplash",
+        # ── Phone-call / contact requests (report-144 operator gap) ─────────────
+        # Multi-word so we never match a customer SHARING a number
+        # ("telefon raqamim 998…"); only "telefon qil/qib" etc. fire.
+        "telefon qil",
+        "telefon qib",
+        "tel qib",
+        "qongiro qil",
+        "qongiroq qib",
+        "qo'ng'iroq qib",
+        "call qil",
+        "call me",
+        "svyaz qil",
+        "svyaz",
+        "bog'lan",
+        "boglan",
         # Typos
         "opratr",
         "operatr",
@@ -171,6 +186,8 @@ _OPERATOR_TRIGGERS: frozenset[str] = frozenset(
         "оператора",
         "связь",
         "связаться",
+        "свяжитесь",
+        "свяжи",
     }
 )
 
