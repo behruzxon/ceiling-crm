@@ -742,6 +742,14 @@ class BusinessSettings(BaseSettings):
         default=False,
         alias="SALES_DIALOGUE_MANAGER_ENABLED",
     )
+    # Shadow / log-only mode: when ON, the Sales Dialogue Manager computes a
+    # decision for each AI-handler message and LOGS a sanitized summary only —
+    # it never produces a customer-facing reply. Default OFF: no behaviour
+    # change. See docs/AI_AGENT_SYSTEM/146_SALES_DIALOGUE_MANAGER_SHADOW_INTEGRATION.md.
+    sales_dialogue_manager_shadow_enabled: bool = Field(
+        default=False,
+        alias="SALES_DIALOGUE_MANAGER_SHADOW_ENABLED",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

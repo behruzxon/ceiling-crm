@@ -133,6 +133,9 @@ from apps.bot.handlers.private.ai_states import (  # noqa: F401
     _phone_request_keyboard,
 )
 from apps.bot.handlers.private.pricing import start_pricing_flow
+from apps.bot.handlers.private.sales_dialogue_shadow import (
+    maybe_log_sales_dialogue_shadow,
+)
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
 from core.services.catalog_link_resolver_service import (
@@ -859,6 +862,23 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         asyncio.create_task(_process_lead_signal(user_id, text))
         asyncio.create_task(_run_orchestrator(user_id, text))
 
+    # Sales Dialogue Manager — shadow / log-only (default OFF). Computes a
+    # decision and logs a sanitized summary; never alters the live reply.
+    if get_settings().business.sales_dialogue_manager_shadow_enabled:
+        try:
+            _sdm_state = await state.get_data()
+        except Exception:
+            _sdm_state = None
+        asyncio.create_task(
+            maybe_log_sales_dialogue_shadow(
+                text=text,
+                state_data=_sdm_state,
+                user_id=user_id or None,
+                chat_id=message.chat.id if message.chat else None,
+                live_route="pre_route",
+            )
+        )
+
     if user_id and _is_greeting(text):
         _mem = await _load_ai_memory(user_id)
         if _mem.get("name"):
@@ -1103,6 +1123,23 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         asyncio.create_task(_ai_stats_count_user(user_id))
         asyncio.create_task(_process_lead_signal(user_id, text))
         asyncio.create_task(_run_orchestrator(user_id, text))
+
+    # Sales Dialogue Manager — shadow / log-only (default OFF). Computes a
+    # decision and logs a sanitized summary; never alters the live reply.
+    if get_settings().business.sales_dialogue_manager_shadow_enabled:
+        try:
+            _sdm_state = await state.get_data()
+        except Exception:
+            _sdm_state = None
+        asyncio.create_task(
+            maybe_log_sales_dialogue_shadow(
+                text=text,
+                state_data=_sdm_state,
+                user_id=user_id or None,
+                chat_id=message.chat.id if message.chat else None,
+                live_route="pre_route",
+            )
+        )
 
     if user_id and _is_greeting(text):
         _mem = await _load_ai_memory(user_id)
