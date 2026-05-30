@@ -132,6 +132,9 @@ from apps.bot.handlers.private.ai_states import (  # noqa: F401
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
+from core.services.catalog_link_resolver_service import (
+    resolve_catalog_link as _resolve_catalog_link,
+)
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
@@ -557,6 +560,62 @@ async def handle_ai_price_btn(message: Message, state: FSMContext, **data: objec
     )
 
 
+# ── Catalog deep-link helper ────────────────────────────────────────────
+
+
+def _build_catalog_link_kb(text: str) -> InlineKeyboardMarkup:
+    """Return an inline keyboard with the design-specific catalog link
+    if ``text`` mentions a known design / category, else the generic
+    full-catalog link. Falls through to the generic link when the
+    matched section has no URL configured.
+    """
+    result = _resolve_catalog_link(text)
+    if result.matched and result.link is not None and result.link.url:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"📂 {result.link.title} katalogi",
+                        url=result.link.url,
+                    )
+                ]
+            ]
+        )
+    # Either no design alias matched, or the section had no URL — fall
+    # back to the generic full-catalog button.
+    fallback = result.fallback_link
+    if fallback is None or not fallback.url:
+        return _catalog_link_kb()
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📂 To'liq katalogimiz",
+                    url=fallback.url,
+                )
+            ]
+        ]
+    )
+
+
+def _catalog_intro_text_for(text: str) -> str:
+    """Return a short intro line for the catalog reply.
+
+    Uses the resolver's ``intro_text`` so the design-specific case
+    reads naturally ("Albatta, mana 🌸 Gulli katalogimiz 👇"), and
+    falls back to the generic smart-catalog response when no design
+    is detected.
+    """
+    result = _resolve_catalog_link(text)
+    if result.matched and result.link is not None and result.link.url:
+        return result.intro_text
+    if result.matched and result.link is not None and not result.link.url:
+        return result.intro_text  # missing-link notice
+    # No design detected — keep the existing personalised generic intro.
+    room, design = _detect_catalog_context(text)
+    return _build_smart_catalog_response(room, design)
+
+
 # ── Deterministic price calculator (wired in Step CO) ──────────────────
 
 
@@ -810,8 +869,8 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
         await message.answer(
-            _build_smart_catalog_response(room, design),
-            reply_markup=_catalog_link_kb(),
+            _catalog_intro_text_for(text),
+            reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
         fsm_data = await state.get_data()
@@ -1054,8 +1113,8 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
         await message.answer(
-            _build_smart_catalog_response(room, design),
-            reply_markup=_catalog_link_kb(),
+            _catalog_intro_text_for(text),
+            reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
         asyncio.create_task(
