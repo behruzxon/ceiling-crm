@@ -184,6 +184,7 @@ _CATALOG_ROOM_KEYWORDS: dict[str, str] = {
 _CATALOG_DESIGN_KEYWORDS: dict[str, str] = {
     "gullili": "Gulli",
     "gulli": "Gulli",
+    "guli": "Gulli",
     "hi tech": "Hi Tech",
     "hitech": "Hi Tech",
     "hi-tech": "Hi Tech",
@@ -471,6 +472,8 @@ _DESIGN_NAMES_IN_TEXT: dict[str, str] = {
     # ── Latin Uzbek ───────────────────────────────────────────────────────────
     "gullili": "Gulli",
     "gulli": "Gulli",
+    "guli": "Gulli",
+    "gul": "Gulli",
     "hi tech": "Hi Tech",
     "hitech": "Hi Tech",
     "hi-tech": "Hi Tech",

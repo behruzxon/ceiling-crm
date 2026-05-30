@@ -798,7 +798,14 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         await start_measurement_flow(message, state)
         return
 
-    if _is_catalog_request(text):
+    # Price-intent win: design names alone are in _CATALOG_TRIGGERS, so
+    # a message like "gulli nech pul" would otherwise route to the
+    # catalog branch and the price keyword would be lost. Skip catalog
+    # when the same text carries a price keyword or an explicit area.
+    _early_combo = parse_combo(text)
+    _price_intent_present = _is_price_query(text) or _early_combo["area"] is not None
+
+    if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
@@ -872,6 +879,7 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
             if user_id:
                 asyncio.create_task(_add_lead_score(user_id, 10))
             if _combo["design"]:
+                await state.update_data(price_design=_combo["design"])
                 await message.answer(
                     "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
                     reply_markup=_ai_keyboard(),
@@ -1037,7 +1045,11 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await start_measurement_flow(message, state)
         return
 
-    if _is_catalog_request(text):
+    # Price-intent win: see handle_ai_question for the same guard.
+    _early_combo = parse_combo(text)
+    _price_intent_present = _is_price_query(text) or _early_combo["area"] is not None
+
+    if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
@@ -1120,6 +1132,7 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             if user_id:
                 asyncio.create_task(_add_lead_score(user_id, 10))
             if _combo["design"]:
+                await state.update_data(price_design=_combo["design"])
                 await message.answer(
                     "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
                     reply_markup=_ai_keyboard(),
