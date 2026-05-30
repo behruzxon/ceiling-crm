@@ -31,8 +31,30 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "o'lchov olish",
         "oʻlchov olish",
         "bepul olchov",
+        "o'lchov",
+        "olchov",
+        "ulchov",
+        "o'lchang",
+        "olchang",
+        "ulchang",
+        "o'lchab",
+        "olchab",
+        "kelib o'lchang",
+        "kelib olchang",
+        "kelib ulchang",
+        "kelib o'lchab bering",
+        "kelib olchab bering",
+        "o'lchab keting",
+        "olchab keting",
         "usta chaqir",
+        "ustani chaqir",
+        "master chaqir",
+        "montajchi chaqir",
+        "montajchi yubor",
         "usta yuborin",
+        "ustani yubor",
+        "usta yubor",
+        "ustani jonat",
         "usta kerak",
         # ── Latin Uzbek — order / zakaz keywords ─────────────────────────────────
         "zakaz",
@@ -51,6 +73,9 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "ustani yuboring",
         "kelib ko'ring",
         "kelib koʻring",
+        "kelinglar",
+        "uyga keling",
+        "manzilga keling",
         # ── Cyrillic Uzbek / Russian — order / measurement ────────────────────────
         "заказ",
         "заказ олинг",
@@ -59,16 +84,41 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "буйуртма бер",
         "буйуртма кил",
         "ўлчов",
+        "улчов",
+        "ўлчанг",
+        "улчанг",
         "ўлчов керак",
         "келиб куринг",
         "келиб кўринг",
+        "келиб ўлчанг",
+        "келиб улчанг",
+        "уста чақир",
+        "устади чақир",
+        "уста юбор",
+        "уста юборинг",
+        "манзилга келинг",
+        "замер",
+        "замерщик",
+        "мастер",
+        "вызвать мастера",
+        "пришлите мастера",
     }
 )
 
 
 def _is_measurement_request(text: str) -> bool:
     lower = text.lower()
-    return any(t in lower for t in _MEASUREMENT_TRIGGERS)
+    if any(t in lower for t in _MEASUREMENT_TRIGGERS):
+        return True
+    # Cyrillic fall-through: latinize the input and try again so
+    # phrases like "эртага келиб ўлчанг" hit the Latin triggers
+    # (kelib o'lchang / olchang / kelib ko'ring / ...).
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _MEASUREMENT_TRIGGERS)
 
 
 # ── Catalog link shortcut ────────────────────────────────────────────────────
