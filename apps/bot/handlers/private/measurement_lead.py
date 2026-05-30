@@ -102,6 +102,13 @@ async def start_measurement_flow(message: Message, state: FSMContext) -> None:
     Entry point callable from other handlers (e.g. ai_support.py).
     Clears any existing FSM state, then starts the measurement lead FSM.
     """
+    # Sales Dialogue Manager shadow / log-only (default OFF) — record the SDM
+    # decision for the measurement entry point. Awaited before state.clear() so
+    # FSM facts are still present; no reply, no state mutation, no OpenAI.
+    from apps.bot.handlers.private.sales_dialogue_shadow import fire_shadow_for_message
+
+    await fire_shadow_for_message(message, state, live_route="measurement")
+
     await state.clear()
     await state.set_state(MeasurementLeadStates.waiting_for_name)
     await message.answer(
