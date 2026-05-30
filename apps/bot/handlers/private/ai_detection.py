@@ -31,8 +31,30 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "o'lchov olish",
         "oʻlchov olish",
         "bepul olchov",
+        "o'lchov",
+        "olchov",
+        "ulchov",
+        "o'lchang",
+        "olchang",
+        "ulchang",
+        "o'lchab",
+        "olchab",
+        "kelib o'lchang",
+        "kelib olchang",
+        "kelib ulchang",
+        "kelib o'lchab bering",
+        "kelib olchab bering",
+        "o'lchab keting",
+        "olchab keting",
         "usta chaqir",
+        "ustani chaqir",
+        "master chaqir",
+        "montajchi chaqir",
+        "montajchi yubor",
         "usta yuborin",
+        "ustani yubor",
+        "usta yubor",
+        "ustani jonat",
         "usta kerak",
         # ── Latin Uzbek — order / zakaz keywords ─────────────────────────────────
         "zakaz",
@@ -51,6 +73,36 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "ustani yuboring",
         "kelib ko'ring",
         "kelib koʻring",
+        "kelinglar",
+        "uyga keling",
+        "uyga kelila",
+        "uyga kelinglar",
+        "manzilga keling",
+        # ── Real-customer messy phrasings (real-language pack) ────────────────────
+        "kelib korila",
+        "kelib korsela",
+        "kelib korila bering",
+        "kelib o'lchab ketila",
+        "kelib olchab ketila",
+        "olchab ketila",
+        "o'lchab ketila",
+        "ustani jo'natila",
+        "ustani jonatila",
+        "usta jo'natila",
+        "usta jonatila",
+        "usta yuborila",
+        "odam yuborila",
+        "odam jo'natila",
+        "odam jonatila",
+        "kela olasizmi",
+        "bugun kelib",
+        "ertaga kela olasizmi",
+        "bugun kela olasizmi",
+        "manzilga kela olasizmi",
+        "bermoqchiman",
+        "zakaz bermoqchiman",
+        "zakaz qilmoqchimiz",
+        "buyurtma bermoqchiman",
         # ── Cyrillic Uzbek / Russian — order / measurement ────────────────────────
         "заказ",
         "заказ олинг",
@@ -59,16 +111,370 @@ _MEASUREMENT_TRIGGERS: frozenset[str] = frozenset(
         "буйуртма бер",
         "буйуртма кил",
         "ўлчов",
+        "улчов",
+        "ўлчанг",
+        "улчанг",
         "ўлчов керак",
         "келиб куринг",
         "келиб кўринг",
+        "келиб ўлчанг",
+        "келиб улчанг",
+        "уста чақир",
+        "устади чақир",
+        "уста юбор",
+        "уста юборинг",
+        "манзилга келинг",
+        "замер",
+        "замерщик",
+        "мастер",
+        "вызвать мастера",
+        "пришлите мастера",
     }
 )
 
 
+_OPERATOR_TRIGGERS: frozenset[str] = frozenset(
+    {
+        # ── Latin Uzbek ─────────────────────────────────────────────────────────
+        "operator",
+        "operatorga ulang",
+        "menejer",
+        "manager",
+        "konsultant",
+        "admin bormi",
+        "admin chaqir",
+        "odam bilan gaplash",
+        "tirik odam",
+        "jonli odam",
+        "tel qil",
+        "tel nomer",
+        "tel raqam",
+        "tel beraman",
+        "aloqa qil",
+        "aloqaga chiq",
+        "qo'ng'iroq qil",
+        "qongiroq qil",
+        "qo'ng'iroq qiling",
+        "qongiroq qiling",
+        "usta bilan gaplash",
+        # Typos
+        "opratr",
+        "operatr",
+        "menjer",
+        # ── Cyrillic Uzbek / Russian ────────────────────────────────────────────
+        "оператор",
+        "менеджер",
+        "консультант",
+        "позвоните",
+        "перезвоните",
+        "позвоните мне",
+        "оператора",
+        "связь",
+        "связаться",
+    }
+)
+
+
+def _is_operator_request(text: str) -> bool:
+    """Heuristic operator-handoff detector for free-text messages.
+
+    Lower-cases + apostrophe-unifies the input and also tries the
+    Latin transliteration so Cyrillic phrases hit the Latin triggers.
+    """
+    lower = _normalize_for_keyword_match_safe(text)
+    if any(t in lower for t in _OPERATOR_TRIGGERS):
+        return True
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _OPERATOR_TRIGGERS)
+
+
+# ── Warranty / quality FAQ detection (added in real-language pack) ─────
+
+
+_WARRANTY_TOPIC_WARRANTY: tuple[str, ...] = (
+    "kafolat",
+    "kafalat",
+    "kafalati",
+    "kafolati",
+    "kafolatingiz",
+    "garantiya",
+    "garantia",
+    "garant",
+    "sertifikat",
+    "sertifikati",
+    "sertifikatlangan",
+    "necha yil kafolat",
+    "necha yillik",
+    "kafolat berasiz",
+    "kafolat dokument",
+    "rasmiy kafolat",
+    # Cyrillic
+    "кафолат",
+    "кафалат",
+    "гарантия",
+    "гарант",
+    "сертификат",
+)
+
+
+_WARRANTY_TOPIC_QUALITY: tuple[str, ...] = (
+    "sifati",
+    "sifatlimi",
+    "sifat qanaqa",
+    "sifati qanday",
+    "качество",
+    "качества",
+    "сифати",
+    "сифат",
+)
+
+
+_WARRANTY_TOPIC_DURABILITY: tuple[str, ...] = (
+    "yirtilib",
+    "yirtilmaydi",
+    "osilib",
+    "osilmaydi",
+    "yiqilib",
+    "tushib ketmaydi",
+    "buzilmaydi",
+    "buzilib",
+    "uzilib",
+    "yorilib",
+    "porvyotsa",
+    "порвётся",
+    "порвется",
+    "тушуб кетмайдими",
+    "осилиб қолмайдими",
+    "ёрилиб",
+)
+
+
+_WARRANTY_TOPIC_SMELL: tuple[str, ...] = (
+    "hid chiq",
+    "hid bor",
+    "hidi bor",
+    "hid keladi",
+    "hid kelmaydimi",
+    "запах",
+    "пахнет",
+    "ҳид чиқ",
+    "ҳид бор",
+)
+
+
+_WARRANTY_TOPIC_HEALTH: tuple[str, ...] = (
+    "sog'liq",
+    "sogliq",
+    "sog'liqqa",
+    "sogliqqa",
+    "salomatlik",
+    "zararmi",
+    "zarar emasmi",
+    "zararli",
+    "хавфли",
+    "вредно",
+    "вреден",
+    "соғлиқ",
+    "сог'лик",
+    "ekologik",
+    "ekologiya",
+    "экологик",
+)
+
+
+_WARRANTY_TOPIC_WATER: tuple[str, ...] = (
+    "suv tegsa",
+    "suv otsa",
+    "suv o'tsa",
+    "suv otkazadimi",
+    "suv o'tkazadimi",
+    "namlik",
+    "namlikka",
+    "namligi",
+    "vlazhnost",
+    "влаг",
+    "сув",
+    "намлик",
+    "hammomga",
+    "hammomda",
+    "vannaga",
+    "vannada",
+    "oshxonaga bo'ladi",
+    "oshxonaga boladi",
+    "oshxonaga",
+    "oshxonada",
+    "kuxnyaga",
+)
+
+
+_WARRANTY_TOPIC_HEAT: tuple[str, ...] = (
+    "issiqda",
+    "issiqlik",
+    "haroratga",
+    "haroratdan",
+    "yong'in",
+    "yongindan",
+    "иссиқлик",
+    "иссиқ",
+    "температур",
+    "жара",
+)
+
+
+_WARRANTY_TOPIC_CLEAN: tuple[str, ...] = (
+    "artib tozala",
+    "tozalasa",
+    "tozalash",
+    "chang bo'la",
+    "chang yig'iladimi",
+    "kir bo'l",
+    "yuvib",
+    "тозалаш",
+    "тозалаш мумкинми",
+    "мыть",
+    "помыть",
+)
+
+
+# All topics combined, used by the high-level detector.
+_WARRANTY_ALL_TRIGGERS: tuple[str, ...] = (
+    _WARRANTY_TOPIC_WARRANTY
+    + _WARRANTY_TOPIC_QUALITY
+    + _WARRANTY_TOPIC_DURABILITY
+    + _WARRANTY_TOPIC_SMELL
+    + _WARRANTY_TOPIC_HEALTH
+    + _WARRANTY_TOPIC_WATER
+    + _WARRANTY_TOPIC_HEAT
+    + _WARRANTY_TOPIC_CLEAN
+)
+
+
+def _is_warranty_quality_question(text: str) -> bool:
+    """Deterministic detector for warranty / quality / trust FAQ.
+
+    Lower-cases + apostrophe-unifies + Cyrillic-latinize fall-through.
+    Returns True for any phrase from a documented topic group.
+    """
+    lower = _normalize_for_keyword_match_safe(text)
+    if any(t in lower for t in _WARRANTY_ALL_TRIGGERS):
+        return True
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _WARRANTY_ALL_TRIGGERS)
+
+
+def _classify_warranty_topic(text: str) -> str:
+    """Return the most-specific warranty topic for ``text``.
+
+    Order matters: longer-tail topics (smell / water / heat / clean)
+    are checked before the generic ``warranty`` / ``quality`` so the
+    canned reply mentions the right fact.
+    """
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lower = _normalize_for_keyword_match_safe(text)
+    lat = latinize_uz_cyrillic(lower) if lower != latinize_uz_cyrillic(lower) else lower
+
+    def hit(group: tuple[str, ...]) -> bool:
+        return any(t in lower for t in group) or any(t in lat for t in group)
+
+    if hit(_WARRANTY_TOPIC_WATER):
+        return "water"
+    if hit(_WARRANTY_TOPIC_SMELL):
+        return "smell"
+    if hit(_WARRANTY_TOPIC_HEALTH):
+        return "health"
+    if hit(_WARRANTY_TOPIC_HEAT):
+        return "heat"
+    if hit(_WARRANTY_TOPIC_CLEAN):
+        return "clean"
+    if hit(_WARRANTY_TOPIC_DURABILITY):
+        return "durability"
+    if hit(_WARRANTY_TOPIC_WARRANTY):
+        return "warranty"
+    if hit(_WARRANTY_TOPIC_QUALITY):
+        return "quality"
+    return "warranty"
+
+
+_WARRANTY_REPLIES: dict[str, str] = {
+    "warranty": (
+        "✅ Ha, biz 15 yil rasmiy kafolat beramiz — hujjat bilan.\n"
+        "Kafolatga material, planka va mahkamlash kiradi.\n\n"
+        "Aniqroq maslahat uchun operatorga ulanishingiz mumkin 🙂"
+    ),
+    "quality": (
+        "Sifat — bizning eng kuchli tomonimiz: 6 yillik tajriba va "
+        "1000+ ob'ekt yakunlangan.\n"
+        "PVC plenka rasmiy sertifikatlangan, 15 yil kafolat bilan.\n\n"
+        "Xohlasangiz katalogimizdan namunalarni ko'rishingiz mumkin 👇"
+    ),
+    "durability": (
+        "PVC plenka cho'zilib turadi va yirtilmaydi.\n"
+        "Yiqilish yoki nuqson bo'lsa — 15 yil kafolat doirasida bepul "
+        "tuzatamiz.\n\n"
+        "Operator bilan gaplashishni xohlaysizmi?"
+    ),
+    "smell": (
+        "Hid haqida ochiq aytamiz: yangi o'rnatishdan keyin 1–2 kun "
+        "yengil plastik hid bo'lishi mumkin.\n"
+        "Xona shamollatilsa yo'qoladi. Keyin hid mutlaqo bo'lmaydi."
+    ),
+    "health": (
+        "Ishlatadigan PVC plenkamiz ekologik sertifikatga ega — "
+        "salomatlik uchun xavfsiz.\n"
+        "Bolalar xonasi, oshxona va yotoq xonalarga ham mos."
+    ),
+    "water": (
+        "Ha, namlikka chidamli — PVC plenka suv o'tkazmaydi.\n"
+        "Hammom, oshxona va vannaga ham qo'yish mumkin. "
+        "Yuqori qavatdan suv oqsa — plenka tutib qoladi, "
+        "suv chiqarilgach asl holatiga qaytadi."
+    ),
+    "heat": (
+        "Oddiy uy haroratiga to'liq chidamli.\n"
+        "Faqat ochiq olov yoki 60 °C dan yuqori uzoq isitishdan saqlang "
+        "(masalan, lampani plenkaga juda yaqin qo'ymaslik kerak)."
+    ),
+    "clean": (
+        "Tozalash juda oson: namlangan yumshoq mato bilan arting.\n"
+        "Kimyoviy tozalovchi vositalar tavsiya etilmaydi (plenka yuzasini "
+        "buzadi). Maxsus parvarish kerak emas."
+    ),
+}
+
+
+def _build_warranty_quality_reply(text: str) -> str:
+    """Return a short, safe Uzbek Latin reply for the matched topic.
+
+    The reply is deterministic, never overpromises ("100% hech qachon
+    buzilmaydi", "darhol kelamiz", "bugun ulgurmiz" are all absent),
+    and always offers operator / next-step.
+    """
+    topic = _classify_warranty_topic(text)
+    return _WARRANTY_REPLIES.get(topic, _WARRANTY_REPLIES["warranty"])
+
+
 def _is_measurement_request(text: str) -> bool:
-    lower = text.lower()
-    return any(t in lower for t in _MEASUREMENT_TRIGGERS)
+    lower = _normalize_for_keyword_match_safe(text)
+    if any(t in lower for t in _MEASUREMENT_TRIGGERS):
+        return True
+    # Cyrillic fall-through: latinize the input and try again so
+    # phrases like "эртага келиб ўлчанг" hit the Latin triggers
+    # (kelib o'lchang / olchang / kelib ko'ring / ...).
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _MEASUREMENT_TRIGGERS)
 
 
 # ── Catalog link shortcut ────────────────────────────────────────────────────
@@ -90,18 +496,48 @@ _CATALOG_TRIGGERS: frozenset[str] = frozenset(
         "foto",
         "surat",
         "namuna",
+        "namunala",
         "misol",
         "ko'rsat",
         "korsat",
+        "koraylik",
         "tashla",
         "yubor",
         "kanal",
         "link",
         "ishlar",
         "работы",
+        # ── Real-customer typos (added in real-language pack) ───────────────────
+        "katalk",
+        "katalok",
+        "katlog",
+        "ktalog",
+        # Design-name typos so "guli bormi" / "mramr korsat" still
+        # enter the catalog branch (which then asks the resolver +
+        # the price-intent guard keeps "guli nech pul" routed to
+        # price). NOTE: do NOT add bare "bormi" / "ko'raman" here —
+        # those words appear in warranty / objection messages too
+        # (e.g. "kafolat bormi") and would falsely route to catalog.
+        "guli",
+        "gul",
+        "gullili",
+        "mramr",
+        "marmar",
+        "xaytek",
+        "haytek",
+        "hi tek",
+        "hitek",
+        "kuxnya",
+        "kuhnya",
+        "kitchen",
+        "oshhona",
+        # Cyrillic design names
+        "гули",
+        "гулли",
+        "мармар",
+        "ошхона",
         # Design type names (Latin)
         "gulli",
-        "gullili",
         "mramor",
         "naqsh",
         "hi tech",
@@ -146,15 +582,23 @@ _CATALOG_TRIGGERS: frozenset[str] = frozenset(
         # Room types — Cyrillic
         "меҳмонхона",
         "ётоқхона",
-        "ошхона",
         "ҳаммом",
     }
 )
 
 
 def _is_catalog_request(text: str) -> bool:
-    lower = text.lower()
+    lower = _normalize_for_keyword_match_safe(text)
     return any(t in lower for t in _CATALOG_TRIGGERS)
+
+
+def _normalize_for_keyword_match_safe(text: str) -> str:
+    """Same as :func:`_normalize_for_keyword_match` but defined here so
+    early-loaded detectors can call it without a forward reference."""
+    out = text.lower()
+    for variant in ("‘", "’", "ʻ", "ʼ", "`"):
+        out = out.replace(variant, "'")
+    return out
 
 
 # ── Catalog context detection ────────────────────────────────────────────────
@@ -184,6 +628,7 @@ _CATALOG_ROOM_KEYWORDS: dict[str, str] = {
 _CATALOG_DESIGN_KEYWORDS: dict[str, str] = {
     "gullili": "Gulli",
     "gulli": "Gulli",
+    "guli": "Gulli",
     "hi tech": "Hi Tech",
     "hitech": "Hi Tech",
     "hi-tech": "Hi Tech",
@@ -411,6 +856,18 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
         "qanchadan",
         "nechadan",
         "hisoblab ber",
+        # ── Real-customer messy short forms (added in real-language pack) ────────
+        "qancha",
+        "nechi",
+        "nechpul",
+        "qancha boladi",
+        "qancha bo'ladi",
+        "qancha tushadi",
+        "qancha tushyapti",
+        "eng arzon",
+        "eng arzoni",
+        "arzoni qanaqa",
+        "qaysi arzon",
         "narxini ayt",
         "narxini hisobla",
         "narxini chiqar",
@@ -461,7 +918,7 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
 
 
 def _is_price_query(text: str) -> bool:
-    lower = text.lower()
+    lower = _normalize_for_keyword_match_safe(text)
     return any(kw in lower for kw in _PRICE_KEYWORDS)
 
 
@@ -471,6 +928,8 @@ _DESIGN_NAMES_IN_TEXT: dict[str, str] = {
     # ── Latin Uzbek ───────────────────────────────────────────────────────────
     "gullili": "Gulli",
     "gulli": "Gulli",
+    "guli": "Gulli",
+    "gul": "Gulli",
     "hi tech": "Hi Tech",
     "hitech": "Hi Tech",
     "hi-tech": "Hi Tech",

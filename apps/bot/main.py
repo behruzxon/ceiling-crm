@@ -58,6 +58,9 @@ from apps.bot.handlers.callbacks.agent_execution_callbacks import (
 from apps.bot.handlers.callbacks.agent_followup_callbacks import (
     router as agent_followup_callbacks_router,
 )
+from apps.bot.handlers.callbacks.catalog_confirm_callbacks import (
+    router as catalog_confirm_callbacks_router,
+)
 from apps.bot.handlers.callbacks.cta_callbacks import router as cta_callbacks_router
 from apps.bot.handlers.callbacks.kanban_callbacks import router as kanban_callbacks_router
 from apps.bot.handlers.callbacks.lead_callbacks import router as lead_callbacks_router
@@ -195,6 +198,7 @@ def build_dispatcher(storage: RedisStorage) -> Dispatcher:
         kanban_callbacks_router,  # kanban:* — visual pipeline management
         lead_status_router,  # lead:{id}:status:{status} — quick admin status updates
         cta_callbacks_router,  # cta:* — discount / order / pricing / operator / catalog
+        catalog_confirm_callbacks_router,  # catalog_confirm:* — fuzzy match confirmation buttons
         sales_closer_callbacks_router,  # closer:* — AI sales closer CTA buttons
         operator_callbacks_router,  # op:* — on-demand operator assist suggestions
         pipeline_callbacks_router,

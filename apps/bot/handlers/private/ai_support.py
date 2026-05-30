@@ -46,13 +46,16 @@ from apps.bot.ai.system_prompt import _parse_ai_scoring
 from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _GENERIC_CONFIRMATIONS,
     _build_smart_catalog_response,
+    _build_warranty_quality_reply,
     _catalog_link_kb,
     _detect_catalog_context,
     _detect_room_type,
     _is_catalog_request,
     _is_greeting,
     _is_measurement_request,
+    _is_operator_request,
     _is_price_query,
+    _is_warranty_quality_question,
     _normalize_room,
     _parse_area,
     _room_design_text,
@@ -132,11 +135,17 @@ from apps.bot.handlers.private.ai_states import (  # noqa: F401
 from apps.bot.handlers.private.pricing import start_pricing_flow
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
+from core.services.catalog_link_resolver_service import (
+    resolve_catalog_link as _resolve_catalog_link,
+)
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
 from shared.logging import get_logger
 from shared.utils.phone import extract_phone_from_text
+from shared.utils.text_normalization import (
+    latinize_uz_cyrillic as _latinize_uz_cyrillic,
+)
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
@@ -557,6 +566,86 @@ async def handle_ai_price_btn(message: Message, state: FSMContext, **data: objec
     )
 
 
+# ── Catalog deep-link helper ────────────────────────────────────────────
+
+
+def _build_catalog_link_kb(text: str) -> InlineKeyboardMarkup:
+    """Return an inline keyboard for the catalog reply.
+
+    Three shapes depending on resolver output:
+
+    * High-confidence direct match → single URL button to the section.
+    * ``needs_confirmation`` → callback buttons (``catalog_confirm:<key>``)
+      plus a ``catalog_all`` fallback so the user picks the right one.
+    * No match / generic ask → single URL button to the full catalog.
+    """
+    result = _resolve_catalog_link(text)
+
+    if result.needs_confirmation and result.candidates:
+        rows: list[list[InlineKeyboardButton]] = [
+            [
+                InlineKeyboardButton(
+                    text=f"✅ {c.title}",
+                    callback_data=f"catalog_confirm:{c.key}",
+                )
+            ]
+            for c in result.candidates
+        ]
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="📂 To'liq katalog",
+                    callback_data="catalog_all",
+                )
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
+    if result.matched and result.link is not None and result.link.url:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"📂 {result.link.title} katalogi",
+                        url=result.link.url,
+                    )
+                ]
+            ]
+        )
+
+    # No design alias matched (or section URL empty) — generic fallback.
+    fallback = result.fallback_link
+    if fallback is None or not fallback.url:
+        return _catalog_link_kb()
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📂 To'liq katalogimiz",
+                    url=fallback.url,
+                )
+            ]
+        ]
+    )
+
+
+def _catalog_intro_text_for(text: str) -> str:
+    """Return a short intro line for the catalog reply.
+
+    Uses the resolver's ``intro_text`` for direct / confirmation
+    results, and falls back to the existing personalised generic
+    smart-catalog text when no design is detected.
+    """
+    result = _resolve_catalog_link(text)
+    if result.needs_confirmation:
+        return result.confirmation_question or result.intro_text
+    if result.matched and result.link is not None:
+        return result.intro_text
+    # No design detected — keep the existing personalised generic intro.
+    room, design = _detect_catalog_context(text)
+    return _build_smart_catalog_response(room, design)
+
+
 # ── Deterministic price calculator (wired in Step CO) ──────────────────
 
 
@@ -798,13 +887,31 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         await start_measurement_flow(message, state)
         return
 
-    if _is_catalog_request(text):
+    # Price-intent win: design names alone are in _CATALOG_TRIGGERS, so
+    # a message like "gulli nech pul" / "гулли неч пул" would otherwise
+    # route to the catalog branch. Skip catalog when the same text
+    # carries a price keyword or an explicit area (checked on both the
+    # raw Latin text and the latinized form for Cyrillic input).
+    _early_combo = parse_combo(text)
+    _latinized = _latinize_uz_cyrillic(text)
+    _price_intent_present = (
+        _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
+    )
+
+    # Warranty / quality FAQ wins over catalog when no price intent —
+    # "rasmiy kafolat" / "hammomga qo'yish mumkinmi" must NOT route
+    # to a generic catalog link.
+    if _is_warranty_quality_question(text) and not _price_intent_present:
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
+        return
+
+    if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
         await message.answer(
-            _build_smart_catalog_response(room, design),
-            reply_markup=_catalog_link_kb(),
+            _catalog_intro_text_for(text),
+            reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
         fsm_data = await state.get_data()
@@ -872,12 +979,19 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
             if user_id:
                 asyncio.create_task(_add_lead_score(user_id, 10))
             if _combo["design"]:
+                await state.update_data(price_design=_combo["design"])
                 await message.answer(
                     "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
                     reply_markup=_ai_keyboard(),
                 )
             else:
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # ── Operator handoff via free text (real-language pack) ─────────
+    if _is_operator_request(text):
+        msg = await _try_operator_handoff(user_id, source="ai_text", reason="operator_requested")
+        await message.answer(msg, reply_markup=_ai_keyboard())
         return
 
     # ── Auto-reply check (skip OpenAI if template matches) ─────────
@@ -1037,13 +1151,28 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await start_measurement_flow(message, state)
         return
 
-    if _is_catalog_request(text):
+    # Price-intent win: see handle_ai_question for the same guard
+    # (including the Cyrillic latinization fallback).
+    _early_combo = parse_combo(text)
+    _latinized = _latinize_uz_cyrillic(text)
+    _price_intent_present = (
+        _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
+    )
+
+    # Warranty / quality FAQ wins over catalog when no price intent —
+    # "rasmiy kafolat" / "hammomga qo'yish mumkinmi" must NOT route
+    # to a generic catalog link.
+    if _is_warranty_quality_question(text) and not _price_intent_present:
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
+        return
+
+    if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
         room, design = _detect_catalog_context(text)
         await message.answer(
-            _build_smart_catalog_response(room, design),
-            reply_markup=_catalog_link_kb(),
+            _catalog_intro_text_for(text),
+            reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
         asyncio.create_task(
@@ -1085,6 +1214,11 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await message.answer(_NEUTRAL_REPLY)
         return
 
+    # ── Warranty / quality FAQ (real-language pack) ─────────────────
+    if _is_warranty_quality_question(text):
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
+        return
+
     _obj_det = detect_objection_full(text)
     if _obj_det:
         await _handle_objection(
@@ -1120,12 +1254,19 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             if user_id:
                 asyncio.create_task(_add_lead_score(user_id, 10))
             if _combo["design"]:
+                await state.update_data(price_design=_combo["design"])
                 await message.answer(
                     "Xonangiz taxminan necha m²?\nMasalan: 20 m² yoki 5x3",
                     reply_markup=_ai_keyboard(),
                 )
             else:
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
+        return
+
+    # ── Operator handoff via free text (real-language pack) ─────────
+    if _is_operator_request(text):
+        msg = await _try_operator_handoff(user_id, source="ai_text", reason="operator_requested")
+        await message.answer(msg, reply_markup=_ai_keyboard())
         return
 
     # ── Auto-reply check (skip OpenAI if template matches) ─────────

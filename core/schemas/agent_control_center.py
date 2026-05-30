@@ -56,3 +56,26 @@ class AgentControlCenterSnapshot:
     safety: AgentSafetySummary = field(default_factory=AgentSafetySummary)
     flags: list[AgentFeatureFlagStatus] = field(default_factory=list)
     health_status: str = "green"
+
+
+@dataclass(frozen=True)
+class AgentLastDecisionView:
+    decision_id: str = ""
+    timestamp: str = ""
+    intent: str = ""
+    safety_flags: tuple[str, ...] = ()
+    execution_mode: str = ""
+
+
+@dataclass(frozen=True)
+class AgentControlSummary:
+    engine_on: bool = False
+    log_only: bool = False
+    live_send_safe: bool = True
+    status_pill_label: str = "ENGINE OFF"
+    status_pill_color: str = "gray"
+    safe_text: str = ""
+    last_decision: AgentLastDecisionView | None = None
+    empty_state_text: str = (
+        "Hali agent qarorlari yo'q. LOG_ONLY yoqilganda qarorlar shu yerda ko'rinadi."
+    )

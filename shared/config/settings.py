@@ -232,6 +232,14 @@ class BusinessSettings(BaseSettings):
     # CRM Operator Reply
     crm_operator_reply_enabled: bool = Field(default=False, alias="CRM_OPERATOR_REPLY_ENABLED")
     crm_operator_reply_max_length: int = Field(default=1000, alias="CRM_OPERATOR_REPLY_MAX_LENGTH")
+
+    # Operator AI reply suggestion panel (F2 — local feature pack).
+    # Suggest-only UI; default OFF. Flipping this to true ONLY surfaces
+    # the deterministic-stub suggestions in the CRM contact detail page;
+    # it never sends anything and never calls OpenAI.
+    operator_reply_suggestions_enabled: bool = Field(
+        default=False, alias="OPERATOR_REPLY_SUGGESTIONS_ENABLED"
+    )
     crm_operator_reply_block_stopped: bool = Field(
         default=True, alias="CRM_OPERATOR_REPLY_BLOCK_STOPPED"
     )

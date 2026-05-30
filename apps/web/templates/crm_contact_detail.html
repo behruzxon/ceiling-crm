@@ -191,6 +191,231 @@
             </div>
         </div>
 
+        <!-- Next Best Action (F4 — deterministic, read-only) -->
+        {% set nba = next_best_action %}
+        <div id="nextBestActionPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Next Best Action</div>
+                {% if nba and nba.action_key != "no_action" %}
+                {% set tone_class = "vp-badge-hot" if nba.badge_tone == "danger" else ("vp-badge-warning" if nba.badge_tone == "warning" else ("vp-badge-success" if nba.badge_tone == "success" else ("vp-badge-neutral" if nba.badge_tone == "neutral" else "vp-badge-info"))) %}
+                <span class="vp-badge {{ tone_class }}" id="nbaPriorityBadge" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">
+                    {{ nba.priority }}
+                </span>
+                {% else %}
+                <span class="vp-badge vp-badge-neutral" style="font-size:10px;">none</span>
+                {% endif %}
+            </div>
+            {% if not nba %}
+            <div id="nbaEmpty" class="vp-empty-state" style="padding:14px 8px;">
+                <div style="font-size:12px;color:#94a3b8;">Hozircha aniq keyingi harakat yo'q.</div>
+            </div>
+            {% else %}
+            <div id="nbaLabel" style="font-size:14px;font-weight:600;color:#0f172a;">{{ nba.label }}</div>
+            <div id="nbaReason" style="font-size:12px;color:#475569;margin-top:4px;">{{ nba.reason }}</div>
+            <div id="nbaConfidence" style="font-size:10px;color:#94a3b8;margin-top:6px;">
+                Ishonch: {{ nba.confidence }}/100
+            </div>
+            {% if nba.cta_url %}
+            <div style="margin-top:8px;">
+                <a id="nbaCtaButton" href="{{ nba.cta_url }}" class="vp-btn vp-btn-secondary" style="font-size:11px;padding:4px 10px;">
+                    {{ nba.cta_label or "Ko'rsatish" }}
+                </a>
+            </div>
+            {% endif %}
+            <div id="nbaSafetyNote" style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                &#9888; {{ nba.safety_note }}
+            </div>
+            {% if nba.empty_reason %}
+            <div style="margin-top:4px;font-size:10px;color:#94a3b8;">{{ nba.empty_reason }}</div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Lead Risk Explanation (F5 — deterministic, read-only) -->
+        {% set lr = lead_risk %}
+        <div id="leadRiskPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Lead Risk Explanation</div>
+                {% if lr %}
+                {% set risk_class = "vp-badge-hot" if lr.badge_tone == "danger" else ("vp-badge-warning" if lr.badge_tone == "warning" else ("vp-badge-success" if lr.badge_tone == "success" else "vp-badge-neutral")) %}
+                <span id="leadRiskBadge" class="vp-badge {{ risk_class }}" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">
+                    {{ lr.risk_level }}
+                </span>
+                {% endif %}
+            </div>
+            {% if not lr or lr.risk_level == "unknown" %}
+            <div id="leadRiskEmpty" class="vp-empty-state" style="padding:14px 8px;">
+                <div style="font-size:12px;color:#94a3b8;">
+                    {{ (lr.empty_reason if lr else "Riskni tushuntirish uchun yetarli signal yo'q.") }}
+                </div>
+            </div>
+            {% else %}
+            <div id="leadRiskSummary" style="font-size:12px;color:#334155;margin-bottom:6px;">
+                {{ lr.summary }}
+            </div>
+            <div style="display:flex;gap:10px;font-size:11px;color:#475569;margin-bottom:8px;">
+                <span id="leadRiskScore">Risk score: <strong>{{ lr.score }}/100</strong></span>
+                <span id="leadRiskConfidence">Ishonch: <strong>{{ lr.confidence }}/100</strong></span>
+            </div>
+            <ul id="leadRiskReasons" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#334155;display:flex;flex-direction:column;gap:4px;">
+                {% for r in lr.reasons %}
+                {% set bullet_color = "#ef4444" if r.tone == "danger" else ("#f59e0b" if r.tone == "warning" else ("#10b981" if r.tone == "success" else "#3b82f6")) %}
+                <li class="riskExplanationItem" style="list-style:disc;color:{{ bullet_color }};">
+                    <span style="color:#0f172a;font-weight:600;">{{ r.label }}</span>
+                    {% if r.detail %}<span style="color:#64748b;"> — {{ r.detail }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <div id="leadRiskSafetyNote" style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                &#9888; {{ lr.safety_note }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Operator AI Reply Suggestions (F2 — suggest-only, copy-only) -->
+        {% set sr = suggestion_result %}
+        <div id="operatorReplySuggestionsPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Operator AI Reply Suggestions</div>
+                {% if sr and sr.feature_enabled %}
+                <span class="vp-badge vp-badge-info" style="font-size:10px;">suggest-only</span>
+                {% else %}
+                <span class="vp-badge vp-badge-neutral" style="font-size:10px;">disabled</span>
+                {% endif %}
+            </div>
+            {% if not sr or not sr.feature_enabled %}
+            <div id="suggestionsDisabledEmpty" class="vp-empty-state" style="padding:14px 8px;">
+                <div style="font-size:12px;color:#94a3b8;">
+                    {{ (sr.empty_reason if sr else "AI reply suggestions hozir o'chiq. Operator javobni qo'lda yozadi.") }}
+                </div>
+            </div>
+            {% elif sr.empty_reason %}
+            <div id="suggestionsEmpty" class="vp-empty-state" style="padding:14px 8px;">
+                <div style="font-size:12px;color:#94a3b8;">{{ sr.empty_reason }}</div>
+            </div>
+            {% else %}
+            <div id="suggestionsSource" style="margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #6366f1;">
+                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Mijoz xabari</div>
+                <div style="font-size:12px;color:#334155;margin-top:2px;">{{ sr.source_message_preview }}</div>
+            </div>
+            <div id="suggestionsList" style="display:flex;flex-direction:column;gap:8px;">
+                {% for s in sr.suggestions %}
+                {% set risk_class = "vp-badge-success" if s.risk_level == "low" else ("vp-badge-warning" if s.risk_level == "medium" else "vp-badge-hot") %}
+                <div class="suggestion-card vp-card" data-suggestion-id="{{ s.suggestion_id }}" style="padding:10px;border:1px solid #e2e8f0;">
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;align-items:center;">
+                        <span class="vp-badge vp-badge-info" style="font-size:10px;">{{ s.tone }}</span>
+                        <span class="vp-badge {{ risk_class }}" style="font-size:10px;">risk: {{ s.risk_level }}</span>
+                    </div>
+                    <div class="suggestion-text" style="font-size:12px;color:#0f172a;line-height:1.4;">{{ s.text }}</div>
+                    <div style="font-size:10px;color:#94a3b8;margin-top:6px;">{{ s.reason }}</div>
+                    <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                        <button type="button"
+                                class="vp-btn vp-btn-ghost suggestion-copy-btn"
+                                data-suggestion-text="{{ s.text }}"
+                                onclick="copySuggestionText(this)"
+                                style="font-size:11px;padding:3px 10px;">
+                            {{ s.copy_label }}
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="suggestionsSafetyNote" style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                &#9888; {{ sr.safety_note }}
+            </div>
+            <script>
+            function copySuggestionText(btn) {
+                var t = btn.getAttribute("data-suggestion-text") || "";
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(t).then(function () {
+                        var original = btn.textContent;
+                        btn.textContent = "Copied";
+                        setTimeout(function () { btn.textContent = original; }, 1200);
+                    });
+                }
+            }
+            </script>
+            {% endif %}
+        </div>
+
+        <!-- Manual Price Calculator (F3 — GET-only, no persistence) -->
+        {% set cr = calculator_result %}
+        <div id="manualPriceCalculatorPanel" class="vp-card" style="margin-bottom:12px;">
+            <div class="vp-card-header">
+                <div class="vp-card-title">Manual Price Calculator</div>
+                <span class="vp-badge vp-badge-info" style="font-size:10px;">taxminiy</span>
+            </div>
+            <form id="manualPriceCalculatorForm" method="get" action="/crm/{{ c.get('id') }}" style="display:flex;flex-direction:column;gap:8px;">
+                <label style="font-size:11px;color:#64748b;">
+                    Maydon (m²)
+                    <input id="calcAreaInput" type="number" name="calc_area" min="1" max="500" step="0.1"
+                           value="{{ calc_area }}" placeholder="masalan: 20"
+                           class="vp-input" style="width:100%;font-size:12px;padding:4px 8px;" />
+                </label>
+                <label style="font-size:11px;color:#64748b;">
+                    Dizayn
+                    <select id="calcDesignSelect" name="calc_design"
+                            class="vp-select" style="width:100%;font-size:12px;padding:4px 8px;">
+                        <option value="">— dizaynni tanlang —</option>
+                        {% for d_key, d_label in (calculator_designs or []) %}
+                        <option value="{{ d_key }}" {% if calc_design == d_key %}selected{% endif %}>{{ d_label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label style="font-size:11px;color:#64748b;">
+                    Qo'shimchalar (vergul bilan)
+                    <input id="calcAddonsInput" type="text" name="calc_addons"
+                           value="{{ calc_addons }}" placeholder="led_strip,cornice"
+                           class="vp-input" style="width:100%;font-size:12px;padding:4px 8px;" />
+                </label>
+                <div style="font-size:10px;color:#94a3b8;">
+                    Mavjud: {% for a_key, a_label in (calculator_addons or []) %}<code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;margin-right:2px;">{{ a_key }}</code>{% endfor %}
+                </div>
+                <button id="calcSubmitBtn" type="submit"
+                        class="vp-btn vp-btn-primary" style="font-size:12px;padding:5px 10px;">
+                    Hisoblash
+                </button>
+            </form>
+
+            {% if cr %}
+            {% if not cr.is_valid %}
+            <div id="calcError" class="vp-alert vp-alert-warning" style="margin-top:10px;font-size:12px;">
+                {{ cr.error }}
+            </div>
+            {% else %}
+            <div id="calcResultCard" style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;border-left:3px solid #10b981;">
+                <div style="font-size:11px;color:#94a3b8;letter-spacing:0.5px;">TAXMINIY HISOB</div>
+                <div id="calcResultTotal" style="font-size:18px;font-weight:700;color:#059669;">
+                    {{ cr.formatted_total }} so'm
+                </div>
+                <table style="width:100%;font-size:12px;margin-top:6px;color:#334155;">
+                    <tr><td style="color:#64748b;">Dizayn</td><td>{{ cr.design_title }}</td></tr>
+                    <tr><td style="color:#64748b;">Maydon</td><td>{{ cr.area_m2 }} m²</td></tr>
+                    <tr><td style="color:#64748b;">Narx / m²</td><td>{{ cr.formatted_rate }} so'm</td></tr>
+                    {% if cr.discount_percent > 0 %}
+                    <tr><td style="color:#64748b;">Chegirma</td><td>{{ cr.discount_percent }}%</td></tr>
+                    {% endif %}
+                    {% if cr.addon_lines %}
+                    <tr><td style="color:#64748b;vertical-align:top;">Qo'shimcha</td>
+                        <td>
+                            {% for line in cr.addon_lines %}
+                            <div style="font-size:11px;">{{ line.label }} ({{ line.quantity }}{{ line.unit }})</div>
+                            {% endfor %}
+                        </td></tr>
+                    {% endif %}
+                </table>
+                <div id="calcWarning" style="font-size:10px;color:#94a3b8;margin-top:6px;">
+                    &#9888; {{ cr.warning }}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div id="calcEmpty" class="vp-empty-state" style="padding:8px;margin-top:8px;font-size:11px;color:#94a3b8;">
+                Maydon va dizayn kiriting — taxminiy narx shu yerda ko'rinadi.
+            </div>
+            {% endif %}
+        </div>
+
         <!-- AI Trace Viewer -->
         <div id="aiTraceSection" class="vp-card">
             <div class="vp-card-header">

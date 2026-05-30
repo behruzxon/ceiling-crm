@@ -29,6 +29,8 @@ _DESIGN_ALIASES: dict[str, str] = {
     "adnatonniy": "adnatonniy",
     "gulli": "gulli",
     "gullili": "gulli",
+    "guli": "gulli",
+    "gul": "gulli",
     "print": "gulli",
     "pechat": "gulli",
     "led": "hi-tech",

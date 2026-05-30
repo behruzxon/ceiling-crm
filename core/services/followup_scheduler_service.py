@@ -51,6 +51,14 @@ _STOP_WORDS: frozenset[str] = frozenset(
         "отмена",
         "yoq kerak emas",
         "rahmat kerak emas",
+        # ── Real-customer messy short forms (real-language pack) ────────────────
+        "shunchaki soradim",
+        "shunchaki",
+        "pul yoq",
+        "pul yo'q",
+        "hali emas",
+        "hali yoq",
+        "hali yo'q",
     }
 )
 

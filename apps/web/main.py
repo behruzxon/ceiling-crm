@@ -18,6 +18,7 @@ Run locally::
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -26,6 +27,24 @@ from fastapi.templating import Jinja2Templates
 from apps.web.api_client import api_get
 from apps.web.auth import require_dashboard_auth
 from apps.web.csrf_middleware import AdminCSRFMiddleware
+from core.services.agent_control_center_service import (
+    build_agent_control_summary,
+)
+from core.services.contact_price_calculator_service import (
+    available_addons,
+    available_designs,
+    build_contact_price_estimate,
+)
+from core.services.crm_next_best_action_service import (
+    compute_next_best_action,
+)
+from core.services.docs_index_service import build_docs_index
+from core.services.lead_risk_service import explain_lead_risk
+from core.services.operator_reply_suggestion_service import (
+    build_operator_reply_suggestions,
+)
+
+_DOCS_DIR = Path(__file__).resolve().parents[2] / "docs" / "AI_AGENT_SYSTEM"
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -146,6 +165,17 @@ async def agent_dashboard(
         params={"limit": 20},
     )
     control = await api_get("/api/v1/admin/agent/control/status")
+    summary = None
+    try:
+        from shared.config import get_settings
+
+        last_decision = (control or {}).get("last_decision")
+        summary = build_agent_control_summary(
+            get_settings(),
+            last_decision=last_decision if isinstance(last_decision, dict) else None,
+        )
+    except Exception:
+        summary = build_agent_control_summary(SimpleNamespace(business=SimpleNamespace()))
     return templates.TemplateResponse(
         "agent.html",
         {
@@ -153,6 +183,7 @@ async def agent_dashboard(
             "overview": overview,
             "pending": pending,
             "control": control,
+            "summary": summary,
             "hours": hours,
         },
     )
@@ -176,15 +207,70 @@ async def crm_contacts(
 
 
 @app.get("/crm/{contact_id}", response_class=HTMLResponse)
-async def crm_contact_detail(request: Request, contact_id: int):
+async def crm_contact_detail(
+    request: Request,
+    contact_id: int,
+    calc_area: str = Query("", max_length=20),
+    calc_design: str = Query("", max_length=40),
+    calc_addons: str = Query("", max_length=200),
+):
     contact = await api_get(f"/api/v1/admin/crm/contacts/{contact_id}")
     messages = await api_get(
         f"/api/v1/admin/crm/contacts/{contact_id}/messages",
         params={"limit": 100},
     )
+    calculator_result = None
+    if calc_area or calc_design or calc_addons:
+        calculator_result = build_contact_price_estimate(
+            area_m2=calc_area or None,
+            design_key=calc_design or None,
+            addons=calc_addons or None,
+        )
+    feature_enabled = False
+    try:
+        from shared.config import get_settings
+
+        feature_enabled = bool(
+            getattr(
+                get_settings().business,
+                "operator_reply_suggestions_enabled",
+                False,
+            )
+        )
+    except Exception:
+        feature_enabled = False
+    suggestion_result = build_operator_reply_suggestions(
+        contact,
+        (messages or {}).get("items", []) if isinstance(messages, dict) else [],
+        feature_enabled=feature_enabled,
+    )
+    next_best_action = compute_next_best_action(
+        contact,
+        messages,
+        calculator_result=calculator_result,
+        suggestion_result=suggestion_result,
+    )
+    lead_risk = explain_lead_risk(
+        contact,
+        messages,
+        next_best_action=next_best_action,
+    )
     return templates.TemplateResponse(
         "crm_contact_detail.html",
-        {"request": request, "contact": contact, "messages": messages},
+        {
+            "request": request,
+            "contact": contact,
+            "messages": messages,
+            "suggestion_result": suggestion_result,
+            "calculator_result": calculator_result,
+            "calculator_designs": available_designs(),
+            "calculator_addons": available_addons(),
+            "calc_area": calc_area,
+            "calc_design": calc_design,
+            "calc_addons": calc_addons,
+            "next_best_action": next_best_action,
+            "lead_risk": lead_risk,
+        },
     )
 
 
@@ -201,6 +287,21 @@ async def admin_security(
     return templates.TemplateResponse(
         "security.html",
         {"request": request, "data": data, "hours": hours},
+    )
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def admin_help(request: Request):
+    """Admin Help / Docs index — read-only browse of docs/AI_AGENT_SYSTEM.
+
+    No API call, no DB read, no AI call. The dashboard auth dependency
+    on the FastAPI app still gates access — this route does not bypass
+    it.
+    """
+    docs_index = build_docs_index(_DOCS_DIR)
+    return templates.TemplateResponse(
+        "help.html",
+        {"request": request, "docs_index": docs_index},
     )
 
 

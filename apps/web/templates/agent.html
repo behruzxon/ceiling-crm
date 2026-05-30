@@ -12,6 +12,54 @@
 {% set s = o.get("safety", {}) %}
 {% set h = o.get("health", {}) %}
 
+<!-- Overall Status Pill + Refresh (F1 polish) -->
+{% set sm = summary %}
+{% if sm %}
+{% set pill_bg = "#10b98115" if sm.status_pill_color == "green" else "#3b82f615" if sm.status_pill_color == "blue" else "#ef444415" if sm.status_pill_color == "red" else "#94a3b815" %}
+{% set pill_fg = "#10b981" if sm.status_pill_color == "green" else "#3b82f6" if sm.status_pill_color == "blue" else "#ef4444" if sm.status_pill_color == "red" else "#64748b" %}
+<div id="agentOverallStatusPill" class="vp-card" style="margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+    <span style="padding:6px 14px;border-radius:999px;background:{{ pill_bg }};color:{{ pill_fg }};font-weight:700;font-size:13px;border:1px solid {{ pill_fg }}40;">
+        {{ sm.status_pill_label }}
+    </span>
+    {% if sm.log_only %}
+    <span id="agentLogOnlyBadge" style="padding:4px 10px;border-radius:6px;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;letter-spacing:0.5px;">
+        LOG_ONLY
+    </span>
+    {% endif %}
+    <span id="agentLiveSafeText" style="font-size:12px;color:{{ '#10b981' if sm.live_send_safe else '#ef4444' }};font-weight:600;">
+        {{ sm.safe_text }}
+    </span>
+    <a id="agentRefreshButton" href="/agent?hours={{ hours }}" style="margin-left:auto;padding:6px 14px;background:#6366f1;color:#fff;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600;">
+        ↻ Refresh
+    </a>
+</div>
+
+<!-- Last Decision Summary Card -->
+<div id="agentLastDecisionCard" class="vp-card" style="margin-bottom:12px;">
+    <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:#475569;">Last decision</h4>
+    {% if sm.last_decision %}
+    {% set ld = sm.last_decision %}
+    <table style="width:100%;font-size:12px;">
+        <tr><td style="color:#64748b;width:130px;">Decision ID</td><td style="font-family:monospace;">{{ ld.decision_id or "—" }}</td></tr>
+        <tr><td style="color:#64748b;">Timestamp</td><td>{{ ld.timestamp or "—" }}</td></tr>
+        <tr><td style="color:#64748b;">Intent</td><td>{{ ld.intent or "—" }}</td></tr>
+        <tr><td style="color:#64748b;">Execution mode</td><td>{{ ld.execution_mode or "—" }}</td></tr>
+        <tr><td style="color:#64748b;">Safety flags</td><td>
+            {% if ld.safety_flags %}
+                {% for f in ld.safety_flags %}
+                <span style="padding:1px 6px;background:#f1f5f9;border-radius:3px;font-size:10px;margin-right:4px;">{{ f }}</span>
+                {% endfor %}
+            {% else %}—{% endif %}
+        </td></tr>
+    </table>
+    {% else %}
+    <p id="agentDecisionsEmptyState" style="font-size:12px;color:#94a3b8;margin:8px 0 0 0;">
+        {{ sm.empty_state_text }}
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Agent Status Header -->
 {% set cc = control or {} %}
 {% set rs = cc.get("rollout_stage", {}) %}
