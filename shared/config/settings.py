@@ -734,6 +734,14 @@ class BusinessSettings(BaseSettings):
         default=True,
         alias="AGENT_RESPONSE_ORCHESTRATOR_TRACE_ENABLED",
     )
+    # Sales Dialogue Manager — independent human-like sales agent layer.
+    # Default OFF: the pure service exists and is fully tested, but it is NOT
+    # wired into the live handler. See
+    # docs/AI_AGENT_SYSTEM/145_SALES_DIALOGUE_MANAGER_DESIGN.md.
+    sales_dialogue_manager_enabled: bool = Field(
+        default=False,
+        alias="SALES_DIALOGUE_MANAGER_ENABLED",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
