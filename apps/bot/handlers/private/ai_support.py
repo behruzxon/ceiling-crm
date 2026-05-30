@@ -46,6 +46,7 @@ from apps.bot.ai.system_prompt import _parse_ai_scoring
 from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _GENERIC_CONFIRMATIONS,
     _build_smart_catalog_response,
+    _build_warranty_quality_reply,
     _catalog_link_kb,
     _detect_catalog_context,
     _detect_room_type,
@@ -54,6 +55,7 @@ from apps.bot.handlers.private.ai_detection import (  # noqa: F401
     _is_measurement_request,
     _is_operator_request,
     _is_price_query,
+    _is_warranty_quality_question,
     _normalize_room,
     _parse_area,
     _room_design_text,
@@ -896,6 +898,13 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
     )
 
+    # Warranty / quality FAQ wins over catalog when no price intent —
+    # "rasmiy kafolat" / "hammomga qo'yish mumkinmi" must NOT route
+    # to a generic catalog link.
+    if _is_warranty_quality_question(text) and not _price_intent_present:
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
+        return
+
     if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
@@ -1150,6 +1159,13 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
     )
 
+    # Warranty / quality FAQ wins over catalog when no price intent —
+    # "rasmiy kafolat" / "hammomga qo'yish mumkinmi" must NOT route
+    # to a generic catalog link.
+    if _is_warranty_quality_question(text) and not _price_intent_present:
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
+        return
+
     if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
             asyncio.create_task(_add_lead_score(user_id, 5))
@@ -1196,6 +1212,11 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
     _norm = (message.text or "").lower().strip()
     if _norm in _GENERIC_CONFIRMATIONS:
         await message.answer(_NEUTRAL_REPLY)
+        return
+
+    # ── Warranty / quality FAQ (real-language pack) ─────────────────
+    if _is_warranty_quality_question(text):
+        await message.answer(_build_warranty_quality_reply(text), reply_markup=_ai_keyboard())
         return
 
     _obj_det = detect_objection_full(text)

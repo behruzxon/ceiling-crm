@@ -192,6 +192,276 @@ def _is_operator_request(text: str) -> bool:
     return any(t in lat for t in _OPERATOR_TRIGGERS)
 
 
+# ── Warranty / quality FAQ detection (added in real-language pack) ─────
+
+
+_WARRANTY_TOPIC_WARRANTY: tuple[str, ...] = (
+    "kafolat",
+    "kafalat",
+    "kafalati",
+    "kafolati",
+    "kafolatingiz",
+    "garantiya",
+    "garantia",
+    "garant",
+    "sertifikat",
+    "sertifikati",
+    "sertifikatlangan",
+    "necha yil kafolat",
+    "necha yillik",
+    "kafolat berasiz",
+    "kafolat dokument",
+    "rasmiy kafolat",
+    # Cyrillic
+    "кафолат",
+    "кафалат",
+    "гарантия",
+    "гарант",
+    "сертификат",
+)
+
+
+_WARRANTY_TOPIC_QUALITY: tuple[str, ...] = (
+    "sifati",
+    "sifatlimi",
+    "sifat qanaqa",
+    "sifati qanday",
+    "качество",
+    "качества",
+    "сифати",
+    "сифат",
+)
+
+
+_WARRANTY_TOPIC_DURABILITY: tuple[str, ...] = (
+    "yirtilib",
+    "yirtilmaydi",
+    "osilib",
+    "osilmaydi",
+    "yiqilib",
+    "tushib ketmaydi",
+    "buzilmaydi",
+    "buzilib",
+    "uzilib",
+    "yorilib",
+    "porvyotsa",
+    "порвётся",
+    "порвется",
+    "тушуб кетмайдими",
+    "осилиб қолмайдими",
+    "ёрилиб",
+)
+
+
+_WARRANTY_TOPIC_SMELL: tuple[str, ...] = (
+    "hid chiq",
+    "hid bor",
+    "hidi bor",
+    "hid keladi",
+    "hid kelmaydimi",
+    "запах",
+    "пахнет",
+    "ҳид чиқ",
+    "ҳид бор",
+)
+
+
+_WARRANTY_TOPIC_HEALTH: tuple[str, ...] = (
+    "sog'liq",
+    "sogliq",
+    "sog'liqqa",
+    "sogliqqa",
+    "salomatlik",
+    "zararmi",
+    "zarar emasmi",
+    "zararli",
+    "хавфли",
+    "вредно",
+    "вреден",
+    "соғлиқ",
+    "сог'лик",
+    "ekologik",
+    "ekologiya",
+    "экологик",
+)
+
+
+_WARRANTY_TOPIC_WATER: tuple[str, ...] = (
+    "suv tegsa",
+    "suv otsa",
+    "suv o'tsa",
+    "suv otkazadimi",
+    "suv o'tkazadimi",
+    "namlik",
+    "namlikka",
+    "namligi",
+    "vlazhnost",
+    "влаг",
+    "сув",
+    "намлик",
+    "hammomga",
+    "hammomda",
+    "vannaga",
+    "vannada",
+    "oshxonaga bo'ladi",
+    "oshxonaga boladi",
+    "oshxonaga",
+    "oshxonada",
+    "kuxnyaga",
+)
+
+
+_WARRANTY_TOPIC_HEAT: tuple[str, ...] = (
+    "issiqda",
+    "issiqlik",
+    "haroratga",
+    "haroratdan",
+    "yong'in",
+    "yongindan",
+    "иссиқлик",
+    "иссиқ",
+    "температур",
+    "жара",
+)
+
+
+_WARRANTY_TOPIC_CLEAN: tuple[str, ...] = (
+    "artib tozala",
+    "tozalasa",
+    "tozalash",
+    "chang bo'la",
+    "chang yig'iladimi",
+    "kir bo'l",
+    "yuvib",
+    "тозалаш",
+    "тозалаш мумкинми",
+    "мыть",
+    "помыть",
+)
+
+
+# All topics combined, used by the high-level detector.
+_WARRANTY_ALL_TRIGGERS: tuple[str, ...] = (
+    _WARRANTY_TOPIC_WARRANTY
+    + _WARRANTY_TOPIC_QUALITY
+    + _WARRANTY_TOPIC_DURABILITY
+    + _WARRANTY_TOPIC_SMELL
+    + _WARRANTY_TOPIC_HEALTH
+    + _WARRANTY_TOPIC_WATER
+    + _WARRANTY_TOPIC_HEAT
+    + _WARRANTY_TOPIC_CLEAN
+)
+
+
+def _is_warranty_quality_question(text: str) -> bool:
+    """Deterministic detector for warranty / quality / trust FAQ.
+
+    Lower-cases + apostrophe-unifies + Cyrillic-latinize fall-through.
+    Returns True for any phrase from a documented topic group.
+    """
+    lower = _normalize_for_keyword_match_safe(text)
+    if any(t in lower for t in _WARRANTY_ALL_TRIGGERS):
+        return True
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(t in lat for t in _WARRANTY_ALL_TRIGGERS)
+
+
+def _classify_warranty_topic(text: str) -> str:
+    """Return the most-specific warranty topic for ``text``.
+
+    Order matters: longer-tail topics (smell / water / heat / clean)
+    are checked before the generic ``warranty`` / ``quality`` so the
+    canned reply mentions the right fact.
+    """
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lower = _normalize_for_keyword_match_safe(text)
+    lat = latinize_uz_cyrillic(lower) if lower != latinize_uz_cyrillic(lower) else lower
+
+    def hit(group: tuple[str, ...]) -> bool:
+        return any(t in lower for t in group) or any(t in lat for t in group)
+
+    if hit(_WARRANTY_TOPIC_WATER):
+        return "water"
+    if hit(_WARRANTY_TOPIC_SMELL):
+        return "smell"
+    if hit(_WARRANTY_TOPIC_HEALTH):
+        return "health"
+    if hit(_WARRANTY_TOPIC_HEAT):
+        return "heat"
+    if hit(_WARRANTY_TOPIC_CLEAN):
+        return "clean"
+    if hit(_WARRANTY_TOPIC_DURABILITY):
+        return "durability"
+    if hit(_WARRANTY_TOPIC_WARRANTY):
+        return "warranty"
+    if hit(_WARRANTY_TOPIC_QUALITY):
+        return "quality"
+    return "warranty"
+
+
+_WARRANTY_REPLIES: dict[str, str] = {
+    "warranty": (
+        "✅ Ha, biz 15 yil rasmiy kafolat beramiz — hujjat bilan.\n"
+        "Kafolatga material, planka va mahkamlash kiradi.\n\n"
+        "Aniqroq maslahat uchun operatorga ulanishingiz mumkin 🙂"
+    ),
+    "quality": (
+        "Sifat — bizning eng kuchli tomonimiz: 6 yillik tajriba va "
+        "1000+ ob'ekt yakunlangan.\n"
+        "PVC plenka rasmiy sertifikatlangan, 15 yil kafolat bilan.\n\n"
+        "Xohlasangiz katalogimizdan namunalarni ko'rishingiz mumkin 👇"
+    ),
+    "durability": (
+        "PVC plenka cho'zilib turadi va yirtilmaydi.\n"
+        "Yiqilish yoki nuqson bo'lsa — 15 yil kafolat doirasida bepul "
+        "tuzatamiz.\n\n"
+        "Operator bilan gaplashishni xohlaysizmi?"
+    ),
+    "smell": (
+        "Hid haqida ochiq aytamiz: yangi o'rnatishdan keyin 1–2 kun "
+        "yengil plastik hid bo'lishi mumkin.\n"
+        "Xona shamollatilsa yo'qoladi. Keyin hid mutlaqo bo'lmaydi."
+    ),
+    "health": (
+        "Ishlatadigan PVC plenkamiz ekologik sertifikatga ega — "
+        "salomatlik uchun xavfsiz.\n"
+        "Bolalar xonasi, oshxona va yotoq xonalarga ham mos."
+    ),
+    "water": (
+        "Ha, namlikka chidamli — PVC plenka suv o'tkazmaydi.\n"
+        "Hammom, oshxona va vannaga ham qo'yish mumkin. "
+        "Yuqori qavatdan suv oqsa — plenka tutib qoladi, "
+        "suv chiqarilgach asl holatiga qaytadi."
+    ),
+    "heat": (
+        "Oddiy uy haroratiga to'liq chidamli.\n"
+        "Faqat ochiq olov yoki 60 °C dan yuqori uzoq isitishdan saqlang "
+        "(masalan, lampani plenkaga juda yaqin qo'ymaslik kerak)."
+    ),
+    "clean": (
+        "Tozalash juda oson: namlangan yumshoq mato bilan arting.\n"
+        "Kimyoviy tozalovchi vositalar tavsiya etilmaydi (plenka yuzasini "
+        "buzadi). Maxsus parvarish kerak emas."
+    ),
+}
+
+
+def _build_warranty_quality_reply(text: str) -> str:
+    """Return a short, safe Uzbek Latin reply for the matched topic.
+
+    The reply is deterministic, never overpromises ("100% hech qachon
+    buzilmaydi", "darhol kelamiz", "bugun ulgurmiz" are all absent),
+    and always offers operator / next-step.
+    """
+    topic = _classify_warranty_topic(text)
+    return _WARRANTY_REPLIES.get(topic, _WARRANTY_REPLIES["warranty"])
+
+
 def _is_measurement_request(text: str) -> bool:
     lower = _normalize_for_keyword_match_safe(text)
     if any(t in lower for t in _MEASUREMENT_TRIGGERS):

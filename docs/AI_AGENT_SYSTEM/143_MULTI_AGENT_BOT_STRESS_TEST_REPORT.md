@@ -4,19 +4,21 @@
 >
 > **Update (P0-1 + real-language pack landed):**
 >
-> | Metric | Before audit | After P0-1 | After real-language pack |
-> |---|---:|---:|---:|
-> | overall | 88 | 92 | **95** |
-> | price | 92 | 92 | **94** |
-> | catalog | 85 | 85 | **90** |
-> | operator | 100 | 100 | 100 |
-> | order/measurement | 24 | 100 | 100 |
-> | typo | 92 | 92 | **100** |
-> | real_customer_language | n/a | n/a | **100** |
-> | safety | 95 | 95 | 95 |
-> | messy persona | 75 | 87 | **94** |
-> | normal persona | 95 | 97 | **98** |
-> | cyrillic persona | 78 | 78 | **83** |
+> | Metric | Before audit | After P0-1 | After real-language pack | After warranty FAQ |
+> |---|---:|---:|---:|---:|
+> | overall | 88 | 92 | 95 | **96** |
+> | price | 92 | 92 | 94 | 94 |
+> | catalog | 85 | 85 | 90 | 90 |
+> | operator | 100 | 100 | 100 | 100 |
+> | order/measurement | 24 | 100 | 100 | 100 |
+> | typo | 92 | 92 | 100 | 100 |
+> | real_customer_language | n/a | n/a | 100 | 98 |
+> | objection | 100 | 100 | 100 | 100 |
+> | **warranty** | **76** | 76 | 76 | **100** |
+> | safety | 95 | 95 | 95 | 95 |
+> | messy persona | 75 | 87 | 94 | 94 |
+> | normal persona | 95 | 97 | 98 | **100** |
+> | cyrillic persona | 78 | 78 | 83 | 83 |
 >
 > All targets now met (messy ≥ 90, overall ≥ 93, safety ≥ 95,
 > price ≥ 92, catalog ≥ 88, measurement = 100). See §3 / §4 for the

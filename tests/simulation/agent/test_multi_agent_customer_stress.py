@@ -44,6 +44,7 @@ from apps.bot.handlers.private.ai_detection import (
     _is_measurement_request,
     _is_operator_request,
     _is_price_query,
+    _is_warranty_quality_question,
     parse_combo,
 )
 from apps.bot.handlers.private.ai_scoring import detect_objection_full
@@ -108,7 +109,13 @@ def _route(text: str) -> Routing:
             return Routing("price_ask_area", {"design": combo["design"]})
         return Routing("price_ask_clarify")
 
-    # 5. Catalog (only after price guard)
+    # 5. Warranty / quality FAQ — wins over catalog when no price
+    #    intent so "rasmiy kafolat" / "hammomga qo'yish" don't get
+    #    routed to a generic catalog link.
+    if _is_warranty_quality_question(raw):
+        return Routing("warranty_faq")
+
+    # 6. Catalog (only after price + warranty guard)
     if _is_catalog_request(raw):
         cat = resolve_catalog_link(raw)
         if cat.matched and cat.link is not None and cat.link.url:
@@ -120,7 +127,7 @@ def _route(text: str) -> Routing:
             )
         return Routing("catalog_generic")
 
-    # 6. Objection
+    # 7. Objection
     obj = detect_objection_full(raw)
     if obj:
         return Routing("objection", {"type": obj.objection_type, "severity": obj.severity})
@@ -376,7 +383,13 @@ def _objection_questions() -> list[Q]:  # ~120
         "qaytib aytaman",
     ):
         items.append(
-            Q("hard", "objection", line, ("objection", "ai_fallback", "price_ask_clarify"), "high")
+            Q(
+                "hard",
+                "objection",
+                line,
+                ("objection", "warranty_faq", "ai_fallback", "price_ask_clarify"),
+                "high",
+            )
         )
     # Repeat with prefixes to reach ~120
     for prefix in ("juda ", "ammo ", "lekin ", "haqiqatdan ", "rostdan "):
@@ -411,11 +424,19 @@ def _warranty_questions() -> list[Q]:  # ~80
         "garantiya хатини беринг",
         "гарантия керакми",
     ):
-        items.append(Q("normal", "warranty", line, ("ai_fallback", "objection"), "medium"))
+        items.append(
+            Q("normal", "warranty", line, ("warranty_faq", "ai_fallback", "objection"), "medium")
+        )
     for prefix in ("salom ", "iltimos ", "qisqacha "):
         for tail in ("kafolat necha yil", "rasmiy kafolat", "sertifikat bormi"):
             items.append(
-                Q("normal", "warranty", f"{prefix}{tail}", ("ai_fallback", "objection"), "medium")
+                Q(
+                    "normal",
+                    "warranty",
+                    f"{prefix}{tail}",
+                    ("warranty_faq", "ai_fallback", "objection"),
+                    "medium",
+                )
             )
     return items[:80]
 
@@ -608,11 +629,13 @@ def _safety_questions() -> list[Q]:  # ~80
     # Forced fake commitments — must NOT actually fulfill the request.
     # The bot has no code path that emits a fake guarantee / final
     # price, so any non-action route is acceptable: AI fallback,
-    # objection (delay detector catches "bugun"), generic catalog, or
-    # price clarification ("ask area first" still doesn't lie).
+    # objection (delay detector catches "bugun"), generic catalog,
+    # warranty_faq (canned safe reply that quotes the real "15 yil"
+    # value, never "100 %" or "20 yil"), or price clarification.
     _SAFE_NON_FULFILL = (
         "ai_fallback",
         "objection",
+        "warranty_faq",
         "catalog_generic",
         "catalog_direct",
         "catalog_confirm",
