@@ -140,6 +140,9 @@ from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
 from shared.logging import get_logger
 from shared.utils.phone import extract_phone_from_text
+from shared.utils.text_normalization import (
+    latinize_uz_cyrillic as _latinize_uz_cyrillic,
+)
 
 log = get_logger(__name__)
 router = Router(name="private:ai_support")
@@ -564,12 +567,37 @@ async def handle_ai_price_btn(message: Message, state: FSMContext, **data: objec
 
 
 def _build_catalog_link_kb(text: str) -> InlineKeyboardMarkup:
-    """Return an inline keyboard with the design-specific catalog link
-    if ``text`` mentions a known design / category, else the generic
-    full-catalog link. Falls through to the generic link when the
-    matched section has no URL configured.
+    """Return an inline keyboard for the catalog reply.
+
+    Three shapes depending on resolver output:
+
+    * High-confidence direct match → single URL button to the section.
+    * ``needs_confirmation`` → callback buttons (``catalog_confirm:<key>``)
+      plus a ``catalog_all`` fallback so the user picks the right one.
+    * No match / generic ask → single URL button to the full catalog.
     """
     result = _resolve_catalog_link(text)
+
+    if result.needs_confirmation and result.candidates:
+        rows: list[list[InlineKeyboardButton]] = [
+            [
+                InlineKeyboardButton(
+                    text=f"✅ {c.title}",
+                    callback_data=f"catalog_confirm:{c.key}",
+                )
+            ]
+            for c in result.candidates
+        ]
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="📂 To'liq katalog",
+                    callback_data="catalog_all",
+                )
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=rows)
+
     if result.matched and result.link is not None and result.link.url:
         return InlineKeyboardMarkup(
             inline_keyboard=[
@@ -581,8 +609,8 @@ def _build_catalog_link_kb(text: str) -> InlineKeyboardMarkup:
                 ]
             ]
         )
-    # Either no design alias matched, or the section had no URL — fall
-    # back to the generic full-catalog button.
+
+    # No design alias matched (or section URL empty) — generic fallback.
     fallback = result.fallback_link
     if fallback is None or not fallback.url:
         return _catalog_link_kb()
@@ -601,16 +629,15 @@ def _build_catalog_link_kb(text: str) -> InlineKeyboardMarkup:
 def _catalog_intro_text_for(text: str) -> str:
     """Return a short intro line for the catalog reply.
 
-    Uses the resolver's ``intro_text`` so the design-specific case
-    reads naturally ("Albatta, mana 🌸 Gulli katalogimiz 👇"), and
-    falls back to the generic smart-catalog response when no design
-    is detected.
+    Uses the resolver's ``intro_text`` for direct / confirmation
+    results, and falls back to the existing personalised generic
+    smart-catalog text when no design is detected.
     """
     result = _resolve_catalog_link(text)
-    if result.matched and result.link is not None and result.link.url:
+    if result.needs_confirmation:
+        return result.confirmation_question or result.intro_text
+    if result.matched and result.link is not None:
         return result.intro_text
-    if result.matched and result.link is not None and not result.link.url:
-        return result.intro_text  # missing-link notice
     # No design detected — keep the existing personalised generic intro.
     room, design = _detect_catalog_context(text)
     return _build_smart_catalog_response(room, design)
@@ -858,11 +885,15 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         return
 
     # Price-intent win: design names alone are in _CATALOG_TRIGGERS, so
-    # a message like "gulli nech pul" would otherwise route to the
-    # catalog branch and the price keyword would be lost. Skip catalog
-    # when the same text carries a price keyword or an explicit area.
+    # a message like "gulli nech pul" / "гулли неч пул" would otherwise
+    # route to the catalog branch. Skip catalog when the same text
+    # carries a price keyword or an explicit area (checked on both the
+    # raw Latin text and the latinized form for Cyrillic input).
     _early_combo = parse_combo(text)
-    _price_intent_present = _is_price_query(text) or _early_combo["area"] is not None
+    _latinized = _latinize_uz_cyrillic(text)
+    _price_intent_present = (
+        _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
+    )
 
     if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
@@ -1104,9 +1135,13 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await start_measurement_flow(message, state)
         return
 
-    # Price-intent win: see handle_ai_question for the same guard.
+    # Price-intent win: see handle_ai_question for the same guard
+    # (including the Cyrillic latinization fallback).
     _early_combo = parse_combo(text)
-    _price_intent_present = _is_price_query(text) or _early_combo["area"] is not None
+    _latinized = _latinize_uz_cyrillic(text)
+    _price_intent_present = (
+        _is_price_query(text) or _is_price_query(_latinized) or _early_combo["area"] is not None
+    )
 
     if _is_catalog_request(text) and not _price_intent_present:
         if user_id:
