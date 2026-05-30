@@ -31,6 +31,12 @@ _DESIGN_ALIASES: dict[str, str] = {
     "gullili": "gulli",
     "guli": "gulli",
     "gul": "gulli",
+    # Cyrillic gulli variants (report-144 R2 gap) — design aliases only,
+    # price values are unchanged.
+    "гулли": "gulli",
+    "гули": "gulli",
+    "гулий": "gulli",
+    "гул": "gulli",
     "print": "gulli",
     "pechat": "gulli",
     "led": "hi-tech",

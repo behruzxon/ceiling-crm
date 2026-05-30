@@ -673,25 +673,22 @@ class TestInvariants:
         assert len(_plan(text).reply_text) < 600
 
 
-# ── Known inherited detector gaps (documented in report 144) ──────────────
-# The dialogue manager reuses the shared detectors, so it inherits their
-# gaps. These tests PIN the current behaviour so the limitation is visible
-# and tracked; fixing them belongs to the detector layer (R1), not here.
+# ── Report-144 detector gaps R1 / R2 — now CLOSED (PR #9) ──────────────────
+# These previously pinned the gaps as broken; the shared detectors are now
+# fixed, so they assert the gaps are closed.
 
 
-class TestKnownInheritedGaps:
-    def test_necha_pul_not_a_price_keyword(self) -> None:
-        # "necha pul" (very common) is NOT in _PRICE_KEYWORDS, so a
-        # design-only "necha pul" question routes to catalog, not price.
-        # See report 144, root cause R1.
-        assert extract_facts("hi tech necha pul").wants_price is False
-        assert _action("hi tech necha pul") == SEND_CATALOG
+class TestReport144GapsClosed:
+    def test_necha_pul_is_now_a_price_keyword(self) -> None:
+        # R1 fixed: "<design> necha pul" now routes to price, not catalog.
+        assert extract_facts("hi tech necha pul").wants_price is True
+        assert _action("hi tech necha pul") == ASK_AREA
 
-    def test_cyrillic_guli_single_l_not_detected(self) -> None:
-        # Cyrillic "гули" (single л) is not in the design map; "гулли"
-        # (double л) is. So mixed "20kv гули qancha" → ask_design.
-        assert extract_facts("20kv гули qancha").design_key is None
-        assert _action("20kv гули qancha") == ASK_DESIGN
+    def test_cyrillic_guli_single_l_now_detected(self) -> None:
+        # R2 fixed: Cyrillic single-л "гули" now resolves to the Gulli design,
+        # so "20kv гули qancha" computes a price.
+        assert extract_facts("20kv гули qancha").design_key == "gulli"
+        assert _action("20kv гули qancha") == ANSWER_PRICE
 
 
 # ── plan_turn shape ───────────────────────────────────────────────────────

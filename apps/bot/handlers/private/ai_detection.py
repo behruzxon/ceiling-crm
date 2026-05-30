@@ -975,6 +975,12 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
         "qancha pul",
         "nech pul",
         "nech pul bo'ladi",
+        # ── "necha pul" family (report-144 R1 gap) ──────────────────────────────
+        "necha pul",
+        "necha pul bo'ladi",
+        "nechi pul",
+        "nechipul",
+        "necha turadi",
         "nechadan qilyapsizlar",
         "qanchadan",
         "nechadan",
@@ -1042,7 +1048,16 @@ _PRICE_KEYWORDS: frozenset[str] = frozenset(
 
 def _is_price_query(text: str) -> bool:
     lower = _normalize_for_keyword_match_safe(text)
-    return any(kw in lower for kw in _PRICE_KEYWORDS)
+    if any(kw in lower for kw in _PRICE_KEYWORDS):
+        return True
+    # Cyrillic fall-through (report-144 R1): latinize and retry so "қанча",
+    # "неч пул", "нечи" hit the Latin keyword set too.
+    from shared.utils.text_normalization import latinize_uz_cyrillic
+
+    lat = latinize_uz_cyrillic(lower)
+    if lat == lower:
+        return False
+    return any(kw in lat for kw in _PRICE_KEYWORDS)
 
 
 # ── Design name detection ────────────────────────────────────────────────────
@@ -1070,6 +1085,9 @@ _DESIGN_NAMES_IN_TEXT: dict[str, str] = {
     "pechat": "Pechat",
     # ── Cyrillic Uzbek / Russian ──────────────────────────────────────────────
     "гулли": "Gulli",
+    "гули": "Gulli",  # single-л Cyrillic (report-144 R2 gap)
+    "гулий": "Gulli",
+    "гул": "Gulli",
     "хай тек": "Hi Tech",
     "хайтек": "Hi Tech",
     "мрамор": "Mramor",

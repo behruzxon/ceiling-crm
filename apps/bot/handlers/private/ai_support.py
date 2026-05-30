@@ -763,6 +763,36 @@ async def _maybe_block_stop_or_safety(
     return False
 
 
+def _classify_live_route(text: str) -> str:
+    """Best-effort label of which live branch will handle ``text``, mirroring
+    the handler's branch order. Used ONLY for the shadow log's ``live_route``
+    (replaces the coarse "pre_route"); never affects the customer reply.
+
+    Allowed labels: stop, safety, measurement, warranty, catalog, objection,
+    price, operator, ai_fallback.
+    """
+    if _is_low_interest_stop(text):
+        return "stop"
+    if _is_safety_block(text):
+        return "safety"
+    if _is_measurement_request(text):
+        return "measurement"
+    combo = parse_combo(text)
+    latin = _latinize_uz_cyrillic(text)
+    price_intent = _is_price_query(text) or _is_price_query(latin) or combo["area"] is not None
+    if _is_warranty_quality_question(text) and not price_intent:
+        return "warranty"
+    if _is_catalog_request(text) and not price_intent:
+        return "catalog"
+    if detect_objection_full(text):
+        return "objection"
+    if price_intent:
+        return "price"
+    if _is_operator_request(text):
+        return "operator"
+    return "ai_fallback"
+
+
 async def _try_operator_handoff(
     user_id: int,
     *,
@@ -933,7 +963,7 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
                 state_data=_sdm_state,
                 user_id=user_id or None,
                 chat_id=message.chat.id if message.chat else None,
-                live_route="pre_route",
+                live_route=_classify_live_route(text),
             )
         )
 
@@ -1200,7 +1230,7 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
                 state_data=_sdm_state,
                 user_id=user_id or None,
                 chat_id=message.chat.id if message.chat else None,
-                live_route="pre_route",
+                live_route=_classify_live_route(text),
             )
         )
 
