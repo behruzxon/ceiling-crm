@@ -267,6 +267,16 @@ _WARRANTY_TOPIC_DURABILITY: tuple[str, ...] = (
     "тушуб кетмайдими",
     "осилиб қолмайдими",
     "ёрилиб",
+    # Generic "is it resistant/durable?" — routes any "...ga chidamlimi"
+    # question to warranty/quality (report-144 warranty gap).
+    "chidamli",
+    "chidamlimi",
+    "chidaydimi",
+    "qo'rqmaydimi",
+    "qorqmaydimi",
+    "чидамли",
+    "чидамлими",
+    "чидайдими",
 )
 
 
@@ -335,10 +345,23 @@ _WARRANTY_TOPIC_HEAT: tuple[str, ...] = (
     "haroratdan",
     "yong'in",
     "yongindan",
+    # ── Heat case-forms + stove/steam (report-144 warranty gap) ─────────────
+    # Bare "issiq" covers issiqqa / issiqga / issiqdan / issiq xona / issiq bug.
+    "issiq",
+    "issiqqa",
+    "issiqga",
+    "issiqdan",
+    "issiq xona",
+    "issiq bug'",
+    "plita yonida",
+    "plita",
+    "bug'",  # apostrophe form only — bare "bug" would match "bugun" (today)
     "иссиқлик",
     "иссиқ",
     "температур",
     "жара",
+    "жар",
+    "плита",
 )
 
 
