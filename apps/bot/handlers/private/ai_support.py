@@ -145,6 +145,9 @@ from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
 from core.services.catalog_link_resolver_service import (
     resolve_catalog_link as _resolve_catalog_link,
 )
+from core.services.unknown_question_service import (
+    capture_unknown_question as _capture_unknown_question,
+)
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
@@ -735,6 +738,19 @@ async def _disable_followups_on_stop(user_id: int) -> None:
         log.warning("stop_signal_handler_error", user_id=user_id)
 
 
+def _schedule_unknown_capture(**kwargs: object) -> None:
+    """Fire-and-forget capture of an unknown / failed question.
+
+    Wrapped so it can NEVER affect the customer reply path: scheduling errors
+    (e.g. no running loop) are swallowed, and the capture coroutine itself has
+    its own internal try/except. Read-only feedback loop — no send, no mutation.
+    """
+    try:
+        asyncio.create_task(_capture_unknown_question(**kwargs))
+    except Exception:  # pragma: no cover - scheduling must never raise
+        pass
+
+
 async def _maybe_block_stop_or_safety(
     message: Message, state: FSMContext, user_id: int, text: str
 ) -> bool:
@@ -758,6 +774,14 @@ async def _maybe_block_stop_or_safety(
     if _is_safety_block(text):
         log.info("safety_block_prelLM", user_id=user_id)
         await message.answer(_INJECTION_REFUSAL["reply"], reply_markup=_ai_keyboard())
+        _schedule_unknown_capture(
+            reason="safety_block",
+            original_text=text,
+            source="telegram",
+            channel_user_id=user_id or None,
+            telegram_chat_id=message.chat.id if message.chat else None,
+            live_route="safety",
+        )
         return True
 
     return False
@@ -1136,6 +1160,14 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         log.exception("ai_call_failed", user_id=user_id)
         await _store_user_message_only(user_id=user_id, user_text=text, current_messages=history)
         await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
+        _schedule_unknown_capture(
+            reason="openai_error",
+            original_text=text,
+            source="telegram",
+            channel_user_id=user_id or None,
+            telegram_chat_id=message.chat.id if message.chat else None,
+            live_route="ai_fallback",
+        )
         return
 
     # Reset consecutive auto-reply counter after OpenAI response
@@ -1420,6 +1452,14 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             current_messages=history,
         )
         await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
+        _schedule_unknown_capture(
+            reason="openai_error",
+            original_text=text,
+            source="telegram",
+            channel_user_id=user_id or None,
+            telegram_chat_id=message.chat.id if message.chat else None,
+            live_route="ai_fallback",
+        )
         return
 
     # Reset consecutive auto-reply counter after OpenAI response
