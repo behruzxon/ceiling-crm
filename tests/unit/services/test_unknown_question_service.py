@@ -17,6 +17,8 @@ from core.services.unknown_question_service import (
     SOURCES,
     STATUSES,
     build_unknown_question_event,
+    classify_catalog_capture,
+    classify_price_capture,
     classify_unknown_question_reason,
     hash_chat_id,
     hash_question_text,
@@ -500,3 +502,180 @@ class TestCaptureNeverRaises:
     async def test_capture_returns_false_when_nothing_to_record(self) -> None:
         ok = await svc.capture_unknown_question(reason=None, original_text="x")
         assert ok is False
+
+
+# ── v2: catalog capture classifier ───────────────────────────────────────────
+
+
+class TestClassifyCatalogCapture:
+    def test_matched_is_no_capture(self) -> None:
+        assert (
+            classify_catalog_capture(matched=True, needs_confirmation=False, reason="alias:gulli")
+            is None
+        )
+
+    def test_confirmation_is_no_capture(self) -> None:
+        assert (
+            classify_catalog_capture(
+                matched=False, needs_confirmation=True, reason="ambiguous:naqsh"
+            )
+            is None
+        )
+
+    def test_fuzzy_confirm_is_no_capture(self) -> None:
+        assert (
+            classify_catalog_capture(
+                matched=False, needs_confirmation=True, reason="fuzzy_confirm:0.74"
+            )
+            is None
+        )
+
+    def test_generic_trigger_is_no_capture(self) -> None:
+        assert (
+            classify_catalog_capture(
+                matched=False, needs_confirmation=False, reason="generic_catalog_trigger"
+            )
+            is None
+        )
+
+    def test_empty_text_is_no_capture(self) -> None:
+        assert (
+            classify_catalog_capture(matched=False, needs_confirmation=False, reason="empty_text")
+            is None
+        )
+
+    def test_no_alias_is_no_catalog_match(self) -> None:
+        assert (
+            classify_catalog_capture(matched=False, needs_confirmation=False, reason="no_alias")
+            == "no_catalog_match"
+        )
+
+    def test_result_is_in_reason_vocab(self) -> None:
+        r = classify_catalog_capture(matched=False, needs_confirmation=False, reason="no_alias")
+        assert r in REASONS
+
+    def test_matched_wins_over_no_alias_reason(self) -> None:
+        # Defensive: matched True should never capture even if reason looks odd.
+        assert (
+            classify_catalog_capture(matched=True, needs_confirmation=False, reason="no_alias")
+            is None
+        )
+
+    @pytest.mark.parametrize(
+        "reason", ["alias:mramor", "fuzzy:0.91", "ambiguous:naqsh", "generic_catalog_trigger"]
+    )
+    def test_non_failure_reasons_skip(self, reason: str) -> None:
+        # matched/confirmation flags set appropriately for each success-ish reason
+        matched = reason.startswith(("alias:", "fuzzy:")) and "confirm" not in reason
+        needs_conf = reason.startswith("ambiguous") or "confirm" in reason
+        assert (
+            classify_catalog_capture(matched=matched, needs_confirmation=needs_conf, reason=reason)
+            is None
+        )
+
+
+# ── v2: price capture classifier ─────────────────────────────────────────────
+
+
+class TestClassifyPriceCapture:
+    def test_none_text(self) -> None:
+        assert classify_price_capture(None) is None
+
+    def test_empty_text(self) -> None:
+        assert classify_price_capture("") is None
+
+    @pytest.mark.parametrize(
+        "txt",
+        ["narx qancha", "necha pul", "narxi qancha", "narx", "qancha turadi"],
+    )
+    def test_short_bare_price_asks_not_captured(self, txt: str) -> None:
+        assert classify_price_capture(txt) is None
+
+    @pytest.mark.parametrize(
+        "txt",
+        [
+            "menga balkon uchun narx aytib bera olasizmi",
+            "narxlaringiz juda chalkash menga tushuntirib bering",
+            "bu xizmat uchun umumiy narx qanaqa bo'ladi menimcha",
+        ],
+    )
+    def test_substantive_price_questions_captured(self, txt: str) -> None:
+        assert classify_price_capture(txt) == "unknown_price_question"
+
+    def test_result_in_reason_vocab(self) -> None:
+        assert classify_price_capture("a b c d e") in REASONS
+
+    def test_threshold_boundary_three_words_skipped(self) -> None:
+        assert classify_price_capture("narx qancha turadi") is None
+
+    def test_threshold_boundary_four_words_captured(self) -> None:
+        assert classify_price_capture("narx qancha turadi aniq") == "unknown_price_question"
+
+    def test_custom_min_words(self) -> None:
+        assert classify_price_capture("narx qancha", min_words=2) == "unknown_price_question"
+
+
+# ── v2: new reasons flow through build / record / severity ───────────────────
+
+
+class TestV2ReasonsEndToEnd:
+    @pytest.mark.parametrize("reason", ["no_catalog_match", "unknown_price_question"])
+    def test_reason_in_vocab(self, reason: str) -> None:
+        assert reason in REASONS
+
+    @pytest.mark.parametrize("reason", ["no_catalog_match", "unknown_price_question"])
+    def test_build_event_keeps_reason(self, reason: str) -> None:
+        e = build_unknown_question_event(reason=reason, original_text="balkon uchun dizayn bormi")
+        assert e["reason"] == reason
+
+    @pytest.mark.parametrize("reason", ["no_catalog_match", "unknown_price_question"])
+    def test_maybe_record_captures(self, reason: str) -> None:
+        e = maybe_record_unknown_question(reason=reason, original_text="balkon dizayn narx savol")
+        assert e is not None and e["reason"] == reason
+
+    def test_no_catalog_match_severity_medium(self) -> None:
+        assert severity_for_unknown_question("no_catalog_match") == "medium"
+
+    def test_unknown_price_severity_medium(self) -> None:
+        assert severity_for_unknown_question("unknown_price_question") == "medium"
+
+    def test_no_catalog_match_hot_lead_bumps(self) -> None:
+        assert severity_for_unknown_question("no_catalog_match", order_readiness_score=85) == "high"
+
+    def test_v2_event_masks_phone(self) -> None:
+        e = build_unknown_question_event(
+            reason="unknown_price_question",
+            original_text="balkon narx +998901234567 ayting",
+        )
+        assert "+998901234567" not in e["original_text_preview"]
+
+    def test_v2_event_hash_64(self) -> None:
+        e = build_unknown_question_event(reason="no_catalog_match", original_text="balkon dizayn")
+        assert len(e["original_text_hash"]) == 64
+
+
+# ── v2: non-failures still skip (greeting / stop / phone-only) ───────────────
+
+
+class TestV2NonFailuresSkip:
+    def test_catalog_generic_not_captured(self) -> None:
+        # "katalog" generic ask → resolver generic_catalog_trigger → no capture
+        assert (
+            classify_catalog_capture(
+                matched=False, needs_confirmation=False, reason="generic_catalog_trigger"
+            )
+            is None
+        )
+
+    def test_catalog_matched_design_not_captured(self) -> None:
+        assert (
+            classify_catalog_capture(matched=True, needs_confirmation=False, reason="alias:gulli")
+            is None
+        )
+
+    def test_price_bare_ask_not_captured(self) -> None:
+        assert classify_price_capture("narx") is None
+
+    def test_phone_only_price_skips_when_short(self) -> None:
+        # "+998901234567" is one token → below threshold → no price capture
+        assert classify_price_capture("+998901234567") is None

@@ -281,9 +281,11 @@ class TestWiring:
         assert self._src().count('reason="openai_error"') >= 2
 
     def test_capture_only_in_failure_paths(self) -> None:
-        # The scheduling helper is invoked exactly 3 times (multi-line calls,
-        # so the call form is "(\n"): safety block + 2 OpenAI-error paths.
-        assert self._src().count("_schedule_unknown_capture(\n") == 3
+        # The scheduling helper is invoked only on failure/review paths. As of
+        # capture v2 there are 7 multi-line call sites (call form "(\n"):
+        # safety block + 2 OpenAI-error + 2 no_catalog_match + 2 price (both
+        # handlers). It must never be called on a normal success path.
+        assert self._src().count("_schedule_unknown_capture(\n") == 7
 
     def test_schedule_wrapped_in_try(self) -> None:
         s = self._src()

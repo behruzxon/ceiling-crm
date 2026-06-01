@@ -56,15 +56,26 @@ A row is captured when the bot likely failed or was uncertain. Capture **reasons
 | `operator_needed` | The conversation needs a human operator. |
 | `manual_flag` | An admin flagged a message manually. |
 
-**Wired in this sprint (minimal, safest points only):**
+**Wired in v1 (minimal, safest points only):**
 
 - `openai_error` — both OpenAI-error `except` blocks in `ai_support.py`
   (`handle_ai_question` and `handle_ai_message`).
 - `safety_block` — the pre-LLM `_maybe_block_stop_or_safety` refusal path.
 
-The remaining reasons are supported by the data model + service + API + UI today
-and are intended to be wired in follow-up PRs (see §9). Wiring them now would have
-touched more live branches than is prudent for a first, read-only sprint.
+**Added in v2 (see [155_UNKNOWN_QUESTIONS_CAPTURE_V2.md](155_UNKNOWN_QUESTIONS_CAPTURE_V2.md)):**
+
+- `no_catalog_match` — a catalog/design ask that resolved to nothing specific
+  (resolver `reason == "no_alias"`); generic catalog asks and ambiguous
+  confirmations are excluded.
+- `unknown_price_question` — a substantive (≥ 4-word) price question with no
+  parseable area / design / district; short bare asks ("narx qancha") are not
+  captured.
+
+**Still deferred:** `generic_reply` (the only deterministic generic reply is for
+confirmation words like "rahmat"/"ok", which are not failures), `unknown_design`
+(near-misses are handled via confirmation prompts; folded into `no_catalog_match`
+for now), `low_confidence` and `shadow_live_mismatch` (SDM is shadow-only / OFF —
+needs a shadow→DB sprint). All remain supported by the model/service/API/UI.
 
 **Not captured** (by design): normal price / catalog / measurement / operator
 successes, and stop / "kerakmas" messages (those are honoured by the stop guard,
