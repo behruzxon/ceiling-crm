@@ -197,6 +197,39 @@ class ApiSettings(BaseSettings):
     )
 
 
+class TelegramSettings(BaseSettings):
+    """Telegram reaction micro-UX configuration (env prefix ``TELEGRAM_``).
+
+    All defaults are SAFE: reactions are OFF unless ``TELEGRAM_REACTIONS_ENABLED``
+    is explicitly set true, and group reactions stay off even then unless
+    ``TELEGRAM_REACTIONS_GROUPS_ENABLED`` is also true. See doc 154.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="TELEGRAM_", env_file=".env", extra="ignore")
+
+    reactions_enabled: bool = Field(
+        default=False,
+        description="Master switch for the reaction micro-UX. Default OFF.",
+    )
+    reactions_groups_enabled: bool = Field(
+        default=False,
+        description="Allow reactions in group/supergroup chats. Default OFF (private only).",
+    )
+    reaction_processing: str = Field(
+        default="👀",
+        description="Emoji shown while the bot is processing (e.g. 👀 or 👍).",
+    )
+    reaction_done: str = Field(
+        default="✅",
+        description="Emoji set after the reply when clear-on-reply is OFF.",
+    )
+    reaction_clear_on_reply: bool = Field(
+        default=True,
+        description="If true, the processing reaction is cleared after the reply "
+        "(safest — always a valid op). If false, it is changed to reaction_done.",
+    )
+
+
 class CTASettings(BaseSettings):
     """CTA (call-to-action) marketing prompts configuration."""
 
@@ -795,6 +828,7 @@ class Settings(BaseSettings):
     payment: PaymentSettings = Field(default_factory=PaymentSettings)
     cta: CTASettings = Field(default_factory=CTASettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
+    telegram: TelegramSettings = Field(default_factory=TelegramSettings)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> Settings:

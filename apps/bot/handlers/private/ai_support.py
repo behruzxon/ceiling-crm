@@ -142,6 +142,11 @@ from apps.bot.handlers.private.sales_dialogue_shadow import (
 )
 from apps.bot.keyboards.catalog import catalog_list_keyboard
 from apps.bot.keyboards.main_menu import BTN_AI, main_menu_keyboard
+from apps.bot.utils.reactions import (
+    maybe_clear_reaction,
+    maybe_react_done,
+    maybe_react_processing,
+)
 from core.services.catalog_link_resolver_service import (
     resolve_catalog_link as _resolve_catalog_link,
 )
@@ -1148,6 +1153,10 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
     profile, history, summary = await _load_context(user_id)
     context_block = _build_context_block(profile, summary)
 
+    # Micro-UX: acknowledge the message with a subtle reaction while the AI
+    # works. Flag-gated (default OFF), private-only, never raises. See doc 154.
+    await maybe_react_processing(message.bot, message)
+
     try:
         result = await _call_ai(text, history, context_block)
         intent = str(result.get("intent", "other"))
@@ -1168,12 +1177,14 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
             telegram_chat_id=message.chat.id if message.chat else None,
             live_route="ai_fallback",
         )
+        await maybe_clear_reaction(message.bot, message)
         return
 
     # Reset consecutive auto-reply counter after OpenAI response
     asyncio.create_task(_reset_auto_reply_counter(user_id))
 
     await message.answer(reply_text, reply_markup=_ai_keyboard())
+    await maybe_react_done(message.bot, message)
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close
@@ -1436,6 +1447,10 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
     profile, history, summary = await _load_context(user_id)
     context_block = _build_context_block(profile, summary)
 
+    # Micro-UX: acknowledge with a subtle reaction while the AI works.
+    # Flag-gated (default OFF), private-only, never raises. See doc 154.
+    await maybe_react_processing(message.bot, message)
+
     try:
         result = await _call_ai(text, history, context_block)
         intent = str(result.get("intent", "other"))
@@ -1460,12 +1475,14 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             telegram_chat_id=message.chat.id if message.chat else None,
             live_route="ai_fallback",
         )
+        await maybe_clear_reaction(message.bot, message)
         return
 
     # Reset consecutive auto-reply counter after OpenAI response
     asyncio.create_task(_reset_auto_reply_counter(user_id))
 
     await message.answer(reply_text)
+    await maybe_react_done(message.bot, message)
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close
