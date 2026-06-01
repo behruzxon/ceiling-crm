@@ -47,9 +47,7 @@ def upgrade() -> None:
     op.create_index("ix_kb_status", "agent_knowledge_items", ["status"])
     op.create_index("ix_kb_category", "agent_knowledge_items", ["category"])
     op.create_index("ix_kb_language", "agent_knowledge_items", ["language"])
-    op.create_index(
-        "ix_kb_source_uq", "agent_knowledge_items", ["source_unknown_question_id"]
-    )
+    op.create_index("ix_kb_source_uq", "agent_knowledge_items", ["source_unknown_question_id"])
     op.create_index("ix_kb_created", "agent_knowledge_items", ["created_at"])
     op.create_index("ix_kb_priority", "agent_knowledge_items", ["priority"])
     op.create_index(
