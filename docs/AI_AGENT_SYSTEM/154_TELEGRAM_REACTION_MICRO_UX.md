@@ -112,6 +112,32 @@ Code-level rollback is a plain revert of this feature branch.
 - Optional group support (flag already present).
 - Optional `is_big` celebratory reaction on a closed deal.
 
+## 10a. TEST-bot smoke + hardening (verified)
+
+V1 was smoke-tested on the **TEST bot** (`@twest12_bot`) with the flag temporarily
+enabled locally, then reverted OFF:
+
+- Logs over the run: `telegram_reaction_set` = 5, `telegram_reaction_clear` = 5,
+  `telegram_reaction_failed` = 0, no `TelegramBadRequest/Forbidden/RetryAfter`,
+  no exceptions from the reaction path. Per-message order:
+  `reaction_set → (OpenAI 429) → ai_call_failed → reaction_clear`.
+- The "technical error / operator" replies during the smoke were caused **only by
+  the local OpenAI key being out of quota** (`429 insufficient_quota`) — not by the
+  reaction feature. Deterministic routes replied normally; the safety message was
+  blocked and captured; Unknown-Questions capture worked (sanitized previews,
+  64-char hash, hashed chat id, no leaks).
+- 👀 set and cleared on every AI-path turn — **no stuck reactions**.
+- Flag reverted to `TELEGRAM_REACTIONS_ENABLED=false` after the smoke.
+
+**Hardening added after the smoke:** the AI-processing region in both handlers is
+now wrapped in `try/finally` with a `_reaction_resolved` flag. On success the flag
+is set (after `maybe_react_done`); on the OpenAI-error path the handler returns and
+the `finally` clears; and for **any other unresolved exit** (e.g. the reply send
+itself raising, or a future early-return added between processing and reply) the
+`finally` clears the reaction. The clear is idempotent, a no-op when the feature is
+off, and never raises — so a 👀 can never get stuck regardless of downstream
+changes. Reply text, routing, and Unknown-Questions capture are unchanged.
+
 ## 10. Files
 
 - `shared/config/settings.py` — `TelegramSettings` group + `settings.telegram`.

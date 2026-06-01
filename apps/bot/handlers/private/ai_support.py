@@ -1156,35 +1156,45 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
     # Micro-UX: acknowledge the message with a subtle reaction while the AI
     # works. Flag-gated (default OFF), private-only, never raises. See doc 154.
     await maybe_react_processing(message.bot, message)
+    _reaction_resolved = False
 
     try:
-        result = await _call_ai(text, history, context_block)
-        intent = str(result.get("intent", "other"))
-        reply_text = str(result.get("reply", "")).strip()
-        extracted: dict[str, Any] = result.get("extracted") or {}
-        lead_temperature, closing_confidence = _parse_ai_scoring(result)
-        if not reply_text:
-            raise ValueError("empty AI reply")
-    except Exception:
-        log.exception("ai_call_failed", user_id=user_id)
-        await _store_user_message_only(user_id=user_id, user_text=text, current_messages=history)
-        await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
-        _schedule_unknown_capture(
-            reason="openai_error",
-            original_text=text,
-            source="telegram",
-            channel_user_id=user_id or None,
-            telegram_chat_id=message.chat.id if message.chat else None,
-            live_route="ai_fallback",
-        )
-        await maybe_clear_reaction(message.bot, message)
-        return
+        try:
+            result = await _call_ai(text, history, context_block)
+            intent = str(result.get("intent", "other"))
+            reply_text = str(result.get("reply", "")).strip()
+            extracted: dict[str, Any] = result.get("extracted") or {}
+            lead_temperature, closing_confidence = _parse_ai_scoring(result)
+            if not reply_text:
+                raise ValueError("empty AI reply")
+        except Exception:
+            log.exception("ai_call_failed", user_id=user_id)
+            await _store_user_message_only(
+                user_id=user_id, user_text=text, current_messages=history
+            )
+            await message.answer(_FAILSAFE_TEXT, reply_markup=_ai_keyboard())
+            _schedule_unknown_capture(
+                reason="openai_error",
+                original_text=text,
+                source="telegram",
+                channel_user_id=user_id or None,
+                telegram_chat_id=message.chat.id if message.chat else None,
+                live_route="ai_fallback",
+            )
+            return  # finally below clears the reaction
 
-    # Reset consecutive auto-reply counter after OpenAI response
-    asyncio.create_task(_reset_auto_reply_counter(user_id))
+        # Reset consecutive auto-reply counter after OpenAI response
+        asyncio.create_task(_reset_auto_reply_counter(user_id))
 
-    await message.answer(reply_text, reply_markup=_ai_keyboard())
-    await maybe_react_done(message.bot, message)
+        await message.answer(reply_text, reply_markup=_ai_keyboard())
+        await maybe_react_done(message.bot, message)
+        _reaction_resolved = True
+    finally:
+        # Safety net: if 👀 was set but no path resolved it (e.g. the reply send
+        # raised, or a future early return is added), clear it now so a reaction
+        # can never get stuck. Idempotent, no-op when off, never raises.
+        if not _reaction_resolved:
+            await maybe_clear_reaction(message.bot, message)
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close
@@ -1450,39 +1460,46 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
     # Micro-UX: acknowledge with a subtle reaction while the AI works.
     # Flag-gated (default OFF), private-only, never raises. See doc 154.
     await maybe_react_processing(message.bot, message)
+    _reaction_resolved = False
 
     try:
-        result = await _call_ai(text, history, context_block)
-        intent = str(result.get("intent", "other"))
-        reply_text = str(result.get("reply", "")).strip()
-        extracted: dict[str, Any] = result.get("extracted") or {}
-        lead_temperature, closing_confidence = _parse_ai_scoring(result)
-        if not reply_text:
-            raise ValueError("empty AI reply")
-    except Exception:
-        log.exception("ai_call_failed", user_id=user_id)
-        await _store_user_message_only(
-            user_id=user_id,
-            user_text=text,
-            current_messages=history,
-        )
-        await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
-        _schedule_unknown_capture(
-            reason="openai_error",
-            original_text=text,
-            source="telegram",
-            channel_user_id=user_id or None,
-            telegram_chat_id=message.chat.id if message.chat else None,
-            live_route="ai_fallback",
-        )
-        await maybe_clear_reaction(message.bot, message)
-        return
+        try:
+            result = await _call_ai(text, history, context_block)
+            intent = str(result.get("intent", "other"))
+            reply_text = str(result.get("reply", "")).strip()
+            extracted: dict[str, Any] = result.get("extracted") or {}
+            lead_temperature, closing_confidence = _parse_ai_scoring(result)
+            if not reply_text:
+                raise ValueError("empty AI reply")
+        except Exception:
+            log.exception("ai_call_failed", user_id=user_id)
+            await _store_user_message_only(
+                user_id=user_id,
+                user_text=text,
+                current_messages=history,
+            )
+            await message.answer(_FAILSAFE_TEXT, reply_markup=_FAILSAFE_KB)
+            _schedule_unknown_capture(
+                reason="openai_error",
+                original_text=text,
+                source="telegram",
+                channel_user_id=user_id or None,
+                telegram_chat_id=message.chat.id if message.chat else None,
+                live_route="ai_fallback",
+            )
+            return  # finally below clears the reaction
 
-    # Reset consecutive auto-reply counter after OpenAI response
-    asyncio.create_task(_reset_auto_reply_counter(user_id))
+        # Reset consecutive auto-reply counter after OpenAI response
+        asyncio.create_task(_reset_auto_reply_counter(user_id))
 
-    await message.answer(reply_text)
-    await maybe_react_done(message.bot, message)
+        await message.answer(reply_text)
+        await maybe_react_done(message.bot, message)
+        _reaction_resolved = True
+    finally:
+        # Safety net: clear 👀 on any unresolved exit (reply send raised, future
+        # early return, etc.). Idempotent, no-op when off, never raises.
+        if not _reaction_resolved:
+            await maybe_clear_reaction(message.bot, message)
 
     try:
         from apps.bot.handlers.private.sales_closer import attempt_close

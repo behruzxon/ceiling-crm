@@ -532,6 +532,145 @@ class TestIdempotentNoState:
         assert len(bot.calls) == 3
 
 
+# ── try/finally hardening (source-pin) ───────────────────────────────────────
+
+
+class TestFinallyHardening:
+    """Pin the guard that guarantees the processing reaction is always resolved.
+
+    Handler-level execution is heavy (deep monkeypatching), so per the test
+    convention we source-pin the structure and unit-test the helper semantics.
+    """
+
+    def _src(self) -> str:
+        return Path("apps/bot/handlers/private/ai_support.py").read_text(encoding="utf-8")
+
+    def test_each_handler_has_finally_guard(self):
+        # Two handlers → two finally-based resolve guards.
+        assert self._src().count("if not _reaction_resolved:") == 2
+
+    def test_resolved_flag_initialized_false(self):
+        assert self._src().count("_reaction_resolved = False") == 2
+
+    def test_resolved_flag_set_true_on_success(self):
+        assert self._src().count("_reaction_resolved = True") == 2
+
+    def test_finally_keyword_present_after_processing(self):
+        s = self._src()
+        # The processing call precedes a finally block in each handler.
+        assert s.count("maybe_react_processing(message.bot, message)") == 2
+        assert "finally:" in s
+
+    def test_clear_lives_in_finally_not_only_except(self):
+        # The clear is reached via the finally guard (paired with the resolved flag).
+        s = self._src()
+        i_flag = s.index("if not _reaction_resolved:")
+        i_clear = s.index("maybe_clear_reaction(message.bot, message)")
+        assert i_clear > i_flag
+
+    def test_done_sets_resolved_before_finally(self):
+        s = self._src()
+        i_done = s.index("maybe_react_done(message.bot, message)")
+        i_true = s.index("_reaction_resolved = True")
+        assert i_true > i_done  # resolved flag set right after done
+
+    def test_processing_still_before_call_ai(self):
+        s = self._src()
+        assert s.index("maybe_react_processing") < s.index("result = await _call_ai")
+
+    def test_no_duplicate_explicit_clear_in_except(self):
+        # The old explicit clear inside the except block is gone; resolution is
+        # centralized in finally. So there are exactly 2 clear calls total
+        # (one finally per handler), not 4.
+        assert self._src().count("maybe_clear_reaction(message.bot, message)") == 2
+
+    def test_return_comment_documents_finally(self):
+        assert self._src().count("finally below clears the reaction") == 2
+
+
+class TestResolveSemantics:
+    """Unit-test the resolve semantics the finally guard relies on."""
+
+    async def test_success_resolves_once(self, monkeypatch):
+        # done() in clear mode → exactly one API call (the clear), resolved=True
+        _patch_cfg(monkeypatch, _Cfg(enabled=True, clear_on_reply=True))
+        bot = _FakeBot()
+        await rx.maybe_react_done(bot, _msg())
+        assert len(bot.calls) == 1 and bot.calls[0]["cleared"] is True
+
+    async def test_except_path_clear_resolves(self, monkeypatch):
+        _patch_cfg(monkeypatch, _Cfg(enabled=True))
+        bot = _FakeBot()
+        await rx.maybe_clear_reaction(bot, _msg())
+        assert bot.calls and bot.calls[0]["cleared"] is True
+
+    async def test_double_clear_no_bad_side_effect(self, monkeypatch):
+        # finally may clear after an except already cleared elsewhere — a double
+        # clear must be harmless (both empty-list, no raise).
+        _patch_cfg(monkeypatch, _Cfg(enabled=True))
+        bot = _FakeBot()
+        await rx.maybe_clear_reaction(bot, _msg())
+        await rx.maybe_clear_reaction(bot, _msg())
+        assert len(bot.calls) == 2
+        assert all(c["cleared"] for c in bot.calls)
+
+    async def test_clear_in_finally_failure_swallowed(self, monkeypatch):
+        # If the finally clear hits a Telegram error it must not propagate.
+        _patch_cfg(monkeypatch, _Cfg(enabled=True))
+        bot = _FakeBot(raise_exc=RuntimeError("finally boom"))
+        await rx.maybe_clear_reaction(bot, _msg())  # must not raise
+
+    async def test_done_then_clear_is_safe(self, monkeypatch):
+        # done (resolved) followed by a defensive clear → both safe.
+        _patch_cfg(monkeypatch, _Cfg(enabled=True, clear_on_reply=False, done="✅"))
+        bot = _FakeBot()
+        await rx.maybe_react_done(bot, _msg())
+        await rx.maybe_clear_reaction(bot, _msg())
+        assert bot.calls[0]["emojis"] == ["✅"]
+        assert bot.calls[1]["cleared"] is True
+
+    async def test_flag_off_finally_clear_noop(self, monkeypatch):
+        # When the feature is off, even the finally-path clear does nothing.
+        _patch_cfg(monkeypatch, _Cfg(enabled=False))
+        bot = _FakeBot()
+        await rx.maybe_clear_reaction(bot, _msg())
+        assert bot.calls == []
+
+
+class TestUnchangedBehaviorAfterHardening:
+    def _src(self) -> str:
+        return Path("apps/bot/handlers/private/ai_support.py").read_text(encoding="utf-8")
+
+    def test_stop_safety_guard_intact(self):
+        assert "_maybe_block_stop_or_safety(message, state, user_id, text)" in self._src()
+
+    def test_failsafe_reply_intact(self):
+        assert "await message.answer(_FAILSAFE_TEXT" in self._src()
+
+    def test_success_reply_intact(self):
+        s = self._src()
+        assert "await message.answer(reply_text, reply_markup=_ai_keyboard())" in s
+        assert "await message.answer(reply_text)" in s
+
+    def test_unknown_capture_openai_intact(self):
+        assert self._src().count('reason="openai_error"') == 2
+
+    def test_unknown_capture_safety_intact(self):
+        assert 'reason="safety_block"' in self._src()
+
+    def test_capture_before_return_in_except(self):
+        # Within the except, capture is scheduled before the return (ordering
+        # unchanged); the finally then clears.
+        s = self._src()
+        i_cap = s.index("_schedule_unknown_capture(")
+        i_ret = s.index("return  # finally below clears the reaction")
+        assert i_cap < i_ret
+
+    def test_no_typing_text_added(self):
+        s = self._src().lower()
+        assert "typing..." not in s and "yozyapti" not in s
+
+
 # ── Helper import smoke ──────────────────────────────────────────────────────
 
 
