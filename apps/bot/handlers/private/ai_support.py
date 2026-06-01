@@ -153,6 +153,12 @@ from core.services.catalog_link_resolver_service import (
 from core.services.unknown_question_service import (
     capture_unknown_question as _capture_unknown_question,
 )
+from core.services.unknown_question_service import (
+    classify_catalog_capture as _classify_catalog_capture,
+)
+from core.services.unknown_question_service import (
+    classify_price_capture as _classify_price_capture,
+)
 from infrastructure.database.models.ai_memory import AiMemoryModel
 from infrastructure.database.session import get_session_factory
 from shared.config import get_settings
@@ -1056,6 +1062,24 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
             reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
+        # Capture catalog/design asks that resolved to nothing specific (and were
+        # not a generic catalog ask or an ambiguous confirmation). Read-only,
+        # fire-and-forget; the customer still gets the full-catalog fallback above.
+        _cat_result = _resolve_catalog_link(text)
+        _cat_capture = _classify_catalog_capture(
+            matched=_cat_result.matched,
+            needs_confirmation=_cat_result.needs_confirmation,
+            reason=_cat_result.reason,
+        )
+        if _cat_capture:
+            _schedule_unknown_capture(
+                reason=_cat_capture,
+                original_text=text,
+                source="telegram",
+                channel_user_id=user_id or None,
+                telegram_chat_id=message.chat.id if message.chat else None,
+                live_route="catalog",
+            )
         fsm_data = await state.get_data()
         asyncio.create_task(
             _notify_warm_interest(
@@ -1127,6 +1151,19 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
                     reply_markup=_ai_keyboard(),
                 )
             else:
+                # Price intent but no area / design / district parsed. A short
+                # bare ask is the normal funnel entry; a longer substantive
+                # question we still could not structure is captured for review.
+                _price_capture = _classify_price_capture(text)
+                if _price_capture:
+                    _schedule_unknown_capture(
+                        reason=_price_capture,
+                        original_text=text,
+                        source="telegram",
+                        channel_user_id=user_id or None,
+                        telegram_chat_id=message.chat.id if message.chat else None,
+                        live_route="price",
+                    )
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
         return
 
@@ -1363,6 +1400,24 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
             reply_markup=_build_catalog_link_kb(text),
         )
         await message.answer(_CATALOG_SOFT_CTA, reply_markup=_ai_keyboard())
+        # Capture catalog/design asks that resolved to nothing specific (and were
+        # not a generic catalog ask or an ambiguous confirmation). Read-only,
+        # fire-and-forget; the customer still gets the full-catalog fallback above.
+        _cat_result = _resolve_catalog_link(text)
+        _cat_capture = _classify_catalog_capture(
+            matched=_cat_result.matched,
+            needs_confirmation=_cat_result.needs_confirmation,
+            reason=_cat_result.reason,
+        )
+        if _cat_capture:
+            _schedule_unknown_capture(
+                reason=_cat_capture,
+                original_text=text,
+                source="telegram",
+                channel_user_id=user_id or None,
+                telegram_chat_id=message.chat.id if message.chat else None,
+                live_route="catalog",
+            )
         asyncio.create_task(
             _notify_warm_interest(
                 topic=room or design or "katalog / dizayn",
@@ -1432,6 +1487,19 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
                     reply_markup=_ai_keyboard(),
                 )
             else:
+                # Price intent but no area / design / district parsed. A short
+                # bare ask is the normal funnel entry; a longer substantive
+                # question we still could not structure is captured for review.
+                _price_capture = _classify_price_capture(text)
+                if _price_capture:
+                    _schedule_unknown_capture(
+                        reason=_price_capture,
+                        original_text=text,
+                        source="telegram",
+                        channel_user_id=user_id or None,
+                        telegram_chat_id=message.chat.id if message.chat else None,
+                        live_route="price",
+                    )
                 await message.answer(_PRICE_ASK_DESIGN_TEXT, reply_markup=_ai_keyboard())
         return
 

@@ -196,3 +196,26 @@ class TestSmoke:
         from apps.api.main import app
 
         assert app is not None
+
+
+# ── v2: reason filter accepts new (text) reasons ──────────────────────────────
+
+
+class TestV2ReasonFilterAcceptsNewReasons:
+    def test_reason_param_is_free_text_not_enum(self) -> None:
+        # The list endpoint declares reason as a length-bounded string (max_length
+        # 40), NOT a fixed enum — so new reasons like unknown_price_question are
+        # accepted without an API change.
+        s = _src()
+        assert 'reason: str = Query(default="", max_length=40)' in s
+
+    def test_no_hardcoded_reason_allowlist(self) -> None:
+        # There must be no rejection of unknown reason values in the list route.
+        s = _src()
+        assert "invalid reason" not in s.lower()
+
+    def test_summary_top_reasons_group_by_reason(self) -> None:
+        # Summary aggregates by the reason column, so new reasons appear in
+        # top_reasons automatically.
+        s = _src()
+        assert "group_by(AgentUnknownQuestionModel.reason)" in s

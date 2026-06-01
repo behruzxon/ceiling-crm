@@ -212,3 +212,40 @@ class TestSmoke:
 
         env = Environment(loader=FileSystemLoader("apps/web/templates"))
         assert env.get_template("agent_unknown_questions.html") is not None
+
+
+# ── v2: expanded reason coverage in the filter UI ─────────────────────────────
+
+
+class TestV2ReasonFilters:
+    def test_unknown_price_question_option_present(self) -> None:
+        assert 'value="unknown_price_question"' in _t()
+
+    def test_no_catalog_match_option_present(self) -> None:
+        assert 'value="no_catalog_match"' in _t()
+
+    def test_unknown_design_option_present(self) -> None:
+        assert 'value="unknown_design"' in _t()
+
+    def test_all_v2_reasons_selectable(self) -> None:
+        t = _t()
+        for reason in (
+            "ai_fallback",
+            "openai_error",
+            "safety_block",
+            "no_catalog_match",
+            "unknown_price_question",
+            "unknown_design",
+            "low_confidence",
+            "shadow_live_mismatch",
+        ):
+            assert f'value="{reason}"' in t, f"missing filter option: {reason}"
+
+    def test_summary_top_reasons_still_rendered(self) -> None:
+        # top_reasons is dynamic (DB group-by), so new reasons render automatically.
+        assert "top_reasons" in _t()
+
+    def test_still_no_send_or_faq_buttons(self) -> None:
+        s = _t()
+        assert "send_message" not in s.lower()
+        assert "create_faq" not in s

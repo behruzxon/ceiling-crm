@@ -219,6 +219,58 @@ def severity_for_unknown_question(
     return base
 
 
+# Minimum word count for a price question to be considered a substantive,
+# unparseable failure rather than the normal short funnel entry ("narx qancha").
+_PRICE_QUESTION_MIN_WORDS = 4
+
+
+def classify_catalog_capture(
+    *,
+    matched: bool,
+    needs_confirmation: bool,
+    reason: str,
+) -> str | None:
+    """Decide whether a catalog resolution is a capture-worthy failure.
+
+    Maps a ``CatalogLinkResult`` outcome to a capture reason, or ``None`` to skip.
+
+    Capture-worthy: the resolver matched nothing specific, did not offer a
+    confirmation prompt, and the text was not a plain generic catalog ask — i.e.
+    ``reason == "no_alias"`` → ``"no_catalog_match"``.
+
+    NOT a failure (returns ``None``):
+    * ``matched`` — a specific design was found (success);
+    * ``needs_confirmation`` — ambiguous / fuzzy near-miss handled by asking the
+      user (good UX, not a miss);
+    * ``reason == "generic_catalog_trigger"`` — the user just asked for "katalog"
+      and got the full catalog (normal);
+    * ``reason == "empty_text"``.
+    """
+    if matched or needs_confirmation:
+        return None
+    if reason == "no_alias":
+        return "no_catalog_match"
+    return None
+
+
+def classify_price_capture(
+    text: str | None, *, min_words: int = _PRICE_QUESTION_MIN_WORDS
+) -> str | None:
+    """Decide whether an unparseable price question is capture-worthy.
+
+    Call this only on the terminal price branch where a price intent was detected
+    but no area / design / district could be parsed. A short bare ask
+    ("narx qancha") is the normal funnel entry and is **not** captured; a longer
+    substantive question the bot still could not structure
+    (``>= min_words`` words) is captured as ``"unknown_price_question"``.
+    """
+    if not text:
+        return None
+    if len(text.split()) >= min_words:
+        return "unknown_price_question"
+    return None
+
+
 def build_unknown_question_event(
     *,
     reason: str,
