@@ -189,6 +189,44 @@ async def agent_dashboard(
     )
 
 
+@app.get("/agent/unknown-questions", response_class=HTMLResponse)
+async def agent_unknown_questions(
+    request: Request,
+    status: str = Query("", max_length=20),
+    reason: str = Query("", max_length=40),
+    severity: str = Query("", max_length=10),
+    q: str = Query("", max_length=100),
+):
+    """Unknown Questions Inbox — read-only triage of captured bot failures.
+
+    Read-only: this page displays captured questions and links to the review
+    API. It never sends a message, edits knowledge, or changes prices/catalog.
+    """
+    summary = await api_get("/api/v1/admin/agent/unknown-questions/summary")
+    params: dict = {"limit": 50}
+    if status:
+        params["status"] = status
+    if reason:
+        params["reason"] = reason
+    if severity:
+        params["severity"] = severity
+    if q:
+        params["q"] = q
+    items = await api_get("/api/v1/admin/agent/unknown-questions", params=params)
+    return templates.TemplateResponse(
+        "agent_unknown_questions.html",
+        {
+            "request": request,
+            "summary": summary,
+            "items": items,
+            "status_filter": status,
+            "reason_filter": reason,
+            "severity_filter": severity,
+            "q_filter": q,
+        },
+    )
+
+
 @app.get("/crm", response_class=HTMLResponse)
 async def crm_contacts(
     request: Request,
