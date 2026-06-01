@@ -166,17 +166,19 @@ class TestNoDangerousSurface:
     def test_no_openai(self) -> None:
         assert "openai" not in _src().lower()
 
-    def test_no_knowledge_mutation(self) -> None:
+    def test_no_system_prompt_mutation(self) -> None:
+        # The promote-to-faq endpoint creates a Knowledge Base item via the
+        # knowledge service, but must never touch the bot's system prompt.
         s = _src().lower()
-        assert "knowledge" not in s
         assert "system_prompt" not in s
 
-    def test_no_faq_conversion_write(self) -> None:
-        # converted_to_faq is a valid *status* label, but there must be no
-        # endpoint that actually creates an FAQ / writes knowledge.
+    def test_promote_to_faq_present_but_safe(self) -> None:
+        # As of the Knowledge Base CRUD sprint, promote-to-faq IS present — it
+        # delegates to the knowledge service (no FAQ table write inline, no send).
         s = _src()
-        assert "create_faq" not in s
-        assert "def promote" not in s
+        assert "promote_to_faq" in s
+        assert "promote_unknown_question_to_faq" in s
+        assert "create_faq" not in s  # no ad-hoc FAQ creation; goes through service
 
     def test_no_secret_literal(self) -> None:
         assert "sk-" not in _src()
