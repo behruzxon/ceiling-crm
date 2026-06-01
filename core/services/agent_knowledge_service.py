@@ -27,6 +27,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from shared.utils.phone import mask_phone_in_text
+from shared.utils.sanitize import detect_prompt_injection
+from shared.utils.text_normalization import latinize_uz_cyrillic
 
 # ── Vocabularies ─────────────────────────────────────────────────────────────
 
@@ -499,3 +501,221 @@ async def promote_unknown_question_to_faq(
     await session.commit()
     await session.refresh(item)
     return _row_to_dict(item)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Retrieval — gated bot lookup of ACTIVE knowledge before the OpenAI fallback.
+# Pure keyword matching (NO OpenAI, NO embeddings). See doc 157.
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Categories the bot may answer from (price/catalog handled by deterministic routes).
+_RETRIEVAL_CATEGORIES: frozenset[str] = frozenset(
+    {"faq", "warranty", "process", "service_area", "objection", "other"}
+)
+
+#: Bare/ambiguous queries that must never be answered from the KB (the bot's
+#: deterministic routes own these). Compared against the normalized full query.
+_QUERY_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "salom",
+        "assalomu alaykum",
+        "ok",
+        "oke",
+        "ha",
+        "yoq",
+        "yo q",
+        "rahmat",
+        "mayli",
+        "zor",
+        "bo ldi",
+        "kerakmas",
+        "kerak emas",
+        "narx",
+        "narxi",
+        "katalog",
+        "kataloq",
+        "operator",
+        "dizayn",
+        "rasm",
+        "foto",
+    }
+)
+
+_RE_NON_WORD = re.compile(r"[^0-9a-zЀ-ӿ\s]")
+
+#: Minimum normalized length / token count for a query to be eligible.
+_QUERY_MIN_CHARS = 6
+_QUERY_MIN_TOKENS = 2
+
+
+@dataclass(frozen=True)
+class KnowledgeMatch:
+    """A scored knowledge hit (the answer + provenance the bot may use)."""
+
+    item: dict[str, Any]
+    score: float
+
+
+def normalize_knowledge_query(text: str | None) -> str:
+    """Normalize for matching: latinize Cyrillic, lowercase, strip punctuation."""
+    if not text:
+        return ""
+    out = latinize_uz_cyrillic(str(text)).lower()
+    out = _RE_NON_WORD.sub(" ", out)
+    return _RE_WS.sub(" ", out).strip()
+
+
+def _tokens(normalized: str) -> set[str]:
+    return {t for t in normalized.split() if t}
+
+
+def is_lookupable_query(text: str | None) -> bool:
+    """True if *text* is safe + substantive enough to match against the KB.
+
+    Rejects: empty, prompt-injection, secret-bearing, bare stopword queries, and
+    very short / single-token queries (those belong to deterministic routes).
+    """
+    if not text or not text.strip():
+        return False
+    if detect_prompt_injection(text) or contains_forbidden_secret(text):
+        return False
+    norm = normalize_knowledge_query(text)
+    if not norm or norm in _QUERY_STOPWORDS:
+        return False
+    if len(norm) < _QUERY_MIN_CHARS:
+        return False
+    if len(_tokens(norm)) < _QUERY_MIN_TOKENS:
+        return False
+    return True
+
+
+def score_knowledge_match(
+    query: str,
+    *,
+    question: str | None,
+    aliases: list[str] | None = None,
+    title: str | None = None,
+) -> float:
+    """Return a 0..1 match score between *query* and a knowledge item.
+
+    Exact normalized question = 1.0; exact alias = 0.95; otherwise the best
+    token-overlap coefficient (|∩| / min(|q|,|f|)) against question (×1.0),
+    aliases (×0.9), and title (×0.6). Pure; no I/O.
+    """
+    q_norm = normalize_knowledge_query(query)
+    q_tokens = _tokens(q_norm)
+    if not q_tokens:
+        return 0.0
+
+    if question and normalize_knowledge_query(question) == q_norm:
+        return 1.0
+    for alias in aliases or []:
+        if alias and normalize_knowledge_query(alias) == q_norm:
+            return 0.95
+
+    best = 0.0
+
+    def _overlap(field: str | None, weight: float) -> float:
+        if not field:
+            return 0.0
+        f_tokens = _tokens(normalize_knowledge_query(field))
+        if not f_tokens:
+            return 0.0
+        inter = len(q_tokens & f_tokens)
+        if not inter:
+            return 0.0
+        return (inter / min(len(q_tokens), len(f_tokens))) * weight
+
+    best = max(best, _overlap(question, 1.0), _overlap(title, 0.6))
+    for alias in aliases or []:
+        best = max(best, _overlap(alias, 0.9))
+    return round(best, 4)
+
+
+async def search_active_knowledge_items(
+    session: Any,
+    query: str,
+    *,
+    language: str = "uz",
+    limit: int = 5,
+    candidate_cap: int = 300,
+) -> list[KnowledgeMatch]:
+    """Return scored ACTIVE knowledge matches (highest first).
+
+    Loads active items in *language* and the retrieval categories (capped),
+    scores each in Python, and returns the top *limit* with score > 0. Items are
+    tie-broken by lower ``priority`` then higher score. Pure keyword scoring.
+    """
+    import sqlalchemy as sa
+
+    from infrastructure.database.models.agent_knowledge_item import AgentKnowledgeItemModel
+
+    if not is_lookupable_query(query):
+        return []
+
+    q = (
+        sa.select(AgentKnowledgeItemModel)
+        .where(
+            AgentKnowledgeItemModel.status == "active",
+            AgentKnowledgeItemModel.language == language,
+            AgentKnowledgeItemModel.category.in_(tuple(_RETRIEVAL_CATEGORIES)),
+        )
+        .order_by(AgentKnowledgeItemModel.priority.asc())
+        .limit(candidate_cap)
+    )
+    res = await session.execute(q)
+    rows = res.scalars().all()
+
+    scored: list[KnowledgeMatch] = []
+    for row in rows:
+        score = score_knowledge_match(
+            query,
+            question=row.question,
+            aliases=row.aliases_json,
+            title=row.title,
+        )
+        if score > 0:
+            scored.append(KnowledgeMatch(item=_row_to_dict(row), score=score))
+
+    scored.sort(key=lambda m: (-m.score, m.item.get("priority", 100)))
+    return scored[:limit]
+
+
+async def find_best_knowledge_answer(
+    session: Any,
+    query: str,
+    *,
+    language: str = "uz",
+    min_score: float = 0.75,
+    limit: int = 5,
+) -> KnowledgeMatch | None:
+    """Return the single best ACTIVE match at/above *min_score*, or ``None``.
+
+    ``None`` when the query is not lookupable (short/stopword/injection/secret)
+    or nothing clears the threshold — the caller then continues its normal flow.
+    """
+    matches = await search_active_knowledge_items(session, query, language=language, limit=limit)
+    if matches and matches[0].score >= min_score:
+        return matches[0]
+    return None
+
+
+_KB_ANSWER_CTA = "Yana savolingiz bo'lsa, yozing 😊"
+
+
+def render_knowledge_answer(
+    match: KnowledgeMatch, *, max_chars: int = 1200, cta: bool = True
+) -> str:
+    """Render a customer-safe answer from a match.
+
+    Uses only the saved (already-sanitized) answer text — never tags / source /
+    metadata. Truncates to *max_chars* and appends a soft CTA. Returns "" if the
+    item has no answer (caller should then fall back).
+    """
+    answer = (match.item.get("answer") or "").strip()
+    if not answer:
+        return ""
+    answer = answer[:max_chars].strip()
+    if cta and _KB_ANSWER_CTA not in answer:
+        return f"{answer}\n\n{_KB_ANSWER_CTA}"
+    return answer

@@ -132,6 +132,7 @@ Manage later at /agent/knowledge (edit / activate / archive)
 1. **Bot Knowledge Retrieval from DB** (gated): `AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED`
    default OFF; when ON, search **active** FAQ items (exact/keyword) before the
    OpenAI fallback. Tests must pin default OFF + no behaviour change.
+   **Update:** implemented — see [157_BOT_KNOWLEDGE_DB_RETRIEVAL.md](157_BOT_KNOWLEDGE_DB_RETRIEVAL.md).
 2. **Knowledge versioning + approval workflow** (draft → review → live, rollback).
 3. **Price Settings UI** and **Catalog Link / Alias Manager** (the other two
    post-deploy gaps from doc 152).

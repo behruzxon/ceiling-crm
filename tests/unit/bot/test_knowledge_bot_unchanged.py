@@ -1,8 +1,11 @@
-"""Regression pins: Knowledge Base CRUD must NOT change bot behaviour (Option A).
+"""Regression pins: bot behaviour is unchanged while DB knowledge lookup is OFF.
 
-This sprint builds the admin-editable knowledge store + promote workflow only.
-The bot does not read DB knowledge yet — these tests prove no DB-knowledge lookup
-was wired into the live handlers and the file-based knowledge load is unchanged.
+Knowledge Base CRUD (doc 156) added the admin store; gated retrieval (doc 157)
+added an OPTIONAL bot lookup that is **default OFF**. These tests pin that:
+* the lookup is flag-gated (`AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED`, default False);
+* with the flag off the bot does not query DB knowledge (helper returns early);
+* the file-based knowledge / system prompt is still loaded and used;
+* the knowledge service never sends Telegram, calls OpenAI, or mutates the prompt.
 """
 
 from __future__ import annotations
@@ -18,22 +21,35 @@ def _system_prompt() -> str:
     return Path("apps/bot/ai/system_prompt.py").read_text(encoding="utf-8")
 
 
-class TestNoBotKnowledgeLookup:
-    def test_handler_does_not_import_knowledge_service(self):
-        assert "agent_knowledge_service" not in _ai_support()
+def _settings() -> str:
+    return Path("shared/config/settings.py").read_text(encoding="utf-8")
 
-    def test_handler_does_not_query_knowledge_model(self):
+
+class TestLookupIsGatedAndDefaultOff:
+    def test_flag_exists(self):
+        assert "AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED" in _settings()
+
+    def test_flag_defaults_off(self):
+        from shared.config.settings import BusinessSettings
+
+        assert BusinessSettings().agent_knowledge_db_lookup_enabled is False
+
+    def test_helper_checks_flag_first(self):
+        # The helper reads the flag and returns before any DB work when off.
         s = _ai_support()
-        assert "AgentKnowledgeItemModel" not in s
-        assert "agent_knowledge_items" not in s
+        idx = s.index("async def _maybe_answer_from_knowledge")
+        body = s[idx : idx + 1200]
+        assert "agent_knowledge_db_lookup_enabled" in body
+        assert "return False" in body
 
-    def test_no_db_knowledge_lookup_helper(self):
-        s = _ai_support().lower()
-        assert "knowledge_db_lookup" not in s
-        assert "lookup_knowledge" not in s
+    def test_helper_never_raises(self):
+        s = _ai_support()
+        idx = s.index("async def _maybe_answer_from_knowledge")
+        body = s[idx : idx + 2400]
+        assert "try:" in body and "except Exception" in body
 
 
-class TestFileKnowledgeUnchanged:
+class TestFileKnowledgeStillUsed:
     def test_system_prompt_still_reads_md_file(self):
         s = _system_prompt()
         assert "_KB_PATH" in s
@@ -45,25 +61,19 @@ class TestFileKnowledgeUnchanged:
         assert "agent_knowledge_items" not in s
 
 
-class TestNoFlagAddedForLookup:
-    def test_no_knowledge_db_lookup_flag(self):
-        # Option A: we did NOT add AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED this sprint.
-        settings = Path("shared/config/settings.py").read_text(encoding="utf-8")
-        assert "knowledge_db_lookup" not in settings.lower()
-
-
-class TestServiceIsAdminOnly:
+class TestServiceIsSafe:
     def test_service_has_no_telegram_send(self):
         s = Path("core/services/agent_knowledge_service.py").read_text(encoding="utf-8")
         assert "send_message" not in s
 
     def test_service_makes_no_openai_call(self):
-        # "openai" legitimately appears in the secret-detection regex; assert
-        # there is no actual model call / client import instead.
+        # "openai" legitimately appears in the secret-detection regex / notes;
+        # assert there is no actual model call / client import / embedding API.
         s = Path("core/services/agent_knowledge_service.py").read_text(encoding="utf-8")
         assert "import openai" not in s
         assert "AsyncOpenAI" not in s
         assert "_call_ai" not in s
+        assert ".embeddings" not in s.lower()
 
     def test_service_does_not_touch_system_prompt(self):
         s = Path("core/services/agent_knowledge_service.py").read_text(encoding="utf-8")

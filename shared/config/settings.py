@@ -767,6 +767,31 @@ class BusinessSettings(BaseSettings):
         default=True,
         alias="AGENT_RESPONSE_ORCHESTRATOR_TRACE_ENABLED",
     )
+    # Bot Knowledge Base DB retrieval — gated, default OFF. When ON, the bot
+    # searches ACTIVE admin FAQ items before the OpenAI fallback (doc 157).
+    # No OpenAI / embeddings — pure keyword matching. No behaviour change OFF.
+    agent_knowledge_db_lookup_enabled: bool = Field(
+        default=False,
+        alias="AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED",
+    )
+    agent_knowledge_db_lookup_min_score: float = Field(
+        default=0.75,
+        alias="AGENT_KNOWLEDGE_DB_LOOKUP_MIN_SCORE",
+        ge=0.0,
+        le=1.0,
+    )
+    agent_knowledge_db_lookup_limit: int = Field(
+        default=5,
+        alias="AGENT_KNOWLEDGE_DB_LOOKUP_LIMIT",
+        ge=1,
+        le=50,
+    )
+    agent_knowledge_db_lookup_max_answer_chars: int = Field(
+        default=1200,
+        alias="AGENT_KNOWLEDGE_DB_LOOKUP_MAX_ANSWER_CHARS",
+        ge=100,
+        le=4000,
+    )
     # Sales Dialogue Manager — independent human-like sales agent layer.
     # Default OFF: the pure service exists and is fully tested, but it is NOT
     # wired into the live handler. See

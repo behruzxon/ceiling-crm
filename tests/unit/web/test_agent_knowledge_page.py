@@ -68,8 +68,16 @@ class TestTitleAndNotice:
         assert "FAQ" in _t() or "bilim" in _t().lower()
 
     def test_read_only_notice(self):
-        # The page states it does not change bot replies yet.
-        assert "avtomatik" in _t().lower() or "keyingi sprint" in _t().lower()
+        # The page states bot lookup is default OFF and names the gating flag.
+        c = _t()
+        assert "AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED" in c
+        assert "OFF" in c or "o'chiq" in c.lower()
+
+    def test_no_toggle_button(self):
+        # No live enable/disable control on the page (env-flag only).
+        c = _t().lower()
+        assert "toggle" not in c
+        assert "enable_lookup" not in c
 
     def test_no_send_notice(self):
         assert "xabar yuborilmaydi" in _t()
