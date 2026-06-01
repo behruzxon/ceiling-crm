@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% set active_page = "knowledge" %}
+{% block title %}Knowledge Base — CeilingCRM{% endblock %}
+{% block page_title %}Knowledge Base{% endblock %}
+{% block page_subtitle %}FAQ va bilimlarni boshqaring (qoralama / faol / arxiv){% endblock %}
+{% block content %}
+<div class="vp-page">
+
+  <div class="vp-alert vp-alert-info" style="margin-bottom:16px;">
+    Bilimlarni shu yerda tahrirlash mumkin. Hozircha bu bot javoblarini avtomatik
+    o'zgartirmaydi (keyingi sprint: bot DB bilimlardan foydalanadi).
+    Mijozga xabar yuborilmaydi.
+  </div>
+
+  <!-- KPI cards -->
+  <div class="vp-kpi-grid" style="margin-bottom:20px;">
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Faol</div>
+      <div class="vp-kpi-value">{{ (summary or {}).get("active", 0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Qoralama</div>
+      <div class="vp-kpi-value">{{ (summary or {}).get("draft", 0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Arxiv</div>
+      <div class="vp-kpi-value">{{ (summary or {}).get("archived", 0) }}</div>
+    </div>
+    <div class="vp-kpi-card">
+      <div class="vp-kpi-label">Kategoriyalar</div>
+      <div class="vp-kpi-value">{{ ((summary or {}).get("categories") or [])|length }}</div>
+    </div>
+  </div>
+
+  <!-- Filters + create -->
+  <div class="vp-card" style="margin-bottom:16px;">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <select class="vp-select" id="statusFilter" onchange="applyFilters()">
+        <option value="">Barcha statuslar</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Faol</option>
+        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Qoralama</option>
+        <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Arxiv</option>
+      </select>
+      <select class="vp-select" id="categoryFilter" onchange="applyFilters()">
+        <option value="">Barcha kategoriyalar</option>
+        <option value="faq" {% if category_filter == 'faq' %}selected{% endif %}>FAQ</option>
+        <option value="price" {% if category_filter == 'price' %}selected{% endif %}>Narx</option>
+        <option value="catalog" {% if category_filter == 'catalog' %}selected{% endif %}>Katalog</option>
+        <option value="warranty" {% if category_filter == 'warranty' %}selected{% endif %}>Kafolat</option>
+        <option value="objection" {% if category_filter == 'objection' %}selected{% endif %}>E'tiroz</option>
+        <option value="service_area" {% if category_filter == 'service_area' %}selected{% endif %}>Hudud</option>
+        <option value="process" {% if category_filter == 'process' %}selected{% endif %}>Jarayon</option>
+        <option value="other" {% if category_filter == 'other' %}selected{% endif %}>Boshqa</option>
+      </select>
+      <select class="vp-select" id="languageFilter" onchange="applyFilters()">
+        <option value="">Barcha tillar</option>
+        <option value="uz" {% if language_filter == 'uz' %}selected{% endif %}>uz</option>
+        <option value="ru" {% if language_filter == 'ru' %}selected{% endif %}>ru</option>
+        <option value="en" {% if language_filter == 'en' %}selected{% endif %}>en</option>
+      </select>
+      <input class="vp-input" id="qFilter" type="text" placeholder="Qidirish…" value="{{ q_filter or '' }}"
+             style="max-width:180px;" onkeydown="if(event.key==='Enter'){applyFilters();}">
+      <button class="vp-btn vp-btn-secondary" onclick="location.reload()">Yangilash</button>
+      <button class="vp-btn vp-btn-primary" onclick="openCreate()" style="margin-left:auto;">+ Yangi bilim</button>
+    </div>
+  </div>
+
+  <!-- Knowledge table -->
+  <div class="vp-card">
+    {% set kb_items = (items or {}).get("items", []) %}
+    {% if kb_items %}
+    <table class="vp-table">
+      <thead>
+        <tr>
+          <th>Sarlavha</th>
+          <th>Savol</th>
+          <th>Kategoriya</th>
+          <th>Status</th>
+          <th>Manba</th>
+          <th>Yangilangan</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in kb_items %}
+        <tr>
+          <td>{{ item.title or '—' }}</td>
+          <td style="max-width:240px;">{{ item.question or '—' }}</td>
+          <td><span class="vp-badge vp-badge-neutral">{{ item.category }}</span></td>
+          <td>
+            {% if item.status == 'active' %}
+              <span class="vp-badge vp-badge-success">Faol</span>
+            {% elif item.status == 'draft' %}
+              <span class="vp-badge vp-badge-warning">Qoralama</span>
+            {% else %}
+              <span class="vp-badge vp-badge-neutral">Arxiv</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11px;">{{ item.source }}</td>
+          <td style="font-size:11px;white-space:nowrap;">{{ (item.updated_at or item.created_at or '')[:16] }}</td>
+          <td>
+            <button class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;"
+                    onclick='openEdit({{ item|tojson }})'>Tahrir</button>
+            {% if item.status != 'archived' %}
+            <button class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;"
+                    onclick="archiveItem({{ item.id }})">Arxiv</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="vp-empty-state">
+      <div class="vp-empty-icon">📚</div>
+      Hali bilim qo'shilmagan — "Yangi bilim" yoki Unknown Questions'dan "FAQ ga o'tkazish"
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Create / edit modal -->
+  <div id="kbModal" class="vp-modal" style="display:none;">
+    <div class="vp-modal-content" style="max-width:560px;">
+      <div class="vp-card-header"><div class="vp-card-title" id="kbModalTitle">Yangi bilim</div></div>
+      <form id="kbForm" onsubmit="submitKb(event)">
+        <input type="hidden" id="kbId">
+        <label class="vp-label">Sarlavha</label>
+        <input class="vp-input" id="kbTitle" maxlength="200" style="width:100%;margin-bottom:8px;">
+        <label class="vp-label">Savol</label>
+        <textarea class="vp-input" id="kbQuestion" maxlength="1000" rows="2" style="width:100%;margin-bottom:8px;"></textarea>
+        <label class="vp-label">Javob</label>
+        <textarea class="vp-input" id="kbAnswer" maxlength="4000" rows="4" style="width:100%;margin-bottom:8px;"></textarea>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;">
+            <label class="vp-label">Kategoriya</label>
+            <select class="vp-select" id="kbCategory" style="width:100%;">
+              <option value="faq">FAQ</option>
+              <option value="price">Narx</option>
+              <option value="catalog">Katalog</option>
+              <option value="warranty">Kafolat</option>
+              <option value="objection">E'tiroz</option>
+              <option value="service_area">Hudud</option>
+              <option value="process">Jarayon</option>
+              <option value="other">Boshqa</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label class="vp-label">Status</label>
+            <select class="vp-select" id="kbStatus" style="width:100%;">
+              <option value="draft">Qoralama</option>
+              <option value="active">Faol</option>
+            </select>
+          </div>
+        </div>
+        <label class="vp-label" style="margin-top:8px;">Aliases (vergul bilan)</label>
+        <input class="vp-input" id="kbAliases" style="width:100%;margin-bottom:8px;">
+        <label class="vp-label">Tags (vergul bilan)</label>
+        <input class="vp-input" id="kbTags" style="width:100%;margin-bottom:12px;">
+        <div id="kbError" class="vp-alert vp-alert-danger" style="display:none;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" class="vp-btn vp-btn-secondary" onclick="closeKb()">Bekor</button>
+          <button type="submit" class="vp-btn vp-btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<style>
+.vp-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex;
+  align-items: center; justify-content: center; z-index: 1000; }
+.vp-modal-content { background: #fff; border-radius: 12px; padding: 20px; width: 92%; max-height: 90vh; overflow:auto; }
+@media (max-width: 767px) {
+  .vp-table th:nth-child(5), .vp-table td:nth-child(5),
+  .vp-table th:nth-child(6), .vp-table td:nth-child(6) { display: none; }
+}
+</style>
+
+<script>
+function applyFilters() {
+  const s = document.getElementById('statusFilter').value;
+  const c = document.getElementById('categoryFilter').value;
+  const l = document.getElementById('languageFilter').value;
+  const q = document.getElementById('qFilter').value;
+  let url = '/agent/knowledge?';
+  if (s) url += 'status=' + encodeURIComponent(s) + '&';
+  if (c) url += 'category=' + encodeURIComponent(c) + '&';
+  if (l) url += 'language=' + encodeURIComponent(l) + '&';
+  if (q) url += 'q=' + encodeURIComponent(q) + '&';
+  location.href = url;
+}
+function _set(id, v) { document.getElementById(id).value = v == null ? '' : v; }
+function openCreate() {
+  document.getElementById('kbModalTitle').textContent = 'Yangi bilim';
+  _set('kbId',''); _set('kbTitle',''); _set('kbQuestion',''); _set('kbAnswer','');
+  _set('kbCategory','faq'); _set('kbStatus','draft'); _set('kbAliases',''); _set('kbTags','');
+  document.getElementById('kbError').style.display = 'none';
+  document.getElementById('kbModal').style.display = 'flex';
+}
+function openEdit(item) {
+  document.getElementById('kbModalTitle').textContent = 'Bilimni tahrirlash';
+  _set('kbId', item.id); _set('kbTitle', item.title); _set('kbQuestion', item.question);
+  _set('kbAnswer', item.answer); _set('kbCategory', item.category); _set('kbStatus', item.status === 'archived' ? 'draft' : item.status);
+  _set('kbAliases', (item.aliases || []).join(', ')); _set('kbTags', (item.tags || []).join(', '));
+  document.getElementById('kbError').style.display = 'none';
+  document.getElementById('kbModal').style.display = 'flex';
+}
+function closeKb() { document.getElementById('kbModal').style.display = 'none'; }
+async function submitKb(ev) {
+  ev.preventDefault();
+  const id = document.getElementById('kbId').value;
+  const payload = {
+    title: document.getElementById('kbTitle').value,
+    question: document.getElementById('kbQuestion').value,
+    answer: document.getElementById('kbAnswer').value,
+    category: document.getElementById('kbCategory').value,
+    status: document.getElementById('kbStatus').value,
+    aliases: document.getElementById('kbAliases').value,
+    tags: document.getElementById('kbTags').value,
+  };
+  const url = id ? '/api/v1/admin/agent/knowledge/' + id : '/api/v1/admin/agent/knowledge';
+  const method = id ? 'PATCH' : 'POST';
+  try {
+    const resp = await fetch(url, {method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+    if (resp.ok) { location.reload(); return; }
+    const d = await resp.json().catch(function(){return {};});
+    const e = document.getElementById('kbError');
+    e.textContent = d.detail || 'Saqlashda xatolik'; e.style.display = 'block';
+  } catch (e) { alert('Tarmoq xatosi'); }
+}
+async function archiveItem(id) {
+  if (!confirm('Bu bilimni arxivlaysizmi?')) return;
+  try {
+    const resp = await fetch('/api/v1/admin/agent/knowledge/' + id + '/archive', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    if (resp.ok) { location.reload(); } else { alert('Arxivlashda xatolik'); }
+  } catch (e) { alert('Tarmoq xatosi'); }
+}
+</script>
+{% endblock %}

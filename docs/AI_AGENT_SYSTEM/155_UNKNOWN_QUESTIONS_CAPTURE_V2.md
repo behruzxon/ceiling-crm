@@ -101,7 +101,8 @@ routing, or existing-capture behavior changed.
 ## 7. Next sprint (unchanged)
 
 **Knowledge Base CRUD + promote-unknown-question → FAQ** — the inbox now surfaces
-catalog and price gaps too, making that sprint even more targeted. After that:
+catalog and price gaps too, making that sprint even more targeted.
+**Update:** implemented — see [156_KNOWLEDGE_BASE_CRUD.md](156_KNOWLEDGE_BASE_CRUD.md). After that:
 DB-level 24h dedupe, then persist SDM shadow decisions to unlock `low_confidence`
 / `shadow_live_mismatch` + a live-vs-SDM parity view.
 

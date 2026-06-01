@@ -23,6 +23,9 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from infrastructure.database.models.admin_group import AdminGroupModel  # noqa: F401
+from infrastructure.database.models.agent_knowledge_item import (  # noqa: F401
+    AgentKnowledgeItemModel,
+)
 from infrastructure.database.models.agent_unknown_question import (  # noqa: F401
     AgentUnknownQuestionModel,
 )

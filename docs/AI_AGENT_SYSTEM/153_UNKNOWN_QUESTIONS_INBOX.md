@@ -242,6 +242,10 @@ in `apps/web/main.py`, nav link under the **AI** section in `base.html`.
 3. Persist SDM shadow decisions → enable `shadow_live_mismatch` capture + parity view.
 4. A real `bot_failure_rate` once a handled-conversation denominator exists.
 
+> **Update:** the promote-to-FAQ loop opened here is now implemented — see
+> [156_KNOWLEDGE_BASE_CRUD.md](156_KNOWLEDGE_BASE_CRUD.md). Promoting a question
+> creates a knowledge item and sets the question's status to `converted_to_faq`.
+
 ## 10. Next sprint: Knowledge Base CRUD
 
 With the inbox showing *what* the bot fails on, the next sprint makes knowledge

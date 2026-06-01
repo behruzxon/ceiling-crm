@@ -170,5 +170,42 @@ async def review_unknown_question(
     return {"status": row.status, "id": question_id}
 
 
+@router.post("/{question_id}/promote-to-faq")
+async def promote_to_faq(
+    question_id: int,
+    body: dict | None = None,
+    db=Depends(get_db),
+) -> dict:
+    """Promote an Unknown Question into a Knowledge Base item.
+
+    Creates an ``agent_knowledge_items`` row (source=unknown_question, linked by
+    id) and marks the unknown question ``converted_to_faq``. The question is
+    pre-filled from the captured preview when not supplied. Saves as ``draft`` by
+    default. No Telegram send, no bot behaviour change. Forbidden secrets in the
+    content are rejected with HTTP 422.
+    """
+    from core.services import agent_knowledge_service as kb
+
+    body = body or {}
+    try:
+        item = await kb.promote_unknown_question_to_faq(
+            db,
+            question_id,
+            title=body.get("title"),
+            question=body.get("question"),
+            answer=body.get("answer"),
+            category=body.get("category", "faq"),
+            status=body.get("status", "draft"),
+            aliases=body.get("aliases"),
+            tags=body.get("tags"),
+            actor=body.get("actor") or "admin",
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Unknown question not found") from exc
+    except kb.KnowledgeValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"status": "promoted", "unknown_question_id": question_id, "knowledge_item": item}
+
+
 # Severities re-exported for callers/tests that want the canonical tuple.
 __all__ = ["router", "SEVERITIES"]

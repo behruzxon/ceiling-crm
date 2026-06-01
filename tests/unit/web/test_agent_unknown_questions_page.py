@@ -172,16 +172,18 @@ class TestNoForbiddenActionsYet:
         c = _t().lower()
         assert "send_message" not in c
 
-    def test_no_convert_to_faq_action(self) -> None:
-        # converted_to_faq may appear as a status label, but there must be no
-        # live "create FAQ" / "edit knowledge" button on the page.
-        s = _t()
-        assert "create_faq" not in s
-        assert "Bilimga qo'shish" not in s
-        assert "edit_knowledge" not in s
+    def test_no_auto_reply_action(self) -> None:
+        assert "auto_reply" not in _t().lower()
 
-    def test_no_knowledge_edit(self) -> None:
-        assert "knowledge" not in _t().lower()
+    def test_promote_to_faq_present(self) -> None:
+        # As of the Knowledge Base CRUD sprint, Promote-to-FAQ IS present here.
+        # It creates a knowledge item via the API; it does NOT send or auto-reply.
+        s = _t()
+        assert "/promote-to-faq" in s
+        assert "openPromote(" in s
+
+    def test_promote_states_no_message_sent(self) -> None:
+        assert "xabar yuborilmaydi" in _t()
 
 
 class TestMobile:

@@ -129,6 +129,10 @@
           <td>
             <button class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;"
                     onclick="openReview({{ item.id }}, '{{ item.status }}')">Ko'rib chiqish</button>
+            {% if item.status in ('new', 'reviewed') %}
+            <button class="vp-btn vp-btn-ghost" style="font-size:11px;padding:3px 8px;"
+                    onclick='openPromote({{ item.id }}, {{ (item.original_text_preview or "")|tojson }})'>FAQ ga o'tkazish</button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -161,6 +165,50 @@
         <div style="display:flex;gap:8px;justify-content:flex-end;">
           <button type="button" class="vp-btn vp-btn-secondary" onclick="closeReview()">Bekor</button>
           <button type="submit" class="vp-btn vp-btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Promote-to-FAQ modal (creates a Knowledge Base item; no bot reply, no send) -->
+  <div id="promoteModal" class="vp-modal" style="display:none;">
+    <div class="vp-modal-content" style="max-width:520px;">
+      <div class="vp-card-header"><div class="vp-card-title">FAQ ga o'tkazish</div></div>
+      <p style="font-size:12px;color:#64748b;margin:0 0 10px;">
+        Bu savoldan bilim (FAQ) yaratiladi. Mijozga xabar yuborilmaydi. Standart holatda qoralama.
+      </p>
+      <form id="promoteForm" onsubmit="submitPromote(event)">
+        <input type="hidden" id="promoteUqId">
+        <label class="vp-label">Savol</label>
+        <textarea class="vp-input" id="promoteQuestion" maxlength="1000" rows="2" style="width:100%;margin-bottom:8px;"></textarea>
+        <label class="vp-label">Javob</label>
+        <textarea class="vp-input" id="promoteAnswer" maxlength="4000" rows="4" style="width:100%;margin-bottom:8px;" placeholder="Javobni yozing…"></textarea>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;">
+            <label class="vp-label">Kategoriya</label>
+            <select class="vp-select" id="promoteCategory" style="width:100%;">
+              <option value="faq">FAQ</option>
+              <option value="price">Narx</option>
+              <option value="catalog">Katalog</option>
+              <option value="warranty">Kafolat</option>
+              <option value="objection">E'tiroz</option>
+              <option value="service_area">Hudud</option>
+              <option value="process">Jarayon</option>
+              <option value="other">Boshqa</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label class="vp-label">Status</label>
+            <select class="vp-select" id="promoteStatus" style="width:100%;">
+              <option value="draft">Qoralama</option>
+              <option value="active">Faol</option>
+            </select>
+          </div>
+        </div>
+        <div id="promoteError" class="vp-alert vp-alert-danger" style="display:none;margin-top:8px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+          <button type="button" class="vp-btn vp-btn-secondary" onclick="closePromote()">Bekor</button>
+          <button type="submit" class="vp-btn vp-btn-primary">Saqlash (FAQ)</button>
         </div>
       </form>
     </div>
@@ -211,6 +259,37 @@ async function submitReview(ev) {
     });
     if (resp.ok) { location.reload(); }
     else { alert('Saqlashda xatolik'); }
+  } catch (e) { alert('Tarmoq xatosi'); }
+}
+function openPromote(id, questionPreview) {
+  document.getElementById('promoteUqId').value = id;
+  document.getElementById('promoteQuestion').value = questionPreview || '';
+  document.getElementById('promoteAnswer').value = '';
+  document.getElementById('promoteCategory').value = 'faq';
+  document.getElementById('promoteStatus').value = 'draft';
+  document.getElementById('promoteError').style.display = 'none';
+  document.getElementById('promoteModal').style.display = 'flex';
+}
+function closePromote() { document.getElementById('promoteModal').style.display = 'none'; }
+async function submitPromote(ev) {
+  ev.preventDefault();
+  const id = document.getElementById('promoteUqId').value;
+  const payload = {
+    question: document.getElementById('promoteQuestion').value,
+    answer: document.getElementById('promoteAnswer').value,
+    category: document.getElementById('promoteCategory').value,
+    status: document.getElementById('promoteStatus').value,
+  };
+  try {
+    const resp = await fetch('/api/v1/admin/agent/unknown-questions/' + id + '/promote-to-faq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (resp.ok) { location.reload(); return; }
+    const d = await resp.json().catch(function(){return {};});
+    const e = document.getElementById('promoteError');
+    e.textContent = d.detail || 'Saqlashda xatolik'; e.style.display = 'block';
   } catch (e) { alert('Tarmoq xatosi'); }
 }
 </script>

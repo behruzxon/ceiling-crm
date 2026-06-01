@@ -227,6 +227,44 @@ async def agent_unknown_questions(
     )
 
 
+@app.get("/agent/knowledge", response_class=HTMLResponse)
+async def agent_knowledge(
+    request: Request,
+    status: str = Query("", max_length=20),
+    category: str = Query("", max_length=30),
+    language: str = Query("", max_length=8),
+    q: str = Query("", max_length=100),
+):
+    """Knowledge Base — admin-editable FAQ / knowledge items (read + edit).
+
+    No Telegram send, no bot behaviour change: editing knowledge here does not
+    (yet) feed the live bot — see doc 156. CRUD goes to the admin API.
+    """
+    summary = await api_get("/api/v1/admin/agent/knowledge/summary")
+    params: dict = {"limit": 50}
+    if status:
+        params["status"] = status
+    if category:
+        params["category"] = category
+    if language:
+        params["language"] = language
+    if q:
+        params["q"] = q
+    items = await api_get("/api/v1/admin/agent/knowledge", params=params)
+    return templates.TemplateResponse(
+        "agent_knowledge.html",
+        {
+            "request": request,
+            "summary": summary,
+            "items": items,
+            "status_filter": status,
+            "category_filter": category,
+            "language_filter": language,
+            "q_filter": q,
+        },
+    )
+
+
 @app.get("/crm", response_class=HTMLResponse)
 async def crm_contacts(
     request: Request,
