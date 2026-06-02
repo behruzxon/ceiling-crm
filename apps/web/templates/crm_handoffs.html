@@ -84,7 +84,10 @@
 
   <!-- Queue Table -->
   <div class="vp-card">
-    {% if queue and queue.items %}
+    {# Use .get("items"): attribute access on the dict would resolve to its
+       built-in items() method (not the key) and break iteration. #}
+    {% set q_items = (queue or {}).get("items", []) %}
+    {% if q_items %}
     <table class="vp-table">
       <thead>
         <tr>
@@ -100,7 +103,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for item in queue.items %}
+        {% for item in q_items %}
         <tr>
           <td>
             {% if item.priority == 'urgent' %}
