@@ -762,6 +762,55 @@ def _schedule_unknown_capture(**kwargs: object) -> None:
         pass
 
 
+async def _maybe_answer_from_knowledge(message: Message, user_id: int, text: str) -> bool:
+    """Gated DB knowledge lookup, just before the OpenAI fallback.
+
+    Returns True if a confident ACTIVE FAQ answered (the reply was already sent);
+    the caller then returns without calling OpenAI or capturing an unknown
+    question. Default OFF (``AGENT_KNOWLEDGE_DB_LOOKUP_ENABLED``) → instant no-op.
+    Pure keyword matching (no OpenAI / embeddings). **Never raises**: a lookup
+    failure logs a warning and returns False so the normal flow continues.
+    """
+    try:
+        biz = get_settings().business
+        if not getattr(biz, "agent_knowledge_db_lookup_enabled", False):
+            return False
+
+        from core.services.agent_knowledge_service import (
+            find_best_knowledge_answer,
+            render_knowledge_answer,
+        )
+
+        factory = get_session_factory()
+        async with factory() as session:
+            match = await find_best_knowledge_answer(
+                session,
+                text,
+                language="uz",
+                min_score=float(getattr(biz, "agent_knowledge_db_lookup_min_score", 0.75)),
+                limit=int(getattr(biz, "agent_knowledge_db_lookup_limit", 5)),
+            )
+        if match is None:
+            return False
+        answer = render_knowledge_answer(
+            match,
+            max_chars=int(getattr(biz, "agent_knowledge_db_lookup_max_answer_chars", 1200)),
+        )
+        if not answer:
+            return False
+        await message.answer(answer, reply_markup=_ai_keyboard())
+        log.info(
+            "agent_knowledge_db_match",
+            user_id=user_id,
+            item_id=match.item.get("id"),
+            score=match.score,
+        )
+        return True
+    except Exception:  # never break the reply path
+        log.warning("agent_knowledge_db_lookup_failed", exc_info=False)
+        return False
+
+
 async def _maybe_block_stop_or_safety(
     message: Message, state: FSMContext, user_id: int, text: str
 ) -> bool:
@@ -1184,6 +1233,12 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         )
         return
 
+    # Gated DB knowledge lookup before the OpenAI fallback (default OFF, doc 157).
+    # On a confident ACTIVE FAQ match this replies and returns — no OpenAI call,
+    # no unknown-question capture. No-op when the flag is off; never raises.
+    if await _maybe_answer_from_knowledge(message, user_id, text):
+        return
+
     if message.bot:
         await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
@@ -1517,6 +1572,10 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await message.answer(
             _AI_RATE_LIMIT_TEXT,
         )
+        return
+
+    # Gated DB knowledge lookup before the OpenAI fallback (default OFF, doc 157).
+    if await _maybe_answer_from_knowledge(message, user_id, text):
         return
 
     if message.bot:
