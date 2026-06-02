@@ -5,10 +5,16 @@ Detection enabled by default, merge gated by CRM_CONTACT_MERGE_ENABLED.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/v1/admin/crm", tags=["crm-merge"])
+from apps.api.dependencies.auth import require_api_token
+
+router = APIRouter(
+    prefix="/api/v1/admin/crm",
+    tags=["crm-merge"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 class MergePreviewBody(BaseModel):

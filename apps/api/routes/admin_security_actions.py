@@ -5,10 +5,16 @@ Feature-gated by ADMIN_SECURITY_ACTIONS_ENABLED.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/v1/admin/security", tags=["admin-security-actions"])
+from apps.api.dependencies.auth import require_api_token
+
+router = APIRouter(
+    prefix="/api/v1/admin/security",
+    tags=["admin-security-actions"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 class RevokeBody(BaseModel):
