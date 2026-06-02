@@ -7,10 +7,16 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/v1/admin/crm/campaigns", tags=["crm-campaigns"])
+from apps.api.dependencies.auth import require_api_token
+
+router = APIRouter(
+    prefix="/api/v1/admin/crm/campaigns",
+    tags=["crm-campaigns"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 class PreviewRecipientsBody(BaseModel):

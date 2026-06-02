@@ -5,9 +5,15 @@ Read-only — no mutations.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-router = APIRouter(prefix="/api/v1/admin/security", tags=["admin-security"])
+from apps.api.dependencies.auth import require_api_token
+
+router = APIRouter(
+    prefix="/api/v1/admin/security",
+    tags=["admin-security"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 @router.get("/dashboard")
