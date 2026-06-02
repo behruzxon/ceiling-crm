@@ -331,7 +331,12 @@ async def crm_contacts(
     )
 
 
-@app.get("/crm/{contact_id}", response_class=HTMLResponse)
+# NOTE: the ``:int`` path converter is required. Without it this dynamic route
+# would also match static CRM pages (/crm/missed-leads, /crm/handoffs,
+# /crm/campaigns, ...) registered after it and fail with int_parsing on the
+# string. ``:int`` makes the match order-independent — only integer contact ids
+# resolve here; named pages fall through to their own routes.
+@app.get("/crm/{contact_id:int}", response_class=HTMLResponse)
 async def crm_contact_detail(
     request: Request,
     contact_id: int,
