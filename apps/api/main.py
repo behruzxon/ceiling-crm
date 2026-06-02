@@ -130,6 +130,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(admin_agent_knowledge_router)
+    from apps.api.routes.admin_crm_conversations import (
+        router as admin_crm_conversations_router,
+    )
+
+    app.include_router(admin_crm_conversations_router)
 
     return app
 
