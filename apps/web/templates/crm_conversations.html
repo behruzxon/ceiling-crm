@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% set active_page = "inbox" %}
+{% block title %}Conversation Inbox — CeilingCRM{% endblock %}
+{% block page_title %}Conversation Inbox{% endblock %}
+{% block page_subtitle %}Mijoz va bot yozishmalarini ko'ring va operator sifatida javob bering{% endblock %}
+{% block content %}
+<div class="vp-page">
+
+  <div class="vp-inbox" style="display:flex;gap:16px;align-items:flex-start;">
+
+    <!-- ── Left: conversation list ───────────────────────────────── -->
+    <div class="vp-card" style="flex:0 0 320px;max-width:320px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input class="vp-input" id="convSearch" type="text" placeholder="Qidirish…"
+               value="{{ q_filter or '' }}" style="flex:1;"
+               onkeydown="if(event.key==='Enter'){convSearch();}">
+        <button class="vp-btn vp-btn-secondary" onclick="convSearch()">Izlash</button>
+      </div>
+      {% set conv_items = (conversations or {}).get("items", []) %}
+      {% if conv_items %}
+      <div class="vp-conv-list">
+        {% for c in conv_items %}
+        <a href="/crm/inbox?contact_id={{ c.contact_id }}"
+           class="vp-conv-item {% if c.contact_id == active_contact_id %}active{% endif %}"
+           style="display:block;padding:8px;border-bottom:1px solid #eef2f7;text-decoration:none;color:inherit;">
+          <div style="display:flex;justify-content:space-between;">
+            <strong style="font-size:13px;">{{ c.name }}</strong>
+            {% if c.temperature == 'hot' %}<span class="vp-badge vp-badge-danger">hot</span>
+            {% elif c.temperature == 'warm' %}<span class="vp-badge vp-badge-warning">warm</span>{% endif %}
+          </div>
+          <div style="font-size:11px;color:#64748b;">{{ c.last_sender_type or '—' }}: {{ (c.last_message_preview or '')[:48] }}</div>
+          <div style="font-size:10px;color:#94a3b8;">{{ (c.last_message_at or '')[:16] }} · {{ c.lead_status }}</div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="vp-empty-state"><div class="vp-empty-icon">💬</div>Hozircha suhbatlar yo'q</div>
+      {% endif %}
+    </div>
+
+    <!-- ── Right: timeline + composer ────────────────────────────── -->
+    <div class="vp-card" style="flex:1;min-width:0;">
+      {% if active_contact_id %}
+        {% set c = contact or {} %}
+        <!-- Contact info -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:10px;border-bottom:1px solid #eef2f7;padding-bottom:8px;">
+          <strong>{{ c.get("first_name") or "" }} {{ c.get("last_name") or "" }}</strong>
+          <span class="vp-badge vp-badge-neutral">{{ c.get("lead_status") or "—" }}</span>
+          <span style="font-size:12px;color:#64748b;">📞 {{ c.get("phone_masked") or c.get("phone") or "—" }}</span>
+          <span style="font-size:12px;color:#64748b;">📍 {{ (c.get("metadata") or {}).get("district") or "—" }}</span>
+          <a href="/crm/{{ active_contact_id }}" class="vp-btn vp-btn-ghost" style="margin-left:auto;font-size:11px;">Kontakt sahifasi</a>
+        </div>
+
+        <!-- Timeline -->
+        <div class="vp-timeline" style="max-height:420px;overflow:auto;padding:4px;">
+          {% set msg_items = (messages or {}).get("items", []) %}
+          {% if msg_items %}
+            {% for m in msg_items %}
+            <div style="margin-bottom:8px;display:flex;{% if m.direction == 'inbound' %}justify-content:flex-start;{% else %}justify-content:flex-end;{% endif %}">
+              <div style="max-width:72%;padding:8px 10px;border-radius:10px;{% if m.direction == 'inbound' %}background:#f1f5f9;{% elif m.sender_type == 'operator' %}background:#ddebff;{% else %}background:#dcfce7;{% endif %}">
+                <div style="font-size:10px;color:#64748b;">
+                  {% if m.direction == 'inbound' %}Mijoz{% elif m.sender_type == 'operator' %}Operator{% else %}Bot{% endif %}
+                  · {{ (m.created_at or '')[:16] }}
+                </div>
+                <div style="font-size:13px;white-space:pre-wrap;">{{ m.text or '[media]' }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="vp-empty-state"><div class="vp-empty-icon">📭</div>Bu kontaktda hali xabarlar yo'q</div>
+          {% endif %}
+        </div>
+
+        <!-- Composer -->
+        <div id="composer" style="margin-top:12px;border-top:1px solid #eef2f7;padding-top:10px;">
+          {% if send_enabled %}
+          <textarea class="vp-input" id="replyText" maxlength="1000" rows="3" style="width:100%;"
+                    placeholder="Operator javobini yozing…" oninput="updateCount()"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+            <span id="charCount" style="font-size:11px;color:#94a3b8;">0/1000</span>
+            <div id="replyError" class="vp-alert vp-alert-danger" style="display:none;margin:0;flex:1;"></div>
+            <button class="vp-btn vp-btn-primary" style="margin-left:auto;" onclick="sendReply({{ active_contact_id }})">Yuborish</button>
+          </div>
+          {% else %}
+          <div class="vp-alert vp-alert-warning" style="margin:0;">
+            ✋ Operator yuborish o'chirilgan (send disabled). <code>OPERATOR_WEB_SEND_ENABLED</code>
+            orqali yoqiladi. Hozircha mijozga xabar yuborib bo'lmaydi.
+          </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="vp-empty-state"><div class="vp-empty-icon">👈</div>Suhbatni tanlang</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.vp-conv-item.active { background:#eef2ff; }
+@media (max-width: 767px) { .vp-inbox { flex-direction: column; } .vp-card { max-width:100% !important; flex-basis:auto !important; } }
+</style>
+
+<script>
+function convSearch() {
+  const q = document.getElementById('convSearch').value;
+  location.href = '/crm/inbox' + (q ? ('?q=' + encodeURIComponent(q)) : '');
+}
+function updateCount() {
+  const t = document.getElementById('replyText');
+  document.getElementById('charCount').textContent = (t.value.length) + '/1000';
+}
+async function sendReply(contactId) {
+  const t = document.getElementById('replyText');
+  const text = (t.value || '').trim();
+  const err = document.getElementById('replyError');
+  err.style.display = 'none';
+  if (!text) { err.textContent = 'Bo\'sh xabar'; err.style.display = 'block'; return; }
+  if (!confirm('Bu xabar real mijozga yuboriladi. Davom etasizmi?')) return;
+  try {
+    const resp = await fetch('/api/v1/admin/crm/conversations/' + contactId + '/operator-reply', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: text, confirm_send: true})
+    });
+    if (resp.ok) { location.reload(); return; }
+    const d = await resp.json().catch(function(){return {};});
+    err.textContent = 'Yuborilmadi: ' + (d.detail || resp.status); err.style.display = 'block';
+  } catch (e) { err.textContent = 'Tarmoq xatosi'; err.style.display = 'block'; }
+}
+</script>
+{% endblock %}

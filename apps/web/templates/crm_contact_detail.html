@@ -8,6 +8,15 @@
 {% set msgs = (messages or {}).get("items", []) %}
 {% set md = c.get("metadata") or {} %}
 
+<!-- Open this contact in the Conversation Inbox (timeline + operator reply) -->
+{% if c.get("id") %}
+<div style="margin-bottom:10px;">
+  <a href="/crm/inbox?contact_id={{ c.get('id') }}" class="vp-btn vp-btn-secondary" style="font-size:12px;">
+    💬 Conversation Inbox'da ochish
+  </a>
+</div>
+{% endif %}
+
 <!-- Back link -->
 <a href="/crm" class="vp-btn vp-btn-ghost" style="margin-bottom:16px;font-size:12px;">&#8592; CRM Inbox</a>
 

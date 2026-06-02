@@ -762,6 +762,64 @@ def _schedule_unknown_capture(**kwargs: object) -> None:
         pass
 
 
+async def _capture_crm_turn(
+    *,
+    user_id: int,
+    chat_id: int | None,
+    first_name: str | None,
+    username: str | None,
+    inbound_text: str | None,
+    bot_reply: str | None,
+) -> None:
+    """Record one client↔bot turn into the CRM conversation store. Never raises.
+
+    Upserts the CRM contact and writes the inbound + bot-outbound messages so the
+    CRM Conversation Inbox can show the dialogue (doc 158). Inbound text is
+    auto-redacted by CRMMessageService. Best-effort: a capture failure only logs
+    a warning and can never affect the customer reply.
+    """
+    try:
+        from core.services.crm_contact_service import CRMContactService
+        from core.services.crm_message_service import CRMMessageService
+
+        factory = get_session_factory()
+        async with factory() as session:
+            contact = await CRMContactService(session).upsert_contact(
+                telegram_user_id=user_id,
+                chat_id=chat_id,
+                first_name=first_name,
+                username=username,
+            )
+            svc = CRMMessageService(session)
+            if inbound_text:
+                await svc.record_inbound(
+                    contact_id=contact.id, telegram_user_id=user_id, text=inbound_text
+                )
+            if bot_reply:
+                await svc.record_outbound(contact_id=contact.id, text=bot_reply, sender_type="bot")
+            await session.commit()
+    except Exception:  # never break the reply path
+        log.warning("crm_conversation_capture_failed", exc_info=False)
+
+
+def _schedule_crm_turn(message: Message, user_id: int, inbound_text: str, bot_reply: str) -> None:
+    """Fire-and-forget CRM conversation capture. Scheduling never raises."""
+    try:
+        fu = message.from_user
+        asyncio.create_task(
+            _capture_crm_turn(
+                user_id=user_id,
+                chat_id=message.chat.id if message.chat else None,
+                first_name=getattr(fu, "first_name", None) if fu else None,
+                username=getattr(fu, "username", None) if fu else None,
+                inbound_text=inbound_text,
+                bot_reply=bot_reply,
+            )
+        )
+    except Exception:  # pragma: no cover - scheduling must never raise
+        pass
+
+
 async def _maybe_answer_from_knowledge(message: Message, user_id: int, text: str) -> bool:
     """Gated DB knowledge lookup, just before the OpenAI fallback.
 
@@ -805,6 +863,7 @@ async def _maybe_answer_from_knowledge(message: Message, user_id: int, text: str
             item_id=match.item.get("id"),
             score=match.score,
         )
+        _schedule_crm_turn(message, user_id, text, answer)
         return True
     except Exception:  # never break the reply path
         log.warning("agent_knowledge_db_lookup_failed", exc_info=False)
@@ -1281,6 +1340,7 @@ async def handle_ai_question(message: Message, state: FSMContext, **data: object
         await message.answer(reply_text, reply_markup=_ai_keyboard())
         await maybe_react_done(message.bot, message)
         _reaction_resolved = True
+        _schedule_crm_turn(message, user_id, text, reply_text)
     finally:
         # Safety net: if 👀 was set but no path resolved it (e.g. the reply send
         # raised, or a future early return is added), clear it now so a reaction
@@ -1622,6 +1682,7 @@ async def handle_ai_message(message: Message, state: FSMContext, **data: object)
         await message.answer(reply_text)
         await maybe_react_done(message.bot, message)
         _reaction_resolved = True
+        _schedule_crm_turn(message, user_id, text, reply_text)
     finally:
         # Safety net: clear 👀 on any unresolved exit (reply send raised, future
         # early return, etc.). Idempotent, no-op when off, never raises.

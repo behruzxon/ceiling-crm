@@ -266,6 +266,19 @@ class BusinessSettings(BaseSettings):
     crm_operator_reply_enabled: bool = Field(default=False, alias="CRM_OPERATOR_REPLY_ENABLED")
     crm_operator_reply_max_length: int = Field(default=1000, alias="CRM_OPERATOR_REPLY_MAX_LENGTH")
 
+    # Operator Send-from-Web — master switch for actually delivering a manual
+    # operator reply to the client via Telegram from the CRM inbox. Default OFF:
+    # while off the API rejects send (403 sender_disabled) and the composer is
+    # disabled — NO Telegram send. Only a TEST/local environment should enable it.
+    # See doc 158. (Separate from crm_operator_reply_enabled, which gates preview.)
+    operator_web_send_enabled: bool = Field(default=False, alias="OPERATOR_WEB_SEND_ENABLED")
+    operator_web_send_max_chars: int = Field(
+        default=1000, alias="OPERATOR_WEB_SEND_MAX_CHARS", ge=1, le=4000
+    )
+    operator_web_send_confirm_required: bool = Field(
+        default=True, alias="OPERATOR_WEB_SEND_CONFIRM_REQUIRED"
+    )
+
     # Operator AI reply suggestion panel (F2 — local feature pack).
     # Suggest-only UI; default OFF. Flipping this to true ONLY surfaces
     # the deterministic-stub suggestions in the CRM contact detail page;

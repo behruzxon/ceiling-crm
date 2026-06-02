@@ -227,6 +227,55 @@ async def agent_unknown_questions(
     )
 
 
+@app.get("/crm/inbox", response_class=HTMLResponse)
+async def crm_inbox(
+    request: Request,
+    contact_id: int = Query(0, ge=0),
+    q: str = Query("", max_length=100),
+    status: str = Query("", max_length=30),
+):
+    """CRM Conversation Inbox — list conversations + open one + operator composer.
+
+    Read-mostly: shows client/bot/operator messages. The composer can only send
+    when OPERATOR_WEB_SEND_ENABLED is true (default OFF → composer disabled, API
+    rejects send). See doc 158.
+    """
+    params: dict = {"limit": 50}
+    if q:
+        params["q"] = q
+    if status:
+        params["status"] = status
+    conversations = await api_get("/api/v1/admin/crm/conversations", params=params)
+    messages = None
+    contact = None
+    if contact_id:
+        messages = await api_get(
+            f"/api/v1/admin/crm/conversations/{contact_id}/messages",
+            params={"limit": 100},
+        )
+        contact = await api_get(f"/api/v1/admin/crm/contacts/{contact_id}")
+    send_enabled = False
+    try:
+        from shared.config import get_settings
+
+        send_enabled = bool(getattr(get_settings().business, "operator_web_send_enabled", False))
+    except Exception:
+        send_enabled = False
+    return templates.TemplateResponse(
+        "crm_conversations.html",
+        {
+            "request": request,
+            "conversations": conversations,
+            "messages": messages,
+            "contact": contact,
+            "active_contact_id": contact_id,
+            "send_enabled": send_enabled,
+            "q_filter": q,
+            "status_filter": status,
+        },
+    )
+
+
 @app.get("/agent/knowledge", response_class=HTMLResponse)
 async def agent_knowledge(
     request: Request,
