@@ -55,7 +55,7 @@ PACKAGE_INFO: dict[str, dict] = {
             "• ⚡ Eng tez o'rnatish\n"
             "• 💸 Har qanday boshqa potolok turidan arzon\n"
             "• 🎨 10+ rang tanlov\n"
-            "• 🛡 10 yil kafolat\n\n"
+            "• 🛡 15 yil kafolat\n\n"
             "💰 Narx: <b>80 000 UZS/m²</b>\n\n"
             "🎯 <i>Ijara uylari va byudjet variant uchun ideal</i>"
         ),
@@ -72,7 +72,7 @@ PACKAGE_INFO: dict[str, dict] = {
             "• 🪨 Mramor (marmar) effektli naqshlar\n"
             "• 🎨 10 000+ dizayn va faktura\n"
             "• 💡 LED bilan uyg'un dizayn\n"
-            "• 🛡 10 yil kafolat\n\n"
+            "• 🛡 15 yil kafolat\n\n"
             "💰 Narx: <b>120 000 UZS/m²</b>"
         ),
         "price_per_m2": 120_000,

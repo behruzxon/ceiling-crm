@@ -60,7 +60,7 @@ Asosiy narxlar (m² uchun):
 - Adnatonniy: 80 000 so'm/m²
 - Hi Tech / Mramor / Naqsh / Kosmos / Osmon: 120 000 so'm/m²
 - Qora UF: 140 000 so'm/m²
-- Gulli: 120 000–140 000 so'm/m²
+- Gulli: 130 000 so'm/m²
 
 Formula:
 Maydon = uzunlik × kenglik

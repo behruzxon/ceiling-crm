@@ -1278,5 +1278,5 @@ def _build_price_calc(area: float) -> str:
         f"• Adnatonniy — {_fmt(int(area * 80_000))} so'm\n"
         f"• Hi Tech / Mramor / Naqsh / Kosmos / Osmon — {_fmt(int(area * 120_000))} so'm\n"
         f"• Qora UF — {_fmt(int(area * 140_000))} so'm\n"
-        f"• Gulli — {_fmt(int(area * 120_000))}–{_fmt(int(area * 140_000))} so'm"
+        f"• Gulli — {_fmt(int(area * 130_000))} so'm"
     )

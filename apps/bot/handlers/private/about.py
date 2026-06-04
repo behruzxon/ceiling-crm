@@ -34,7 +34,7 @@ _ABOUT_TEXT: str = (
     "🏗 10 000+ muvaffaqiyatli topshirilgan obyekt\n"
     "👥 Ijtimoiy tarmoqlarda 200 000+ kuzatuvchi\n"
     "🤖 Sun'iy intellekt orqali tezkor mijozlarga xizmat\n"
-    "🛡 15 yilgacha rasmiy kafolat\n"
+    "🛡 15 yil rasmiy kafolat\n"
     "📏 Bepul o'lchov va aniq hisob-kitob\n"
     "👷 Tajribali montaj brigada\n"
     "💎 Sertifikatlangan va sifatli materiallar\n\n"

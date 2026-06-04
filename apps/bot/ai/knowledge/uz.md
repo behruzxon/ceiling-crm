@@ -19,11 +19,11 @@
 
 | Tur                    | Narx (UZS/m²) |
 |------------------------|---------------|
-| Gulli                  | 120 000       |
+| Gulli                  | 130 000       |
 | Odnotonniy             | 80 000        |
 | Mramor                 | 120 000       |
 | Qora naqsh (UF pechat) | 140 000       |
-| Hi-tech                | 130 000       |
+| Hi-tech                | 120 000       |
 | Kosmos                 | 120 000       |
 | Osmon                  | 120 000       |
 | Oshxona                | 120 000       |
