@@ -33,12 +33,12 @@ class TestActivePage:
         assert "active_page == 'handoffs'" in _base()
 
     def test_topbar_title(self):
-        assert "Handoff Queue" in _base()
+        assert "Operator navbati" in _base()
 
 
 class TestPageTitle:
     def test_title(self):
-        assert "Handoff Queue" in _t("crm_handoffs.html")
+        assert "Operator navbati" in _t("crm_handoffs.html")
 
     def test_subtitle(self):
         c = _t("crm_handoffs.html")

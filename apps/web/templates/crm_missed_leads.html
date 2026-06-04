@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "missed_leads" %}
-{% block title %}Missed Leads — CeilingCRM{% endblock %}
-{% block page_title %}Missed Leads{% endblock %}
+{% block title %}Javobsiz leadlar — CeilingCRM{% endblock %}
+{% block page_title %}Javobsiz leadlar{% endblock %}
 {% block page_subtitle %}Yo'qolib ketishi mumkin bo'lgan mijozlarni nazorat qiling{% endblock %}
 {% block content %}
 <div class="vp-page">
@@ -23,10 +23,10 @@
   <!-- KPI Cards (real data; severity by wait time) -->
   <div class="vp-kpi-grid" style="margin-bottom:12px;">
     <div class="vp-kpi-card"><div class="vp-kpi-label">Jami javobsiz</div><div class="vp-kpi-value">{{ summary.total|default(0) }}</div></div>
-    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#dc2626;">Critical</div><div class="vp-kpi-value" style="color:#dc2626;">{{ summary.critical|default(0) }}</div></div>
-    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#f59e0b;">High</div><div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.high|default(0) }}</div></div>
-    <div class="vp-kpi-card"><div class="vp-kpi-label">Medium</div><div class="vp-kpi-value">{{ summary.medium|default(0) }}</div></div>
-    <div class="vp-kpi-card"><div class="vp-kpi-label">Low</div><div class="vp-kpi-value">{{ summary.low|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#dc2626;">Juda jiddiy</div><div class="vp-kpi-value" style="color:#dc2626;">{{ summary.critical|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#f59e0b;">Yuqori</div><div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.high|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">O'rta</div><div class="vp-kpi-value">{{ summary.medium|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Past</div><div class="vp-kpi-value">{{ summary.low|default(0) }}</div></div>
     <div class="vp-kpi-card"><div class="vp-kpi-label">Eng uzoq kutish</div><div class="vp-kpi-value">{{ summary.oldest_wait_minutes|default(0) }} min</div></div>
   </div>
 
@@ -53,16 +53,16 @@
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
       <select class="vp-select" id="sevFilter" onchange="applyFilters()">
         <option value="">Barcha darajalar</option>
-        <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
-        <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
-        <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
-        <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+        <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Juda jiddiy</option>
+        <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>Yuqori</option>
+        <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>O'rta</option>
+        <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Past</option>
       </select>
       <button class="vp-btn vp-btn-secondary" onclick="location.reload()">Yangilash</button>
     </div>
   </div>
 
-  <!-- Missed Leads Table -->
+  <!-- Javobsiz leadlar jadvali -->
   <div class="vp-card">
     {% set ml_items = (items or {}).get("items", []) %}
     {% if ml_items %}
@@ -73,7 +73,7 @@
           <th>Sabab</th>
           <th>Kontakt</th>
           <th>Telefon</th>
-          <th>Score</th>
+          <th>Ball</th>
           <th>Kutish</th>
           <th>Keyingi qadam</th>
           <th>Amal</th>
@@ -84,13 +84,13 @@
         <tr>
           <td>
             {% if item.severity == 'critical' %}
-              <span class="vp-badge vp-badge-danger">Critical</span>
+              <span class="vp-badge vp-badge-danger">Juda jiddiy</span>
             {% elif item.severity == 'high' %}
-              <span class="vp-badge vp-badge-warning">High</span>
+              <span class="vp-badge vp-badge-warning">Yuqori</span>
             {% elif item.severity == 'medium' %}
-              <span class="vp-badge vp-badge-info">Medium</span>
+              <span class="vp-badge vp-badge-info">O'rta</span>
             {% else %}
-              <span class="vp-badge vp-badge-neutral">Low</span>
+              <span class="vp-badge vp-badge-neutral">Past</span>
             {% endif %}
           </td>
           <td><span class="vp-badge vp-badge-neutral">{{ item.reason }}</span></td>
@@ -116,7 +116,7 @@
     {% else %}
     <div class="vp-empty-state">
       <div class="vp-empty-icon">✅</div>
-      Missed leadlar yo'q — hammasi nazoratda
+      Javobsiz leadlar yo'q — hammasi nazoratda
     </div>
     {% endif %}
   </div>

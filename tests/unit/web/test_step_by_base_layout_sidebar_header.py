@@ -140,16 +140,16 @@ class TestTopbar:
         assert "vp-role-badge" in _base()
 
     def test_title_agent(self):
-        assert "AI Agent" in _base()
+        assert "AI agent" in _base()
 
     def test_title_crm(self):
-        assert "CRM Inbox" in _base()
+        assert "Mijozlar" in _base()
 
     def test_title_security(self):
-        assert "Security" in _base()
+        assert "Xavfsizlik" in _base()
 
     def test_title_campaigns(self):
-        assert "Campaigns" in _base()
+        assert "Kampaniyalar" in _base()
 
     def test_title_fallback(self):
         assert "Systemax CRM" in _base()
@@ -168,10 +168,10 @@ class TestSidebarFooter:
         assert "vp-sidebar-footer" in _base()
 
     def test_safe_mode(self):
-        assert "Safe mode" in _base()
+        assert "Xavfsiz rejim" in _base()
 
     def test_flags_off(self):
-        assert "Flags OFF" in _base()
+        assert "Avto-yuborish o'chiq" in _base()
 
     def test_version(self):
         assert "v1.0" in _base()

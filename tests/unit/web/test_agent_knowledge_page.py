@@ -52,7 +52,7 @@ class TestSidebar:
         assert "active_page == 'knowledge'" in _base()
 
     def test_topbar_title(self):
-        assert "Knowledge Base" in _base()
+        assert "Bilimlar bazasi" in _base()
 
 
 class TestActivePage:
@@ -62,7 +62,7 @@ class TestActivePage:
 
 class TestTitleAndNotice:
     def test_title(self):
-        assert "Knowledge Base" in _t()
+        assert "Bilimlar bazasi" in _t()
 
     def test_subtitle(self):
         assert "FAQ" in _t() or "bilim" in _t().lower()

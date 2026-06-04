@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% set active_page = "unknown_questions" %}
-{% block title %}Unknown Questions — CeilingCRM{% endblock %}
-{% block page_title %}Unknown Questions{% endblock %}
+{% block title %}Noma'lum savollar — CeilingCRM{% endblock %}
+{% block page_title %}Noma'lum savollar{% endblock %}
 {% block page_subtitle %}Bot javob bera olmagan yoki ishonchsiz savollarni ko'rib chiqing{% endblock %}
 {% block content %}
 <div class="vp-page">
+
+  {% if (summary or {})._error or (items or {})._error %}
+  <div class="vp-alert vp-alert-danger" style="margin-bottom:16px;">
+    Ma'lumotlarni yuklab bo'lmadi. Server bilan bog'lanishda xatolik &mdash; birozdan keyin qayta urinib ko'ring.
+  </div>
+  {% endif %}
 
   <!-- Read-only notice: this inbox never sends messages or edits any content -->
   <div class="vp-alert vp-alert-info" style="margin-bottom:16px;">
