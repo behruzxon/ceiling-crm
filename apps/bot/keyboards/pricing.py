@@ -23,11 +23,11 @@ class DesignOption:
 # Single source of truth for all available ceiling designs.
 # Key is used as the callback_data payload: "design:<key>".
 DESIGN_BY_KEY: dict[str, DesignOption] = {
-    "gulli": DesignOption("Gulli", 120_000),
+    "gulli": DesignOption("Gulli", 130_000),
     "odnotonniy": DesignOption("Odnotonniy", 80_000),
     "mramor": DesignOption("Mramor", 120_000),
     "qora_naqsh_uf": DesignOption("Qora naqsh (UF pechat)", 140_000),
-    "hi_tech": DesignOption("Hi-tech", 130_000),
+    "hi_tech": DesignOption("Hi-tech", 120_000),
     "kosmos_osmon": DesignOption("Kosmos / osmon", 120_000),
 }
 

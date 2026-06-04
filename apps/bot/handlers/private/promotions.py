@@ -42,7 +42,7 @@ _PROMO_TEXT: str = (
     "🛡 Faqat sertifikatlangan materiallar\n"
     "🛠 Professional montaj brigada\n"
     "⏱ 24 soat ichida qayta aloqa\n"
-    "📄 15 yilgacha rasmiy kafolat\n\n"
+    "📄 15 yil rasmiy kafolat\n\n"
     "⏳ Aksiyalar cheklangan muddatga amal qiladi.\n\n"
     "🔥 Xona o'lchamini hoziroq yuboring —\n"
     "narxni 1 daqiqada hisoblab beramiz!"
