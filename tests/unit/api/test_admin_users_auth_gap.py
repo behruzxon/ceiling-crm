@@ -20,6 +20,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
+import apps.api.dependencies.auth as auth_module
 from apps.api.dependencies.auth import require_api_token
 
 _SRC_FILE = "apps/api/routers/admin_users.py"
@@ -137,10 +138,16 @@ def _settings_prod_no_token() -> SimpleNamespace:
 
 
 class TestFailClosed:
+    # NOTE: auth.py binds ``get_settings`` at module import (apps/api/dependencies/
+    # auth.py:32), so require_api_token resolves the name in the auth module's
+    # namespace — patching shared.config.get_settings would be a no-op. Patch the
+    # module-bound reference so behavior is deterministic regardless of whether the
+    # environment/.env has API_INTERNAL_TOKEN set (the reason this passed locally
+    # but failed in token-less CI).
     async def test_tokenless_request_rejected_when_token_configured(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("shared.config.get_settings", _settings_token_configured)
+        monkeypatch.setattr(auth_module, "get_settings", _settings_token_configured)
         with pytest.raises(HTTPException) as exc:
             await require_api_token(credentials=None)
         assert exc.value.status_code == 401
@@ -148,7 +155,7 @@ class TestFailClosed:
     async def test_production_without_token_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("shared.config.get_settings", _settings_prod_no_token)
+        monkeypatch.setattr(auth_module, "get_settings", _settings_prod_no_token)
         with pytest.raises(HTTPException) as exc:
             await require_api_token(credentials=None)
         assert exc.value.status_code == 401
