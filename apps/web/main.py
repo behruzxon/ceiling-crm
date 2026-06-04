@@ -137,11 +137,11 @@ async def root():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    """Dashboard home — summary cards from analytics API."""
-    data = await api_get("/api/v1/analytics", params={"period": "month"})
+    """Daily Control Dashboard — the page fetches /api/v1/admin/crm/daily-summary
+    client-side through the web proxy (token stays server-side)."""
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "data": data},
+        {"request": request},
     )
 
 
