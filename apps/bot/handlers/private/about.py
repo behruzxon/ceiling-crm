@@ -31,7 +31,7 @@ router = Router(name="private:about")
 _ABOUT_TEXT: str = (
     "⭐ BIZ HAQIMIZDA\n\n"
     "VASHPOTOLOK kompaniyasi 6 yildan beri Qashqadaryoda faoliyat yuritib kelmoqda.\n\n"
-    "🏗 10 000+ muvaffaqiyatli topshirilgan obyekt\n"
+    "🏗 1000+ muvaffaqiyatli topshirilgan obyekt\n"
     "👥 Ijtimoiy tarmoqlarda 200 000+ kuzatuvchi\n"
     "🤖 Sun'iy intellekt orqali tezkor mijozlarga xizmat\n"
     "🛡 15 yil rasmiy kafolat\n"
@@ -41,7 +41,7 @@ _ABOUT_TEXT: str = (
     "Biz zamonaviy texnologiyalar va AI yordamida\n"
     "mijozlarga 24/7 tezkor javob va aniq hisob-kitob taqdim etamiz.\n\n"
     "📍 Qashqadaryo bo'ylab xizmat ko'rsatamiz\n"
-    "⏱ 24 soat ichida qayta aloqa\n\n"
+    "⏱ Operator imkon qadar tez bog'lanadi\n\n"
     "👇 Savolingiz bormi yoki buyurtma bermoqchimisiz?"
 )
 

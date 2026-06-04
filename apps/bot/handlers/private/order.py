@@ -817,7 +817,7 @@ async def _save_and_confirm(message: Message, state: FSMContext) -> None:
         f"📍 Tuman:   <b>{district}</b>\n"
         f"🏷 Tur:     <b>{category_label}</b>\n"
         f"{area_line}"
-        "\nMenejerimiz 24 soat ichida siz bilan bog'lanadi. 🙏"
+        "\nMenejerimiz imkon qadar tez siz bilan bog'lanadi. 🙏"
         f"{lead_line}"
     )
 
