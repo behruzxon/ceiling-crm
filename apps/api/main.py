@@ -120,6 +120,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(admin_crm_operator_digest_router)
+    from apps.api.routes.admin_crm_daily_summary import (
+        router as admin_crm_daily_summary_router,
+    )
+
+    app.include_router(admin_crm_daily_summary_router)
     from apps.api.routes.admin_agent_unknown_questions import (
         router as admin_agent_unknown_questions_router,
     )
