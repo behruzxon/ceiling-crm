@@ -1,0 +1,5 @@
+# Shell scripts must stay LF so they execute inside Linux containers.
+# On Windows with core.autocrlf=true, checkout was rewriting them to CRLF,
+# which broke the Docker ENTRYPOINT shebang and crash-looped api/web/bot
+# ("exec /app/deploy/docker/entrypoint.sh: no such file or directory").
+*.sh text eol=lf
