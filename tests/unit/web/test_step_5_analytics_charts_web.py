@@ -79,6 +79,19 @@ class TestQuickLinks:
         assert "/crm/handoffs" in c
 
 
+class TestTrendRangeToggle:
+    def test_toggle_buttons(self):
+        c = _t()
+        assert "tr-range-btn" in c
+        assert 'data-range="today"' in c and 'data-range="7d"' in c and 'data-range="30d"' in c
+        assert "Bugun" in c and "7 kun" in c and "30 kun" in c
+
+    def test_fetch_uses_selected_range(self):
+        c = _t()
+        assert "function loadTrends(range)" in c
+        assert 'summary?range=" + range' in c
+
+
 class TestSmoke:
     def test_api(self):
         from apps.api.main import app

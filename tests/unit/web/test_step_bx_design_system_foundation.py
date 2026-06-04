@@ -140,16 +140,16 @@ class TestActivePage:
 
 class TestTopbarTitles:
     def test_agent_title(self):
-        assert "AI Agent" in _base()
+        assert "AI agent" in _base()
 
     def test_crm_title(self):
-        assert "CRM Inbox" in _base()
+        assert "Mijozlar" in _base()
 
     def test_security_title(self):
-        assert "Security" in _base()
+        assert "Xavfsizlik" in _base()
 
     def test_campaigns_title(self):
-        assert "Campaigns" in _base()
+        assert "Kampaniyalar" in _base()
 
 
 class TestSVGIcons:

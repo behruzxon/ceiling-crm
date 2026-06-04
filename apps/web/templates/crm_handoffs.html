@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% set active_page = "handoffs" %}
-{% block title %}Handoff Queue — CeilingCRM{% endblock %}
-{% block page_title %}Handoff Queue{% endblock %}
+{% block title %}Operator navbati — CeilingCRM{% endblock %}
+{% block page_title %}Operator navbati{% endblock %}
 {% block page_subtitle %}Operator kerak degan mijozlar navbati{% endblock %}
 {% block content %}
 <div class="vp-page">
 
+  {# Error state — never show an empty "all clear" queue when the API failed #}
+  {% if (summary or {})._error or (queue or {})._error %}
+  <div class="vp-alert vp-alert-danger" style="margin-bottom:16px;">
+    Ma'lumotlarni yuklab bo'lmadi. Server bilan bog'lanishda xatolik &mdash; quyidagi sonlar to'liq bo'lmasligi mumkin. Birozdan keyin qayta urinib ko'ring.
+  </div>
+  {% endif %}
+
   <!-- KPI Cards -->
   <div class="vp-kpi-grid" style="margin-bottom:20px;">
     <div class="vp-kpi-card">
-      <div class="vp-kpi-label">Open</div>
+      <div class="vp-kpi-label">Ochiq</div>
       <div class="vp-kpi-value">{{ summary.total_open|default(0) }}</div>
     </div>
     <div class="vp-kpi-card">
@@ -21,11 +28,11 @@
       <div class="vp-kpi-value">{{ summary.total_assigned|default(0) }}</div>
     </div>
     <div class="vp-kpi-card">
-      <div class="vp-kpi-label" style="color:#dc2626;">Urgent</div>
+      <div class="vp-kpi-label" style="color:#dc2626;">Shoshilinch</div>
       <div class="vp-kpi-value" style="color:#dc2626;">{{ summary.total_urgent|default(0) }}</div>
     </div>
     <div class="vp-kpi-card">
-      <div class="vp-kpi-label" style="color:#f59e0b;">High</div>
+      <div class="vp-kpi-label" style="color:#f59e0b;">Yuqori</div>
       <div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.total_high|default(0) }}</div>
     </div>
   </div>
@@ -33,7 +40,7 @@
   <!-- Daily Operator Digest -->
   <div id="operatorDigestCard" class="vp-card" style="margin-bottom:16px;">
     <div class="vp-card-header" style="display:flex;justify-content:space-between;align-items:center;">
-      <div class="vp-card-title">Daily Operator Digest</div>
+      <div class="vp-card-title">Kunlik operator hisoboti</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <span id="digestSeverityBadge" class="vp-badge vp-badge-neutral digest-severity">—</span>
         <a href="/crm/operator-digest" class="vp-btn vp-btn-ghost digest-open-btn" style="font-size:11px;padding:3px 8px;">To'liq ko'rish</a>
@@ -55,7 +62,7 @@
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
       <select class="vp-select" id="statusFilter" onchange="applyFilters()">
         <option value="">Barcha holatlar</option>
-        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Ochiq</option>
         <option value="waiting_phone" {% if status_filter == 'waiting_phone' %}selected{% endif %}>Telefon kutilmoqda</option>
         <option value="assigned" {% if status_filter == 'assigned' %}selected{% endif %}>Tayinlangan</option>
         <option value="contacted" {% if status_filter == 'contacted' %}selected{% endif %}>Bog'lanildi</option>
@@ -65,10 +72,10 @@
       </select>
       <select class="vp-select" id="priorityFilter" onchange="applyFilters()">
         <option value="">Barcha ustuvorlik</option>
-        <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Urgent</option>
-        <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
-        <option value="normal" {% if priority_filter == 'normal' %}selected{% endif %}>Normal</option>
-        <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+        <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Shoshilinch</option>
+        <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>Yuqori</option>
+        <option value="normal" {% if priority_filter == 'normal' %}selected{% endif %}>Oddiy</option>
+        <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Past</option>
       </select>
       <select class="vp-select" id="assignedFilter" onchange="applyFilters()">
         <option value="">Barcha tayinlash</option>
@@ -107,18 +114,18 @@
         <tr>
           <td>
             {% if item.priority == 'urgent' %}
-              <span class="vp-badge vp-badge-danger">Urgent</span>
+              <span class="vp-badge vp-badge-danger">Shoshilinch</span>
             {% elif item.priority == 'high' %}
-              <span class="vp-badge vp-badge-warning">High</span>
+              <span class="vp-badge vp-badge-warning">Yuqori</span>
             {% elif item.priority == 'low' %}
-              <span class="vp-badge vp-badge-neutral">Low</span>
+              <span class="vp-badge vp-badge-neutral">Past</span>
             {% else %}
-              <span class="vp-badge vp-badge-info">Normal</span>
+              <span class="vp-badge vp-badge-info">Oddiy</span>
             {% endif %}
           </td>
           <td>
             {% if item.status == 'open' %}
-              <span class="vp-badge vp-badge-warning">Open</span>
+              <span class="vp-badge vp-badge-warning">Ochiq</span>
             {% elif item.status == 'waiting_phone' %}
               <span class="vp-badge vp-badge-info">Tel kutilmoqda</span>
             {% elif item.status == 'assigned' %}
@@ -267,7 +274,7 @@ async function loadWorkload() {
         '<div style="font-size:11px;color:#64748b;">' +
         (op.contacted > 0 ? 'Bog\'lanildi: ' + op.contacted + ' | ' : '') +
         'Bugun hal: ' + (op.resolved_today || 0) +
-        (op.urgent_assigned > 0 ? ' | <span style="color:#dc2626;">Urgent: ' + op.urgent_assigned + '</span>' : '') +
+        (op.urgent_assigned > 0 ? ' | <span style="color:#dc2626;">Shoshilinch: ' + op.urgent_assigned + '</span>' : '') +
         (op.oldest_assigned_minutes > 0 ? ' | Eng eski: ' + op.oldest_assigned_minutes + 'min' : '') +
         '</div></div>';
     });

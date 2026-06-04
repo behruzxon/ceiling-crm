@@ -52,7 +52,7 @@ class TestSidebar:
         assert "active_page == 'inbox'" in _base()
 
     def test_topbar_title(self):
-        assert "Conversation Inbox" in _base()
+        assert "Suhbatlar" in _base()
 
 
 class TestActivePage:

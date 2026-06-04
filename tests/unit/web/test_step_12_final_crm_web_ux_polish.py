@@ -84,10 +84,10 @@ class TestBaseSidebar:
         assert ".vp-sidebar.open" in base_src
 
     def test_topbar_titles_include_handoffs(self, base_src: str) -> None:
-        assert "Handoff Queue" in base_src or "Handoffs" in base_src
+        assert "Operator navbati" in base_src
 
     def test_topbar_titles_include_missed_leads(self, base_src: str) -> None:
-        assert "Missed Leads" in base_src
+        assert "Javobsiz leadlar" in base_src
 
 
 # ----------------------------- handoffs page --------------------------------
@@ -137,10 +137,10 @@ class TestHandoffsPage:
 
 class TestMissedLeadsPage:
     def test_kpi_critical(self, missed_src: str) -> None:
-        assert "Critical" in missed_src
+        assert "Juda jiddiy" in missed_src
 
     def test_kpi_high(self, missed_src: str) -> None:
-        assert "High" in missed_src
+        assert "Yuqori" in missed_src
 
     def test_recommendations_card(self, missed_src: str) -> None:
         assert "Tavsiyalar" in missed_src
@@ -155,7 +155,7 @@ class TestMissedLeadsPage:
         assert "vp-badge-neutral" in missed_src
 
     def test_empty_state_friendly(self, missed_src: str) -> None:
-        assert "Missed leadlar yo'q — hammasi nazoratda" in missed_src
+        assert "Javobsiz leadlar yo'q — hammasi nazoratda" in missed_src
 
     def test_mobile_media_query(self, missed_src: str) -> None:
         assert "max-width: 767px" in missed_src
@@ -198,7 +198,9 @@ class TestAnalyticsPage:
         assert 'id="tr-ho-open"' in analytics_src
 
     def test_empty_state_no_data(self, analytics_src: str) -> None:
-        assert "No analytics data available" in analytics_src
+        # honest empty state in Uzbek; an API failure shows a distinct error message
+        assert "Hozircha tahlil uchun ma'lumot yo'q" in analytics_src
+        assert "Tahlil ma'lumotlarini yuklab bo'lmadi" in analytics_src
 
     def test_mobile_grid_one_column(self, analytics_src: str) -> None:
         assert "grid-template-columns: 1fr" in analytics_src

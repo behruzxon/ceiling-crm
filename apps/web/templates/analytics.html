@@ -8,19 +8,20 @@
 <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;">
     <div>
         <div style="display:flex;align-items:center;gap:12px;">
-            <h1 style="font-size:24px;font-weight:700;color:#1e293b;margin:0;">Analytics</h1>
-            <span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:3px 10px;border-radius:12px;">Read-only Reports</span>
+            <h1 style="font-size:24px;font-weight:700;color:#1e293b;margin:0;">Tahlillar</h1>
+            <span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:3px 10px;border-radius:12px;">Faqat o'qish uchun</span>
         </div>
         <p style="font-size:14px;color:#64748b;margin-top:4px;">Sotuv, konversiya va mijozlar tahlili</p>
     </div>
 
     <!-- Period Selector -->
     <div style="display:flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+        {% set period_labels = {'today': 'Bugun', 'week': 'Hafta', 'month': 'Oy', 'all': 'Hammasi'} %}
         {% for p in ['today', 'week', 'month', 'all'] %}
         <a href="/analytics?period={{ p }}"
            style="padding:6px 14px;font-size:13px;font-weight:500;border-radius:7px;text-decoration:none;transition:background 0.15s;
                   {% if period == p %}background:#4f46e5;color:#fff;{% else %}color:#64748b;{% endif %}">
-            {{ p | capitalize }}
+            {{ period_labels[p] | default(p | capitalize) }}
         </a>
         {% endfor %}
     </div>
@@ -32,27 +33,27 @@
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px;" class="analytics-kpi-grid">
     <!-- Total -->
     <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #4f46e5;">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Total Leads</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Jami leadlar</div>
         <div style="font-size:26px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ data.total_leads | fmt_number }}</div>
     </div>
     <!-- Won -->
     <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #10b981;">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Won</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Yutilgan</div>
         <div style="font-size:26px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;">{{ data.won_leads | fmt_number }}</div>
     </div>
     <!-- Lost -->
     <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #ef4444;">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Lost</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Yo'qotilgan</div>
         <div style="font-size:26px;font-weight:700;color:#dc2626;font-variant-numeric:tabular-nums;">{{ data.lost_leads | fmt_number }}</div>
     </div>
     <!-- Active -->
     <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #0ea5e9;">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Active</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Faol</div>
         <div style="font-size:26px;font-weight:700;color:#0284c7;font-variant-numeric:tabular-nums;">{{ data.active_leads | fmt_number }}</div>
     </div>
     <!-- Conversion -->
     <div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;border-top:3px solid #8b5cf6;">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Conversion</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Konversiya</div>
         <div style="font-size:26px;font-weight:700;color:#7c3aed;font-variant-numeric:tabular-nums;">{{ data.conversion_rate | fmt_percent }}</div>
     </div>
 </div>
@@ -62,15 +63,15 @@
 
     <!-- Source Performance -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Source Performance</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Manbalar samaradorligi</h2>
         {% if data.top_sources %}
         <table style="width:100%;border-collapse:collapse;">
             <thead>
                 <tr style="border-bottom:2px solid #e2e8f0;">
-                    <th style="padding:8px 0;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Source</th>
-                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Leads</th>
-                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Won</th>
-                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Rate</th>
+                    <th style="padding:8px 0;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Manba</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Leadlar</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Yutilgan</th>
+                    <th style="padding:8px 0;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Foiz</th>
                 </tr>
             </thead>
             <tbody>
@@ -87,17 +88,17 @@
             </tbody>
         </table>
         {% else %}
-        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No source data available for this period</div>
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">Bu davr uchun manba ma'lumotlari yo'q</div>
         {% endif %}
     </div>
 
     <!-- Pipeline Funnel -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Pipeline Funnel</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Savdo voronkasi</h2>
         {% if data.stage_counts %}
         {% set stage_max = data.stage_counts | map(attribute='count') | max %}
         {% set stage_colors = {'new': '#3b82f6', 'contacted': '#f59e0b', 'measurement': '#8b5cf6', 'quote_sent': '#6366f1', 'deal_closed': '#10b981', 'installation': '#14b8a6', 'completed': '#059669', 'lost': '#ef4444', 'package_selected': '#0ea5e9'} %}
-        {% set stage_labels = {'new': 'New', 'contacted': 'Contacted', 'measurement': 'Measurement', 'quote_sent': 'Quote', 'deal_closed': 'Deal', 'installation': 'Install', 'completed': 'Completed', 'lost': 'Lost', 'package_selected': 'Package'} %}
+        {% set stage_labels = {'new': 'Yangi', 'contacted': "Bog'lanildi", 'measurement': "O'lchov", 'quote_sent': 'Taklif', 'deal_closed': 'Kelishuv', 'installation': "O'rnatish", 'completed': 'Yakunlangan', 'lost': "Yo'qotilgan", 'package_selected': 'Paket'} %}
 
         <div style="display:flex;flex-direction:column;gap:10px;">
             {% for sc in data.stage_counts %}
@@ -116,11 +117,11 @@
         {% if data.largest_dropoff_stage %}
         <div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;align-items:center;gap:6px;">
             <span style="color:#f59e0b;font-size:14px;">&#9888;</span>
-            <span style="font-size:12px;color:#92400e;">Largest dropoff at <strong>{{ stage_labels[data.largest_dropoff_stage] if data.largest_dropoff_stage in stage_labels else data.largest_dropoff_stage }}</strong></span>
+            <span style="font-size:12px;color:#92400e;">Eng katta yo'qotish: <strong>{{ stage_labels[data.largest_dropoff_stage] if data.largest_dropoff_stage in stage_labels else data.largest_dropoff_stage }}</strong></span>
         </div>
         {% endif %}
         {% else %}
-        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No funnel data available for this period</div>
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">Bu davr uchun voronka ma'lumotlari yo'q</div>
         {% endif %}
     </div>
 </div>
@@ -130,7 +131,7 @@
 
     <!-- Score Distribution -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Score Distribution</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Ball taqsimoti</h2>
         {% if data.score_distribution %}
         {% set sd = data.score_distribution %}
         {% set total_scored = sd.hot + sd.warm + sd.cold %}
@@ -140,7 +141,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
-                    <span style="font-size:13px;font-weight:500;color:#374151;">Hot (60+)</span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Issiq (60+)</span>
                 </div>
                 <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.hot }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.hot / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
             </div>
@@ -154,7 +155,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
-                    <span style="font-size:13px;font-weight:500;color:#374151;">Warm (30-59)</span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Iliq (30-59)</span>
                 </div>
                 <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.warm }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.warm / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
             </div>
@@ -168,7 +169,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>
-                    <span style="font-size:13px;font-weight:500;color:#374151;">Cold (0-29)</span>
+                    <span style="font-size:13px;font-weight:500;color:#374151;">Sovuq (0-29)</span>
                 </div>
                 <span style="font-size:13px;font-weight:600;color:#374151;">{{ sd.cold }}<span style="color:#94a3b8;font-weight:400;margin-left:4px;">{% if total_scored %}{{ ((sd.cold / total_scored) * 100) | int }}%{% else %}0%{% endif %}</span></span>
             </div>
@@ -178,39 +179,39 @@
         </div>
 
         <div style="padding-top:10px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;">
-            <span style="font-size:12px;color:#94a3b8;">Average score</span>
+            <span style="font-size:12px;color:#94a3b8;">O'rtacha ball</span>
             <span style="font-size:13px;font-weight:600;color:#4f46e5;">{{ data.avg_score | fmt_number }}</span>
         </div>
         {% else %}
-        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No score data available for this period</div>
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">Bu davr uchun ball ma'lumotlari yo'q</div>
         {% endif %}
     </div>
 
     <!-- Follow-up Performance -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Follow-up Performance</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Kuzatuv samaradorligi</h2>
         {% if data.followup_stats %}
         {% set fs = data.followup_stats %}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div style="background:#ecfdf5;border-radius:10px;padding:14px;">
-                <div style="font-size:11px;font-weight:600;color:#064e3b;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (Won)</div>
+                <div style="font-size:11px;font-weight:600;color:#064e3b;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">O'rtacha (yutilgan)</div>
                 <div style="font-size:22px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_won | fmt_number }}</div>
             </div>
             <div style="background:#fef2f2;border-radius:10px;padding:14px;">
-                <div style="font-size:11px;font-weight:600;color:#7f1d1d;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (Lost)</div>
+                <div style="font-size:11px;font-weight:600;color:#7f1d1d;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">O'rtacha (yo'qotilgan)</div>
                 <div style="font-size:22px;font-weight:700;color:#dc2626;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_lost | fmt_number }}</div>
             </div>
             <div style="background:#f8fafc;border-radius:10px;padding:14px;">
-                <div style="font-size:11px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg (All)</div>
+                <div style="font-size:11px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">O'rtacha (hammasi)</div>
                 <div style="font-size:22px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ fs.avg_followups_all | fmt_number }}</div>
             </div>
             <div style="background:#eef2ff;border-radius:10px;padding:14px;">
-                <div style="font-size:11px;font-weight:600;color:#3730a3;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">With Follow-up</div>
+                <div style="font-size:11px;font-weight:600;color:#3730a3;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Kuzatuv bilan</div>
                 <div style="font-size:22px;font-weight:700;color:#4f46e5;font-variant-numeric:tabular-nums;">{{ fs.with_followup_pct | fmt_percent }}</div>
             </div>
         </div>
         {% else %}
-        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">No follow-up data available for this period</div>
+        <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:13px;">Bu davr uchun kuzatuv ma'lumotlari yo'q</div>
         {% endif %}
     </div>
 </div>
@@ -220,15 +221,15 @@
 
     <!-- Revenue Summary -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Revenue Summary</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Daromad xulosasi</h2>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div>
-                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Est. Total Revenue</div>
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Taxminiy umumiy daromad</div>
                 <div style="font-size:22px;font-weight:700;color:#d97706;font-variant-numeric:tabular-nums;">{{ data.total_estimated_revenue | fmt_number }}</div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:2px;">UZS</div>
             </div>
             <div>
-                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Avg per Lead</div>
+                <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Lead boshiga o'rtacha</div>
                 <div style="font-size:22px;font-weight:700;color:#1e293b;font-variant-numeric:tabular-nums;">{{ data.avg_revenue_per_lead | fmt_number }}</div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:2px;">UZS</div>
             </div>
@@ -237,7 +238,7 @@
 
     <!-- Recommendations -->
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Recommendations</h2>
+        <h2 style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 16px;">Tavsiyalar</h2>
         {% if data.recommendations %}
         <div style="display:flex;flex-direction:column;gap:8px;">
             {% for rec in data.recommendations %}
@@ -250,20 +251,28 @@
         {% else %}
         <div style="text-align:center;padding:24px 0;">
             <div style="font-size:24px;margin-bottom:8px;">&#10003;</div>
-            <div style="font-size:13px;color:#64748b;">No critical recommendations right now</div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">Everything looks healthy</div>
+            <div style="font-size:13px;color:#64748b;">Hozircha muhim tavsiyalar yo'q</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">Hammasi joyida ko'rinadi</div>
         </div>
         {% endif %}
     </div>
 </div>
 
 {% else %}
-<!-- Empty State -->
+<!-- Error vs empty: never present an API failure as "no data yet" -->
+{% if data and data._error is defined %}
+<div style="text-align:center;padding:80px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">&#9888;</div>
+    <h2 style="font-size:18px;font-weight:600;color:#b91c1c;margin:0 0 8px;">Tahlil ma'lumotlarini yuklab bo'lmadi</h2>
+    <p style="font-size:14px;color:#94a3b8;max-width:420px;margin:0 auto;">Server bilan bog'lanishda xatolik. Bu "ma'lumot yo'q" degani emas &mdash; birozdan keyin qayta urinib ko'ring.</p>
+</div>
+{% else %}
 <div style="text-align:center;padding:80px 24px;">
     <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">&#9652;</div>
-    <h2 style="font-size:18px;font-weight:600;color:#64748b;margin:0 0 8px;">No analytics data available</h2>
-    <p style="font-size:14px;color:#94a3b8;max-width:400px;margin:0 auto;">Data will appear after leads and pipeline activity grow.</p>
+    <h2 style="font-size:18px;font-weight:600;color:#64748b;margin:0 0 8px;">Hozircha tahlil uchun ma'lumot yo'q</h2>
+    <p style="font-size:14px;color:#94a3b8;max-width:420px;margin:0 auto;">Leadlar va savdo faoliyati ko'paygach, ma'lumotlar bu yerda paydo bo'ladi.</p>
 </div>
+{% endif %}
 {% endif %}
 
 <!-- Responsive overrides -->
@@ -294,9 +303,14 @@
     .chart-bar-value { font-size: 11px; font-weight: 600; color: #1e293b; min-width: 36px; }
 </style>
 
-<!-- Visual Charts Section -->
+<!-- Trends Section (real data) -->
 <div style="margin-top:28px;">
     <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Trendlar (haqiqiy ma'lumot)</h2>
+    <div id="trRangeToggle" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button type="button" class="vp-btn vp-btn-secondary tr-range-btn" data-range="today">Bugun</button>
+        <button type="button" class="vp-btn vp-btn-primary tr-range-btn" data-range="7d">7 kun</button>
+        <button type="button" class="vp-btn vp-btn-secondary tr-range-btn" data-range="30d">30 kun</button>
+    </div>
     <div id="chartsLoading" style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Yuklanmoqda...</div>
     <div id="chartsError" class="vp-alert vp-alert-danger" style="display:none;margin-bottom:8px;">Trend ma'lumotlarini yuklab bo'lmadi.</div>
 
@@ -310,7 +324,7 @@
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
         <div class="vp-card">
-          <div class="vp-card-header"><div class="vp-card-title">Kunlik xabarlar (oxirgi 7 kun)</div></div>
+          <div class="vp-card-header"><div class="vp-card-title">Kunlik xabarlar</div></div>
           <div id="tr-msg-chart" style="display:flex;align-items:flex-end;gap:4px;height:120px;"></div>
         </div>
         <div class="vp-card">
@@ -333,8 +347,8 @@
 
     <!-- Quick Links -->
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="/crm/missed-leads" class="vp-btn vp-btn-ghost" style="font-size:12px;">Missed Leads Dashboard</a>
-        <a href="/crm/handoffs" class="vp-btn vp-btn-ghost" style="font-size:12px;">Handoff Queue</a>
+        <a href="/crm/missed-leads" class="vp-btn vp-btn-ghost" style="font-size:12px;">Javobsiz leadlar</a>
+        <a href="/crm/handoffs" class="vp-btn vp-btn-ghost" style="font-size:12px;">Operator navbati</a>
     </div>
 </div>
 
@@ -362,25 +376,47 @@
         });
     }
 
-    fetch("/api/v1/admin/crm/analytics/summary?range=7d", { credentials: "same-origin", headers: { "Accept": "application/json" } })
-        .then(function (r) { if (!r.ok) { throw new Error("http " + r.status); } return r.json(); })
-        .then(function (d) {
-            show("chartsLoading", false); show("chartsError", false); show("trBody", true);
-            var t = d.totals || {};
-            setText("tr-messages", fmt(t.messages));
-            setText("tr-incoming", fmt(t.incoming));
-            setText("tr-outgoing", fmt(t.outgoing));
-            setText("tr-contacts", fmt(t.new_contacts));
-            setText("tr-unknown", fmt(t.unknown_questions));
-            var h = d.handoffs || {};
-            setText("tr-ho-open", fmt(h.open));
-            setText("tr-ho-assigned", fmt(h.assigned));
-            setText("tr-ho-resolved", fmt(h.resolved));
-            var trend = d.trend || [];
-            renderTrendBars("tr-msg-chart", trend, "messages", "#4f46e5");
-            renderTrendBars("tr-contact-chart", trend, "new_contacts", "#8b5cf6");
-        })
-        .catch(function () { show("chartsLoading", false); show("chartsError", true); });
+    var VALID_RANGES = ["today", "7d", "30d"];
+
+    function setActiveRange(range) {
+        var btns = document.querySelectorAll(".tr-range-btn");
+        for (var i = 0; i < btns.length; i++) {
+            var on = btns[i].getAttribute("data-range") === range;
+            btns[i].className = "vp-btn tr-range-btn " + (on ? "vp-btn-primary" : "vp-btn-secondary");
+        }
+    }
+
+    function loadTrends(range) {
+        if (VALID_RANGES.indexOf(range) === -1) { range = "7d"; }
+        setActiveRange(range);
+        show("chartsLoading", true); show("chartsError", false); show("trBody", false);
+        fetch("/api/v1/admin/crm/analytics/summary?range=" + range, { credentials: "same-origin", headers: { "Accept": "application/json" } })
+            .then(function (r) { if (!r.ok) { throw new Error("http " + r.status); } return r.json(); })
+            .then(function (d) {
+                show("chartsLoading", false); show("chartsError", false); show("trBody", true);
+                var t = d.totals || {};
+                setText("tr-messages", fmt(t.messages));
+                setText("tr-incoming", fmt(t.incoming));
+                setText("tr-outgoing", fmt(t.outgoing));
+                setText("tr-contacts", fmt(t.new_contacts));
+                setText("tr-unknown", fmt(t.unknown_questions));
+                var h = d.handoffs || {};
+                setText("tr-ho-open", fmt(h.open));
+                setText("tr-ho-assigned", fmt(h.assigned));
+                setText("tr-ho-resolved", fmt(h.resolved));
+                var trend = d.trend || [];
+                renderTrendBars("tr-msg-chart", trend, "messages", "#4f46e5");
+                renderTrendBars("tr-contact-chart", trend, "new_contacts", "#8b5cf6");
+            })
+            .catch(function () { show("chartsLoading", false); show("chartsError", true); show("trBody", false); });
+    }
+
+    var rangeBtns = document.querySelectorAll(".tr-range-btn");
+    for (var i = 0; i < rangeBtns.length; i++) {
+        rangeBtns[i].addEventListener("click", function () { loadTrends(this.getAttribute("data-range")); });
+    }
+
+    loadTrends("7d");
 })();
 </script>
 {% endblock %}

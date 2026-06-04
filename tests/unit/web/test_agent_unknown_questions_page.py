@@ -49,7 +49,7 @@ class TestSidebar:
         assert "active_page == 'unknown_questions'" in _base()
 
     def test_topbar_title(self) -> None:
-        assert "Unknown Questions" in _base()
+        assert "Noma'lum savollar" in _base()
 
 
 class TestActivePage:

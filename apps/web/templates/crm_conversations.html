@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% set active_page = "inbox" %}
-{% block title %}Conversation Inbox — CeilingCRM{% endblock %}
-{% block page_title %}Conversation Inbox{% endblock %}
+{% block title %}Suhbatlar — CeilingCRM{% endblock %}
+{% block page_title %}Suhbatlar{% endblock %}
 {% block page_subtitle %}Mijoz va bot yozishmalarini ko'ring va operator sifatida javob bering{% endblock %}
 {% block content %}
 <div class="vp-page">
+
+  {% if (conversations or {})._error %}
+  <div class="vp-alert vp-alert-danger" style="margin-bottom:16px;">
+    Suhbatlarni yuklab bo'lmadi. Server bilan bog'lanishda xatolik &mdash; birozdan keyin qayta urinib ko'ring.
+  </div>
+  {% endif %}
 
   <div class="vp-inbox" style="display:flex;gap:16px;align-items:flex-start;">
 

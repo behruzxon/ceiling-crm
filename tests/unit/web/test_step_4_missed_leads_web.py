@@ -30,7 +30,7 @@ class TestSidebar:
         assert "active_page == 'missed_leads'" in _base()
 
     def test_topbar_title(self):
-        assert "Missed Leads" in _base()
+        assert "Javobsiz leadlar" in _base()
 
 
 class TestActivePage:
@@ -40,7 +40,7 @@ class TestActivePage:
 
 class TestTitle:
     def test_title(self):
-        assert "Missed Leads" in _t()
+        assert "Javobsiz leadlar" in _t()
 
     def test_subtitle(self):
         c = _t().lower()
@@ -59,7 +59,7 @@ class TestKPICards:
 
     def test_medium_low_cards(self):
         c = _t()
-        assert "Medium" in c and "Low" in c
+        assert "O'rta" in c and "Past" in c
 
     def test_oldest_wait(self):
         assert "oldest_wait" in _t() or "kutish" in _t().lower()

@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% set active_page = "knowledge" %}
-{% block title %}Knowledge Base — CeilingCRM{% endblock %}
-{% block page_title %}Knowledge Base{% endblock %}
+{% block title %}Bilimlar bazasi — CeilingCRM{% endblock %}
+{% block page_title %}Bilimlar bazasi{% endblock %}
 {% block page_subtitle %}FAQ va bilimlarni boshqaring (qoralama / faol / arxiv){% endblock %}
 {% block content %}
 <div class="vp-page">
+
+  {% if (summary or {})._error or (items or {})._error %}
+  <div class="vp-alert vp-alert-danger" style="margin-bottom:16px;">
+    Ma'lumotlarni yuklab bo'lmadi. Server bilan bog'lanishda xatolik &mdash; birozdan keyin qayta urinib ko'ring.
+  </div>
+  {% endif %}
 
   <div class="vp-alert vp-alert-info" style="margin-bottom:16px;">
     Bilimlarni shu yerda tahrirlash mumkin. Bot lookup hozircha standart holatda
