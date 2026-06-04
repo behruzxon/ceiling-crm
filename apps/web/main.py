@@ -473,18 +473,17 @@ async def admin_help(request: Request):
 @app.get("/crm/missed-leads", response_class=HTMLResponse)
 async def crm_missed_leads(
     request: Request,
+    range: str = Query("7d", max_length=10),
     severity: str = Query("", max_length=20),
-    reason: str = Query("", max_length=50),
 ):
-    """Missed Leads Dashboard."""
-    summary = await api_get("/api/v1/admin/crm/missed-leads/summary")
-    params: dict = {"limit": 50}
+    """Missed Leads Dashboard — real data from the deterministic missed-leads API."""
+    rng = range if range in ("today", "7d", "30d") else "7d"
+    summary = await api_get("/api/v1/admin/crm/missed-leads/summary", params={"range": rng})
+    params: dict = {"limit": 50, "range": rng}
     if severity:
         params["severity"] = severity
-    if reason:
-        params["reason"] = reason
     items = await api_get("/api/v1/admin/crm/missed-leads", params=params)
-    recs = await api_get("/api/v1/admin/crm/missed-leads/recommendations")
+    recs = await api_get("/api/v1/admin/crm/missed-leads/recommendations", params={"range": rng})
     return templates.TemplateResponse(
         "crm_missed_leads.html",
         {
@@ -492,8 +491,8 @@ async def crm_missed_leads(
             "summary": summary,
             "items": items,
             "recs": recs,
+            "range_filter": rng,
             "severity_filter": severity,
-            "reason_filter": reason,
         },
     )
 
