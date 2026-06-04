@@ -104,26 +104,49 @@ Every send flag from §5 stays OFF during Stage 1.
 
 ## 7. Backup procedure
 
+The automated backup script `deploy/scripts/backup.sh` produces a
+**plain-SQL gzip** dump (`<db>_<timestamp>.sql.gz`). The matching restore path
+is therefore `gunzip -c ... | psql ...` — **not** `pg_restore`, which only reads
+custom-format (`-F c`) or directory-format dumps. Keep the backup and restore
+formats consistent or the restore will fail.
+
 ```text
-# Placeholder commands — replace <PLACEHOLDER> with VPS values.
-pg_dump -h <POSTGRES_HOST> -U <POSTGRES_USER> -d <POSTGRES_DB> \
-    -F c -f /var/backups/ceilingcrm/$(date +%Y%m%d_%H%M)_pre_stage1.dump
+# Automated (recommended) — scheduled via host cron or run one-off.
+# Writes /backups/<DB>_<YYYYMMDD_HHMMSS>.sql.gz and prunes old backups.
+BACKUP_VIA_DOCKER=1 RETENTION_DAYS=30 ./deploy/scripts/backup.sh
+
+# Manual equivalent (same plain-SQL gzip format the restore below expects):
+pg_dump -h <POSTGRES_HOST> -U <POSTGRES_USER> -d <POSTGRES_DB> --no-owner --no-acl \
+    | gzip > /var/backups/ceilingcrm/$(date +%Y%m%d_%H%M)_pre_stage1.sql.gz
 ls -lh /var/backups/ceilingcrm/
 ```
 
-Verification (mandatory):
+Verification (mandatory) — restore into a THROWAWAY database only:
 
 ```text
-# Restore the dump into a scratch database before continuing.
+# 1. Create a scratch DB. NEVER restore over the live ceilingcrm database.
 createdb -h <POSTGRES_HOST> -U <POSTGRES_USER> ceilingcrm_verify
-pg_restore -h <POSTGRES_HOST> -U <POSTGRES_USER> \
-    -d ceilingcrm_verify /var/backups/ceilingcrm/<YYYYMMDD_HHMM>_pre_stage1.dump
-# Confirm row counts on key tables, then drop the scratch DB.
+
+# 2. Restore the plain-SQL gzip dump into the scratch DB (gunzip | psql).
+gunzip -c /var/backups/ceilingcrm/<YYYYMMDD_HHMM>_pre_stage1.sql.gz \
+    | psql -h <POSTGRES_HOST> -U <POSTGRES_USER> -d ceilingcrm_verify
+
+# 3. Verify key tables restored with rows.
+psql -h <POSTGRES_HOST> -U <POSTGRES_USER> -d ceilingcrm_verify \
+    -c "SELECT count(*) FROM leads;" -c "SELECT count(*) FROM users;"
+
+# 4. Drop the scratch DB once verified.
 dropdb -h <POSTGRES_HOST> -U <POSTGRES_USER> ceilingcrm_verify
 ```
 
-**Never continue without a verified-restorable backup.** If
-verification fails, stop and investigate.
+**Safety:**
+
+- The restore target above is the throwaway `ceilingcrm_verify` DB. **Never run
+  the restore against the production `ceilingcrm` database.** Restoring over a
+  live DB is destructive and requires an explicit, deliberate manual decision
+  (stop the app/scheduler, take a fresh dump first, then restore).
+- **Never continue without a verified-restorable backup.** If verification
+  fails, stop and investigate.
 
 ## 8. Migration procedure
 
