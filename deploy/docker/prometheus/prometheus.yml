@@ -9,5 +9,8 @@ rule_files:
 scrape_configs:
   - job_name: 'ceiling_crm_bot'
     static_configs:
-      - targets: ['bot:9090']
+      # Production runs the bot in webhook mode, which serves /metrics (and
+      # /health) on port 8080 (apps/bot/main.py run_webhook -> port 8080).
+      # The 9090 health/metrics server only runs in dev polling mode.
+      - targets: ['bot:8080']
     metrics_path: '/metrics'

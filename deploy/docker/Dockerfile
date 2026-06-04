@@ -59,8 +59,12 @@ USER appuser
 
 ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
 
-# Health check: lightweight Python connectivity check
+# Health check: real DB connectivity probe.
+# Default for any service that does not override healthcheck in compose
+# (e.g. the scheduler).  check_database_health() never raises — it returns
+# {"status": "ok"|"error"} — so we MUST inspect the status and exit non-zero
+# on failure, otherwise the container would always report healthy.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import asyncio; asyncio.run(__import__('infrastructure.database.session', fromlist=['check_database_health']).check_database_health())" || exit 1
+    CMD python -c "import asyncio, sys; from infrastructure.database.session import check_database_health; sys.exit(0 if asyncio.run(check_database_health()).get('status') == 'ok' else 1)"
 
 CMD ["python", "-m", "apps.bot.main"]

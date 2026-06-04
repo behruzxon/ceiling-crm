@@ -71,6 +71,13 @@ services:
       redis:
         condition: service_healthy
     command: ["python", "-m", "apps.bot.main"]
+    # Production runs in webhook mode → /health is served on 8080.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - backend
     deploy:
@@ -94,6 +101,15 @@ services:
       redis:
         condition: service_healthy
     command: ["python", "-m", "apps.scheduler.main"]
+    # The scheduler runs no HTTP server; probe real DB connectivity (it cannot
+    # do its job without the DB). check_database_health() never raises, so the
+    # exit code is derived from its status — not an always-pass check.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import asyncio, sys; from infrastructure.database.session import check_database_health; sys.exit(0 if asyncio.run(check_database_health()).get('status') == 'ok' else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - backend
     deploy:
@@ -119,6 +135,14 @@ services:
     command: ["celery", "-A", "infrastructure.queue.app:celery_app", "worker",
               "--loglevel=info", "--concurrency=${CELERY_CONCURRENCY:-4}",
               "--max-tasks-per-child=${CELERY_MAX_TASKS_PER_CHILD:-1000}"]
+    # Meaningful liveness: the worker answers a Celery control ping over the
+    # broker (not an always-pass check).
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A infrastructure.queue.app:celery_app inspect ping --timeout 10 2>/dev/null | grep -q OK"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
     networks:
       - backend
     deploy:
