@@ -41,7 +41,7 @@ _PROMO_TEXT: str = (
     "   Mutaxassis joyiga borib aniq hisoblab beradi.\n\n"
     "🛡 Faqat sertifikatlangan materiallar\n"
     "🛠 Professional montaj brigada\n"
-    "⏱ 24 soat ichida qayta aloqa\n"
+    "⏱ Operator imkon qadar tez bog'lanadi\n"
     "📄 15 yil rasmiy kafolat\n\n"
     "⏳ Aksiyalar cheklangan muddatga amal qiladi.\n\n"
     "🔥 Xona o'lchamini hoziroq yuboring —\n"
