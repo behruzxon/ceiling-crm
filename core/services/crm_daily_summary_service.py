@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta, timezone
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.services.crm_top_questions_service import TOP_QUESTIONS_SOURCE, collect_top_questions
 from infrastructure.database.models.agent_unknown_question import AgentUnknownQuestionModel
 from infrastructure.database.models.crm_contact import CRMContactModel
 from infrastructure.database.models.crm_message import CRMMessageModel
@@ -90,6 +91,7 @@ class RawCounts:
     hourly_messages: dict[int, int] = field(default_factory=dict)
     hourly_new_contacts: dict[int, int] = field(default_factory=dict)
     unknown_items: list[dict] = field(default_factory=list)
+    top_questions: list[dict] = field(default_factory=list)
 
 
 def empty_hourly() -> list[dict]:
@@ -149,14 +151,17 @@ def shape_summary(range_: str, period: Period, raw: RawCounts) -> dict:
             "resolved_handoffs": raw.resolved_handoffs,
         },
         "hourly_activity": _build_hourly(raw),
-        # Deferred: top customer questions need text-normalisation grouping (later step).
-        "top_questions": [],
+        # Real grouping of the most-asked captured questions (see
+        # crm_top_questions_service). Empty list when no data — never fabricated.
+        "top_questions": raw.top_questions,
         "unknown_questions": raw.unknown_items,
         "warnings": _build_warnings(raw),
         "data_quality": {
             "intent_reliable": False,
             "source_reliable": False,
             "temperature_reliable": False,
+            "top_questions_reliable": True,
+            "top_questions_source": TOP_QUESTIONS_SOURCE,
         },
     }
 
@@ -347,4 +352,5 @@ async def build_daily_summary(
         now = datetime.now(tz=UTC)
     period = resolve_period(range_, now, timezone_name)
     raw = await collect_raw_counts(session, period)
+    raw.top_questions = await collect_top_questions(session, period.start, period.end)
     return shape_summary(range_, period, raw)

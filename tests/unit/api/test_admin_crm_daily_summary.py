@@ -129,3 +129,49 @@ class TestDailySummaryRoute:
         assert body["kpis"]["hot_leads"] is None
         assert body["data_quality"]["source_reliable"] is False
         assert len(body["hourly_activity"]) == 24
+
+    def test_empty_top_questions_is_empty_list(self, client, monkeypatch):
+        # honest empty: no data → [], never a fabricated example list
+        from datetime import datetime
+
+        from core.services.crm_daily_summary_service import Period, RawCounts, shape_summary
+
+        _p = Period(start=datetime(2026, 6, 4), end=datetime(2026, 6, 4), timezone="Asia/Tashkent")
+
+        async def _fake_summary(db, *, range_, source, timezone_name):
+            return shape_summary(range_, _p, RawCounts())
+
+        monkeypatch.setattr(
+            "apps.api.routes.admin_crm_daily_summary.build_daily_summary", _fake_summary
+        )
+        body = client.get(_PATH).json()
+        assert body["top_questions"] == []
+        assert body["data_quality"]["top_questions_source"] == "agent_unknown_questions"
+
+    def test_top_questions_real_list_passthrough(self, client, monkeypatch):
+        from datetime import datetime
+
+        from core.services.crm_daily_summary_service import Period, RawCounts, shape_summary
+
+        _p = Period(start=datetime(2026, 6, 4), end=datetime(2026, 6, 4), timezone="Asia/Tashkent")
+        grouped = [
+            {
+                "normalized": "narx qancha",
+                "sample": "Narx qancha?",
+                "count": 5,
+                "last_seen": "2026-06-04T12:00:00+00:00",
+                "reason": "price",
+                "severity": "medium",
+                "status": "new",
+            }
+        ]
+
+        async def _fake_summary(db, *, range_, source, timezone_name):
+            return shape_summary(range_, _p, RawCounts(top_questions=grouped))
+
+        monkeypatch.setattr(
+            "apps.api.routes.admin_crm_daily_summary.build_daily_summary", _fake_summary
+        )
+        body = client.get(_PATH).json()
+        assert body["top_questions"] == grouped
+        assert body["data_quality"]["top_questions_reliable"] is True

@@ -104,6 +104,8 @@ class TestShapeEmptyDay:
             "intent_reliable": False,
             "source_reliable": False,
             "temperature_reliable": False,
+            "top_questions_reliable": True,
+            "top_questions_source": "agent_unknown_questions",
         }
 
 
@@ -255,12 +257,20 @@ class TestBuildDailySummary:
             captured["period"] = period
             return RawCounts(incoming_messages=2, outgoing_messages=1)
 
+        async def _fake_top_questions(session, start, end, limit=10):
+            captured["tq_window"] = (start, end)
+            return []
+
         monkeypatch.setattr(
             "core.services.crm_daily_summary_service.collect_raw_counts", _fake_collect
+        )
+        monkeypatch.setattr(
+            "core.services.crm_daily_summary_service.collect_top_questions", _fake_top_questions
         )
         out = await build_daily_summary(object(), range_="7d", now=_NOW)
         assert out["range"] == "7d"
         assert out["kpis"]["total_messages"] == 3
+        assert out["top_questions"] == []
         assert out["period"]["timezone"] == "Asia/Tashkent"
         assert captured["period"].end - captured["period"].start == timedelta(days=7)
 
