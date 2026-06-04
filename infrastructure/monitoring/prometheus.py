@@ -70,7 +70,10 @@ openai_request_duration = Histogram(
 async def metrics_handler(request: web.Request) -> web.Response:
     """Expose Prometheus metrics at /metrics endpoint."""
     data = generate_latest()
-    return web.Response(body=data, content_type=CONTENT_TYPE_LATEST)
+    # CONTENT_TYPE_LATEST carries a charset ("text/plain; ...; charset=utf-8").
+    # aiohttp rejects a charset inside the ``content_type=`` argument, so set the
+    # full Prometheus content type via a raw header instead.
+    return web.Response(body=data, headers={"Content-Type": CONTENT_TYPE_LATEST})
 
 
 async def health_handler(request: web.Request) -> web.Response:
