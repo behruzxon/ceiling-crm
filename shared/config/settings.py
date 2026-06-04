@@ -14,6 +14,7 @@ repeatedly without performance penalty.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -882,6 +883,21 @@ class Settings(BaseSettings):
                 )
             if not self.sentry.dsn:
                 raise ValueError("SENTRY_DSN is required in production")
+            # Fail-closed auth depends on these being present. Without them the
+            # REST API (require_api_token) and the web dashboard (Basic Auth)
+            # would reject every request in production while config validation
+            # silently passed — i.e. a misconfig would look "fine" but be down.
+            if not self.api.internal_token:
+                raise ValueError("API_INTERNAL_TOKEN is required in production")
+            # Web dashboard credentials are consumed from the environment by
+            # apps/web (apps/web/config.py), not as model fields, so validate
+            # the environment directly (docker env_file exports them).
+            if not os.environ.get("WEB_DASHBOARD_USERNAME") or not os.environ.get(
+                "WEB_DASHBOARD_PASSWORD"
+            ):
+                raise ValueError(
+                    "WEB_DASHBOARD_USERNAME and WEB_DASHBOARD_PASSWORD are required in production"
+                )
         return self
 
     @property
