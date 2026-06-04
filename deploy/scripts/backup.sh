@@ -11,6 +11,16 @@
 #
 # Cron example (daily at 03:00):
 #   0 3 * * * /opt/ceiling-crm/deploy/scripts/backup.sh >> /var/log/ceiling-crm-backup.log 2>&1
+#
+# FORMAT: plain-SQL gzip (<db>_<timestamp>.sql.gz). Restore with gunzip | psql,
+#         NOT pg_restore (pg_restore only reads custom/-Fc or directory dumps).
+#
+# RESTORE (into a THROWAWAY db only — NEVER over the live ceilingcrm DB):
+#   createdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" ceilingcrm_verify
+#   gunzip -c /backups/ceilingcrm_YYYYMMDD_HHMMSS.sql.gz \
+#       | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d ceilingcrm_verify
+#   dropdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" ceilingcrm_verify
+#   See docs/AI_AGENT_SYSTEM/128_PRODUCTION_DEPLOYMENT_RUNBOOK.md §7.
 # =============================================================================
 
 set -euo pipefail
