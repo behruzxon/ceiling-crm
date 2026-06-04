@@ -114,6 +114,15 @@
         </div>
     </div>
 
+    <!-- Top customer questions panel (grouped from captured unknown questions) -->
+    <div class="vp-card" style="margin-bottom:20px;">
+        <div class="vp-card-header">
+            <span class="vp-card-title">Eng ko'p so'ralgan savollar</span>
+            <a href="/agent/unknown-questions" class="vp-btn vp-btn-ghost" style="font-size:12px;">FAQ yaratish &#8594;</a>
+        </div>
+        <div id="dc-top-questions"></div>
+    </div>
+
     <!-- Unknown questions panel -->
     <div class="vp-card" style="margin-bottom:20px;">
         <div class="vp-card-header">
@@ -144,6 +153,13 @@
     function show(id, on) { var e = el(id); if (e) { e.style.display = on ? "" : "none"; } }
     function fmt(n) { return (n === null || n === undefined) ? "—" : Number(n).toLocaleString("ru-RU"); }
     function setText(id, v) { var e = el(id); if (e) { e.textContent = v; } }
+    function fmtDate(iso) {
+        if (!iso) { return "—"; }
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return "—"; }
+        return d.toLocaleDateString("ru-RU") + " "
+            + d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    }
 
     function renderWarnings(list) {
         var box = el("dc-warnings");
@@ -203,6 +219,48 @@
         });
     }
 
+    function renderTopQuestions(items) {
+        var box = el("dc-top-questions");
+        box.textContent = "";
+        if (!items || items.length === 0) {
+            var empty = document.createElement("div");
+            empty.className = "vp-empty-state";
+            empty.textContent = "Hali yetarli savol yig'ilmagan";
+            box.appendChild(empty);
+            return;
+        }
+        items.forEach(function (q) {
+            var row = document.createElement("div");
+            row.style.padding = "10px 0";
+            row.style.borderBottom = "1px solid #f1f5f9";
+            var top = document.createElement("div");
+            top.style.display = "flex";
+            top.style.justifyContent = "space-between";
+            top.style.gap = "12px";
+            var txt = document.createElement("div");
+            txt.style.fontSize = "13px";
+            txt.style.color = "#334155";
+            txt.style.fontWeight = "500";
+            txt.textContent = q.sample || q.normalized || "(matnsiz)";  // textContent — XSS-safe
+            var cnt = document.createElement("span");
+            cnt.className = "vp-badge vp-badge-info";
+            cnt.style.flexShrink = "0";
+            cnt.textContent = "Necha marta: " + fmt(q.count);
+            top.appendChild(txt);
+            top.appendChild(cnt);
+            var meta = document.createElement("div");
+            meta.style.fontSize = "11px";
+            meta.style.color = "#94a3b8";
+            meta.style.marginTop = "2px";
+            meta.textContent = "Oxirgi ko'rilgan: " + fmtDate(q.last_seen)
+                + (q.reason ? " · " + q.reason : "")
+                + (q.severity ? " · " + q.severity : "");
+            row.appendChild(top);
+            row.appendChild(meta);
+            box.appendChild(row);
+        });
+    }
+
     function render(d) {
         var k = d.kpis || {};
         KPI_KEYS.forEach(function (key) { setText("kpi-" + key, fmt(k[key])); });
@@ -221,6 +279,7 @@
 
         renderWarnings(d.warnings);
         renderHourly(d.hourly_activity);
+        renderTopQuestions(d.top_questions);
         renderUnknown(d.unknown_questions);
         setText("dc-updated", new Date().toLocaleTimeString("ru-RU"));
     }

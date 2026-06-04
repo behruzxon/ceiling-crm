@@ -99,6 +99,41 @@ class TestSafetyAndLinks:
         assert 'href="/agent/unknown-questions"' in html
 
 
+class TestTopQuestionsPanel:
+    def test_panel_title_and_labels(self):
+        html = _render()
+        assert "Eng ko'p so'ralgan savollar" in html
+        assert "Necha marta" in html
+        assert "Oxirgi ko'rilgan" in html
+        assert "FAQ yaratish" in html
+
+    def test_panel_container_and_wiring(self):
+        html = _render()
+        assert 'id="dc-top-questions"' in html
+        assert "renderTopQuestions" in html
+        assert "d.top_questions" in html
+
+    def test_empty_state_message(self):
+        assert "Hali yetarli savol yig'ilmagan" in _render()
+
+    def test_link_to_unknown_questions(self):
+        # the "FAQ yaratish" CTA points at the triage page (unknown -> knowledge)
+        html = _render()
+        assert 'href="/agent/unknown-questions"' in html
+
+    def test_no_fabricated_question_examples(self):
+        # the panel is filled by JS from the API; no hardcoded sample questions
+        html = _render()
+        for fake in ("Narx qancha", "Katalog bormi", "O'lcham qancha", "Qancha turadi"):
+            assert fake not in html
+
+    def test_rendered_with_textcontent_xss_safe(self):
+        html = _render()
+        # the top-questions renderer uses textContent, never innerHTML
+        assert "q.sample" in html
+        assert ".innerHTML" not in html
+
+
 # ── route + auth ─────────────────────────────────────────────────────────────
 
 
