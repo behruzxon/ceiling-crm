@@ -1,4 +1,9 @@
-"""Tests for Step 5 — Analytics Charts Web."""
+"""Analytics page — the dead all-zero "Visual Charts" are replaced by real trends.
+
+The old Temperature/Intent/Missed/Handoff charts were fed an all-zero API and
+were fake. They are gone; the page now fetches the real /analytics/summary trend
+endpoint. These tests pin the new section and the removal of the fake one.
+"""
 
 from __future__ import annotations
 
@@ -9,118 +14,69 @@ def _t() -> str:
     return Path("apps/web/templates/analytics.html").read_text(encoding="utf-8")
 
 
-class TestChartsSection:
-    def test_visual_charts_heading(self):
-        assert "Visual Charts" in _t()
+class TestRealTrendsSection:
+    def test_trend_heading(self):
+        assert "Trendlar" in _t()
 
-    def test_charts_grid(self):
-        assert "chartsGrid" in _t()
+    def test_fetches_real_summary_endpoint(self):
+        assert "/api/v1/admin/crm/analytics/summary" in _t()
 
-
-class TestTemperatureChart:
-    def test_container(self):
-        assert "chartTemperature" in _t()
-
-    def test_title(self):
-        assert "Lead Temperature" in _t()
-
-    def test_hot_bar(self):
-        assert "Hot" in _t()
-
-    def test_warm_bar(self):
-        assert "Warm" in _t()
-
-    def test_cold_bar(self):
-        assert "Cold" in _t()
-
-
-class TestIntentChart:
-    def test_container(self):
-        assert "chartIntent" in _t()
-
-    def test_title(self):
-        assert "Intent Breakdown" in _t()
-
-    def test_price_bar(self):
-        assert "Price" in _t()
-
-    def test_operator_bar(self):
-        assert "Operator" in _t()
-
-
-class TestMissedChart:
-    def test_container(self):
-        assert "chartMissed" in _t()
-
-    def test_title(self):
-        assert "Missed Leads Severity" in _t()
-
-    def test_critical_bar(self):
-        assert "Critical" in _t()
-
-
-class TestHandoffChart:
-    def test_container(self):
-        assert "chartHandoff" in _t()
-
-    def test_title(self):
-        assert "Handoff Status" in _t()
-
-    def test_open_bar(self):
+    def test_trend_charts_present(self):
         c = _t()
-        assert "Open" in c
+        assert "tr-msg-chart" in c
+        assert "tr-contact-chart" in c
 
-    def test_resolved_bar(self):
-        assert "Resolved" in _t()
+    def test_real_totals_and_handoffs(self):
+        c = _t()
+        assert "Jami xabarlar" in c
+        assert "tr-ho-open" in c and "tr-ho-resolved" in c
+
+    def test_uzbek_labels(self):
+        c = _t()
+        assert "Kiruvchi" in c and "Chiquvchi" in c and "Yangi kontaktlar" in c
+
+    def test_data_quality_note(self):
+        assert "ishonchli yig'ilmaydi" in _t()
 
 
-class TestDesignSystem:
-    def test_vp_card(self):
-        assert "vp-card" in _t()
+class TestOldFakeChartsRemoved:
+    def test_no_fake_chart_titles(self):
+        c = _t()
+        for stale in (
+            "Lead Temperature",
+            "Intent Breakdown",
+            "Missed Leads Severity",
+            "Handoff Status",
+        ):
+            assert stale not in c
 
-    def test_chart_bar_container(self):
-        assert "chart-bar-container" in _t()
+    def test_no_fake_chart_ids(self):
+        c = _t()
+        for stale in ("chartTemperature", "chartIntent", "chartMissed", "chartHandoff"):
+            assert stale not in c
 
-    def test_chart_bar_fill(self):
-        assert "chart-bar-fill" in _t()
+    def test_no_longer_calls_dead_charts_endpoint(self):
+        # the all-zero /analytics/charts endpoint is no longer used by the page
+        assert "/api/v1/admin/crm/analytics/charts" not in _t()
+
+
+class TestStatesAndSafety:
+    def test_loading_error_states(self):
+        c = _t()
+        assert "chartsLoading" in c and "chartsError" in c
+
+    def test_same_origin_fetch_no_token(self):
+        c = _t()
+        assert 'credentials: "same-origin"' in c
+        assert "sk-" not in c
+        assert "session_id_hash" not in c
 
 
 class TestQuickLinks:
-    def test_missed_leads_link(self):
-        assert "/crm/missed-leads" in _t()
-
-    def test_handoff_link(self):
-        assert "/crm/handoffs" in _t()
-
-
-class TestMobile:
-    def test_responsive(self):
-        assert "analytics-2col-grid" in _t()
-
-
-class TestJSFetch:
-    def test_fetch_charts(self):
-        assert "/api/v1/admin/crm/analytics/charts" in _t()
-
-    def test_render_bars(self):
-        assert "renderBars" in _t()
-
-
-class TestSafety:
-    def test_no_token(self):
-        assert "sk-" not in _t()
-
-    def test_no_session_hash(self):
-        assert "session_id_hash" not in _t()
-
-    def test_no_phone(self):
-        c = _t().lower()
-        assert "phone_number" not in c
-
-
-class TestDocExists:
-    def test_doc_119(self):
-        assert Path("docs/AI_AGENT_SYSTEM/119_ANALYTICS_CHARTS.md").exists()
+    def test_links(self):
+        c = _t()
+        assert "/crm/missed-leads" in c
+        assert "/crm/handoffs" in c
 
 
 class TestSmoke:

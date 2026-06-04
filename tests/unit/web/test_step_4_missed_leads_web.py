@@ -54,25 +54,35 @@ class TestKPICards:
     def test_high(self):
         assert "high" in _t().lower()
 
-    def test_hot_unanswered(self):
-        assert "hot_unanswered" in _t() or "Hot javobsiz" in _t()
+    def test_total_card(self):
+        assert "Jami javobsiz" in _t()
 
-    def test_operator_waiting(self):
-        assert "operator_waiting" in _t() or "Operator kutmoqda" in _t()
-
-    def test_phone_shared(self):
-        assert "phone_shared" in _t() or "Telefon ulashgan" in _t()
+    def test_medium_low_cards(self):
+        c = _t()
+        assert "Medium" in c and "Low" in c
 
     def test_oldest_wait(self):
         assert "oldest_wait" in _t() or "kutish" in _t().lower()
+
+    def test_data_quality_note(self):
+        # honest about unreliable reason-categories, not faked as 0
+        assert "ishonchli aniqlanmaydi" in _t()
+
+    def test_range_toggle(self):
+        c = _t()
+        assert "Bugun" in c and "7 kun" in c and "30 kun" in c
 
 
 class TestFilters:
     def test_severity_filter(self):
         assert "sevFilter" in _t()
 
-    def test_reason_filter(self):
-        assert "reasonFilter" in _t()
+    def test_no_dead_reason_filter(self):
+        # the reason dropdown was a dead control (reason is generic now) — removed
+        assert "reasonFilter" not in _t()
+
+    def test_error_state_present(self):
+        assert "Ma'lumotlarni yuklab bo'lmadi" in _t()
 
     def test_refresh(self):
         assert "Yangilash" in _t() or "reload" in _t()

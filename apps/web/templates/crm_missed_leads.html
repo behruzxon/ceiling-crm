@@ -6,32 +6,33 @@
 {% block content %}
 <div class="vp-page">
 
-  <!-- KPI Cards -->
-  <div class="vp-kpi-grid" style="margin-bottom:20px;">
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label" style="color:#dc2626;">Critical</div>
-      <div class="vp-kpi-value" style="color:#dc2626;">{{ summary.critical|default(0) }}</div>
-    </div>
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label" style="color:#f59e0b;">High</div>
-      <div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.high|default(0) }}</div>
-    </div>
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label">Hot javobsiz</div>
-      <div class="vp-kpi-value">{{ summary.hot_unanswered|default(0) }}</div>
-    </div>
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label">Operator kutmoqda</div>
-      <div class="vp-kpi-value">{{ summary.operator_waiting|default(0) }}</div>
-    </div>
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label">Telefon ulashgan</div>
-      <div class="vp-kpi-value">{{ summary.phone_shared_no_followup|default(0) }}</div>
-    </div>
-    <div class="vp-kpi-card">
-      <div class="vp-kpi-label">Eng uzoq kutish</div>
-      <div class="vp-kpi-value">{{ summary.oldest_wait_minutes|default(0) }} min</div>
-    </div>
+  {# Error state — never show "all clear" when the API failed #}
+  {% if (summary or {})._error or (items or {})._error %}
+  <div class="vp-alert vp-alert-danger" style="margin-bottom:16px;">
+    Ma'lumotlarni yuklab bo'lmadi. Server bilan bog'lanishda xatolik &mdash; birozdan keyin qayta urinib ko'ring.
+  </div>
+  {% endif %}
+
+  <!-- Range toggle -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;">
+    {% for rk, rl in [("today", "Bugun"), ("7d", "7 kun"), ("30d", "30 kun")] %}
+    <a href="/crm/missed-leads?range={{ rk }}" class="vp-btn {% if range_filter == rk %}vp-btn-primary{% else %}vp-btn-secondary{% endif %}">{{ rl }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- KPI Cards (real data; severity by wait time) -->
+  <div class="vp-kpi-grid" style="margin-bottom:12px;">
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Jami javobsiz</div><div class="vp-kpi-value">{{ summary.total|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#dc2626;">Critical</div><div class="vp-kpi-value" style="color:#dc2626;">{{ summary.critical|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label" style="color:#f59e0b;">High</div><div class="vp-kpi-value" style="color:#f59e0b;">{{ summary.high|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Medium</div><div class="vp-kpi-value">{{ summary.medium|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Low</div><div class="vp-kpi-value">{{ summary.low|default(0) }}</div></div>
+    <div class="vp-kpi-card"><div class="vp-kpi-label">Eng uzoq kutish</div><div class="vp-kpi-value">{{ summary.oldest_wait_minutes|default(0) }} min</div></div>
+  </div>
+
+  <!-- Data-quality note -->
+  <div class="vp-alert" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;margin-bottom:16px;">
+    &#8505; Daraja kutish vaqtiga qarab beriladi. "Hot / Operator / Telefon" kabi sabab turlari hali ishonchli aniqlanmaydi, shuning uchun ko'rsatilmaydi.
   </div>
 
   <!-- Recommendations -->
@@ -56,14 +57,6 @@
         <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
         <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
         <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
-      </select>
-      <select class="vp-select" id="reasonFilter" onchange="applyFilters()">
-        <option value="">Barcha sabablar</option>
-        <option value="hot_unanswered">Hot javobsiz</option>
-        <option value="operator_waiting">Operator kutmoqda</option>
-        <option value="phone_shared_no_followup">Telefon ulashgan</option>
-        <option value="price_interest_no_action">Narx so'ragan</option>
-        <option value="sla_critical">SLA critical</option>
       </select>
       <button class="vp-btn vp-btn-secondary" onclick="location.reload()">Yangilash</button>
     </div>
@@ -115,6 +108,11 @@
         {% endfor %}
       </tbody>
     </table>
+    {% elif (items or {})._error %}
+    <div class="vp-empty-state">
+      <div class="vp-empty-icon">⚠️</div>
+      Ro'yxatni yuklab bo'lmadi.
+    </div>
     {% else %}
     <div class="vp-empty-state">
       <div class="vp-empty-icon">✅</div>
@@ -135,10 +133,8 @@
 <script>
 function applyFilters() {
   const s = document.getElementById('sevFilter').value;
-  const r = document.getElementById('reasonFilter').value;
-  let url = '/crm/missed-leads?';
-  if (s) url += 'severity=' + s + '&';
-  if (r) url += 'reason=' + r + '&';
+  let url = '/crm/missed-leads?range={{ range_filter|default("7d") }}';
+  if (s) url += '&severity=' + s;
   location.href = url;
 }
 </script>

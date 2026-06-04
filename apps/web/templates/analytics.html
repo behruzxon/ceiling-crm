@@ -296,53 +296,39 @@
 
 <!-- Visual Charts Section -->
 <div style="margin-top:28px;">
-    <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Visual Charts</h2>
-    <div id="chartsLoading" style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Charts yuklanmoqda...</div>
-    <div id="chartsError" class="vp-alert vp-alert-warning" style="display:none;margin-bottom:8px;">Charts yuklab bo'lmadi.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="analytics-2col-grid" id="chartsGrid">
+    <h2 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:16px;">Trendlar (haqiqiy ma'lumot)</h2>
+    <div id="chartsLoading" style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Yuklanmoqda...</div>
+    <div id="chartsError" class="vp-alert vp-alert-danger" style="display:none;margin-bottom:8px;">Trend ma'lumotlarini yuklab bo'lmadi.</div>
 
-        <!-- Temperature Chart -->
-        <div class="vp-card" id="chartTemperature">
-            <div class="vp-card-header"><div class="vp-card-title">Lead Temperature</div></div>
-            <div class="chart-bar-container" id="tempBars">
-                <div class="chart-bar-row"><span class="chart-bar-label">Hot</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#ef4444;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Warm</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Cold</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
-            </div>
+    <div id="trBody" style="display:none;">
+      <div class="vp-kpi-grid" style="margin-bottom:16px;">
+        <div class="vp-kpi-card"><div class="vp-kpi-label">Jami xabarlar</div><div class="vp-kpi-value" id="tr-messages">&mdash;</div></div>
+        <div class="vp-kpi-card"><div class="vp-kpi-label">Kiruvchi</div><div class="vp-kpi-value" id="tr-incoming">&mdash;</div></div>
+        <div class="vp-kpi-card"><div class="vp-kpi-label">Chiquvchi</div><div class="vp-kpi-value" id="tr-outgoing">&mdash;</div></div>
+        <div class="vp-kpi-card"><div class="vp-kpi-label">Yangi kontaktlar</div><div class="vp-kpi-value" id="tr-contacts">&mdash;</div></div>
+        <div class="vp-kpi-card"><div class="vp-kpi-label">Noma'lum savollar</div><div class="vp-kpi-value" id="tr-unknown">&mdash;</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+        <div class="vp-card">
+          <div class="vp-card-header"><div class="vp-card-title">Kunlik xabarlar (oxirgi 7 kun)</div></div>
+          <div id="tr-msg-chart" style="display:flex;align-items:flex-end;gap:4px;height:120px;"></div>
         </div>
-
-        <!-- Intent Chart -->
-        <div class="vp-card" id="chartIntent">
-            <div class="vp-card-header"><div class="vp-card-title">Intent Breakdown</div></div>
-            <div class="chart-bar-container" id="intentBars">
-                <div class="chart-bar-row"><span class="chart-bar-label">Price</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#4f46e5;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Operator</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Catalog</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Order</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
-            </div>
+        <div class="vp-card">
+          <div class="vp-card-header"><div class="vp-card-title">Kunlik yangi kontaktlar</div></div>
+          <div id="tr-contact-chart" style="display:flex;align-items:flex-end;gap:4px;height:120px;"></div>
         </div>
-
-        <!-- Missed Severity Chart -->
-        <div class="vp-card" id="chartMissed">
-            <div class="vp-card-header"><div class="vp-card-title">Missed Leads Severity</div></div>
-            <div class="chart-bar-container" id="missedBars">
-                <div class="chart-bar-row"><span class="chart-bar-label">Critical</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#dc2626;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">High</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Medium</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#3b82f6;"></div></div><span class="chart-bar-value">0</span></div>
-            </div>
+      </div>
+      <div class="vp-card" style="margin-top:16px;">
+        <div class="vp-card-header"><div class="vp-card-title">Operator navbati</div></div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+          <div><div style="font-size:12px;color:#64748b;">Ochiq</div><div style="font-size:22px;font-weight:700;color:#dc2626;" id="tr-ho-open">&mdash;</div></div>
+          <div><div style="font-size:12px;color:#64748b;">Tayinlangan</div><div style="font-size:22px;font-weight:700;color:#d97706;" id="tr-ho-assigned">&mdash;</div></div>
+          <div><div style="font-size:12px;color:#64748b;">Hal qilingan</div><div style="font-size:22px;font-weight:700;color:#059669;" id="tr-ho-resolved">&mdash;</div></div>
         </div>
-
-        <!-- Handoff Status Chart -->
-        <div class="vp-card" id="chartHandoff">
-            <div class="vp-card-header"><div class="vp-card-title">Handoff Status</div></div>
-            <div class="chart-bar-container" id="handoffBars">
-                <div class="chart-bar-row"><span class="chart-bar-label">Open</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#f59e0b;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Assigned</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#8b5cf6;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Contacted</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#10b981;"></div></div><span class="chart-bar-value">0</span></div>
-                <div class="chart-bar-row"><span class="chart-bar-label">Resolved</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:0%;background:#059669;"></div></div><span class="chart-bar-value">0</span></div>
-            </div>
-        </div>
-
+      </div>
+      <div class="vp-alert" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;margin-top:12px;">
+        &#8505; Lead harorati, narx/katalog intent va manba hali ishonchli yig'ilmaydi &mdash; shuning uchun bu trendlarga kiritilmadi.
+      </div>
     </div>
 
     <!-- Quick Links -->
@@ -353,41 +339,48 @@
 </div>
 
 <script>
-(async function loadCharts() {
-    const loadingEl = document.getElementById('chartsLoading');
-    const errorEl = document.getElementById('chartsError');
-    try {
-        const r = await fetch('/api/v1/admin/crm/analytics/charts?days=30');
-        if (!r.ok) {
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (errorEl) errorEl.style.display = 'block';
-            return;
-        }
-        const d = await r.json();
-        if (loadingEl) loadingEl.style.display = 'none';
-        function renderBars(containerId, data) {
-            if (!data || !data.points) return;
-            const el = document.getElementById(containerId);
-            if (!el) return;
-            const max = Math.max(...data.points.map(p => p.value), 1);
-            const rows = el.querySelectorAll('.chart-bar-row');
-            data.points.forEach((p, i) => {
-                if (rows[i]) {
-                    const fill = rows[i].querySelector('.chart-bar-fill');
-                    const val = rows[i].querySelector('.chart-bar-value');
-                    if (fill) fill.style.width = Math.max((p.value / max) * 100, 2) + '%';
-                    if (val) val.textContent = p.value;
-                }
-            });
-        }
-        renderBars('tempBars', d.lead_temperature);
-        renderBars('intentBars', d.intent_breakdown);
-        renderBars('missedBars', d.missed_severity);
-        renderBars('handoffBars', d.handoff_status);
-    } catch(e) {
-        if (loadingEl) loadingEl.style.display = 'none';
-        if (errorEl) errorEl.style.display = 'block';
+(function () {
+    "use strict";
+    function el(id) { return document.getElementById(id); }
+    function show(id, on) { var e = el(id); if (e) { e.style.display = on ? "" : "none"; } }
+    function fmt(n) { return (n === null || n === undefined) ? "—" : Number(n).toLocaleString("ru-RU"); }
+    function setText(id, v) { var e = el(id); if (e) { e.textContent = v; } }
+
+    function renderTrendBars(containerId, trend, key, color) {
+        var box = el(containerId); if (!box) { return; }
+        box.textContent = "";
+        var max = 1;
+        trend.forEach(function (d) { if ((d[key] || 0) > max) { max = d[key]; } });
+        trend.forEach(function (d) {
+            var bar = document.createElement("div");
+            bar.title = d.date + ": " + (d[key] || 0);
+            bar.style.flex = "1"; bar.style.minWidth = "4px";
+            bar.style.height = Math.round(((d[key] || 0) / max) * 100) + "%";
+            bar.style.background = (d[key] || 0) > 0 ? color : "#e2e8f0";
+            bar.style.borderRadius = "2px 2px 0 0";
+            box.appendChild(bar);
+        });
     }
+
+    fetch("/api/v1/admin/crm/analytics/summary?range=7d", { credentials: "same-origin", headers: { "Accept": "application/json" } })
+        .then(function (r) { if (!r.ok) { throw new Error("http " + r.status); } return r.json(); })
+        .then(function (d) {
+            show("chartsLoading", false); show("chartsError", false); show("trBody", true);
+            var t = d.totals || {};
+            setText("tr-messages", fmt(t.messages));
+            setText("tr-incoming", fmt(t.incoming));
+            setText("tr-outgoing", fmt(t.outgoing));
+            setText("tr-contacts", fmt(t.new_contacts));
+            setText("tr-unknown", fmt(t.unknown_questions));
+            var h = d.handoffs || {};
+            setText("tr-ho-open", fmt(h.open));
+            setText("tr-ho-assigned", fmt(h.assigned));
+            setText("tr-ho-resolved", fmt(h.resolved));
+            var trend = d.trend || [];
+            renderTrendBars("tr-msg-chart", trend, "messages", "#4f46e5");
+            renderTrendBars("tr-contact-chart", trend, "new_contacts", "#8b5cf6");
+        })
+        .catch(function () { show("chartsLoading", false); show("chartsError", true); });
 })();
 </script>
 {% endblock %}

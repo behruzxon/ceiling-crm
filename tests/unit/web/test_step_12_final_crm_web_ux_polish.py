@@ -170,7 +170,7 @@ class TestMissedLeadsPage:
 class TestAnalyticsPage:
     def test_charts_loading_state(self, analytics_src: str) -> None:
         assert 'id="chartsLoading"' in analytics_src
-        assert "Charts yuklanmoqda" in analytics_src
+        assert "Yuklanmoqda" in analytics_src
 
     def test_charts_error_state(self, analytics_src: str) -> None:
         assert 'id="chartsError"' in analytics_src
@@ -182,17 +182,20 @@ class TestAnalyticsPage:
     def test_quick_links_to_handoffs(self, analytics_src: str) -> None:
         assert 'href="/crm/handoffs"' in analytics_src
 
-    def test_chart_temperature_card(self, analytics_src: str) -> None:
-        assert 'id="chartTemperature"' in analytics_src
+    def test_real_trend_charts(self, analytics_src: str) -> None:
+        # the fake all-zero charts are replaced by real-data trend charts
+        assert 'id="tr-msg-chart"' in analytics_src
+        assert 'id="tr-contact-chart"' in analytics_src
 
-    def test_chart_intent_card(self, analytics_src: str) -> None:
-        assert 'id="chartIntent"' in analytics_src
+    def test_real_trend_endpoint(self, analytics_src: str) -> None:
+        assert "/api/v1/admin/crm/analytics/summary" in analytics_src
 
-    def test_chart_missed_card(self, analytics_src: str) -> None:
-        assert 'id="chartMissed"' in analytics_src
+    def test_old_fake_charts_removed(self, analytics_src: str) -> None:
+        for stale in ("chartTemperature", "chartIntent", "chartMissed", "chartHandoff"):
+            assert stale not in analytics_src
 
-    def test_chart_handoff_card(self, analytics_src: str) -> None:
-        assert 'id="chartHandoff"' in analytics_src
+    def test_handoff_panel_present(self, analytics_src: str) -> None:
+        assert 'id="tr-ho-open"' in analytics_src
 
     def test_empty_state_no_data(self, analytics_src: str) -> None:
         assert "No analytics data available" in analytics_src
