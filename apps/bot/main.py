@@ -409,10 +409,46 @@ async def create_storage() -> RedisStorage:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def build_health_app() -> web.Application:
+    """Build a minimal aiohttp app exposing /health (+ /metrics when enabled).
+
+    Polling mode otherwise runs no HTTP server, so Docker healthchecks and
+    Prometheus scrapes have nothing to hit.  This reuses the same
+    ``setup_prometheus`` wiring as the webhook server so the health/metrics
+    surface is identical across both modes.
+    """
+    app = web.Application()
+    setup_prometheus(app)  # /health always, /metrics when PROMETHEUS_ENABLED
+    return app
+
+
+async def _start_health_server() -> web.AppRunner:
+    """Start the polling-mode health/metrics server on ``settings.prometheus_port``."""
+    settings = get_settings()
+    runner = web.AppRunner(build_health_app())
+    await runner.setup()
+    site = web.TCPSite(runner, host="0.0.0.0", port=settings.prometheus_port)
+    await site.start()
+    log.info("polling_health_server_started", port=settings.prometheus_port)
+    return runner
+
+
+async def _stop_health_server(runner: web.AppRunner | None) -> None:
+    """Cleanly shut down the polling-mode health server."""
+    if runner is None:
+        return
+    await runner.cleanup()
+    log.info("polling_health_server_stopped")
+
+
 async def run_polling() -> None:
     """
     Run the bot in long-polling mode.
     Used for local development.  Not suitable for production.
+
+    A lightweight aiohttp health/metrics server runs alongside polling so
+    container healthchecks (``/health``) and Prometheus scrapes (``/metrics``)
+    have an endpoint to hit; without it the bot is always reported unhealthy.
     """
     bot = create_bot()
     storage = await create_storage()
@@ -421,8 +457,10 @@ async def run_polling() -> None:
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    log.info("starting_polling")
+    health_runner: web.AppRunner | None = None
     try:
+        health_runner = await _start_health_server()
+        log.info("starting_polling")
         await dp.start_polling(
             bot,
             allowed_updates=[
@@ -434,6 +472,7 @@ async def run_polling() -> None:
             handle_signals=True,
         )
     finally:
+        await _stop_health_server(health_runner)
         log.info("polling_stopped")
 
 
