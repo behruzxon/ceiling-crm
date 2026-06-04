@@ -20,11 +20,11 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from apps.web.api_client import api_get
+from apps.web.api_client import PROXY_METHODS, api_get, proxy_api_request
 from apps.web.auth import require_dashboard_auth
 from apps.web.csrf_middleware import AdminCSRFMiddleware
 from core.services.agent_control_center_service import (
@@ -89,6 +89,41 @@ def _fmt_percent(value: float | None) -> str:
 # Register template filters
 templates.env.filters["fmt_number"] = _fmt_number
 templates.env.filters["fmt_percent"] = _fmt_percent
+
+
+# ── Browser → API reverse proxy ──────────────────────────────────────────
+# Client-side fetch('/api/v1/admin/...') in the templates hits the WEB origin
+# (:8001).  The admin API routes live on the separate API service (:8000), so
+# without this every CRM/Agent mutation and lazy-loaded panel would 404 in a
+# standard two-container deploy.  We forward such requests server-side and
+# attach the Bearer token (kept off the browser, exactly like api_get).
+#
+# Security: this route inherits the app-level dashboard Basic Auth dependency
+# and the CSRF middleware, and it adds NO capability — the API still enforces
+# every feature flag (operator/campaign send stay gated and return their
+# disabled response).  In production a front nginx may instead route /api/* to
+# the API; this proxy makes the app correct even without that, and is harmless
+# alongside it.
+@app.api_route("/api/v1/admin/{path:path}", methods=list(PROXY_METHODS))
+async def proxy_admin_api(path: str, request: Request) -> Response:
+    """Forward a browser /api/v1/admin/* call to the API service server-side."""
+    # Defense-in-depth: keep the proxy scoped to the admin prefix. A legitimate
+    # admin path never contains a dot-segment; ".." would let httpx normalize the
+    # URL out of /api/v1/admin/ into a sibling /api/v1/* endpoint.
+    if ".." in path.split("/"):
+        return Response(
+            content=b'{"_error": "invalid path"}',
+            status_code=400,
+            media_type="application/json",
+        )
+    status_code, content, media_type = await proxy_api_request(
+        method=request.method,
+        path=f"/api/v1/admin/{path}",
+        query_string=request.url.query,
+        body=await request.body(),
+        content_type=request.headers.get("content-type"),
+    )
+    return Response(content=content, status_code=status_code, media_type=media_type)
 
 
 # ── Routes ──────────────────────────────────────────────────────────────
