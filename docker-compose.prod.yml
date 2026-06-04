@@ -52,6 +52,29 @@ services:
           memory: 256M
           cpus: "0.5"
 
+  # One-shot schema migrator: runs `alembic upgrade head` exactly once, then
+  # exits. Every long-running service waits for it to complete
+  # (service_completed_successfully) and sets RUN_MIGRATIONS=false, so Alembic
+  # never runs concurrently across bot/scheduler/celery-worker.
+  migrate:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: "no"
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # entrypoint.sh runs the migration (RUN_MIGRATIONS=true), then exec's this
+    # no-op so the container exits 0 once the schema is up to date.
+    command: ["true"]
+    networks:
+      - backend
+
   bot:
     build:
       context: .
@@ -61,6 +84,7 @@ services:
     environment:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+      RUN_MIGRATIONS: "false"  # the one-shot "migrate" service owns migrations
     volumes:
       - media_data:/app/media
     ports:
@@ -70,6 +94,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["python", "-m", "apps.bot.main"]
     # Production runs in webhook mode → /health is served on 8080.
     healthcheck:
@@ -95,11 +121,14 @@ services:
     environment:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+      RUN_MIGRATIONS: "false"  # the one-shot "migrate" service owns migrations
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["python", "-m", "apps.scheduler.main"]
     # The scheduler runs no HTTP server; probe real DB connectivity (it cannot
     # do its job without the DB). check_database_health() never raises, so the
@@ -127,11 +156,14 @@ services:
     environment:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+      RUN_MIGRATIONS: "false"  # the one-shot "migrate" service owns migrations
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["celery", "-A", "infrastructure.queue.app:celery_app", "worker",
               "--loglevel=info", "--concurrency=${CELERY_CONCURRENCY:-4}",
               "--max-tasks-per-child=${CELERY_MAX_TASKS_PER_CHILD:-1000}"]
