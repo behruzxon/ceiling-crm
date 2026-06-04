@@ -5,10 +5,16 @@ Feature-gated by ADMIN_DB_RBAC_ENABLED.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/v1/admin/users", tags=["admin-users"])
+from apps.api.dependencies.auth import require_api_token
+
+router = APIRouter(
+    prefix="/api/v1/admin/users",
+    tags=["admin-users"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 class AdminUserCreateBody(BaseModel):
@@ -104,7 +110,11 @@ async def enable_admin_user(admin_id: str) -> dict:
     return {"ok": False, "error": "DB RBAC not enabled"}
 
 
-audit_router = APIRouter(prefix="/api/v1/admin/audit", tags=["admin-audit"])
+audit_router = APIRouter(
+    prefix="/api/v1/admin/audit",
+    tags=["admin-audit"],
+    dependencies=[Depends(require_api_token)],
+)
 
 
 @audit_router.get("")
